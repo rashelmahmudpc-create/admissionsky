@@ -54,3 +54,16 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: '4.35.0'
           command: deploy --config wrangler.auth.toml
+      # F-04 phase 2 gate: prove the new script really answers before anyone
+      # points traffic at it. A cross-script Durable Object binding is the one
+      # thing that cannot be checked from the repository, so it is checked here:
+      # GET is origin-optional, and /config reaches the authority. A 503
+      # NOT_CONFIGURED or AUTHORITY error means the binding is wrong and the
+      # AUTH_ROUTE switch must stay on "local".
+      - name: Smoke-test the deployed script
+        run: |
+          set -eu
+          url="https://admission-auth.admissionhub.workers.dev/api/auth/v1/config?cb=$RANDOM"
+          body="$(curl -sS --max-time 25 -H 'X-AH-Auth-UI: auth-premium-v6' "$url" || true)"
+          printf '%s\n' "$body" | head -c 600
+          printf '%s' "$body" | grep -q '"ok":true'
