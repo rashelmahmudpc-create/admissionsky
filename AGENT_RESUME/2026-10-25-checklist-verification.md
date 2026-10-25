@@ -41,16 +41,40 @@
    Web key পাবলিক হওয়াই স্বাভাবিক, কিন্তু Firebase Console-এ **API restrictions** না থাকলে
    অন্য সাইট থেকে কোটা খরচ হতে পারে — এটা Console-এ চোখে দেখে নিশ্চিত হতে হবে, কোড দিয়ে বোঝা যায় না।
 
-## ৩. নতুন সমস্যা — আজকের অটো-ডিপ্লয় চালু হয়নি
+## ৩. নতুন সমস্যা (সবচেয়ে বড়) — আজ কোনো ডিপ্লয়ই হতে পারেনি
 
-- রান `40215708666` — `Deploy Pages UI + Worker (manual)`, `event: push`, `headSha: fdcf014`,
-  **`conclusion: startup_failure`**, `jobs: []` (কোনো জবই শুরু হয়নি)।
-- একই পুশে বাকি গার্ডগুলো (Bundle Guard, Account Retirement, Email Gateway) **success** →
-  Actions নিজে বন্ধ নয়, সমস্যা এই একটা ওয়ার্কফ্লোতেই।
-- ওয়ার্কফ্লো ফাইলটা শেষ সফল রানের (`451c9a0`, ২৪ অক্টো) পর **বদলায়নি** (`git diff` খালি),
-  তাই "ফাইল এডিটে ভাঙা" নয় — কারণ আলাদা করে দেখতে হবে।
-- লাইভ `sw.js` এখনো HEAD-এর `v364-sky-goal`, অর্থাৎ শেল মিলে যাচ্ছে; তবে `sky-ai/`-এর
-  আজকের বদল সত্যিই ডিপ্লয় হয়েছে কিনা এটা প্রমাণ করে না। **সন্দেহ হলে ধরে নিন ডিপ্লয় হয়নি।**
+**লক্ষণ:** `Deploy Pages UI + Worker (manual)` রান `40215708666` (push, `fdcf014`) আর
+`40216187997` (push, `ad7d972`) — দুটোই **`startup_failure`**, `jobs: 0`, `started_at: null`।
+একই পুশে Bundle Guard / Account Retirement / Email Gateway / Voice Agent Guard **success**,
+তাই Actions বন্ধ নয় — শুধু `uses:` ব্যবহার করা ওয়ার্কফ্লোগুলোই মরে যাচ্ছে।
+
+**আসল কারণ (GitHub-এর নিজের এরর মেসেজ, রান পেজ থেকে):**
+
+> The action `cloudflare/wrangler-action@9acf94…` is not allowed in
+> `rashelmahmudpc-create/admissionsky` because all actions must be from a repository owned by
+> `rashelmahmudpc-create` or created by GitHub.
+
+অর্থাৎ রিপোতে এখন **third-party action বন্ধ**। এটা `study-lock-timer.yml` নিজেই করে
+(লক লাইনের ২ নম্বর ধারা: "blocks all `uses:` actions")। কিন্তু ওই টাইমার নিজেই
+**২৪ তারিখের পর থেকে প্রতিবার ফেল করছে**, তাই লক খোলার কাজটাও হয় না:
+
+- লেটেস্ট ৭টা `schedule` রানই `failure` (শেষ সফল `2026-10-24T15:50Z`, সেদিন ছিল
+  আপনার একদিনের ছুটি → `ACT=all` পথ, তাই পাস করেছিল)।
+- এরর (রান `40209784765`): `gh: You cannot have 'verified_allowed', 'github_owned_allowed',
+  and 'patterns_allowed' all disabled at the same time. … set 'local_only' … (Conflict)`
+  → `exit code 1`, তাই `allowed_actions=selected` সেট হয়েই আটকে থাকে = সব `uses:` ব্লক।
+- আজ ২৩:০৩ / ২৩:২০ ঢাকার "খোলার" cron রানগুলো **চলেইনি** (`17:03Z`/`17:20Z` কোনো রান নেই),
+  তাই ২৩:১৭-এ পুশ হওয়া কমিটও ডিপ্লয় হতে পারেনি।
+
+**ঠিক করার লাইনটা (আপনার নিজের হাতে, কারণ Study Lock ফাইল আমি ছুঁব না):**
+`study-lock-timer.yml`-এ `{"github_owned_allowed":false,"verified_allowed":false,"patterns_allowed":[]}`
+এর জায়গায় GitHub-এর নিজের পরামর্শ অনুযায়ী
+`{"allowed_actions":"local_only"}` (অথবা `github_owned_allowed: true`) বসালেই লক-পথ আর ফেল করবে না।
+এরপর `npx wrangler` দিয়ে ডিপ্লয় করা যায় (ওটা `uses:` নয়, তাই ব্লকে পড়ে না) — কিন্তু
+টাইমার ফাইল/সিক্রেট বদলানো আমার কাজ নয়, লক নিজেই তা নিষেধ করে।
+
+**সংশ্লিষ্ট লক্ষণ:** লাইভ `sw.js` এখনো `v364-sky-goal`; `sky-ai/`-এর আজকের বদল সত্যিই
+ডিপ্লয় হয়েছে কিনা প্রমাণ নেই। **সন্দেহ হলে ধরে নিন হয়নি।**
 
 ## ৪. যাচাই করা যায়নি (অনুমান করব না)
 
@@ -64,7 +88,15 @@
 
 ## পরের ধাপ (ক্রম অনুযায়ী)
 
-1. `startup_failure`-এর কারণ ঠিক করা — নাহলে `main`-এ মার্জ হলেও লাইভে যাবে না।
+1. **Study Lock টাইমারের ভাঙা লাইনটা আপনি ঠিক করুন** (উপরের এক লাইন) — নাহলে `main`-এ
+   যা-ই মার্জ হোক, লাইভে কিছুই যাবে না। এটাই এখন ১৩টা কাজের আসল গেট।
 2. `/about` + `/contact` পেজ (canonical, description, OG, JSON-LD সহ) — ঙ২।
 3. ভুল পাসওয়ার্ডে "আর N বার" বার্তা — চ৩ (সার্ভার + ক্লায়েন্ট, দুটোই লাগবে)।
 4. আপনার হ্যাঁ এলে: `SHADOW_GUARD_ACTIVATION=enforce`, রিপো private করা (জ৪)।
+
+## ৫. খেয়াল রাখার বিষয়
+
+- এই সেশনের মাঝে **আরেকটা এজেন্ট/প্রসেস `main`-এ পুশ করছে** (`ad7d972` — "real auth on write
+  routes"), আমার HEAD `fdcf014` নয়। কাজের আগে `git fetch` করে নিন, নইলে পুরোনো কোডে কাজ হবে।
+- রিপোতে ৩০+ ওয়ার্কফ্লো এখনো `cloudflare/wrangler-action` / `Infisical/secrets-action` ব্যবহার করে;
+  লক যতক্ষণ third-party ব্লক করে, এগুলোর একটা-ও চলবে না (upstream-এ fail, app-এর দোষ নয়)।
