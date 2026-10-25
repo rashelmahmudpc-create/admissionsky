@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   PASSWORD_GUARD_SCALES,
   guardDecision,
@@ -176,3 +177,17 @@ test('the count reaches the level the shadow guard treats as high', () => {
   assert.ok(passwordFailuresSoFar({ strikes: 2, fails: 3 }) >= 8);
 });
 
+
+test('the login response carries the remaining tries, and the form reads it', () => {
+  // চ৩. The guard's count is worthless to a student if the answer never leaves
+  // the server, so the wiring itself is pinned: the handler must attach the
+  // count to an INVALID_CREDENTIALS answer and ship it next to `toPublic()`,
+  // and the form must read `attemptsRemaining` off the error body.
+  const handler = readFileSync(new URL('./auth-native/worker/public-auth-handler.mjs', import.meta.url), 'utf8');
+  assert.match(handler, /attemptsRemaining = Math\.max\(0, Math\.floor\(Number\(counted\?\.attemptsRemaining\)/, 'the failure branch reads the decision');
+  assert.match(handler, /error\.attemptsRemaining = attemptsRemaining/, 'the count rides on the thrown error');
+  assert.match(handler, /\.\.\.\(attemptsRemaining > 0 \? \{ attemptsRemaining \} : \{\}\)/, 'the count is serialised beside toPublic()');
+  const client = readFileSync(new URL('./account-access.js', import.meta.url), 'utf8');
+  assert.match(client, /error\.attemptsRemaining = Math\.max\(0, Math\.floor\(Number\(data\?\.error\?\.attemptsRemaining\)/, 'the client parses the field');
+  assert.match(client, /আর \$\{bangla\} বার ভুল হলে/, 'the login form names the remaining tries');
+});
