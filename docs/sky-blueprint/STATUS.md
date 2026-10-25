@@ -109,6 +109,12 @@ Source of truth: Notion "Sky AI v1.0" → main page section **"🚦 এজেন
     reach is reachable here; warning = a mismatch, with the fix named (put the key
     in KV `secret:AI_KEYS` so both rooms read it). Reported, not failed — the
     fallback keeps students working and the fix is a credential, not code.
+  - **Ordering lesson (first deploy of 4j):** the step ran BEFORE `Deploy Worker`
+    and reported "no parity field" on a healthy deploy, because it asked the
+    PREVIOUS admission-gk whether the NEW sky-ai matched — the header it needs is
+    produced by the deployment being measured. Moved after `Deploy Worker`, and the
+    report now distinguishes three outcomes (ok / mismatch / unknown) instead of
+    lumping "could not compare" in with "does not match".
 - **Superseded — `/api/ai/status` blocking note.** Status is a
   report about which AI engine and keys are available, and those keys are
   secrets on `admission-gk`. sky-ai has no `GEMINI_KEYS`/`GROQ_API_KEY`, so it

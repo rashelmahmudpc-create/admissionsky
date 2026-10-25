@@ -125,33 +125,6 @@ jobs:
       # because "chat is still on admission-gk" and "chat moved" look identical
       # from outside, and the whole point of copying the credentials across is to
       # find out which one is true.
-      - name: Report whether sky-ai can answer chat itself
-        run: |
-          set -eu
-          body="$(curl -sS --max-time 20 "https://admission-gk.admissionhub.workers.dev/api/ai/sky-health?cb=$RANDOM" || true)"
-          providers="$(printf '%s' "$body" | grep -oE '"providers":\[[^]]*\]' | head -1 || true)"
-          if [ -z "$providers" ]; then
-            echo "::warning title=Sky AI chat status unknown::/health returned no provider list, so chat is answered by admission-gk (unchanged for students)."
-            exit 0
-          fi
-          # F0.1 step 4j: the provider list alone cannot tell "sky-ai has a key"
-          # apart from "sky-ai has every key admission-gk has". parity.ok is
-          # computed by the same function the routing gate uses, so it is the only
-          # answer that proves chat is really served here. A mismatch is reported
-          # rather than failed: the fallback keeps students working, and the fix is
-          # a credential, not a code change.
-          parity="$(printf '%s' "$body" | grep -oE '"parity":\{[^}]*\}' | head -1 || true)"
-          case "$parity" in
-            *'"ok":true'*)
-              echo "::notice title=Sky AI parity ok::$providers — every provider admission-gk has is reachable here, so chat is answered by sky-ai."
-              ;;
-            *)
-              echo "::warning title=Sky AI parity mismatch::${parity:-no parity field} — admission-gk can reach a provider sky-ai cannot, so chat falls back (students unaffected). Put that key in KV secret:AI_KEYS so both rooms read the same one."
-              ;;
-          esac
-          if printf '%s' "$providers" | grep -q 'gemini'; then
-            echo "::notice title=Sky AI providers present::${providers}"
-          fi
       # F0.1 step 4i made this worth checking on every deploy: the status body is
       # now PRODUCED in one Worker and REDACTED in another. A mistake in that hand
       # -off does not break anything a student can see — it quietly publishes the
@@ -211,6 +184,42 @@ jobs:
           wranglerVersion: '4.35.0'
           command: deploy --config wrangler.toml
 
+      - name: Report whether sky-ai can answer chat itself
+        run: |
+          set -eu
+          body="$(curl -sS --max-time 20 "https://admission-gk.admissionhub.workers.dev/api/ai/sky-health?cb=$RANDOM" || true)"
+          providers="$(printf '%s' "$body" | grep -oE '"providers":\[[^]]*\]' | head -1 || true)"
+          if [ -z "$providers" ]; then
+            echo "::warning title=Sky AI chat status unknown::/health returned no provider list, so chat is answered by admission-gk (unchanged for students)."
+            exit 0
+          fi
+          # F0.1 step 4j: the provider list alone cannot tell "sky-ai has a key"
+          # apart from "sky-ai has every key admission-gk has". parity.ok is
+          # computed by the same function the routing gate uses, so it is the only
+          # answer that proves chat is really served here. A mismatch is reported
+          # rather than failed: the fallback keeps students working, and the fix is
+          # a credential, not a code change.
+          #
+          # ORDER MATTERS: this runs AFTER Deploy Worker. The first version of this
+          # step ran before it and reported "no parity field" on a healthy deploy,
+          # because it was asking the PREVIOUS admission-gk whether the NEW sky-ai
+          # matched — the header it needs is produced by the very deployment being
+          # measured. A check that reads a stale side is worse than no check.
+          parity="$(printf '%s' "$body" | grep -oE '"parity":(\{[^}]*\}|null)' | head -1 || true)"
+          case "$parity" in
+            *'"ok":true'*)
+              echo "::notice title=Sky AI parity ok::$providers — every provider admission-gk has is reachable here, so chat is answered by sky-ai."
+              ;;
+            *'"ok":false'*)
+              echo "::warning title=Sky AI parity mismatch::$parity — admission-gk can reach a provider sky-ai cannot, so chat falls back (students unaffected). Put that key in KV secret:AI_KEYS so both rooms read the same one."
+              ;;
+            *)
+              echo "::warning title=Sky AI parity unknown::${parity:-field absent} — the comparison could not be made, so whether chat is served by sky-ai is unproven. Check that admission-gk sends x-sky-need-providers on /api/ai/sky-health."
+              ;;
+          esac
+          if printf '%s' "$providers" | grep -q 'gemini'; then
+            echo "::notice title=Sky AI providers present::${providers}"
+          fi
       # F-04: the public auth route must answer on the app Worker, whether it is
       # served in process (AUTH_ROUTE=local) or forwarded to admission-auth
       # (AUTH_ROUTE=service). One curl proves the path a student actually uses.
