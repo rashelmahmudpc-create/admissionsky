@@ -18,9 +18,10 @@ import { handleRecallPost } from './recall.mjs';
 import { handleInstructions } from './instructions.mjs';
 import { handleMemoryClear } from './memory-clear.mjs';
 import { handleActionsPost } from './actions.mjs';
+import { handleChat, chatReadiness } from './chat.mjs';
 import { aiStateStore } from '../ai-state-do.mjs';
 
-export const SKY_AI_VERSION = 'sky-ai-f0.1-4g-actions';
+export const SKY_AI_VERSION = 'sky-ai-f0.1-4h-chat';
 
 /* F0.1 step 4d: what /health reports about this Worker's dependencies.
  *
@@ -70,7 +71,11 @@ export async function handle(request, env = {}) {
       /* Shows whether the call came through admission-gk's service binding
        * (internal header set by the caller) or straight from the internet. */
       via: request.headers.get('x-sky-ai-caller') === 'admission-gk' ? 'service-binding' : 'direct',
-      deps: await dependencies(env)
+      deps: await dependencies(env),
+      /* F0.1 step 4h: which AI providers THIS room can reach, by name only. Chat
+       * refuses to answer when it is missing one that admission-gk has, so this is
+       * the number to read when chat has not moved yet. */
+      providers: await chatReadiness(env)
     });
   }
 
@@ -110,6 +115,15 @@ export async function handle(request, env = {}) {
    * makes the admission-gk fallback safe for a destructive route. */
   if (request.method === 'POST' && path === '/api/ai/memory/clear') {
     const res = await handleMemoryClear(request, env);
+    if (res) return res;
+  }
+
+  /* F0.1 step 4h: POST /api/ai/chat (and the non-streaming /api/ai) — the real
+   * model call (internal-key protected, see chat.mjs). Refuses unless this room
+   * can reach every provider admission-gk can, so a partial key set can never
+   * quietly answer with a weaker model. */
+  if (request.method === 'POST' && (path === '/api/ai/chat' || path === '/api/ai')) {
+    const res = await handleChat(request, env);
     if (res) return res;
   }
 

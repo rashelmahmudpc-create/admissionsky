@@ -59,6 +59,24 @@ Source of truth: Notion "Sky AI v1.0" → main page section **"🚦 এজেন
   enabled; otherwise the layer could be resurrected by a forward. A retry after a
   lost answer cannot double-apply anything, because the proposal is consumed
   before the write.
+- **F0.1 step 4h ✅ (2026-10-25): `/api/ai/chat` + `/api/ai` moved (POST) — the last route.**
+  The model call. Unlike every earlier step this one needs CREDENTIALS, not just
+  code, so it is built to move itself the moment they exist:
+  - `sky-ai/chat.mjs` compares the provider names admission-gk says it can reach
+    (`x-sky-need-providers`) with its OWN readiness and returns null if one is
+    missing — so a room with a partial key set can never answer with a weaker free
+    model and no error anywhere. Null → 404 → admission-gk answers as today.
+  - Daily cap + model overrides cross the hop, so the two rooms cannot answer
+    differently for the same request.
+  - **One request id per chat** (`x-sky-req-id`) reaches the quota counter from
+    both sides, so a retried chat replays the first decision instead of spending a
+    second message from the student's daily allowance.
+  - `/health` now reports `providers: [...]` (names only), and the deploy prints
+    whether chat is live in sky-ai or still on the fallback. Both are correct; it
+    must simply never be silent.
+  - **To complete 4h the provider keys must reach sky-ai** (`GEMINI_KEYS`,
+    `GROQ_API_KEY`, …). Until then chat is served by admission-gk exactly as
+    before — same code, same answer, one extra header check.
 - **Blocked on purpose — `/api/ai/status`: it must NOT move yet.** Status is a
   report about which AI engine and keys are available, and those keys are
   secrets on `admission-gk`. sky-ai has no `GEMINI_KEYS`/`GROQ_API_KEY`, so it
@@ -73,8 +91,8 @@ Source of truth: Notion "Sky AI v1.0" → main page section **"🚦 এজেন
 - 2026-10-25 · F0.1 step 4d · `POST /api/ai/recall` moved to sky-ai with the
   AI_STATE cross-script binding + `/health` dependency report + deploy assertion;
   42 sky-ai/routing tests and 78 AI/recall tests green · PR (this branch) ·
-  next: `/api/ai/chat` (last). `/api/ai/status` waits for the provider keys to
-  live in sky-ai.
+  next: `/api/ai/status` waits for the provider keys to live in sky-ai — the same
+  prerequisite step 4h now checks at runtime.
 - 2026-10-25 · F0.1 step 4e · `/api/ai/instructions` (GET/POST/DELETE) moved;
   method-aware forwarder + body-read-order test · 52 sky-ai tests green.
 - 2026-10-25 · F0.1 step 4f · `/api/ai/memory/clear` moved; "forget" now defined

@@ -117,6 +117,28 @@ jobs:
           done
           echo "::error title=Sky AI memory store unreachable::/health did not report aiState=ok. Recall would silently return nothing. Check script_name in sky-ai/wrangler.toml."
           exit 1
+      # F0.1 step 4h. Chat is listed in the allowlist, but sky-ai answers it only
+      # when it can reach EVERY provider admission-gk can — otherwise it steps
+      # aside and admission-gk answers, exactly as before. Both outcomes are
+      # correct, so this is a notice rather than a failure: a red deploy here
+      # would imply a fault where there is none. What it must never be is silent,
+      # because "chat is still on admission-gk" and "chat moved" look identical
+      # from outside, and the whole point of copying the credentials across is to
+      # find out which one is true.
+      - name: Report whether sky-ai can answer chat itself
+        run: |
+          set -eu
+          body="$(curl -sS --max-time 20 "https://admission-gk.admissionhub.workers.dev/api/ai/sky-health?cb=$RANDOM" || true)"
+          providers="$(printf '%s' "$body" | grep -oE '"providers":\[[^]]*\]' | head -1 || true)"
+          if [ -z "$providers" ]; then
+            echo "::warning title=Sky AI chat status unknown::/health returned no provider list, so chat is answered by admission-gk (unchanged for students)."
+            exit 0
+          fi
+          if printf '%s' "$providers" | grep -q 'gemini'; then
+            echo "::notice title=Sky AI chat live::$providers — sky-ai can answer the model call itself."
+          else
+            echo "::notice title=Sky AI chat on fallback::$providers — sky-ai lacks a provider admission-gk has, so it declined and admission-gk answered. Students are unaffected; copy the provider keys into sky-ai to complete step 4h."
+          fi
       # The aiState check above proves the binding WORKS. It does not prove that
       # THIS commit is the build being served: a Worker upload can succeed while
       # requests are still answered by the previous isolate, and an upload that

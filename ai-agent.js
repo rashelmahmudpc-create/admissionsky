@@ -796,6 +796,36 @@ export async function aiKeyOverlay(env) {
    operator can always override from the dashboard without touching KV. */
 const pickKey = (env, kv, name) => String((env && env[name]) || kv[name] || '').trim();
 
+/* Which providers this Worker can actually reach, by NAME only — never the keys,
+   never a length, never a prefix. F0.1 step 4h needs this because chat can now be
+   answered by two different Workers: admission-gk forwards the list it can reach,
+   and sky-ai REFUSES to answer if it is missing any of them. Without that check a
+   room with fewer keys would answer every request with a weaker free model and
+   nobody would notice anything except slower, worse replies.
+
+   One definition, used by both sides, so the two lists are comparable by
+   construction rather than by careful maintenance. */
+export async function providerReadiness(env) {
+  const kv = await aiKeyOverlay(env);
+  const has = (name) => !!pickKey(env, kv, name);
+  const out = {
+    gemini: has('GEMINI_KEYS'),
+    groq: has('GROQ_API_KEY'),
+    cloudflare: has('CLOUDFLARE_ACCOUNT_ID') && has('CLOUDFLARE_AI_API_KEY')
+  };
+  for (const p of COMPAT_PROVIDERS) {
+    // Name it after the key so a comma-separated list of ready providers stays short.
+    out[p.key.toLowerCase().replace(/_api_keys?$|_key$|_token$/, '')] = has(p.key);
+  }
+  return out;
+}
+
+/* Only the names that are ready, in a stable order, for the header that crosses
+   the service binding. */
+export function readyProviderNames(readiness) {
+  return Object.keys(readiness || {}).filter((k) => readiness[k]).sort();
+}
+
 export function routerChain(env, tier, badSet = new Set(), kv = {}) {
   const geminiModels = String(env && env.AGENT_GEMINI_MODELS || '')
     .split(',').map(s => s.trim()).filter(Boolean);
@@ -1069,7 +1099,7 @@ export async function agentChat(request, env, uid, opts = {}) {
   let quota = null;
   if (aiState) {
     try {
-      const q = await aiState.consumeQuota(sendCtx.uid, cap);
+      const q = await aiState.consumeQuota(sendCtx.uid, cap, opts && opts.reqId);
       quota = { exhausted: !q.allowed, remaining: q.remaining, start: Number(q.start) || 0 };
     } catch (_) { quota = null; }
   }
@@ -1777,9 +1807,12 @@ export async function clearAiMemory(env, uid) {
 
 export async function agentStatus(request, env, uid) {
   const kv = await aiKeyOverlay(env);
-  const hasGemini = !!pickKey(env, kv, 'GEMINI_KEYS');
-  const hasGroq = !!pickKey(env, kv, 'GROQ_API_KEY');
-  const hasCloudflare = !!pickKey(env, kv, 'CLOUDFLARE_ACCOUNT_ID') && !!pickKey(env, kv, 'CLOUDFLARE_AI_API_KEY');
+  /* Same three answers the chat route's parity header is built from, read through
+     providerReadiness() so the dashboard and the routing check cannot disagree. */
+  const ready = await providerReadiness(env);
+  const hasGemini = ready.gemini;
+  const hasGroq = ready.groq;
+  const hasCloudflare = ready.cloudflare;
   const ctxOn = contextEngineEnabled(env);
   return jsonResp({
     ok: true, agent: AGENT_VERSION, pv: SYSTEM_PROMPT_V,
