@@ -196,5 +196,47 @@ test('the redaction list exists in exactly one place', async () => {
 });
 
 test('version says which routes this build serves', () => {
-  assert.equal(SKY_AI_VERSION, 'sky-ai-f0.1-4i-status');
+  // Moves with every step; what matters is that a step is named, not which letter.
+  assert.match(SKY_AI_VERSION, /^sky-ai-f0\.1-4[a-z]/);
+});
+
+/* ── F0.1 step 4j: the two rooms must reach the same providers ───────────── */
+
+test('health proves parity, not just that a key exists', async () => {
+  /* Before this, "chat is live" rested on sky-ai listing *a* provider. That is a
+     different claim from "sky-ai reaches every provider admission-gk reaches", and
+     only the second one means students are really answered here. */
+  const env = envWithKeys({ GEMINI_KEYS: 'sk-test' });
+  const same = await (await handle(new Request('https://sky-ai.example/health', { headers: headers() }), env)).json();
+  assert.deepEqual(same.parity, { ok: true, needed: ['gemini'] });
+  assert.deepEqual(same.providers, ['gemini']);
+
+  const limited = envWithKeys({});
+  const broke = await (await handle(new Request('https://sky-ai.example/health', { headers: headers({ 'x-sky-need-providers': 'gemini,groq' }) }), limited)).json();
+  assert.equal(broke.parity.ok, false, 'a missing provider is reported as a mismatch');
+  assert.deepEqual(broke.parity.needed, ['gemini', 'groq']);
+
+  // A direct internet caller sends no list, so there is nothing to compare.
+  const direct = await (await handle(new Request('https://sky-ai.example/health', { headers: { 'x-sky-ai-caller': 'direct' } }), env)).json();
+  assert.equal(direct.parity, null);
+});
+
+test('the parity report uses the same function as the routing gate', () => {
+  // If these diverged, /health could say "ok" while chat refused — exactly the
+  // confident-wrong-answer problem this whole step is about.
+  const worker = readFileSync(new URL('./worker.mjs', import.meta.url), 'utf8');
+  const fn = worker.slice(worker.indexOf('async function providerParity'), worker.indexOf('export async function handle'));
+  assert.match(fn, /missingProviders\(request, env\)/);
+  const chat = readFileSync(new URL('./chat.mjs', import.meta.url), 'utf8');
+  assert.match(chat, /missingProviders\(request, env\)/);
+});
+
+test('admission-gk tells sky-ai what it can reach, so the comparison can happen', () => {
+  const src = readFileSync(new URL('../gk-agent-worker.js', import.meta.url), 'utf8');
+  const block = src.slice(src.indexOf("url.pathname === '/api/ai/sky-health'"));
+  const health = block.slice(0, block.indexOf('return env.SKY_AI.fetch'));
+  assert.match(health, /readyProviderNames\(await providerReadiness\(env\)\)/);
+  assert.match(health, /'x-sky-need-providers'\] = needed\.join\(','\)/);
+  // The probe must never break the endpoint it is probing.
+  assert.match(health, /catch \(_\) \{ \/\* a health probe must never fail/);
 });

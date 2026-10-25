@@ -20,9 +20,10 @@ import { handleMemoryClear } from './memory-clear.mjs';
 import { handleActionsPost } from './actions.mjs';
 import { handleChat, chatReadiness } from './chat.mjs';
 import { handleStatus } from './status.mjs';
+import { neededProviders, missingProviders } from './parity.mjs';
 import { aiStateStore } from '../ai-state-do.mjs';
 
-export const SKY_AI_VERSION = 'sky-ai-f0.1-4i-status';
+export const SKY_AI_VERSION = 'sky-ai-f0.1-4j-parity';
 
 /* F0.1 step 4d: what /health reports about this Worker's dependencies.
  *
@@ -60,6 +61,19 @@ function json(body, status = 200) {
   });
 }
 
+/* Whether this room can answer the same requests admission-gk can. Built from the
+ * SAME function the routing gate uses (missingProviders), so the report can never
+ * disagree with what chat would actually do. */
+async function providerParity(request, env) {
+  const needed = neededProviders(request);
+  if (!needed.length) return null;
+  try {
+    return { ok: (await missingProviders(request, env)).length === 0, needed };
+  } catch (_) {
+    return { ok: false, needed, error: 'probe-failed' };
+  }
+}
+
 export async function handle(request, env = {}) {
   const url = new URL(request.url);
   const path = url.pathname;
@@ -76,7 +90,12 @@ export async function handle(request, env = {}) {
       /* F0.1 step 4h: which AI providers THIS room can reach, by name only. Chat
        * refuses to answer when it is missing one that admission-gk has, so this is
        * the number to read when chat has not moved yet. */
-      providers: await chatReadiness(env)
+      providers: await chatReadiness(env),
+      /* F0.1 step 4j: the same list compared with admission-gk's. `null` means
+       * nothing was sent to compare against. `ok: true` is the only answer that
+       * proves chat really is answered here — the provider list alone cannot tell
+       * "has a key" from "has every key the other room has". */
+      parity: await providerParity(request, env)
     });
   }
 

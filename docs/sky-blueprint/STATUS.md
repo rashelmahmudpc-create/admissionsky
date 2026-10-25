@@ -94,6 +94,21 @@ Source of truth: Notion "Sky AI v1.0" → main page section **"🚦 এজেন
   - The deploy now asks the public endpoint the question a stranger would — does a
     caller without the owner token get `providers`, `chain`, `limits`, `tools`? —
     and goes red if it does.
+- **F0.1 step 4j ✅ (2026-10-25): the credential question, answered by measurement.**
+  The keys are already in ONE place — KV `secret:AI_KEYS` (a JSON blob) plus
+  `secret:<NAME>` fallbacks — and *both* Workers bind that same KV namespace, so
+  moving them is not a copy job. The real risk was narrower: a provider secret that
+  exists only as an env var on admission-gk is invisible here, and chat then falls
+  back silently.
+  - `/health` now reports `parity: { ok, needed }`, computed by the SAME function
+    the routing gate uses (`missingProviders`), so the report cannot disagree with
+    what chat would really do.
+  - `gk-agent-worker.js` sends `x-sky-need-providers` on the sky-health probe
+    (names only, never a key), so the comparison can happen at all.
+  - The deploy reads `parity.ok`: green notice = every provider admission-gk can
+    reach is reachable here; warning = a mismatch, with the fix named (put the key
+    in KV `secret:AI_KEYS` so both rooms read it). Reported, not failed — the
+    fallback keeps students working and the fix is a credential, not code.
 - **Superseded — `/api/ai/status` blocking note.** Status is a
   report about which AI engine and keys are available, and those keys are
   secrets on `admission-gk`. sky-ai has no `GEMINI_KEYS`/`GROQ_API_KEY`, so it
