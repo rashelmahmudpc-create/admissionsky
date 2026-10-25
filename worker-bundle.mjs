@@ -33360,10 +33360,13 @@ var gk_agent_worker_default = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === "/api/ai/sky-health" && request.method === "GET" && env.SKY_AI) {
-      return env.SKY_AI.fetch(new Request(request.url, {
-        method: "GET",
-        headers: { "x-sky-ai-caller": "admission-gk" }
-      }));
+      const headers = { "x-sky-ai-caller": "admission-gk" };
+      try {
+        const needed = readyProviderNames(await providerReadiness(env));
+        if (needed.length) headers["x-sky-need-providers"] = needed.join(",");
+      } catch (_) {
+      }
+      return env.SKY_AI.fetch(new Request(request.url, { method: "GET", headers }));
     }
     {
       const viaSky = await tryRouteToSkyAi(request, env);

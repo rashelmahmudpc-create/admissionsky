@@ -1,6 +1,7 @@
 // v133b: public-product module
 import pubHandler, { publishGlobal } from './public-worker.js';
 import { tryRouteToSkyAi } from './sky-ai-route.mjs';
+import { providerReadiness, readyProviderNames } from './ai-agent.js';
 import { runDailyReport } from './sky-daily-report.mjs';
 import { handleInternalEmailRequest } from './email-gateway/worker/handler.mjs';
 import { createNativeAuthHandler } from './auth-native/worker/public-auth-handler.mjs';
@@ -588,10 +589,17 @@ export default {
      * forwarded; every existing /api/ai/* route is still served here. Without
      * the binding (e.g. staging) the request falls through unchanged. */
     if (url.pathname === '/api/ai/sky-health' && request.method === 'GET' && env.SKY_AI) {
-      return env.SKY_AI.fetch(new Request(request.url, {
-        method: 'GET',
-        headers: { 'x-sky-ai-caller': 'admission-gk' }
-      }));
+      /* F0.1 step 4j: tell sky-ai which providers THIS Worker can reach, so its
+       * health report can say whether the two rooms match. Without it, "chat is
+       * live" could only be inferred from sky-ai listing *a* provider — which is
+       * not the same claim. Names only; the keys never leave this Worker.
+       * Best-effort: no list simply means "nothing to compare". */
+      const headers = { 'x-sky-ai-caller': 'admission-gk' };
+      try {
+        const needed = readyProviderNames(await providerReadiness(env));
+        if (needed.length) headers['x-sky-need-providers'] = needed.join(',');
+      } catch (_) { /* a health probe must never fail because of the probe */ }
+      return env.SKY_AI.fetch(new Request(request.url, { method: 'GET', headers }));
     }
     /* F0.1 step 4a / DV-01: generic, allowlist-gated proxy to sky-ai. The
      * allowlist in sky-ai-route.mjs is EMPTY, so nothing changes for students.

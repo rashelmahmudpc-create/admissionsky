@@ -134,10 +134,23 @@ jobs:
             echo "::warning title=Sky AI chat status unknown::/health returned no provider list, so chat is answered by admission-gk (unchanged for students)."
             exit 0
           fi
+          # F0.1 step 4j: the provider list alone cannot tell "sky-ai has a key"
+          # apart from "sky-ai has every key admission-gk has". parity.ok is
+          # computed by the same function the routing gate uses, so it is the only
+          # answer that proves chat is really served here. A mismatch is reported
+          # rather than failed: the fallback keeps students working, and the fix is
+          # a credential, not a code change.
+          parity="$(printf '%s' "$body" | grep -oE '"parity":\{[^}]*\}' | head -1 || true)"
+          case "$parity" in
+            *'"ok":true'*)
+              echo "::notice title=Sky AI parity ok::$providers — every provider admission-gk has is reachable here, so chat is answered by sky-ai."
+              ;;
+            *)
+              echo "::warning title=Sky AI parity mismatch::${parity:-no parity field} — admission-gk can reach a provider sky-ai cannot, so chat falls back (students unaffected). Put that key in KV secret:AI_KEYS so both rooms read the same one."
+              ;;
+          esac
           if printf '%s' "$providers" | grep -q 'gemini'; then
-            echo "::notice title=Sky AI chat live::$providers — sky-ai can answer the model call itself."
-          else
-            echo "::notice title=Sky AI chat on fallback::$providers — sky-ai lacks a provider admission-gk has, so it declined and admission-gk answered. Students are unaffected; copy the provider keys into sky-ai to complete step 4h."
+            echo "::notice title=Sky AI providers present::${providers}"
           fi
       # F0.1 step 4i made this worth checking on every deploy: the status body is
       # now PRODUCED in one Worker and REDACTED in another. A mistake in that hand
