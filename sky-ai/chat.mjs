@@ -31,53 +31,25 @@
  */
 
 import { agentChat, providerReadiness, readyProviderNames } from '../ai-agent.js';
-import { INTERNAL_KEY_NAME, sameKey } from './prefs.mjs';
+import { trustedUid, missingProviders, applyEnvPassthrough } from './parity.mjs';
 
 const PATHS = new Set(['/api/ai/chat', '/api/ai']);
 
-/* The env keys that change what a chat DOES (as opposed to which secret it reads).
-   Carried across the hop so the two Workers cannot answer differently for the
-   same request — a different daily cap or a stale model id would be a silent
-   behaviour change. Absent headers keep the defaults, which is what admission-gk
-   would have used too. */
-const ENV_PASSTHROUGH = ['AGENT_DAILY_CAP', 'AGENT_GEMINI_MODELS', 'AGENT_GROQ_MODELS', 'AGENT_CLOUDFLARE_MODELS', 'AGENT_FIRST_CHUNK_MS'];
-
-async function trusted(request, env) {
-  const kv = env && env.PUB_KV;
-  if (!kv || typeof kv.get !== 'function') return null;
-  if (request.headers.get('x-sky-ai-caller') !== 'admission-gk') return null;
-  const uid = request.headers.get('x-sky-uid') || '';
-  const given = request.headers.get('x-sky-internal') || '';
-  if (!uid || !given) return null;
-  let key = null;
-  try { key = await kv.get(INTERNAL_KEY_NAME); } catch (_) { return null; }
-  return sameKey(key, given) ? uid : null;
-}
+/* The trust check and the provider-parity rule now live in parity.mjs, because
+   status needs exactly the same two — see that file for what each one guarantees. */
 
 export async function handleChat(request, env = {}) {
   if (request.method !== 'POST') return null;
   if (!PATHS.has(new URL(request.url).pathname)) return null;
-  const uid = await trusted(request, env);
+  const uid = await trustedUid(request, env);
   if (!uid) return null;
 
-  /* Parity is the gate. An empty expected list means admission-gk has no provider
-     either, so forwarding it here would only produce the same failure in a room
-     with fewer keys to try. */
-  const needed = String(request.headers.get('x-sky-need-providers') || '')
-    .split(',').map((s) => s.trim()).filter(Boolean);
-  if (!needed.length) return null;
-  let mine = {};
-  try { mine = await providerReadiness(env); } catch (_) { return null; }
-  const missing = needed.filter((name) => !mine[name]);
-  if (missing.length) return null;
+  /* Parity is the gate: a room with fewer credentials would answer with a weaker
+     model and report nothing. An empty expected list means admission-gk has no
+     provider either, so there is nothing to gain by answering here. */
+  if ((await missingProviders(request, env)).length) return null;
 
-  /* Rebuild the env only for the keys that were actually sent, so this Worker's
-     own defaults stay in charge of everything else. */
-  const chatEnv = { ...env };
-  for (const name of ENV_PASSTHROUGH) {
-    const sent = request.headers.get('x-sky-env-' + name.toLowerCase().replace(/_/g, '-'));
-    if (sent != null && sent !== '') chatEnv[name] = sent;
-  }
+  const chatEnv = applyEnvPassthrough(env, request);
 
   // agentChat reads the body itself, so it gets a Request, not parsed JSON.
   const chatRequest = new Request(request.url, {

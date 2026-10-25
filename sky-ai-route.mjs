@@ -58,7 +58,11 @@ export const SKY_AI_IDENTITY_ROUTES = Object.freeze([
   /* F0.1 step 4e: reading the student's saved note. The write methods for the
    * same path are in SKY_AI_BODY_IDENTITY_ROUTES below — the list is keyed on
    * "METHOD /path", so a GET here can never let a POST through. */
-  'GET /api/ai/instructions'
+  'GET /api/ai/instructions',
+  /* F0.1 step 4i: the engine/model report, last. sky-ai answers only when it can
+   * reach every provider admission-gk can (see sky-ai/status.mjs); the owner-only
+   * redaction stays on admission-gk, where ADMIN_TOKEN lives. */
+  'GET /api/ai/status'
 ]);
 export const SKY_INTERNAL_KEY_NAME = 'secret:sky-internal';
 
