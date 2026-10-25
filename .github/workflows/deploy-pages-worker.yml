@@ -117,6 +117,34 @@ jobs:
           done
           echo "::error title=Sky AI memory store unreachable::/health did not report aiState=ok. Recall would silently return nothing. Check script_name in sky-ai/wrangler.toml."
           exit 1
+      # The aiState check above proves the binding WORKS. It does not prove that
+      # THIS commit is the build being served: a Worker upload can succeed while
+      # requests are still answered by the previous isolate, and an upload that
+      # silently did nothing looks exactly the same from outside. Comparing the
+      # version the repo declares with the version the Worker reports is the only
+      # cheap way to tell "deployed" from "deployed last time" — and it turns a
+      # stale deploy into a red run instead of a quiet lie.
+      - name: Verify the deployed sky-ai build is this commit
+        run: |
+          set -eu
+          expected="$(grep -oE "SKY_AI_VERSION = '[^']+'" sky-ai/worker.mjs | head -1 | sed "s/.*'\([^']*\)'/\1/" || true)"
+          if [ -z "$expected" ]; then
+            echo "::error title=sky-ai version missing::sky-ai/worker.mjs declares no SKY_AI_VERSION."
+            exit 1
+          fi
+          got=''
+          for attempt in 1 2 3 4 5; do
+            body="$(curl -sS --max-time 20 "https://admission-gk.admissionhub.workers.dev/api/ai/sky-health?cb=$RANDOM" || true)"
+            got="$(printf '%s' "$body" | grep -oE '"version":"[^"]*"' | head -1 | cut -d'"' -f4 || true)"
+            printf 'attempt %s: expected %s, live %s\n' "$attempt" "$expected" "${got:-none}"
+            if [ "$got" = "$expected" ]; then
+              echo "::notice title=Sky AI version match::the live Worker reports $expected."
+              exit 0
+            fi
+            sleep 6
+          done
+          echo "::error title=Sky AI stale build::live reports '${got:-none}' but this commit expects '$expected'. The deploy did not take effect."
+          exit 1
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
         with:

@@ -83,6 +83,17 @@ Source of truth: Notion "Sky AI v1.0" → main page section **"🚦 এজেন
 - 2026-10-25 · F0.1 step 4g · `actions/propose|confirm` moved; handlers extracted
   to `ai-actions.mjs` so both sides run one copy; kill switch gated at the call
   site · 73 sky-ai tests, 88 AI/action tests green · next: `/api/ai/chat`.
+- 2026-10-25 · deploy · Two blockers found while publishing 4g, both outside the code.
+  1. `Study Lock Timer` failure mode: when the lock engages it also sets the repo's
+     allowed-actions list to empty, so any workflow using a third-party action
+     (`cloudflare/wrangler-action`) fails as `startup_failure` — the deploy dies
+     before a job exists, with no annotation to say why. Guards using only
+     `actions/*` keep passing, which makes it look like nothing is wrong. Restoring
+     "Allow all actions" is what unwedges it.
+  2. Added **Verify the deployed sky-ai build is this commit**: the existing
+     `aiState=ok` check proves the binding works, not that this commit is live. The
+     run now compares the repo's `SKY_AI_VERSION` with the version the Worker
+     reports, so a stale or no-op upload goes red instead of looking successful.
 - 2026-10-19 · — · Blueprint v1.0 created (Notion).
 - 2026-10-20 (approx.) · F0.1 steps 1–3 + F0.2 flags.mjs · merged to main, sky-ai deployed · (Notion not updated at the time).
 - 2026-10-21 23:20 · handoff system · Notion board + pages 07/09 updated, this file added · next: F0.1 step 4a.
