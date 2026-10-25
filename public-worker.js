@@ -1,7 +1,7 @@
 // Admission Hub, Public Product Worker (account system retired, v221)
 // Active routes: public content · Firebase-account/ephemeral-guest AI · content admin.
 // The former login/profile/onboarding/session/state APIs are intentionally absent.
-import { agentChat, agentStatus, agentRecall, agentInstructions, sanitizeAiPrefs, AI_PREFS_DEFAULT, clearAiEverything } from './ai-agent.js';
+import { agentChat, agentStatus, agentRecall, agentInstructions, sanitizeAiPrefs, AI_PREFS_DEFAULT, clearAiEverything, providerReadiness, readyProviderNames } from './ai-agent.js';
 import { actionsEnabled } from './action-engine.js';
 import { proposeAction, confirmAction, readAudit } from './ai-actions.mjs';
 import { checkAbuse, isGuarded } from './p14-abuse-guard.mjs';
@@ -167,6 +167,47 @@ async function aiRequestIdentity(request, env, countUsage = true) {
   const uid = await anonymousAiIdentity(request, env, countUsage);
   return { uid, persistMemory: false, authenticated: false };
 }
+
+/* F0.1 step 4h: the model call, with sky-ai given the first chance and
+   admission-gk always the last word.
+
+   Three things are decided HERE rather than inside the other room, because this
+   Worker is where they are known for certain:
+
+   1. ONE REQUEST ID per chat (`reqId`). It travels in the header AND is handed to
+      the local agentChat, so the quota counter sees the same id on both sides and
+      a repeated attempt replays the first decision instead of spending a second
+      message from the student's daily allowance.
+   2. WHICH PROVIDERS must be reachable. sky-ai answers only if it can reach every
+      one of these (see sky-ai/chat.mjs); otherwise it declines and the local path
+      below answers exactly as it does today. A room with fewer keys never gets to
+      answer with a weaker model.
+   3. THE SETTINGS that change the answer (daily cap, model overrides), so both
+      sides behave identically rather than drifting apart silently.
+
+   No providers here means nothing to gain: skip the hop and save the round trip. */
+const chatWithFallback = async (request, env, identity, { stream }) => {
+  const reqId = crypto.randomUUID();
+  const local = { stream, persistMemory: identity.persistMemory, reqId };
+  let needed = [];
+  try { needed = readyProviderNames(await providerReadiness(env)); } catch (_) { needed = []; }
+  if (needed.length) {
+    const headers = {
+      'x-sky-need-providers': needed.join(','),
+      'x-sky-req-id': reqId,
+      'x-sky-persist-memory': identity.persistMemory === false ? '0' : '1'
+    };
+    for (const name of ['AGENT_DAILY_CAP', 'AGENT_GEMINI_MODELS', 'AGENT_GROQ_MODELS', 'AGENT_CLOUDFLARE_MODELS', 'AGENT_FIRST_CHUNK_MS']) {
+      const value = env && env[name];
+      if (value != null && String(value) !== '') headers['x-sky-env-' + name.toLowerCase().replace(/_/g, '-')] = String(value);
+    }
+    try {
+      const viaSky = await forwardWithIdentityBody(request, env, identity.uid, undefined, headers);
+      if (viaSky) return viaSky;
+    } catch (_) { /* the local path below is the whole point of the fallback */ }
+  }
+  return await agentChat(request, env, identity.uid, local);
+};
 
 export const publishGlobal = async (env, full) => {
   if (!env || !env.PUB_KV) return { error: 'no-pub-kv' };
@@ -639,12 +680,12 @@ export default {
         /* M7: AI chat is signed-in only. Refuse the guest here, before the
            public rate-limit counter or any KV write, so a guest leaves no trace. */
         if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI চ্যাট ব্যবহার করতে লগইন করো।' }, 401);
-        return await agentChat(request, env, identity.uid, { persistMemory: identity.persistMemory });
+        return await chatWithFallback(request, env, identity, { stream: true });
       }
       if (path === '/api/ai' && request.method === 'POST') {
         const identity = await aiRequestIdentity(request, env, false);
         if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI চ্যাট ব্যবহার করতে লগইন করো।' }, 401);
-        return await agentChat(request, env, identity.uid, { stream: false, persistMemory: identity.persistMemory });
+        return await chatWithFallback(request, env, identity, { stream: false });
       }
       return json({ error: 'not-found' }, 404);
     } catch (error) {

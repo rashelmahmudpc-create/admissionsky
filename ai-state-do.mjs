@@ -24,6 +24,11 @@ export const AI_STATE_VERSION = 'ai-state-v1';
 export const RL_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 const K_QUOTA = 'quota';
+/* One entry per quota-consuming request id, so a request that is retried (or
+   answered by admission-gk after sky-ai already counted it) is not counted
+   twice. Kept only for an allowed decision: a refusal wrote nothing, so replaying
+   it costs nothing either. */
+const K_QUOTA_ID = (id) => 'quotaid:' + id;
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -56,9 +61,18 @@ export class AiStateObject {
 
   /* Rolling 24-hour window, first message starts it, the same rule the KV
      version used, so a Dhaka morning does not hand out a second allowance. */
-  async consume({ uid, cap, now }) {
+  async consume({ uid, cap, now, reqId }) {
     const limit = Math.max(1, Math.min(500, num(cap, 10)));
     const t = num(now, Date.now());
+    const rid = String(reqId || '').trim();
+    /* Idempotent by request id. F0.1 step 4h: once chat can be answered by either
+       Worker, a retry must not spend a second message from the student's daily
+       allowance. The stored decision is returned verbatim, with `replayed` so a
+       caller can tell it apart while debugging. */
+    if (rid) {
+      const prior = await this.#entry(K_QUOTA_ID(rid));
+      if (prior && prior.v) return { ...prior.v, replayed: true };
+    }
     const cur = await this.#entry(K_QUOTA);
     let n = cur ? num(cur.v && cur.v.n) : 0;
     let start = cur && cur.v ? num(cur.v.start, t) : t;
@@ -67,7 +81,11 @@ export class AiStateObject {
       return { allowed: false, used: n, cap: limit, remaining: 0, start, uid: String(uid || '') };
     }
     await this.ctx.storage.put(K_QUOTA, { v: { n: n + 1, start }, exp: 0 });
-    return { allowed: true, used: n + 1, cap: limit, remaining: limit - n - 1, start, uid: String(uid || '') };
+    const decision = { allowed: true, used: n + 1, cap: limit, remaining: limit - n - 1, start, uid: String(uid || '') };
+    if (rid) {
+      try { await this.ctx.storage.put(K_QUOTA_ID(rid), { v: decision, exp: t + RL_WINDOW_MS }); } catch (_) { /* counting still happened */ }
+    }
+    return decision;
   }
 
   /* AI audit 2026-10-16: give back one credit for a message the AI never
@@ -182,7 +200,7 @@ export function aiStateStore(env) {
 
   return {
     version: AI_STATE_VERSION,
-    consumeQuota: (uid, cap) => call(uid, '/quota/consume', { cap }),
+    consumeQuota: (uid, cap, reqId) => call(uid, '/quota/consume', { cap, reqId }),
     get: async (uid, key) => (await call(uid, '/state/get', { key })).value,
     put: (uid, key, value, ttlMs) => call(uid, '/state/put', { key, value, ttlMs }),
     del: (uid, keys) => call(uid, '/state/delete', { keys }),

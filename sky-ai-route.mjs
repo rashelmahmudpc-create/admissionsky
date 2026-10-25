@@ -80,10 +80,15 @@ export const SKY_AI_BODY_IDENTITY_ROUTES = Object.freeze([
    * actions are enabled on ITS env — sky-ai has no USE_WRITE_ACTIONS, so a
    * forwarded call would otherwise resurrect a switched-off layer. */
   'POST /api/ai/actions/propose',
-  'POST /api/ai/actions/confirm'
+  'POST /api/ai/actions/confirm',
+  /* F0.1 step 4h: the model call itself, last on purpose. sky-ai answers only
+   * when it can reach every provider admission-gk can (see chat.mjs), so listing
+   * it here is safe before the credentials are copied across. */
+  'POST /api/ai/chat',
+  'POST /api/ai'
 ]);
 
-export async function forwardWithIdentityBody(request, env, uid, routes = SKY_AI_BODY_IDENTITY_ROUTES) {
+export async function forwardWithIdentityBody(request, env, uid, routes = SKY_AI_BODY_IDENTITY_ROUTES, extraHeaders = null) {
   // The allowlist carries the method, so this only needs to refuse the methods
   // that have no business carrying anything.
   if (!uid || ['GET', 'HEAD', 'OPTIONS'].includes(request.method)) return null;
@@ -105,7 +110,12 @@ export async function forwardWithIdentityBody(request, env, uid, routes = SKY_AI
         ...(body.byteLength ? { 'content-type': 'application/json' } : {}),
         'x-sky-ai-caller': 'admission-gk',
         'x-sky-uid': String(uid),
-        'x-sky-internal': key
+        'x-sky-internal': key,
+        /* F0.1 step 4h: the chat route carries what the far side needs to answer
+           IDENTICALLY — which providers must be reachable, the per-day cap, the
+           model overrides and the request id the quota counter is keyed on. Sent
+           only by the routes that pass them; everything else stays as before. */
+        ...(extraHeaders && typeof extraHeaders === 'object' ? extraHeaders : {})
       },
       body: body.byteLength ? body : undefined
     }));

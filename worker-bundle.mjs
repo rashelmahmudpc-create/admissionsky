@@ -2411,6 +2411,7 @@ function describeObservability() {
 var AI_STATE_VERSION = "ai-state-v1";
 var RL_WINDOW_MS = 24 * 60 * 60 * 1e3;
 var K_QUOTA = "quota";
+var K_QUOTA_ID = (id) => "quotaid:" + id;
 var json = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
   headers: { "Content-Type": "application/json" }
@@ -2436,9 +2437,14 @@ var AiStateObject = class {
   }
   /* Rolling 24-hour window, first message starts it, the same rule the KV
      version used, so a Dhaka morning does not hand out a second allowance. */
-  async consume({ uid, cap, now }) {
+  async consume({ uid, cap, now, reqId }) {
     const limit = Math.max(1, Math.min(500, num2(cap, 10)));
     const t = num2(now, Date.now());
+    const rid = String(reqId || "").trim();
+    if (rid) {
+      const prior = await this.#entry(K_QUOTA_ID(rid));
+      if (prior && prior.v) return { ...prior.v, replayed: true };
+    }
     const cur = await this.#entry(K_QUOTA);
     let n = cur ? num2(cur.v && cur.v.n) : 0;
     let start = cur && cur.v ? num2(cur.v.start, t) : t;
@@ -2450,7 +2456,14 @@ var AiStateObject = class {
       return { allowed: false, used: n, cap: limit, remaining: 0, start, uid: String(uid || "") };
     }
     await this.ctx.storage.put(K_QUOTA, { v: { n: n + 1, start }, exp: 0 });
-    return { allowed: true, used: n + 1, cap: limit, remaining: limit - n - 1, start, uid: String(uid || "") };
+    const decision = { allowed: true, used: n + 1, cap: limit, remaining: limit - n - 1, start, uid: String(uid || "") };
+    if (rid) {
+      try {
+        await this.ctx.storage.put(K_QUOTA_ID(rid), { v: decision, exp: t + RL_WINDOW_MS });
+      } catch (_) {
+      }
+    }
+    return decision;
   }
   /* AI audit 2026-10-16: give back one credit for a message the AI never
      answered. Never goes below zero and keeps the window start. */
@@ -2558,7 +2571,7 @@ function aiStateStore(env) {
   };
   return {
     version: AI_STATE_VERSION,
-    consumeQuota: (uid, cap) => call2(uid, "/quota/consume", { cap }),
+    consumeQuota: (uid, cap, reqId) => call2(uid, "/quota/consume", { cap, reqId }),
     get: async (uid, key) => (await call2(uid, "/state/get", { key })).value,
     put: (uid, key, value, ttlMs) => call2(uid, "/state/put", { key, value, ttlMs }),
     del: (uid, keys2) => call2(uid, "/state/delete", { keys: keys2 }),
@@ -3868,6 +3881,22 @@ async function aiKeyOverlay(env) {
   return out;
 }
 var pickKey = (env, kv2, name) => String(env && env[name] || kv2[name] || "").trim();
+async function providerReadiness(env) {
+  const kv2 = await aiKeyOverlay(env);
+  const has2 = (name) => !!pickKey(env, kv2, name);
+  const out = {
+    gemini: has2("GEMINI_KEYS"),
+    groq: has2("GROQ_API_KEY"),
+    cloudflare: has2("CLOUDFLARE_ACCOUNT_ID") && has2("CLOUDFLARE_AI_API_KEY")
+  };
+  for (const p of COMPAT_PROVIDERS) {
+    out[p.key.toLowerCase().replace(/_api_keys?$|_key$|_token$/, "")] = has2(p.key);
+  }
+  return out;
+}
+function readyProviderNames(readiness) {
+  return Object.keys(readiness || {}).filter((k) => readiness[k]).sort();
+}
 function routerChain(env, tier, badSet = /* @__PURE__ */ new Set(), kv2 = {}) {
   const geminiModels = String(env && env.AGENT_GEMINI_MODELS || "").split(",").map((s) => s.trim()).filter(Boolean);
   const chain = [];
@@ -4116,7 +4145,7 @@ async function agentChat(request, env, uid, opts = {}) {
   let quota = null;
   if (aiState) {
     try {
-      const q = await aiState.consumeQuota(sendCtx.uid, cap);
+      const q = await aiState.consumeQuota(sendCtx.uid, cap, opts && opts.reqId);
       quota = { exhausted: !q.allowed, remaining: q.remaining, start: Number(q.start) || 0 };
     } catch (_) {
       quota = null;
@@ -4782,9 +4811,10 @@ async function clearAiMemory(env, uid) {
 }
 async function agentStatus(request, env, uid) {
   const kv2 = await aiKeyOverlay(env);
-  const hasGemini = !!pickKey(env, kv2, "GEMINI_KEYS");
-  const hasGroq = !!pickKey(env, kv2, "GROQ_API_KEY");
-  const hasCloudflare = !!pickKey(env, kv2, "CLOUDFLARE_ACCOUNT_ID") && !!pickKey(env, kv2, "CLOUDFLARE_AI_API_KEY");
+  const ready = await providerReadiness(env);
+  const hasGemini = ready.gemini;
+  const hasGroq = ready.groq;
+  const hasCloudflare = ready.cloudflare;
   const ctxOn = contextEngineEnabled(env);
   return jsonResp({
     ok: true,
@@ -5145,9 +5175,14 @@ var SKY_AI_BODY_IDENTITY_ROUTES = Object.freeze([
    * actions are enabled on ITS env — sky-ai has no USE_WRITE_ACTIONS, so a
    * forwarded call would otherwise resurrect a switched-off layer. */
   "POST /api/ai/actions/propose",
-  "POST /api/ai/actions/confirm"
+  "POST /api/ai/actions/confirm",
+  /* F0.1 step 4h: the model call itself, last on purpose. sky-ai answers only
+   * when it can reach every provider admission-gk can (see chat.mjs), so listing
+   * it here is safe before the credentials are copied across. */
+  "POST /api/ai/chat",
+  "POST /api/ai"
 ]);
-async function forwardWithIdentityBody(request, env, uid, routes = SKY_AI_BODY_IDENTITY_ROUTES) {
+async function forwardWithIdentityBody(request, env, uid, routes = SKY_AI_BODY_IDENTITY_ROUTES, extraHeaders = null) {
   if (!uid || ["GET", "HEAD", "OPTIONS"].includes(request.method)) return null;
   if (!shouldRouteToSkyAi(request, env, routes) || !env.PUB_KV) return null;
   try {
@@ -5162,7 +5197,12 @@ async function forwardWithIdentityBody(request, env, uid, routes = SKY_AI_BODY_I
         ...body.byteLength ? { "content-type": "application/json" } : {},
         "x-sky-ai-caller": "admission-gk",
         "x-sky-uid": String(uid),
-        "x-sky-internal": key
+        "x-sky-internal": key,
+        /* F0.1 step 4h: the chat route carries what the far side needs to answer
+           IDENTICALLY — which providers must be reachable, the per-day cap, the
+           model overrides and the request id the quota counter is keyed on. Sent
+           only by the routes that pass them; everything else stays as before. */
+        ...extraHeaders && typeof extraHeaders === "object" ? extraHeaders : {}
       },
       body: body.byteLength ? body : void 0
     }));
@@ -5507,6 +5547,33 @@ async function aiRequestIdentity(request, env, countUsage = true) {
   const uid = await anonymousAiIdentity(request, env, countUsage);
   return { uid, persistMemory: false, authenticated: false };
 }
+var chatWithFallback = async (request, env, identity, { stream }) => {
+  const reqId = crypto.randomUUID();
+  const local = { stream, persistMemory: identity.persistMemory, reqId };
+  let needed = [];
+  try {
+    needed = readyProviderNames(await providerReadiness(env));
+  } catch (_) {
+    needed = [];
+  }
+  if (needed.length) {
+    const headers = {
+      "x-sky-need-providers": needed.join(","),
+      "x-sky-req-id": reqId,
+      "x-sky-persist-memory": identity.persistMemory === false ? "0" : "1"
+    };
+    for (const name of ["AGENT_DAILY_CAP", "AGENT_GEMINI_MODELS", "AGENT_GROQ_MODELS", "AGENT_CLOUDFLARE_MODELS", "AGENT_FIRST_CHUNK_MS"]) {
+      const value = env && env[name];
+      if (value != null && String(value) !== "") headers["x-sky-env-" + name.toLowerCase().replace(/_/g, "-")] = String(value);
+    }
+    try {
+      const viaSky = await forwardWithIdentityBody(request, env, identity.uid, void 0, headers);
+      if (viaSky) return viaSky;
+    } catch (_) {
+    }
+  }
+  return await agentChat(request, env, identity.uid, local);
+};
 var publishGlobal = async (env, full) => {
   if (!env || !env.PUB_KV) return { error: "no-pub-kv" };
   const source = full && typeof full === "object" ? full : {};
@@ -5867,12 +5934,12 @@ var public_worker_default = {
       if (path === "/api/ai/chat" && request.method === "POST") {
         const identity = await aiRequestIdentity(request, env, false);
         if (!identity.authenticated) return json2({ error: "sign_in_required", message: "AI চ্যাট ব্যবহার করতে লগইন করো।" }, 401);
-        return await agentChat(request, env, identity.uid, { persistMemory: identity.persistMemory });
+        return await chatWithFallback(request, env, identity, { stream: true });
       }
       if (path === "/api/ai" && request.method === "POST") {
         const identity = await aiRequestIdentity(request, env, false);
         if (!identity.authenticated) return json2({ error: "sign_in_required", message: "AI চ্যাট ব্যবহার করতে লগইন করো।" }, 401);
-        return await agentChat(request, env, identity.uid, { stream: false, persistMemory: identity.persistMemory });
+        return await chatWithFallback(request, env, identity, { stream: false });
       }
       return json2({ error: "not-found" }, 404);
     } catch (error) {
