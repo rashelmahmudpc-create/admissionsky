@@ -5764,6 +5764,12 @@ var public_worker_default = {
         delete data.chain;
         delete data.limits;
         delete data.observability;
+        delete data.state;
+        delete data.tools;
+        delete data.memory;
+        delete data.response;
+        delete data.actions;
+        delete data.context;
         return json2(data, res.status);
       }
       if (path === "/api/ai/prefs" && request.method === "GET") {
@@ -32758,6 +32764,50 @@ var cors = (request) => {
   return headers;
 };
 var json7 = (request, obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...cors(request) } });
+var tokenEquals2 = (a, b) => {
+  const x = String(a == null ? "" : a);
+  const y = String(b == null ? "" : b);
+  if (!x || x.length !== y.length) return false;
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x.charCodeAt(i) ^ y.charCodeAt(i);
+  return diff === 0;
+};
+var ownerProof = (request, env) => {
+  if (!env || !env.ADMIN_TOKEN) return false;
+  const bearer = String(request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
+  const header = String(request.headers.get("X-AH-Admin-Token") || "").trim();
+  return tokenEquals2(bearer, env.ADMIN_TOKEN) || tokenEquals2(header, env.ADMIN_TOKEN);
+};
+var readSessionCookie = (request) => {
+  const raw = String(request.headers.get("Cookie") || "");
+  for (const part of raw.split(";")) {
+    const i = part.indexOf("=");
+    if (i < 1 || part.slice(0, i).trim() !== "__Host-ah_session") continue;
+    try {
+      return decodeURIComponent(part.slice(i + 1).trim());
+    } catch (_) {
+      return "";
+    }
+  }
+  return "";
+};
+var verifiedSession = async (request, env) => {
+  const token = readSessionCookie(request);
+  if (!/^[A-Za-z0-9_-]{32,160}$/.test(token) || !env || !env.AUTH_AUTHORITY) return false;
+  try {
+    const id = env.AUTH_AUTHORITY.idFromName("admission-hub-global-auth-v1");
+    const stub = env.AUTH_AUTHORITY.get(id);
+    const res = await stub.fetch("https://auth.internal/internal/session/get", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionToken: token })
+    });
+    const payload = await res.json().catch(() => null);
+    return res.ok && payload?.ok === true && !!payload?.result?.user?.id;
+  } catch (_) {
+    return false;
+  }
+};
 var dhakaToday = () => new Date(Date.now() + 6 * 36e5).toISOString().slice(0, 10);
 var sleep2 = (ms) => new Promise((r) => setTimeout(r, ms));
 var keys = (env) => String(env.BROWSER_USE_API_KEYS || "").split(",").map((k) => k.trim()).filter(Boolean);
@@ -33171,9 +33221,7 @@ async function sendTelegramAlert(env, text) {
 }
 async function handleErrorReport(request, env) {
   const proxied = request.headers.get("x-ah-pages-proxy") === "1";
-  const sameOrigin = request.headers.get("Origin") === "https://admissionsky.pages.dev";
-  const sameOriginOld = request.headers.get("Origin") === "https://admissionhub.pages.dev";
-  if (!proxied && !sameOrigin && !sameOriginOld) return json7(request, { error: "forbidden" }, 403);
+  if (!proxied) return json7(request, { error: "forbidden" }, 403);
   let body = {};
   try {
     body = await request.json();
@@ -33314,8 +33362,13 @@ var gk_agent_worker_default = {
       return json7(request, { ok: true, keys: keys(env).length, askKey: !!env.ASK_API_KEY, kv: !!env.GK_KV, tg: !!env.TG_BOT_TOKEN, agent: "agent-f1", gemini: !!env.GEMINI_KEYS, groq: !!env.GROQ_API_KEY, lastDay: env.GK_KV ? await env.GK_KV.get("gkDay") : null });
     }
     const isApp = request.headers.get("X-AH-App") === APP_HEADER;
-    const beaconOk = !isApp && request.method === "POST" && url.pathname === "/api/bank" && (request.headers.get("Origin") === "https://admissionhub.pages.dev" || request.headers.get("Origin") === "https://admissionsky.pages.dev");
+    const writeRoute = url.pathname === "/api/cloud/publish" || url.pathname === "/api/bank" || url.pathname === "/api/ask";
+    const stateChanging = writeRoute && request.method === "POST";
+    const beaconOk = false;
     if (!isApp && !beaconOk) return json7(request, { error: "forbidden" }, 403);
+    if (stateChanging && !ownerProof(request, env) && !await verifiedSession(request, env)) {
+      return json7(request, { error: "forbidden" }, 403);
+    }
     if (request.method === "POST" && url.pathname === "/api/ask") return await createAsk(request, env, ctx);
     if (request.method === "POST" && url.pathname === "/api/bank") return await bankUpload(request, env);
     if (request.method === "GET" && url.pathname === "/api/bank") return await bankInfo(request, env);

@@ -474,6 +474,20 @@ export default {
         delete data.chain;
         delete data.limits;
         delete data.observability;
+        /* BUG-002 (2026-10-25 audit): the remaining blocks are an attacker's
+           map, not the student's. `state` names the state store and its schema
+           version, `tools` lists every declared tool with its permission and
+           owner-scope, `memory` gives the memory mode and scope, and `response`
+           names the exact filter classes plus which ones block — precisely the
+           list to craft an evasion against. A guest or signed-in student has no
+           use for any of it; the owner keeps the whole body above, and the
+           app's own shell (ok, agent, streaming, pv) is untouched. */
+        delete data.state;
+        delete data.tools;
+        delete data.memory;
+        delete data.response;
+        delete data.actions;
+        delete data.context;
         return json(data, res.status);
       }
       if (path === '/api/ai/prefs' && request.method === 'GET') {

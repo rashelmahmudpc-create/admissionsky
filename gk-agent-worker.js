@@ -105,6 +105,48 @@ const cors = request => {
   return headers;
 };
 const json = (request, obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...cors(request) } });
+
+/* BUG-001 (2026-10-25 audit). X-AH-App is a hardcoded literal that ships in
+   client code (cloud-content-sync.js, vocabulary-elevenlabs.js), so it is a
+   routing hint and never a credential: anyone who reads the bundle can forge
+   it. These helpers give the state-changing routes a real proof of identity. */
+const tokenEquals = (a, b) => {
+  const x = String(a == null ? '' : a); const y = String(b == null ? '' : b);
+  if (!x || x.length !== y.length) return false;
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x.charCodeAt(i) ^ y.charCodeAt(i);
+  return diff === 0;
+};
+const ownerProof = (request, env) => {
+  if (!env || !env.ADMIN_TOKEN) return false;
+  const bearer = String(request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  const header = String(request.headers.get('X-AH-Admin-Token') || '').trim();
+  return tokenEquals(bearer, env.ADMIN_TOKEN) || tokenEquals(header, env.ADMIN_TOKEN);
+};
+const readSessionCookie = request => {
+  const raw = String(request.headers.get('Cookie') || '');
+  for (const part of raw.split(';')) {
+    const i = part.indexOf('=');
+    if (i < 1 || part.slice(0, i).trim() !== '__Host-ah_session') continue;
+    try { return decodeURIComponent(part.slice(i + 1).trim()); } catch (_) { return ''; }
+  }
+  return '';
+};
+const verifiedSession = async (request, env) => {
+  const token = readSessionCookie(request);
+  if (!/^[A-Za-z0-9_-]{32,160}$/.test(token) || !env || !env.AUTH_AUTHORITY) return false;
+  try {
+    const id = env.AUTH_AUTHORITY.idFromName('admission-hub-global-auth-v1');
+    const stub = env.AUTH_AUTHORITY.get(id);
+    const res = await stub.fetch('https://auth.internal/internal/session/get', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionToken: token })
+    });
+    const payload = await res.json().catch(() => null);
+    return res.ok && payload?.ok === true && !!payload?.result?.user?.id;
+  } catch (_) { return false; }
+};
 const dhakaToday = () => new Date(Date.now() + 6 * 3600000).toISOString().slice(0, 10);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -492,10 +534,16 @@ async function sendTelegramAlert(env, text) {
 }
 
 async function handleErrorReport(request, env) {
+  /* BUG-003 (2026-10-25 audit). This endpoint sits before the app gate on
+     purpose — the reporter is an unauthenticated browser beacon — but its only
+     control was an Origin whitelist, and Origin is set by the caller, so any
+     script could inject arbitrary text into the owner's Telegram alert channel.
+     The Pages proxy sets x-ah-pages-proxy on the requests it forwards, and that
+     header cannot survive a cross-origin call (it would need a CORS preflight
+     the Pages deployment does not grant), so it is the one signal a foreign
+     origin cannot fake. Origin alone no longer suffices. */
   const proxied = request.headers.get('x-ah-pages-proxy') === '1';
-  const sameOrigin = request.headers.get('Origin') === 'https://admissionsky.pages.dev';
-  const sameOriginOld = request.headers.get('Origin') === 'https://admissionhub.pages.dev';
-  if (!proxied && !sameOrigin && !sameOriginOld) return json(request, { error: 'forbidden' }, 403);
+  if (!proxied) return json(request, { error: 'forbidden' }, 403);
 
   let body = {};
   try { body = await request.json(); } catch (_) {}
@@ -683,9 +731,20 @@ export default {
     }
 
     const isApp = request.headers.get('X-AH-App') === APP_HEADER;
-    // sendBeacon-ফলব্যাক: হেডার ছাড়া এলে শুধু অ্যাপের নিজের Origin হলে /api/bank POST গ্রহণযোগ্য
-    const beaconOk = !isApp && request.method === 'POST' && url.pathname === '/api/bank' && (request.headers.get('Origin') === 'https://admissionhub.pages.dev' || request.headers.get('Origin') === 'https://admissionsky.pages.dev');
+    /* BUG-001: the header above is a routing hint only. The routes below change
+       live data — /api/cloud/publish overwrites the global question bank,
+       /api/bank injects questions, /api/ask spends the owner's paid keys — so
+       they now require a real proof: the owner's admin token, or a session the
+       auth authority confirms. The old `beaconOk` exception accepted a bare
+       POST /api/bank on the strength of the Origin header alone, which any
+       non-browser client sets freely; it is gone. */
+    const writeRoute = url.pathname === '/api/cloud/publish' || url.pathname === '/api/bank' || url.pathname === '/api/ask';
+    const stateChanging = writeRoute && request.method === 'POST';
+    const beaconOk = false;
     if (!isApp && !beaconOk) return json(request, { error: 'forbidden' }, 403);
+    if (stateChanging && !ownerProof(request, env) && !(await verifiedSession(request, env))) {
+      return json(request, { error: 'forbidden' }, 403);
+    }
     if (request.method === 'POST' && url.pathname === '/api/ask') return await createAsk(request, env, ctx);
     if (request.method === 'POST' && url.pathname === '/api/bank') return await bankUpload(request, env);
     if (request.method === 'GET' && url.pathname === '/api/bank') return await bankInfo(request, env);

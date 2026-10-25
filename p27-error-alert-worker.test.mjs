@@ -85,7 +85,12 @@ for (const [name, worker] of [['source', sourceWorker], ['bundle', bundledWorker
     } finally { stub.restore(); }
   });
 
-  test(`p27-২ (${name}): the Pages Origin header is accepted as well as the proxy header`, async () => {
+  test(`p27-২ (${name}): the Pages Origin header alone is NO LONGER enough`, async () => {
+    /* BUG-003 (2026-10-25 audit): Origin is set by the caller, so accepting it
+       as proof let any script inject text into the owner's alert channel. The
+       Pages proxy stamps x-ah-pages-proxy on what it forwards, and that header
+       cannot survive a cross-origin call, so it is the real signal. This test
+       used to assert the opposite; it now pins the fix. */
     const stub = stubFetch();
     try {
       const req = new Request('https://worker/api/report-error', {
@@ -93,8 +98,8 @@ for (const [name, worker] of [['source', sourceWorker], ['bundle', bundledWorker
         headers: { 'Content-Type': 'application/json', Origin: 'https://admissionhub.pages.dev' },
         body: JSON.stringify(sample()),
       });
-      assert.equal((await workerFetch(worker, req, env())).status, 200);
-      assert.equal(stub.calls.length, 1);
+      assert.equal((await workerFetch(worker, req, env())).status, 403);
+      assert.equal(stub.calls.length, 0, 'a forged Origin must not reach Telegram');
     } finally { stub.restore(); }
   });
 

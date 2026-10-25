@@ -10,6 +10,14 @@
   const GLOBAL_STORES = ['subjects', 'topics', 'questions', 'vocabulary', 'vocabularyMaster'];
   const META_KEY = 'ahCloudApplied';
   const APP_HEADER = { 'X-AH-App': 'admission-hub', 'Content-Type': 'application/json' };
+  /* BUG-001: the worker no longer accepts the static header as proof on the
+     write routes. A control-role device sends the owner's admin token, which it
+     already holds for the admin pages; without one the publish is refused. */
+  const writeHeaders = () => {
+    let token = '';
+    try { token = sessionStorage.getItem('ahAdminTok') || ''; } catch (_) {}
+    return token ? { ...APP_HEADER, Authorization: 'Bearer ' + token } : APP_HEADER;
+  };
 
   const bootReady = async () => {
     if (window.__admissionBootPromise) {
@@ -111,7 +119,7 @@
     try { if (sessionStorage.getItem('ahCloudFp') === fp) return; } catch (_) {}
     publishing = true;
     try {
-      const res = await apiFetch('/api/cloud/publish', { method: 'POST', headers: APP_HEADER, body: JSON.stringify(full) });
+      const res = await apiFetch('/api/cloud/publish', { method: 'POST', headers: writeHeaders(), body: JSON.stringify(full) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || ('http-' + res.status));
       try { sessionStorage.setItem('ahCloudFp', fp); localStorage.setItem('ahCloudLastPublishAt', String(Date.now())); } catch (_) {}
