@@ -4856,6 +4856,80 @@ data: ${JSON.stringify({ model: model || null, provider: "cache", intent, cached
   }), { status: 200, headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache", "Access-Control-Allow-Origin": "*" } });
 }
 
+// ai-actions.mjs
+var PROPOSAL_KEY = (uid) => "actprop:" + uid;
+var AUDIT_KEY = (uid) => "actaudit:" + uid;
+var readAudit = async (env, uid) => {
+  try {
+    const raw = await env.PUB_KV.get(AUDIT_KEY(uid));
+    return parseAudit(raw, uid);
+  } catch (_) {
+    return [];
+  }
+};
+var writeAudit = async (env, uid, records) => {
+  await env.PUB_KV.put(AUDIT_KEY(uid), JSON.stringify(records));
+};
+async function proposeAction(env, uid, body) {
+  const name = String(body?.action || "");
+  const auth = authorizeAction(name, { uid, args: body?.args, enabled: actionsEnabled(env) });
+  if (!auth.allowed) return { status: 403, body: { error: "action_denied", reason: auth.reason } };
+  const proposal = makeProposal(name, { uid, args: auth.args, id: crypto.randomUUID(), enabled: actionsEnabled(env) });
+  if (!proposal) return { status: 403, body: { error: "action_denied", reason: "no-proposal" } };
+  try {
+    await env.PUB_KV.put(PROPOSAL_KEY(uid), JSON.stringify(proposal), { expirationTtl: Math.ceil((proposal.expiresAt - Date.now()) / 1e3) });
+    const audit = await readAudit(env, uid);
+    await writeAudit(env, uid, appendAudit(audit, makeAuditRecord({ proposal, status: STATUS.PROPOSED, uid }), uid));
+  } catch (_) {
+    return { status: 500, body: { error: "propose_failed", message: "এখন proposal তৈরি করা গেল না, আবার চেষ্টা করো।" } };
+  }
+  return {
+    status: 200,
+    body: {
+      ok: true,
+      proposal: {
+        id: proposal.id,
+        action: proposal.action,
+        permission: proposal.permission,
+        riskLevel: proposal.riskLevel,
+        summary: proposal.summary,
+        expiresAt: proposal.expiresAt
+      }
+    }
+  };
+}
+async function confirmAction(env, uid, body) {
+  const token = String(body?.token || "");
+  let stored = null;
+  try {
+    const raw = await env.PUB_KV.get(PROPOSAL_KEY(uid));
+    stored = raw ? JSON.parse(raw) : null;
+  } catch (_) {
+    stored = null;
+  }
+  const decision = confirmProposal(stored, token, uid, { enabled: actionsEnabled(env) });
+  if (!decision.ok) {
+    const audit2 = await readAudit(env, uid);
+    if (stored) await writeAudit(env, uid, appendAudit(audit2, makeAuditRecord({ proposal: stored, status: decision.status, uid, detail: decision.reason }), uid));
+    return { status: 403, body: { error: "confirm_denied", reason: decision.reason } };
+  }
+  try {
+    await env.PUB_KV.delete(PROPOSAL_KEY(uid));
+    if (decision.action === "prefs.write") {
+      const prefs = sanitizeAiPrefs(decision.args);
+      await env.PUB_KV.put("aiprefs:" + uid, JSON.stringify(prefs));
+    }
+  } catch (_) {
+    const audit2 = await readAudit(env, uid);
+    await writeAudit(env, uid, appendAudit(audit2, makeAuditRecord({ proposal: stored, status: STATUS.FAILED, uid, detail: "write-failed" }), uid));
+    return { status: 500, body: { error: "action_failed", message: "কাজটা সম্পন্ন করা গেল না, আবার চেষ্টা করো।" } };
+  }
+  const audit = await readAudit(env, uid);
+  const record = makeAuditRecord({ proposal: stored, status: STATUS.CONFIRMED, uid });
+  await writeAudit(env, uid, appendAudit(audit, record, uid));
+  return { status: 200, body: { ok: true, action: decision.action, status: STATUS.CONFIRMED } };
+}
+
 // p14-abuse-guard.mjs
 var RATE_DEFAULTS = Object.freeze({ limit: 120, windowMs: 6e4 });
 var clamp = (value, lo, hi, fallback) => {
@@ -5066,7 +5140,12 @@ var SKY_AI_BODY_IDENTITY_ROUTES = Object.freeze([
   "POST /api/ai/recall",
   "POST /api/ai/instructions",
   "DELETE /api/ai/instructions",
-  "POST /api/ai/memory/clear"
+  "POST /api/ai/memory/clear",
+  /* F0.1 step 4g: the write layer. admission-gk forwards these only while write
+   * actions are enabled on ITS env — sky-ai has no USE_WRITE_ACTIONS, so a
+   * forwarded call would otherwise resurrect a switched-off layer. */
+  "POST /api/ai/actions/propose",
+  "POST /api/ai/actions/confirm"
 ]);
 async function forwardWithIdentityBody(request, env, uid, routes = SKY_AI_BODY_IDENTITY_ROUTES) {
   if (!uid || ["GET", "HEAD", "OPTIONS"].includes(request.method)) return null;
@@ -5522,17 +5601,6 @@ var verifyIntegrity = (doc) => {
   if (source.counts && JSON.stringify(source.counts) !== JSON.stringify(counts)) mismatches.push("counts");
   return { ok: mismatches.length === 0, v: source.v || 0, sig: source.sig || "", expectedSig: expected, counts, mismatches };
 };
-var readAudit = async (env, uid) => {
-  try {
-    const raw = await env.PUB_KV.get("actaudit:" + uid);
-    return parseAudit(raw, uid);
-  } catch (_) {
-    return [];
-  }
-};
-var writeAudit = async (env, uid, records) => {
-  await env.PUB_KV.put("actaudit:" + uid, JSON.stringify(records));
-};
 var admin = async (request, env, path) => {
   const token = String(request.headers.get("Authorization") || "").replace("Bearer ", "").trim();
   if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) return json2({ error: "forbidden" }, 403);
@@ -5753,54 +5821,24 @@ var public_worker_default = {
       if (path === "/api/ai/actions/propose" && request.method === "POST") {
         const identity = await aiRequestIdentity(request, env, false);
         if (!identity.authenticated) return json2({ error: "sign_in_required", message: "AI action ব্যবহার করতে লগইন করো।" }, 401);
-        const body = await request.json().catch(() => null);
-        const name = String(body?.action || "");
-        const auth = authorizeAction(name, { uid: identity.uid, args: body?.args, enabled: actionsEnabled(env) });
-        if (!auth.allowed) return json2({ error: "action_denied", reason: auth.reason }, 403);
-        const proposal = makeProposal(name, { uid: identity.uid, args: auth.args, id: crypto.randomUUID(), enabled: actionsEnabled(env) });
-        if (!proposal) return json2({ error: "action_denied", reason: "no-proposal" }, 403);
-        try {
-          await env.PUB_KV.put("actprop:" + identity.uid, JSON.stringify(proposal), { expirationTtl: Math.ceil((proposal.expiresAt - Date.now()) / 1e3) });
-          const audit = await readAudit(env, identity.uid);
-          await writeAudit(env, identity.uid, appendAudit(audit, makeAuditRecord({ proposal, status: STATUS.PROPOSED, uid: identity.uid }), identity.uid));
-        } catch (_) {
-          return json2({ error: "propose_failed", message: "এখন proposal তৈরি করা গেল না, আবার চেষ্টা করো।" }, 500);
+        if (actionsEnabled(env)) {
+          const viaSky = await forwardWithIdentityBody(request, env, identity.uid);
+          if (viaSky) return viaSky;
         }
-        return json2({ ok: true, proposal: { id: proposal.id, action: proposal.action, permission: proposal.permission, riskLevel: proposal.riskLevel, summary: proposal.summary, expiresAt: proposal.expiresAt } });
+        const body = await request.json().catch(() => null);
+        const r = await proposeAction(env, identity.uid, body);
+        return json2(r.body, r.status);
       }
       if (path === "/api/ai/actions/confirm" && request.method === "POST") {
         const identity = await aiRequestIdentity(request, env, false);
         if (!identity.authenticated) return json2({ error: "sign_in_required", message: "AI action ব্যবহার করতে লগইন করো।" }, 401);
+        if (actionsEnabled(env)) {
+          const viaSky = await forwardWithIdentityBody(request, env, identity.uid);
+          if (viaSky) return viaSky;
+        }
         const body = await request.json().catch(() => null);
-        const token = String(body?.token || "");
-        let stored = null;
-        try {
-          const raw = await env.PUB_KV.get("actprop:" + identity.uid);
-          stored = raw ? JSON.parse(raw) : null;
-        } catch (_) {
-          stored = null;
-        }
-        const decision = confirmProposal(stored, token, identity.uid, { enabled: actionsEnabled(env) });
-        if (!decision.ok) {
-          const audit2 = await readAudit(env, identity.uid);
-          if (stored) await writeAudit(env, identity.uid, appendAudit(audit2, makeAuditRecord({ proposal: stored, status: decision.status, uid: identity.uid, detail: decision.reason }), identity.uid));
-          return json2({ error: "confirm_denied", reason: decision.reason }, 403);
-        }
-        try {
-          await env.PUB_KV.delete("actprop:" + identity.uid);
-          if (decision.action === "prefs.write") {
-            const prefs = sanitizeAiPrefs(decision.args);
-            await env.PUB_KV.put("aiprefs:" + identity.uid, JSON.stringify(prefs));
-          }
-        } catch (_) {
-          const audit2 = await readAudit(env, identity.uid);
-          await writeAudit(env, identity.uid, appendAudit(audit2, makeAuditRecord({ proposal: stored, status: STATUS.FAILED, uid: identity.uid, detail: "write-failed" }), identity.uid));
-          return json2({ error: "action_failed", message: "কাজটা সম্পন্ন করা গেল না, আবার চেষ্টা করো।" }, 500);
-        }
-        const audit = await readAudit(env, identity.uid);
-        const record = makeAuditRecord({ proposal: stored, status: STATUS.CONFIRMED, uid: identity.uid });
-        await writeAudit(env, identity.uid, appendAudit(audit, record, identity.uid));
-        return json2({ ok: true, action: decision.action, status: STATUS.CONFIRMED });
+        const r = await confirmAction(env, identity.uid, body);
+        return json2(r.body, r.status);
       }
       if (path === "/api/ai/actions/audit" && request.method === "GET") {
         const identity = await aiRequestIdentity(request, env, false);

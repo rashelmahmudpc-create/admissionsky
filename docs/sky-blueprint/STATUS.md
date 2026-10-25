@@ -50,6 +50,15 @@ Source of truth: Notion "Sky AI v1.0" → main page section **"🚦 এজেন
   account. `clearAiEverything()` in `ai-agent.js` is now the single definition of
   what "forget" covers — the four KV keys that used to be deleted inline in
   `public-worker.js` moved into it, so the two callers cannot drift.
+- **F0.1 step 4g ✅ (2026-10-25): `/api/ai/actions/propose` + `/api/ai/actions/confirm` moved (POST).**
+  The write/execute layer. `proposeAction()` / `confirmAction()` moved out of
+  `public-worker.js` into `ai-actions.mjs`, and both sides now run the same code —
+  a copy would have let the two sides disagree about single-use or ownership.
+  **The kill switch is now honoured across the hop:** sky-ai has no
+  `USE_WRITE_ACTIONS`, so admission-gk forwards only while its own switch says
+  enabled; otherwise the layer could be resurrected by a forward. A retry after a
+  lost answer cannot double-apply anything, because the proposal is consumed
+  before the write.
 - **Blocked on purpose — `/api/ai/status`: it must NOT move yet.** Status is a
   report about which AI engine and keys are available, and those keys are
   secrets on `admission-gk`. sky-ai has no `GEMINI_KEYS`/`GROQ_API_KEY`, so it
@@ -64,14 +73,16 @@ Source of truth: Notion "Sky AI v1.0" → main page section **"🚦 এজেন
 - 2026-10-25 · F0.1 step 4d · `POST /api/ai/recall` moved to sky-ai with the
   AI_STATE cross-script binding + `/health` dependency report + deploy assertion;
   42 sky-ai/routing tests and 78 AI/recall tests green · PR (this branch) ·
-  next: `memory/clear` ✅ (4f) → `actions/propose|confirm` → `/api/ai/chat`
-  last. `/api/ai/status` waits for the provider keys.
+  next: `/api/ai/chat` (last). `/api/ai/status` waits for the provider keys to
+  live in sky-ai.
 - 2026-10-25 · F0.1 step 4e · `/api/ai/instructions` (GET/POST/DELETE) moved;
   method-aware forwarder + body-read-order test · 52 sky-ai tests green.
 - 2026-10-25 · F0.1 step 4f · `/api/ai/memory/clear` moved; "forget" now defined
   once in `clearAiEverything()` · 62 sky-ai tests, 76 AI tests green ·
-  `/api/ai/status` held back (no provider keys in sky-ai), next:
-  `actions/propose|confirm`.
+  `/api/ai/status` held back (no provider keys in sky-ai).
+- 2026-10-25 · F0.1 step 4g · `actions/propose|confirm` moved; handlers extracted
+  to `ai-actions.mjs` so both sides run one copy; kill switch gated at the call
+  site · 73 sky-ai tests, 88 AI/action tests green · next: `/api/ai/chat`.
 - 2026-10-19 · — · Blueprint v1.0 created (Notion).
 - 2026-10-20 (approx.) · F0.1 steps 1–3 + F0.2 flags.mjs · merged to main, sky-ai deployed · (Notion not updated at the time).
 - 2026-10-21 23:20 · handoff system · Notion board + pages 07/09 updated, this file added · next: F0.1 step 4a.

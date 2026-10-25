@@ -128,6 +128,8 @@ test('the non-GET allowlist names every method it allows, so rollback is one lin
     'POST /api/ai/recall',
     'POST /api/ai/instructions',
     'DELETE /api/ai/instructions',
-    'POST /api/ai/memory/clear'
+    'POST /api/ai/memory/clear',
+    'POST /api/ai/actions/propose',
+    'POST /api/ai/actions/confirm'
   ]);
 });

@@ -17,9 +17,10 @@ import { handleAuditGet } from './audit.mjs';
 import { handleRecallPost } from './recall.mjs';
 import { handleInstructions } from './instructions.mjs';
 import { handleMemoryClear } from './memory-clear.mjs';
+import { handleActionsPost } from './actions.mjs';
 import { aiStateStore } from '../ai-state-do.mjs';
 
-export const SKY_AI_VERSION = 'sky-ai-f0.1-4f-memory-clear';
+export const SKY_AI_VERSION = 'sky-ai-f0.1-4g-actions';
 
 /* F0.1 step 4d: what /health reports about this Worker's dependencies.
  *
@@ -109,6 +110,14 @@ export async function handle(request, env = {}) {
    * makes the admission-gk fallback safe for a destructive route. */
   if (request.method === 'POST' && path === '/api/ai/memory/clear') {
     const res = await handleMemoryClear(request, env);
+    if (res) return res;
+  }
+
+  /* F0.1 step 4g: POST /api/ai/actions/propose and /confirm — the write layer
+   * (internal-key protected, see actions.mjs). Refuses when the layer is off, so
+   * admission-gk keeps answering the kill-switch case. */
+  if (request.method === 'POST' && path.startsWith('/api/ai/actions/') && path !== '/api/ai/actions/audit') {
+    const res = await handleActionsPost(request, env);
     if (res) return res;
   }
 

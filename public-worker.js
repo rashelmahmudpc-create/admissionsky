@@ -2,10 +2,8 @@
 // Active routes: public content · Firebase-account/ephemeral-guest AI · content admin.
 // The former login/profile/onboarding/session/state APIs are intentionally absent.
 import { agentChat, agentStatus, agentRecall, agentInstructions, sanitizeAiPrefs, AI_PREFS_DEFAULT, clearAiEverything } from './ai-agent.js';
-import {
-  authorizeAction, makeProposal, confirmProposal, proposalSummary,
-  makeAuditRecord, parseAudit, appendAudit, STATUS, actionsEnabled
-} from './action-engine.js';
+import { actionsEnabled } from './action-engine.js';
+import { proposeAction, confirmAction, readAudit } from './ai-actions.mjs';
 import { checkAbuse, isGuarded } from './p14-abuse-guard.mjs';
 import { recordError, summarizeErrors } from './p19-error-monitor.mjs';
 import { listReports } from './sky-daily-report.mjs';
@@ -283,16 +281,7 @@ export const verifyIntegrity = doc => {
   return { ok: mismatches.length === 0, v: source.v || 0, sig: source.sig || '', expectedSig: expected, counts, mismatches };
 };
 
-const readAudit = async (env, uid) => {
-  try {
-    const raw = await env.PUB_KV.get('actaudit:' + uid);
-    return parseAudit(raw, uid);
-  } catch (_) { return []; }
-};
 
-const writeAudit = async (env, uid, records) => {
-  await env.PUB_KV.put('actaudit:' + uid, JSON.stringify(records));
-};
 
 const admin = async (request, env, path) => {
   const token = String(request.headers.get('Authorization') || '').replace('Bearer ', '').trim();
@@ -571,53 +560,35 @@ export default {
       if (path === '/api/ai/actions/propose' && request.method === 'POST') {
         const identity = await aiRequestIdentity(request, env, false);
         if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI action ব্যবহার করতে লগইন করো।' }, 401);
-        const body = await request.json().catch(() => null);
-        const name = String(body?.action || '');
-        const auth = authorizeAction(name, { uid: identity.uid, args: body?.args, enabled: actionsEnabled(env) });
-        if (!auth.allowed) return json({ error: 'action_denied', reason: auth.reason }, 403);
-        const proposal = makeProposal(name, { uid: identity.uid, args: auth.args, id: crypto.randomUUID(), enabled: actionsEnabled(env) });
-        if (!proposal) return json({ error: 'action_denied', reason: 'no-proposal' }, 403);
-        try {
-          await env.PUB_KV.put('actprop:' + identity.uid, JSON.stringify(proposal), { expirationTtl: Math.ceil((proposal.expiresAt - Date.now()) / 1000) });
-          const audit = await readAudit(env, identity.uid);
-          await writeAudit(env, identity.uid, appendAudit(audit, makeAuditRecord({ proposal, status: STATUS.PROPOSED, uid: identity.uid }), identity.uid));
-        } catch (_) {
-          return json({ error: 'propose_failed', message: 'এখন proposal তৈরি করা গেল না, আবার চেষ্টা করো।' }, 500);
+        /* F0.1 step 4g: sky-ai answers this when the route is listed in
+           sky-ai-route.mjs — but ONLY while write actions are enabled here.
+           sky-ai has no USE_WRITE_ACTIONS, so forwarding during a kill-switch
+           would turn the switch back on. The body is read after the forward, so
+           the fallback below still has it. */
+        if (actionsEnabled(env)) {
+          const viaSky = await forwardWithIdentityBody(request, env, identity.uid);
+          if (viaSky) return viaSky;
         }
-        return json({ ok: true, proposal: { id: proposal.id, action: proposal.action, permission: proposal.permission, riskLevel: proposal.riskLevel, summary: proposal.summary, expiresAt: proposal.expiresAt } });
+        const body = await request.json().catch(() => null);
+        const r = await proposeAction(env, identity.uid, body);
+        return json(r.body, r.status);
       }
       if (path === '/api/ai/actions/confirm' && request.method === 'POST') {
         const identity = await aiRequestIdentity(request, env, false);
         if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI action ব্যবহার করতে লগইন করো।' }, 401);
+        /* F0.1 step 4g. Confirming is the one route that CHANGES something on the
+           student's behalf, and it is single-use by design: the proposal is
+           consumed before the write. That ordering is what makes the fallback
+           safe — if sky-ai confirms and the answer is lost, the retry below finds
+           no proposal and refuses, so an action can be applied once at most. It
+           can never be applied twice. */
+        if (actionsEnabled(env)) {
+          const viaSky = await forwardWithIdentityBody(request, env, identity.uid);
+          if (viaSky) return viaSky;
+        }
         const body = await request.json().catch(() => null);
-        const token = String(body?.token || '');
-        let stored = null;
-        try {
-          const raw = await env.PUB_KV.get('actprop:' + identity.uid);
-          stored = raw ? JSON.parse(raw) : null;
-        } catch (_) { stored = null; }
-        const decision = confirmProposal(stored, token, identity.uid, { enabled: actionsEnabled(env) });
-        if (!decision.ok) {
-          const audit = await readAudit(env, identity.uid);
-          if (stored) await writeAudit(env, identity.uid, appendAudit(audit, makeAuditRecord({ proposal: stored, status: decision.status, uid: identity.uid, detail: decision.reason }), identity.uid));
-          return json({ error: 'confirm_denied', reason: decision.reason }, 403);
-        }
-        // Single-use: consume the proposal before the write so a replay finds nothing.
-        try {
-          await env.PUB_KV.delete('actprop:' + identity.uid);
-          if (decision.action === 'prefs.write') {
-            const prefs = sanitizeAiPrefs(decision.args);
-            await env.PUB_KV.put('aiprefs:' + identity.uid, JSON.stringify(prefs));
-          }
-        } catch (_) {
-          const audit = await readAudit(env, identity.uid);
-          await writeAudit(env, identity.uid, appendAudit(audit, makeAuditRecord({ proposal: stored, status: STATUS.FAILED, uid: identity.uid, detail: 'write-failed' }), identity.uid));
-          return json({ error: 'action_failed', message: 'কাজটা সম্পন্ন করা গেল না, আবার চেষ্টা করো।' }, 500);
-        }
-        const audit = await readAudit(env, identity.uid);
-        const record = makeAuditRecord({ proposal: stored, status: STATUS.CONFIRMED, uid: identity.uid });
-        await writeAudit(env, identity.uid, appendAudit(audit, record, identity.uid));
-        return json({ ok: true, action: decision.action, status: STATUS.CONFIRMED });
+        const r = await confirmAction(env, identity.uid, body);
+        return json(r.body, r.status);
       }
       if (path === '/api/ai/actions/audit' && request.method === 'GET') {
         const identity = await aiRequestIdentity(request, env, false);

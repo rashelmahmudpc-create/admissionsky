@@ -75,7 +75,12 @@ export const SKY_AI_BODY_IDENTITY_ROUTES = Object.freeze([
   'POST /api/ai/recall',
   'POST /api/ai/instructions',
   'DELETE /api/ai/instructions',
-  'POST /api/ai/memory/clear'
+  'POST /api/ai/memory/clear',
+  /* F0.1 step 4g: the write layer. admission-gk forwards these only while write
+   * actions are enabled on ITS env — sky-ai has no USE_WRITE_ACTIONS, so a
+   * forwarded call would otherwise resurrect a switched-off layer. */
+  'POST /api/ai/actions/propose',
+  'POST /api/ai/actions/confirm'
 ]);
 
 export async function forwardWithIdentityBody(request, env, uid, routes = SKY_AI_BODY_IDENTITY_ROUTES) {
