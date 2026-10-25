@@ -33,7 +33,7 @@ jobs:
           set -eu
           if [ -z "${GH_TOKEN:-}" ]; then echo '::error::STUDY_LOCK_TOKEN secret is missing'; exit 1; fi
           H=$(TZ=Asia/Dhaka date +%H); D=$(TZ=Asia/Dhaka date +%Y%m%d)
-          if [ "$D" -ge 20270201 ] || [ "$D" = "20261024" ] || [ "$H" = "23" ]; then ENF=disabled; ACT=all; else ENF=active; ACT=selected; fi
+          if [ "$D" -ge 20270201 ] || [ "$D" = "20261024" ] || [ "$H" = "23" ]; then ENF=disabled; ACT=all; else ENF=active; ACT=local_only; fi
           BODY=$(printf '{"name":"Study Lock","target":"branch","enforcement":"%s","bypass_actors":[],"conditions":{"ref_name":{"include":["~ALL"],"exclude":[]}},"rules":[{"type":"creation"},{"type":"update"},{"type":"deletion"},{"type":"non_fast_forward"}]}' "$ENF")
           ID=$(gh api "repos/$REPO/rulesets" --jq '.[] | select(.name=="Study Lock") | .id' | head -n1)
           if [ -z "$ID" ]; then
@@ -42,7 +42,5 @@ jobs:
             echo "$BODY" | gh api -X PUT "repos/$REPO/rulesets/$ID" --input - >/dev/null
           fi
           echo "{\"enabled\":true,\"allowed_actions\":\"$ACT\"}" | gh api -X PUT "repos/$REPO/actions/permissions" --input - >/dev/null
-          if [ "$ACT" = selected ]; then
-            echo '{"github_owned_allowed":false,"verified_allowed":false,"patterns_allowed":[]}' | gh api -X PUT "repos/$REPO/actions/permissions/selected-actions" --input - >/dev/null
-          fi
+          # local_only = no external `uses:` actions (GitHub rejects "selected" with all three flags off -> 409).
           echo "Dhaka hour=$H  ruleset=$ENF  actions=$ACT"
