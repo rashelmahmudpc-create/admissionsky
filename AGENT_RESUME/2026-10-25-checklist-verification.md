@@ -29,9 +29,17 @@
 ## ২. সত্যিই বাকি (লাইভ বা রিপোতে নেই)
 
 1. **ঙ২ — about আর contact পেজ নেই।** `/about` → 404, `/contact` → 404, রিপোতে `about*`/`contact*` ফাইল নেই। এটাই সবচেয়ে পরিষ্কার "করা বাকি" কাজ।
-2. **চ৩ — ভুল পাসওয়ার্ডে "আর কতবার" বার্তা নেই।** সার্ভার `attemptsRemaining` জানে
-   (`password-guard.mjs`), কিন্তু লগইন রেসপন্সে সেটা যায় না (`public-auth-handler.mjs:1039`),
-   ক্লায়েন্টেও (`account-access.js`) ওই ফিল্ড পড়া হয় না। ছাত্র এখন শুধু **ব্লক হওয়ার পরে** বার্তা পায়।
+2. **চ৩ — ভুল পাসওয়ার্ডে "আর কতবার" বার্তা — এখন করা হয়েছে (এই কমিটে)।**
+   সার্ভার (`public-auth-handler.mjs`) ভুল পাসওয়ার্ডে `attemptsRemaining` পাঠায়, ক্লায়েন্ট
+   (`account-access.js`) সেটা দেখিয়ে লেখে "আর ২ বার ভুল হলে কিছুক্ষণের জন্য বন্ধ হবে।",
+   আর ইংরেজি মোডে `language-engine.js`-এর `RULES` সেটাকে ইংরেজি করে।
+  সঙ্গে: `?v=` + `BUILD_ID` → `v365-pw-guard-hint`, `sw.js` digest নতুন করে লেখা।
+   টেস্ট: `language-engine.test.mjs` ১২/১২ (নতুন রুল-টেস্টসহ), `password-guard`/`shadow-guard`/
+   `native-auth` ৯৭/৯৭, `account-retirement`+`code-native-welcome`+`profile-ui` ৬৭/৬৭,
+   `check:worker-bundle` ও `check:auth-worker-bundle` — দুটোই ০।
+   `fcm-global-contract.test.mjs`-এ ২টা ফেল আছে, কিন্তু সেটা **আগের থেকেই** (`/tmp/base` worktree-তে
+   HEAD-এও একই ২টা ফেল), এই বদলের কারণে নয়।
+   (**এখনো বাকি:** গার্ড ব্লক করা চালু করা, অর্থাৎ নিচের ৪ নম্বর।)
 3. **গার্ড চালু করা বাকি (activation)।** `SHADOW_GUARD_ACTIVATION` সেট না থাকায় ডিফল্ট **observe** —
    পাসওয়ার্ড গার্ড কেবল গুনছে, আটকাচ্ছে না। `enforce` করলে ছাত্র আটকানোর ঝুঁকি তৈরি হয়,
    তাই আপনার **হ্যাঁ** ছাড়া করব না (আপনার নিয়ম ২)।

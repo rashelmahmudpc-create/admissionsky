@@ -154,3 +154,10 @@ test('counts inside a rendered sentence still translate', async () => {
   const dom = await setup({ body: '<p>নিরাপত্তার জন্য ৪৫ সেকেন্ড পর আবার পাঠাতে পারবেন।</p>' });
   assert.equal(text(dom), 'For your security you can resend in 45 seconds.');
 });
+
+test('the password-guard hint translates once the remaining count is baked in', async () => {
+  // চ৩: the login form warns how many wrong passwords are left before the pair
+  // is paused. One fixed sentence around one number, so it is a rule, not a key.
+  const dom = await setup({ body: '<p>Email বা Password সঠিক নয়। আর ২ বার ভুল হলে কিছুক্ষণের জন্য বন্ধ হবে।</p>' });
+  assert.equal(text(dom), 'Email or password is incorrect. 2 more wrong tries and this will pause for a while.');
+});

@@ -1026,6 +1026,10 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         let signed;
         let user;
         let failureRetryAfter = 0;
+        // চ৩: how many guesses this pair has left, so the login form can warn
+        // *before* the block instead of only after it. Zero means "no guard
+        // fact" (guard off, KV read failed) and is never sent.
+        let attemptsRemaining = 0;
         try {
           signed = await provider.signIn(prepared.email, input.password);
         } catch (cause) {
@@ -1038,11 +1042,13 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
               try {
                 const counted = await passwordGuard.recordFailure(guardKey, 'user');
                 if (counted?.blocked) failureRetryAfter = Math.max(failureRetryAfter, counted.retryAfterSeconds);
+                attemptsRemaining = Math.max(0, Math.floor(Number(counted?.attemptsRemaining) || 0));
               } catch {}
             }
           }
           const error = providerError(cause, 'signin');
           if (failureRetryAfter > 0) error.retryAfter = Math.max(Number(error.retryAfter || 0), failureRetryAfter);
+          if (attemptsRemaining > 0 && error.code === AUTH_ERROR_CODES.INVALID_CREDENTIALS) error.attemptsRemaining = attemptsRemaining;
           throw error;
         }
         try { user = await provider.lookup(signed.idToken); } catch (cause) { throw providerError(cause, 'lookup'); }
@@ -2305,7 +2311,16 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         try { await callAuthority(env, '/internal/session/revoke', { sessionToken: jar[AUTH_SESSION_COOKIE] }); } catch {}
       }
       const providerDiagnosticCode = /^[A-Z0-9_]{1,80}$/.test(String(error.providerDiagnostic || '')) ? String(error.providerDiagnostic) : '';
-      return json(request, error.status, { ok: false, error: error.toPublic() }, {
+      // চ৩: an optional, additive field. `toPublic()` keeps its fixed shape, so
+      // the count rides beside it and only when the password guard produced one.
+      const attemptsRemaining = Math.floor(Number(error.attemptsRemaining) || 0);
+      return json(request, error.status, {
+        ok: false,
+        error: {
+          ...error.toPublic(),
+          ...(attemptsRemaining > 0 ? { attemptsRemaining } : {})
+        }
+      }, {
         ...(error.retryAfter ? { 'Retry-After': String(error.retryAfter) } : {}),
         ...(providerDiagnosticCode ? { 'X-AH-Auth-Diagnostic': providerDiagnosticCode } : {}),
         ...(googleRequest ? { 'X-AH-Auth-Stage': authStage } : {}),

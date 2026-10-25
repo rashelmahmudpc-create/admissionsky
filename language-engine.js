@@ -834,6 +834,13 @@
      than as more table entries with hand-written duplicates. */
   const RULES = [
     {
+      /* Password guard (চ৩): the login form names how many wrong passwords are
+         left before the pair is paused. One fixed sentence around one number,
+         so no table key can own it. */
+      re: /^Email বা Password সঠিক নয়। আর ([0-9০-৯]+) বার ভুল হলে কিছুক্ষণের জন্য বন্ধ হবে।$/,
+      en: (m) => `Email or password is incorrect. ${toEnDigits(m[1])} more wrong ${toEnDigits(m[1]) === '1' ? 'try' : 'tries'} and this will pause for a while.`
+    },
+    {
       re: /^আবার পাঠানো যাবে \(([0-9০-৯][0-9০-৯,]*)\s*সেকেন্ড\)$/,
       en: (m) => `You can resend in (${m[1]} sec)`
     },

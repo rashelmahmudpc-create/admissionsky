@@ -3,7 +3,7 @@ const CACHE_PREFIX = 'admission-hub-shell-';
 // hold user data; this one holds exactly one image and is trimmed on write.
 const AVATAR_CACHE = 'admission-hub-avatar-v1';
 
-const BUILD_ID = 'v364-sky-goal';
+const BUILD_ID = 'v365-pw-guard-hint';
 const CACHE_NAME = `${CACHE_PREFIX}${BUILD_ID}`;
 const VERSION_HEADER = 'X-Admission-Hub-Build';
 const DOCUMENT_NETWORK_TIMEOUT_MS = 2500;
@@ -36,8 +36,8 @@ const APP_SHELL = [
   './account-access.css?v=20261018-allowlist-v1',
   './sky-onboarding.css?v=sky-flow-20261018-v12',
   './institutions-bd.js?v=bd-institutions-v2',
-  './language-engine.js?v=lang-v5-single-email-button',
-  './account-access.js?v=20261021-turnstile-v1&startup=fast1',
+  './language-engine.js?v=lang-v6-pw-guard-hint',
+  './account-access.js?v=20261025-pw-guard-hint&startup=fast1',
   './sky-onboarding.js?v=sky-flow-20261018-v12',
   './email-policy-client.js?v=20261018-allowlist-v1',
   './welcome-story.css?v=welcome-story-20261018-v3',
@@ -92,7 +92,7 @@ const APP_SHELL = [
 // A truncated/corrupt download is NEVER written to the shell cache.
 const ASSET_DIGESTS = {
 /* sw-manifest:start */
-  "./index.html": "16eeb220ca2076ccc094a9937dc205806ea746a15747841625829ef5f1dedf26",
+  "./index.html": "03a241778d1f036039c4b5f0516623da6428da03b5ee2455709b6c8e93795739",
   "./manifest.json": "6dcf0e0c6f7671750549e53558ba8b9f0c2c83b0c6759072a6b5e2276331f491",
   "./manifest.webmanifest": "abcd26174710f6df3e183889a5a9da182f73ee8cdcc543b43db8fb4070cad54f",
   "./dashboard-v2.css?v=dash2f13-theme": "4541bc1e65fd158c593443562975400d128b8f1d3b636595df3c235b99e8cced",
@@ -102,8 +102,8 @@ const ASSET_DIGESTS = {
   "./account-access.css?v=20261018-allowlist-v1": "bf4f6e237ddfffd888d094b492a9cf49c10fcd85958ab13e91770a23fc8949f0",
   "./sky-onboarding.css?v=sky-flow-20261018-v12": "f94c44b34348038eea1b934f68ae0988a27ef64d76dbef47cd6dd640efde0bbe",
   "./institutions-bd.js?v=bd-institutions-v2": "602c5549515e8207ad152b948ca9b8fe3ad0fbe429afb56380e4e21b662f779d",
-  "./language-engine.js?v=lang-v5-single-email-button": "414b9fc68022a48d46fcb5e0492ca46042e93a5ec3da8eb0e5c437cf5a930e0f",
-  "./account-access.js?v=20261021-turnstile-v1&startup=fast1": "007a27731bd9d290981c7060db17cea510e26816d41c1a0b80b8717c4036523c",
+  "./language-engine.js?v=lang-v6-pw-guard-hint": "9d9f1de6b360c3144183b3302bc63ba6a23adedc3a08ce50e97e830d68c0f3ba",
+  "./account-access.js?v=20261025-pw-guard-hint&startup=fast1": "5ec2018af605e11f64cf737bf8662c6cd14078fad9e7dc49ee76ecc2cd947bd1",
   "./sky-onboarding.js?v=sky-flow-20261018-v12": "f601a6e189d2a0123546b024ba3da24e8ebe3bbd92c374d95fe66f092793e5b6",
   "./email-policy-client.js?v=20261018-allowlist-v1": "d52570ca207888a5dc0e320a30ea59b576887e4bc4f33f48bfec64c2eb2245b5",
   "./welcome-story.css?v=welcome-story-20261018-v3": "4b589890fdf457149113e236320f94014b5cc2845c190b1bdf853f1f2963073d",

@@ -2804,6 +2804,7 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         let signed;
         let user;
         let failureRetryAfter = 0;
+        let attemptsRemaining = 0;
         try {
           signed = await provider.signIn(prepared.email, input.password);
         } catch (cause) {
@@ -2817,12 +2818,14 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
               try {
                 const counted = await passwordGuard.recordFailure(guardKey, "user");
                 if (counted?.blocked) failureRetryAfter = Math.max(failureRetryAfter, counted.retryAfterSeconds);
+                attemptsRemaining = Math.max(0, Math.floor(Number(counted?.attemptsRemaining) || 0));
               } catch {
               }
             }
           }
           const error = providerError(cause, "signin");
           if (failureRetryAfter > 0) error.retryAfter = Math.max(Number(error.retryAfter || 0), failureRetryAfter);
+          if (attemptsRemaining > 0 && error.code === AUTH_ERROR_CODES.INVALID_CREDENTIALS) error.attemptsRemaining = attemptsRemaining;
           throw error;
         }
         try {
@@ -4142,7 +4145,14 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         }
       }
       const providerDiagnosticCode = /^[A-Z0-9_]{1,80}$/.test(String(error.providerDiagnostic || "")) ? String(error.providerDiagnostic) : "";
-      return json(request, error.status, { ok: false, error: error.toPublic() }, {
+      const attemptsRemaining = Math.floor(Number(error.attemptsRemaining) || 0);
+      return json(request, error.status, {
+        ok: false,
+        error: {
+          ...error.toPublic(),
+          ...attemptsRemaining > 0 ? { attemptsRemaining } : {}
+        }
+      }, {
         ...error.retryAfter ? { "Retry-After": String(error.retryAfter) } : {},
         ...providerDiagnosticCode ? { "X-AH-Auth-Diagnostic": providerDiagnosticCode } : {},
         ...googleRequest ? { "X-AH-Auth-Stage": authStage } : {},

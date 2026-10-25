@@ -993,9 +993,9 @@ textarea{min-height:96px}
 </noscript>
 <script type="module" src="./sentry-report.js?v=sentry-v2"></script>
 <script defer src="./institutions-bd.js?v=bd-institutions-v2"></script>
-<script defer src="./language-engine.js?v=lang-v5-single-email-button"></script>
+<script defer src="./language-engine.js?v=lang-v6-pw-guard-hint"></script>
 <script>window.ADMISSION_HUB_TURNSTILE_SITEKEY='0x4AAAAAAFYX5IGYQ0F-3DU9';</script>
-<script defer src="./account-access.js?v=20261021-turnstile-v1&startup=fast1"></script>
+<script defer src="./account-access.js?v=20261025-pw-guard-hint&startup=fast1"></script>
 <script defer src="./email-policy-client.js?v=20261018-allowlist-v1"></script>
 <script src="./app-seed.js?v=sky-flow-20261018-v12" defer></script>
 <script defer src="./ios-chrome.js?v=9"></script>
@@ -5455,7 +5455,7 @@ window.__admissionBootPromise.catch(error => console.error('[Admission Hub] boot
       // this, and sw.js already purges every shell whose name is not its own
       // current build. A stale value here deletes the live offline shell on
       // every launch, so the iOS instant-startup cache never survives.
-      const expectedSwVersion = 'v364-sky-goal';
+      const expectedSwVersion = 'v365-pw-guard-hint';
       // register() on the same scope performs an in-place update. Never unregister
       // the active iOS worker first: that discards the instant offline shell.
       const registration=await navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'});
@@ -5464,7 +5464,7 @@ window.__admissionBootPromise.catch(error => console.error('[Admission Hub] boot
       // stale pre-retirement application shells can never be served from cache again.
       try {
 
-        const cur = 'admission-hub-shell-v364-sky-goal';
+        const cur = 'admission-hub-shell-v365-pw-guard-hint';
         const names = await caches.keys();
         for (const name of names) {
           if (name.startsWith('admission-hub-shell-') && name !== cur) await caches.delete(name).catch(()=>{});

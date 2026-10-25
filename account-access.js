@@ -713,7 +713,18 @@
       ORIGIN_FORBIDDEN: 'এই ঠিকানা থেকে account কাজ করছে না, অ্যাপের মূল লিংক থেকে আবার চেষ্টা করো।',
       NOT_CONFIGURED: 'Account সেবাটি এখনো প্রস্তুত নয়-একটু পরে আবার চেষ্টা করো।',
     };
-    if (known[error?.code]) return known[error.code];
+    if (known[error?.code]) {
+      // চ৩: a wrong password that the guard counted is answered with the
+      // remaining attempts, so the student learns the cost before the pause
+      // instead of after it. Fixed wording, one number — the engine's RULES
+      // carries the English for this shape.
+      const left = Math.max(0, Math.min(4, Math.floor(Number(error?.attemptsRemaining) || 0)));
+      if (error.code === 'INVALID_CREDENTIALS' && left > 0) {
+        const bangla = String(left).replace(/[0-9]/g, (d) => '০১২৩৪৫৬৭৮৯'[Number(d)]);
+        return `Email বা Password সঠিক নয়। আর ${bangla} বার ভুল হলে কিছুক্ষণের জন্য বন্ধ হবে।`;
+      }
+      return known[error.code];
+    }
     if (error?.status === 0) return 'ইন্টারনেট সংযোগ পাওয়া যাচ্ছে না, সংযোগ ঠিক হলে আবার চেষ্টা করো।';
     // A named reason from the API beats the generic banner: the server already
     // says in Bengali which step failed, so the user is not left guessing.
@@ -1521,6 +1532,9 @@
       // same dead end and hiding what actually failed.
       error.serverMessage = typeof data?.error?.message === 'string' ? data.error.message : '';
       error.retryAfter = Number(data?.error?.retryAfter || response.headers.get('Retry-After') || 0);  
+      // চ৩: how many wrong passwords are left before the pair is paused. The
+      // server only sends this after a wrong password that the guard counted.
+      error.attemptsRemaining = Math.max(0, Math.floor(Number(data?.error?.attemptsRemaining) || 0));
       throw error;  
     }  
     return data;  
