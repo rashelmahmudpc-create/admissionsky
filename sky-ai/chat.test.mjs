@@ -149,6 +149,36 @@ test('a guest never reaches the model call', () => {
   assert.ok(block.indexOf('sign_in_required') < block.indexOf('chatWithFallback'), 'the gate runs first');
 });
 
+test('E2E: the answer really streams back through this Worker', async () => {
+  // The parity and quota tests prove the guards. This proves the thing the guards
+  // protect: that sky-ai can actually complete a model call and hand the streamed
+  // answer back, with the route marker on it. A fake provider response is used and
+  // global fetch is restored afterwards, exactly like the provider-adapter suite.
+  const env = envWithKeys({ GEMINI_KEYS: 'sk-test' });
+  const real = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    if (u.includes('generativelanguage')) {
+      return new Response('data: ' + JSON.stringify({ candidates: [{ content: { parts: [{ text: 'উত্তর পাওয়া গেছে' }] }, finishReason: 'STOP' }] }) + '\n\n', {
+        status: 200,
+        headers: { 'content-type': 'text/event-stream' }
+      });
+    }
+    return new Response('unexpected ' + u, { status: 500 });
+  };
+  try {
+    const res = await handleChat(chatReq({}, '/api/ai/chat', { messages: [{ role: 'user', content: 'বুঝিয়ে বলো' }] }), env);
+    assert.ok(res, 'a complete key set means this route answers');
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get('x-sky-ai-route'), 'chat');
+    assert.match(String(res.headers.get('content-type') || ''), /text\/event-stream/, 'the student reads it as it arrives');
+    const text = await res.text();
+    assert.ok(text.includes('উত্তর পাওয়া গেছে'), 'the model answer reached the client');
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
 test('version says which routes this build serves', () => {
   assert.equal(SKY_AI_VERSION, 'sky-ai-f0.1-4h-chat');
 });
