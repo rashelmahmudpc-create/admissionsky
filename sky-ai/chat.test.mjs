@@ -119,12 +119,17 @@ test('the settings that shape an answer cross the hop, so the rooms cannot drift
   for (const name of ['AGENT_DAILY_CAP', 'AGENT_GEMINI_MODELS', 'AGENT_GROQ_MODELS', 'AGENT_CLOUDFLARE_MODELS']) {
     assert.ok(helper.includes(name), `${name} is forwarded`);
   }
-  const chat = readFileSync(new URL('./chat.mjs', import.meta.url), 'utf8');
+  /* Step 4i moved the applying side into parity.mjs, because status needs the
+     same handling. The list and the assignment moved together — asserting on the
+     file that really owns them is stricter than asserting on a copy. */
+  const parity = readFileSync(new URL('./parity.mjs', import.meta.url), 'utf8');
   for (const name of ['AGENT_DAILY_CAP', 'AGENT_GEMINI_MODELS', 'AGENT_GROQ_MODELS', 'AGENT_CLOUDFLARE_MODELS']) {
-    assert.ok(chat.includes(name), `${name} is applied`);
+    assert.ok(parity.includes(name), `${name} is applied`);
   }
   // The daily cap is the one with a real consequence: 10 vs 20 messages a day.
-  assert.match(chat, /chatEnv\[name\] = sent/);
+  assert.match(parity, /out\[name\] = sent/);
+  const chat = readFileSync(new URL('./chat.mjs', import.meta.url), 'utf8');
+  assert.match(chat, /applyEnvPassthrough\(env, request\)/, 'chat applies whatever was sent');
 });
 
 test('both chat paths are routed and the non-streaming one asks for JSON', async () => {
@@ -180,5 +185,7 @@ test('E2E: the answer really streams back through this Worker', async () => {
 });
 
 test('version says which routes this build serves', () => {
-  assert.equal(SKY_AI_VERSION, 'sky-ai-f0.1-4h-chat');
+  // Moves with every added route; the assertion that matters is that a step is
+  // named at all, not which letter, or each later step would edit this file.
+  assert.match(SKY_AI_VERSION, /^sky-ai-f0\.1-4[a-z]/);
 });

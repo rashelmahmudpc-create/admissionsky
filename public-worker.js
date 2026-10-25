@@ -168,6 +168,53 @@ async function aiRequestIdentity(request, env, countUsage = true) {
   return { uid, persistMemory: false, authenticated: false };
 }
 
+/* Is this request the owner's? The admin token is his own proof of identity, the
+   same gate /api/admin/* uses. No token configured means nobody, which keeps the
+   old fail-closed behaviour. */
+const ownerRequest = (request, env) => {
+  const token = String(request.headers.get('Authorization') || '').replace('Bearer ', '').trim();
+  return Boolean(env.ADMIN_TOKEN) && tokenEquals(token, env.ADMIN_TOKEN);
+};
+
+/* What a NON-owner may see of the AI status. This is the only definition: the
+   answer is applied to whatever body comes back, local or forwarded, so the split
+   cannot leak a field by omission.
+ *
+ * Owner-only cost view: the provider list, model ids, the fallback chain, the
+ * per-day limit and the pricing/observability block expose which keys are live
+ * and what the AI costs.
+ *
+ * BUG-002 (2026-10-25 audit): the remaining blocks are an attacker's map, not the
+ * student's. `state` names the state store and its schema version, `tools` lists
+ * every declared tool with its permission and owner-scope, `memory` gives the
+ * memory mode and scope, and `response` names the exact filter classes plus which
+ * ones block — precisely the list to craft an evasion against. The app's own
+ * shell (ok, agent, streaming, pv) is untouched, because the student's client
+ * reads those. */
+const REDACTED_STATUS_FIELDS = [
+  'providers', 'models', 'chain', 'limits', 'observability',
+  'state', 'tools', 'memory', 'response', 'actions', 'context'
+];
+
+const redactAiStatus = (data, isOwner) => {
+  if (isOwner || !data || typeof data !== 'object') return data;
+  const out = { ...data };
+  for (const field of REDACTED_STATUS_FIELDS) delete out[field];
+  return out;
+};
+
+/* The headers a status request needs across the service binding: which providers
+   must be reachable, and the settings that shape the report (a different daily
+   cap or model list would describe a different deployment). */
+const statusHopHeaders = (env, needed) => {
+  const headers = { 'x-sky-need-providers': needed.join(',') };
+  for (const name of ['AGENT_DAILY_CAP', 'AGENT_GEMINI_MODELS', 'AGENT_GROQ_MODELS', 'AGENT_CLOUDFLARE_MODELS', 'AGENT_FIRST_CHUNK_MS']) {
+    const value = env && env[name];
+    if (value != null && String(value) !== '') headers['x-sky-env-' + name.toLowerCase().replace(/_/g, '-')] = String(value);
+  }
+  return headers;
+};
+
 /* F0.1 step 4h: the model call, with sky-ai given the first chance and
    admission-gk always the last word.
 
@@ -499,37 +546,27 @@ export default {
       if (path.startsWith('/api/admin/')) return admin(request, env, path);
       if (path === '/api/ai/status' && request.method === 'GET') {
         const identity = await aiRequestIdentity(request, env, false);
+        /* F0.1 step 4i: sky-ai answers this when the route is listed in
+           sky-ai-route.mjs — and it returns the COMPLETE body on purpose. What a
+           caller may see is decided here, once, by redactAiStatus(), for the
+           forwarded answer and the local one alike. The owner token exists only
+           on this Worker, so a copy of that decision on the far side would be
+           both impossible to trust and free to drift. */
+        const isOwner = ownerRequest(request, env);
+        let needed = [];
+        try { needed = readyProviderNames(await providerReadiness(env)); } catch (_) { needed = []; }
+        if (needed.length) {
+          const headers = statusHopHeaders(env, needed);
+          const viaSky = await forwardWithIdentity(request, env, identity.uid, undefined, headers);
+          if (viaSky) {
+            const data = await viaSky.json().catch(() => null);
+            if (data) return json(redactAiStatus(data, isOwner), viaSky.status);
+            // A body this Worker cannot parse is not worth showing; fall through.
+          }
+        }
         const res = await agentStatus(request, env, identity.uid);
-        /* Owner-only cost view. The provider list, model ids, the fallback
-           chain, the per-day limit and the pricing/observability block expose
-           which keys are live and what the AI costs; a student must not read
-           them. The admin token is the owner's own proof of identity (the same
-           gate /api/admin/* uses), so only that requester gets the full body.
-           Everyone else keeps the generic shape the app already relies on. */
-        const token = String(request.headers.get('Authorization') || '').replace('Bearer ', '').trim();
-        if (env.ADMIN_TOKEN && tokenEquals(token, env.ADMIN_TOKEN)) return res;
         const data = await res.json().catch(() => null);
-        if (!data) return res;
-        delete data.providers;
-        delete data.models;
-        delete data.chain;
-        delete data.limits;
-        delete data.observability;
-        /* BUG-002 (2026-10-25 audit): the remaining blocks are an attacker's
-           map, not the student's. `state` names the state store and its schema
-           version, `tools` lists every declared tool with its permission and
-           owner-scope, `memory` gives the memory mode and scope, and `response`
-           names the exact filter classes plus which ones block — precisely the
-           list to craft an evasion against. A guest or signed-in student has no
-           use for any of it; the owner keeps the whole body above, and the
-           app's own shell (ok, agent, streaming, pv) is untouched. */
-        delete data.state;
-        delete data.tools;
-        delete data.memory;
-        delete data.response;
-        delete data.actions;
-        delete data.context;
-        return json(data, res.status);
+        return data ? json(redactAiStatus(data, isOwner), res.status) : res;
       }
       if (path === '/api/ai/prefs' && request.method === 'GET') {
         const identity = await aiRequestIdentity(request, env, false);

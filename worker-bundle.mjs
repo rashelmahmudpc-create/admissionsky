@@ -5163,7 +5163,11 @@ var SKY_AI_IDENTITY_ROUTES = Object.freeze([
   /* F0.1 step 4e: reading the student's saved note. The write methods for the
    * same path are in SKY_AI_BODY_IDENTITY_ROUTES below — the list is keyed on
    * "METHOD /path", so a GET here can never let a POST through. */
-  "GET /api/ai/instructions"
+  "GET /api/ai/instructions",
+  /* F0.1 step 4i: the engine/model report, last. sky-ai answers only when it can
+   * reach every provider admission-gk can (see sky-ai/status.mjs); the owner-only
+   * redaction stays on admission-gk, where ADMIN_TOKEN lives. */
+  "GET /api/ai/status"
 ]);
 var SKY_INTERNAL_KEY_NAME = "secret:sky-internal";
 var SKY_AI_BODY_IDENTITY_ROUTES = Object.freeze([
@@ -5547,6 +5551,37 @@ async function aiRequestIdentity(request, env, countUsage = true) {
   const uid = await anonymousAiIdentity(request, env, countUsage);
   return { uid, persistMemory: false, authenticated: false };
 }
+var ownerRequest = (request, env) => {
+  const token = String(request.headers.get("Authorization") || "").replace("Bearer ", "").trim();
+  return Boolean(env.ADMIN_TOKEN) && tokenEquals(token, env.ADMIN_TOKEN);
+};
+var REDACTED_STATUS_FIELDS = [
+  "providers",
+  "models",
+  "chain",
+  "limits",
+  "observability",
+  "state",
+  "tools",
+  "memory",
+  "response",
+  "actions",
+  "context"
+];
+var redactAiStatus = (data, isOwner) => {
+  if (isOwner || !data || typeof data !== "object") return data;
+  const out = { ...data };
+  for (const field2 of REDACTED_STATUS_FIELDS) delete out[field2];
+  return out;
+};
+var statusHopHeaders = (env, needed) => {
+  const headers = { "x-sky-need-providers": needed.join(",") };
+  for (const name of ["AGENT_DAILY_CAP", "AGENT_GEMINI_MODELS", "AGENT_GROQ_MODELS", "AGENT_CLOUDFLARE_MODELS", "AGENT_FIRST_CHUNK_MS"]) {
+    const value = env && env[name];
+    if (value != null && String(value) !== "") headers["x-sky-env-" + name.toLowerCase().replace(/_/g, "-")] = String(value);
+  }
+  return headers;
+};
 var chatWithFallback = async (request, env, identity, { stream }) => {
   const reqId = crypto.randomUUID();
   const local = { stream, persistMemory: identity.persistMemory, reqId };
@@ -5821,23 +5856,24 @@ var public_worker_default = {
       if (path.startsWith("/api/admin/")) return admin(request, env, path);
       if (path === "/api/ai/status" && request.method === "GET") {
         const identity = await aiRequestIdentity(request, env, false);
+        const isOwner = ownerRequest(request, env);
+        let needed = [];
+        try {
+          needed = readyProviderNames(await providerReadiness(env));
+        } catch (_) {
+          needed = [];
+        }
+        if (needed.length) {
+          const headers = statusHopHeaders(env, needed);
+          const viaSky = await forwardWithIdentity(request, env, identity.uid, void 0, headers);
+          if (viaSky) {
+            const data2 = await viaSky.json().catch(() => null);
+            if (data2) return json2(redactAiStatus(data2, isOwner), viaSky.status);
+          }
+        }
         const res = await agentStatus(request, env, identity.uid);
-        const token = String(request.headers.get("Authorization") || "").replace("Bearer ", "").trim();
-        if (env.ADMIN_TOKEN && tokenEquals(token, env.ADMIN_TOKEN)) return res;
         const data = await res.json().catch(() => null);
-        if (!data) return res;
-        delete data.providers;
-        delete data.models;
-        delete data.chain;
-        delete data.limits;
-        delete data.observability;
-        delete data.state;
-        delete data.tools;
-        delete data.memory;
-        delete data.response;
-        delete data.actions;
-        delete data.context;
-        return json2(data, res.status);
+        return data ? json2(redactAiStatus(data, isOwner), res.status) : res;
       }
       if (path === "/api/ai/prefs" && request.method === "GET") {
         const identity = await aiRequestIdentity(request, env, false);

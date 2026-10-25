@@ -77,7 +77,24 @@ Source of truth: Notion "Sky AI v1.0" → main page section **"🚦 এজেন
   - **To complete 4h the provider keys must reach sky-ai** (`GEMINI_KEYS`,
     `GROQ_API_KEY`, …). Until then chat is served by admission-gk exactly as
     before — same code, same answer, one extra header check.
-- **Blocked on purpose — `/api/ai/status`: it must NOT move yet.** Status is a
+- **F0.1 step 4i ✅ (2026-10-25): `/api/ai/status` moved (GET) — the split is complete.**
+  This one was blocked for a day because a status served from a room without the
+  provider keys would have reported `providers: all false` and an empty chain — a
+  confidently wrong dashboard. Step 4h proved the keys are visible from sky-ai;
+  only then does this route become honest.
+  - **The redaction did NOT move.** The owner-only fields are hidden by
+    `redactAiStatus()` in `public-worker.js`, applied to the forwarded answer and
+    the local one through the same function, because `ADMIN_TOKEN` — the owner's
+    proof — exists only there. A copy of the field list on the far side would be
+    free to drift, and BUG-002 already showed how that ends: six more names had to
+    be added to the list after the fact.
+  - The provider-parity check moved into `sky-ai/parity.mjs`, now shared by chat
+    and status, and the daily cap + model overrides cross the hop so a report
+    describes the deployment that really exists.
+  - The deploy now asks the public endpoint the question a stranger would — does a
+    caller without the owner token get `providers`, `chain`, `limits`, `tools`? —
+    and goes red if it does.
+- **Superseded — `/api/ai/status` blocking note.** Status is a
   report about which AI engine and keys are available, and those keys are
   secrets on `admission-gk`. sky-ai has no `GEMINI_KEYS`/`GROQ_API_KEY`, so it
   would answer `providers: all false`, an empty chain and a default daily cap —
@@ -91,8 +108,9 @@ Source of truth: Notion "Sky AI v1.0" → main page section **"🚦 এজেন
 - 2026-10-25 · F0.1 step 4d · `POST /api/ai/recall` moved to sky-ai with the
   AI_STATE cross-script binding + `/health` dependency report + deploy assertion;
   42 sky-ai/routing tests and 78 AI/recall tests green · PR (this branch) ·
-  next: `/api/ai/status` waits for the provider keys to live in sky-ai — the same
-  prerequisite step 4h now checks at runtime.
+  **All /api/ai/* routes now live in sky-ai.** Remaining F0.1 follow-ups are not
+  route moves: F0.2's `SKY_FLAGS` KV binding, and deciding which credentials sky-ai
+  should own outright now that it serves every route.
 - 2026-10-25 · F0.1 step 4e · `/api/ai/instructions` (GET/POST/DELETE) moved;
   method-aware forwarder + body-read-order test · 52 sky-ai tests green.
 - 2026-10-25 · F0.1 step 4f · `/api/ai/memory/clear` moved; "forget" now defined

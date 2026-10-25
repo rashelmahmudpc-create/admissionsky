@@ -19,9 +19,10 @@ import { handleInstructions } from './instructions.mjs';
 import { handleMemoryClear } from './memory-clear.mjs';
 import { handleActionsPost } from './actions.mjs';
 import { handleChat, chatReadiness } from './chat.mjs';
+import { handleStatus } from './status.mjs';
 import { aiStateStore } from '../ai-state-do.mjs';
 
-export const SKY_AI_VERSION = 'sky-ai-f0.1-4h-chat';
+export const SKY_AI_VERSION = 'sky-ai-f0.1-4i-status';
 
 /* F0.1 step 4d: what /health reports about this Worker's dependencies.
  *
@@ -115,6 +116,14 @@ export async function handle(request, env = {}) {
    * makes the admission-gk fallback safe for a destructive route. */
   if (request.method === 'POST' && path === '/api/ai/memory/clear') {
     const res = await handleMemoryClear(request, env);
+    if (res) return res;
+  }
+
+  /* F0.1 step 4i: GET /api/ai/status — the engine/model report (internal-key
+   * protected, see status.mjs). Returns the COMPLETE body; admission-gk decides
+   * what a student may see, because the owner token lives there. */
+  if (request.method === 'GET' && path === '/api/ai/status') {
+    const res = await handleStatus(request, env);
     if (res) return res;
   }
 

@@ -17,7 +17,8 @@ test('the GET allowlist is exactly what has been moved, nothing more', () => {
     'GET /api/ai/prefs',
     'GET /api/ai/actions/audit',
     'GET /api/ai/sky-flags',
-    'GET /api/ai/instructions'
+    'GET /api/ai/instructions',
+    'GET /api/ai/status'
   ]);
 });
 
