@@ -11,6 +11,7 @@ let pass = 0, fail = 0;
 const t = (n, c) => { if (c) { pass++; console.log('  ✓', n); } else { fail++; console.log('  ✗', n); } }
 
 const E = await import('./action-engine.js');
+const ACTIONS_SRC = readFileSync(new URL('./ai-actions.mjs', import.meta.url), 'utf8');
 const WORKER_SRC = readFileSync('public-worker.js', 'utf8');
 const {
   ACTION_VERSION, ENABLED, PERMISSION, RISK, STATUS, CONFIRM_TTL_MS, MAX_AUDIT,
@@ -149,15 +150,20 @@ t('M9-৩১. the three action routes are wired with sign-in gates',
   WORKER_SRC.includes("'/api/ai/actions/propose'") && WORKER_SRC.includes("'/api/ai/actions/confirm'")
   && WORKER_SRC.includes("'/api/ai/actions/audit'")
   && (WORKER_SRC.match(/AI action ব্যবহার করতে লগইন করো।/g) || []).length === 3);
-t('M9-৩২. the confirm route consumes the proposal before writing (single-use)',
+/* F0.1 step 4g: the propose/confirm handlers moved out of public-worker.js into
+   ai-actions.mjs so sky-ai and admission-gk run the SAME code. The assertion
+   follows them rather than being weakened — the single-use ordering is the
+   property that stops an action being applied twice, so it must stay pinned
+   wherever the code now lives. */
+t('M9-৩২. the confirm handler consumes the proposal before writing (single-use)',
   (() => {
-    const confirmRoute = WORKER_SRC.slice(WORKER_SRC.indexOf("'/api/ai/actions/confirm'"));
-    const del = confirmRoute.indexOf("delete('actprop:' + identity.uid)");
-    const write = confirmRoute.indexOf("aiprefs:' + identity.uid, JSON.stringify(prefs)");
+    const confirmFn = ACTIONS_SRC.slice(ACTIONS_SRC.indexOf('export async function confirmAction'));
+    const del = confirmFn.indexOf('delete(PROPOSAL_KEY(uid))');
+    const write = confirmFn.indexOf("'aiprefs:' + uid, JSON.stringify(prefs)");
     return del !== -1 && write !== -1 && del < write;
   })());
 t('M9-৩৩. the audit trail is stored per owner key',
-  WORKER_SRC.includes("'actaudit:' + uid") && E.MAX_AUDIT === 200);
+  ACTIONS_SRC.includes("'actaudit:' + uid") && E.MAX_AUDIT === 200);
 
 /* ── ৮. E2E: the routes refuse while the layer is off ── */
 function stubEnv(over = {}) {

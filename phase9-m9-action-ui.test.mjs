@@ -190,9 +190,16 @@ await t('M9UI-১৭. the UI strings for both languages exist',
   ['actYes', 'actNo', 'actExpired', 'actFail', 'actOnly'].every((k) => (UI.match(new RegExp(k + ':', 'g')) || []).length >= 2));
 
 /* ── ৬. Server contract is unchanged and still gated ── */
+/* F0.1 step 4g: the confirmation logic moved to ai-actions.mjs, which both
+   admission-gk and sky-ai call. The route still has to be gated here (sign-in is
+   resolved by this Worker) and the single-use delete still has to exist — so the
+   check follows the code instead of being dropped. */
+const ACTIONS_SRC = readFileSync(new URL('./ai-actions.mjs', import.meta.url), 'utf8');
 await t('M9UI-১৮. the confirm route still requires a signed-in student and a single-use token',
-  PW.includes("path === '/api/ai/actions/confirm'") && PW.includes('confirmProposal(stored, token, identity.uid')
-  && PW.includes("env.PUB_KV.delete('actprop:' + identity.uid)"));
+  PW.includes("path === '/api/ai/actions/confirm'")
+  && PW.includes("error: 'sign_in_required', message: 'AI action ব্যবহার করতে লগইন করো।'")
+  && ACTIONS_SRC.includes('confirmProposal(stored, token, uid')
+  && ACTIONS_SRC.includes('delete(PROPOSAL_KEY(uid))'));
 
 console.log('\n🧩 PHASE9-M9-ACTION-UI: ' + pass + ' pass / ' + fail + ' fail');
 process.exit(fail ? 1 : 0);
