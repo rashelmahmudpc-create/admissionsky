@@ -115,6 +115,17 @@ Source of truth: Notion "Sky AI v1.0" → main page section **"🚦 এজেন
     produced by the deployment being measured. Moved after `Deploy Worker`, and the
     report now distinguishes three outcomes (ok / mismatch / unknown) instead of
     lumping "could not compare" in with "does not match".
+- **F0.1 step 4k ✅ (2026-10-25): the parity check found a real gap, and closed it.**
+  The first honest reading of 4j was `parity: { ok: false, needed: [..., "cloudflare"] }`
+  — admission-gk could reach Cloudflare Workers AI and sky-ai could not, so chat had
+  been quietly answered by the fallback all along. Not an outage; simply not moved.
+  - `ai-key-sync.mjs` copies any credential that exists only in admission-gk's
+    environment into KV `secret:AI_KEYS`, where both rooms read it. It runs off the
+    request path (`ctx.waitUntil`), once per isolate, merges only MISSING names,
+    never overwrites a rotated KV value, refuses to touch an unparseable blob, and
+    logs names — never values. Tests cover each of those refusals, plus the
+    property that matters: after a sync, the other room computes the same
+    readiness from the same namespace.
 - **Superseded — `/api/ai/status` blocking note.** Status is a
   report about which AI engine and keys are available, and those keys are
   secrets on `admission-gk`. sky-ai has no `GEMINI_KEYS`/`GROQ_API_KEY`, so it
