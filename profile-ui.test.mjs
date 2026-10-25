@@ -118,7 +118,7 @@ test('index.html: profile assets linked with versions (v262)', () => {
 
 test('sw.js caches the profile assets (v262)', () => {
 
-  assert.match(SW, /const BUILD_ID = 'v365-pw-guard-hint';/);
+  assert.match(SW, /const BUILD_ID = 'v364-sky-goal';/);
   assert.match(SW, /'\.\/academic-catalog\.js\?v=acad-cat-v2',/);
   assert.match(SW, /'\.\/profile-ui\.js\?v=profile-v20-sky-instr',/);
   assert.match(SW, /'\.\/profile-ui\.css\?v=profile-v15-uni-tap',/);

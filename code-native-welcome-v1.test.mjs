@@ -15,7 +15,7 @@ const RELEASE_WORKFLOW = read('.github/workflows/telegram-auth-canary-activate.y
 const UI_VERSION = '20261018-allowlist-v1';
 const UI_JS_VERSION = '20261025-pw-guard-hint';
 
-const SHELL_VERSION = 'v365-pw-guard-hint';
+const SHELL_VERSION = 'v364-sky-goal';
 
 const between = (source, start, end) => {
   const from = source.indexOf(start);

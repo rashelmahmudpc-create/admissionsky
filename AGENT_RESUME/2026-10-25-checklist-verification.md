@@ -33,7 +33,8 @@
    সার্ভার (`public-auth-handler.mjs`) ভুল পাসওয়ার্ডে `attemptsRemaining` পাঠায়, ক্লায়েন্ট
    (`account-access.js`) সেটা দেখিয়ে লেখে "আর ২ বার ভুল হলে কিছুক্ষণের জন্য বন্ধ হবে।",
    আর ইংরেজি মোডে `language-engine.js`-এর `RULES` সেটাকে ইংরেজি করে।
-  সঙ্গে: `?v=` + `BUILD_ID` → `v365-pw-guard-hint`, `sw.js` digest নতুন করে লেখা।
+   সঙ্গে: `account-access.js` ও `language-engine.js`-এর `?v=` বদলানো হয়েছে
+   (`20261025-pw-guard-hint` / `lang-v6-pw-guard-hint`) আর `sw.js`-এর digest নতুন করে লেখা হয়েছে।
    টেস্ট: `language-engine.test.mjs` ১২/১২ (নতুন রুল-টেস্টসহ), `password-guard`/`shadow-guard`/
    `native-auth` ৯৭/৯৭, `account-retirement`+`code-native-welcome`+`profile-ui` ৬৭/৬৭,
    `check:worker-bundle` ও `check:auth-worker-bundle` — দুটোই ০।
@@ -41,10 +42,12 @@
    HEAD-এও একই ২টা ফেল), এই বদলের কারণে নয়।
    (**এখনো বাকি:** গার্ড ব্লক করা চালু করা, অর্থাৎ নিচের ৪ নম্বর।)
 
-   **একটা অসম্পূর্ণ অংশ:** `.github/workflows/telegram-auth-canary-activate.yml`-এ BUILD_ID লিটার
-   এখনো `v364-sky-goal` — এই সেশনের টোকেনে `workflows` পারমিশন নেই, তাই ওই ফাইল পুশ হয়নি।
-   যার `workflows` পারমিশন আছে (অথবা আপনার নিজের হাতে) শুধু `v364-sky-goal` → `v365-pw-guard-hint`
-   বদলালেই ক্যানারি ওয়ার্কফ্লো আবার মিলবে। বাকি সব পিন (index.html, sw.js, টেস্ট) আপডেট করা।
+   **BUILD_ID ইচ্ছাকৃতভাবে `v364-sky-goal`-ই রাখা হয়েছে:** শেল বিল্ড আইডি বদলাতে হলে
+   `.github/workflows/telegram-auth-canary-activate.yml`-ও একসাথে বদলাতে হয়, কিন্তু এই সেশনের
+   টোকেনে `workflows` পারমিশন নেই (push rejected: refusing to allow a GitHub App to update workflow).
+   তাই `?v=` টোকেন দুটো বদলেছে (ব্রাউজার নতুন ফাইলই আনবে), BUILD_ID আসেনি — এতে কোনো টেস্ট
+   ভাঙেনি (১৭২/১৭২ পাস)। যার `workflows` পারমিশন আছে সে `node scripts/cache-bump.mjs` চালালেই
+   BUILD_ID-ও একসাথে যাবে।
 
 3. **গার্ড চালু করা বাকি (activation)।** `SHADOW_GUARD_ACTIVATION` সেট না থাকায় ডিফল্ট **observe** —
    পাসওয়ার্ড গার্ড কেবল গুনছে, আটকাচ্ছে না। `enforce` করলে ছাত্র আটকানোর ঝুঁকি তৈরি হয়,

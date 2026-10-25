@@ -12,7 +12,7 @@ const BUNDLE_GUARD = read('.github/workflows/cf-pages.yml');
 const UI_VERSION = '20261018-allowlist-v1';
 const UI_JS_VERSION = '20261025-pw-guard-hint';
 
-const SHELL_VERSION = 'v365-pw-guard-hint';
+const SHELL_VERSION = 'v364-sky-goal';
 
 const signupStart = JS.indexOf('<form class="ah-account-view ah-signup-view"');
 const signupEnd = JS.indexOf('<div class="ah-account-view ah-created-view"', signupStart);
