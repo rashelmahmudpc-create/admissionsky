@@ -18,7 +18,7 @@ head_sampling_rate = 1
 # aiprefs:<uid> and the internal key secret:sky-internal). A binding, not a var.
 [[kv_namespaces]]
 binding = "PUB_KV"
-id = "b9353515b098427687afcfb8654ed359"
+id = "fd9a455d1be64c2eade1309186462808"
 
 # F0.1 step 4d — Recall reads per-student memory that lives in the AI_STATE
 # Durable Object. `script_name` is what keeps it the SAME object: a DO id is

@@ -16,7 +16,8 @@ import { readFileSync } from 'node:fs';
 
 /** The production resources staging must never touch. */
 export const PRODUCTION_IDS = [
-  'b9353515b098427687afcfb8654ed359', // GK_KV / PUB_KV
+  'b9353515b098427687afcfb8654ed359', // GK_KV (private agent state)
+  'fd9a455d1be64c2eade1309186462808', // PUB_KV (public content, split out 2026-10-26)
   '942828aa82e546d4af11796ef92ab134', // OLD_KV
   '8f7cf101-66a3-437d-bc98-a8984698d7f5', // PROFILE_DB (D1)
 ];
