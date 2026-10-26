@@ -674,8 +674,14 @@
     closeModal();
     window.toast?.('টেস্ট পাঠানো হচ্ছে…');
     const okSend = await dispatch({ title: 'Admission Hub টেস্ট', body: 'বাহ! Notification চ্যানেল কাজ করছে, এখন থেকে ঠিক সময়ে আমি মনে করিয়ে দেব', category: 'update' }, { streak: streakNow(), todayQ: todayQuestions() });
-    if (okSend !== 'off') await logRow({ id: uid(), category: 'update', title: 'টেস্ট notification', body: 'চ্যানেল যাচাই সম্পন্ন ✓', priority: 1, dedup: 'test-' + Date.now(), status: 'sent', readAt: null, createdAt: Date.now() });
-    window.toast?.(okSend === 'off' ? 'Endpoint বন্ধ আছে' : 'টেস্ট পাঠানো হয়েছে, Telegram/push দেখো!');
+    if (okSend === 'ok') await logRow({ id: uid(), category: 'update', title: 'টেস্ট notification', body: 'চ্যানেল যাচাই সম্পন্ন ✓', priority: 1, dedup: 'test-' + Date.now(), status: 'sent', readAt: null, createdAt: Date.now() });
+    // BUG-001: the Worker now requires a real proof of identity, so a device
+    // without the owner's admin token is refused. Say that plainly instead of
+    // reporting a delivery that never happened.
+    const msg = okSend === 'off' ? 'Endpoint বন্ধ আছে'
+      : okSend === 'forbidden' ? 'এই ব্রাউজারে অ্যাডমিন টোকেন নেই, তাই টেস্ট পাঠানো হয়নি।'
+      : 'টেস্ট পাঠানো হয়েছে, Telegram/push দেখো!';
+    window.toast?.(msg);
   };
   const toastShort = text => { try { window.toast?.(text); } catch (_) {} };
 
