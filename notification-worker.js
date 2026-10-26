@@ -13,10 +13,58 @@
 const APP_HEADER = 'admission-hub';
 const TG_API = token => `https://api.telegram.org/bot${token}`;
 
+/* BUG-001 (2026-10-26 audit). APP_HEADER is a hardcoded literal that ships in
+   the client bundle, so it is a routing hint and never a credential: anyone who
+   reads the bundle could POST /api/notify/dispatch and make this Worker send
+   Telegram messages and push to every subscribed device. The dispatch route now
+   needs a real proof of identity. Same helpers as gk-agent-worker.js, kept in
+   sync by the bug001-write-auth test. */
+const tokenEquals = (a, b) => {
+  const x = String(a == null ? '' : a); const y = String(b == null ? '' : b);
+  if (!x || x.length !== y.length) return false;
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x.charCodeAt(i) ^ y.charCodeAt(i);
+  return diff === 0;
+};
+const ownerProof = (request, env) => {
+  if (!env || !env.ADMIN_TOKEN) return false;
+  const bearer = String(request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  const header = String(request.headers.get('X-AH-Admin-Token') || '').trim();
+  return tokenEquals(bearer, env.ADMIN_TOKEN) || tokenEquals(header, env.ADMIN_TOKEN);
+};
+const readSessionCookie = request => {
+  const raw = String(request.headers.get('Cookie') || '');
+  for (const part of raw.split(';')) {
+    const i = part.indexOf('=');
+    if (i < 1 || part.slice(0, i).trim() !== '__Host-ah_session') continue;
+    try { return decodeURIComponent(part.slice(i + 1).trim()); } catch (_) { return ''; }
+  }
+  return '';
+};
+const verifiedSession = async (request, env) => {
+  const token = readSessionCookie(request);
+  if (!/^[A-Za-z0-9_-]{32,160}$/.test(token) || !env || !env.AUTH_AUTHORITY) return false;
+  try {
+    const id = env.AUTH_AUTHORITY.idFromName('admission-hub-global-auth-v1');
+    const stub = env.AUTH_AUTHORITY.get(id);
+    const res = await stub.fetch('https://auth.internal/internal/session/get', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionToken: token })
+    });
+    const payload = await res.json().catch(() => null);
+    return res.ok && payload?.ok === true && !!payload?.result?.user?.id;
+  } catch (_) { return false; }
+};
+
 const cors = request => {
   const origin = request.headers.get('Origin') || '';
-  const ok = /^https:\/\/([a-z0-9-]+\.)?github\.io$/.test(origin)
-    || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+  /* BUG-002 (2026-10-26 audit): this allowlist still took any *.github.io site
+     and any localhost / 127.0.0.1 page. With credentials attached that lets a
+     stranger's page, or any script on a developer machine, call this Worker as
+     the signed-in student and read the response. Only the app's own origins
+     remain, matching cors-policy.mjs. */
+  const ok = /^https:\/\/([a-z0-9-]+\.)?(admissionsky|admissionhub)\.pages\.dev$/.test(origin);
   const headers = {
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, X-AH-App',
@@ -127,6 +175,34 @@ export default {
     }
 
     if (request.headers.get('X-AH-App') !== APP_HEADER) return json(request, { error: 'forbidden' }, 403);
+
+    /* BUG-001: dispatch is the route that sends Telegram messages and pushes to
+       every subscribed device, and it overwrites the cron-fallback state. The
+       header above only proves the caller read the client bundle, so this route
+       now requires the owner's admin token or a session the auth authority
+       confirms. Push subscribe/unsubscribe stay header-gated on purpose: they
+       are a per-device user action from a student's own browser, they touch only
+       that one device's record, and requiring a proof there would break the
+       enable-push button for signed-in students without closing the abuse path
+       that matters (mass messaging). */
+    if (request.method === 'POST' && url.pathname === '/api/notify/dispatch') {
+      if (!ownerProof(request, env) && !(await verifiedSession(request, env))) {
+        return json(request, { error: 'forbidden' }, 403);
+      }
+    }
+
+    /* The app syncs its own streak snapshot here on every open, and the cron
+       fallback reads it to decide whether a reminder is still needed. That call
+       comes from a student's browser and cannot carry an admin token, so it
+       lives on its own route: state only, never a message. Keeping it separate
+       is what lets /api/notify/dispatch be locked down completely. */
+    if (request.method === 'POST' && url.pathname === '/api/notify/state') {
+      let body; try { body = await request.json(); } catch (_) { return json(request, { error: 'bad_json' }, 400); }
+      if (body?.state && env.NOTIFY_KV) {
+        try { await env.NOTIFY_KV.put('state', JSON.stringify({ ...body.state, updatedAt: Date.now() })); } catch (_) {}
+      }
+      return json(request, { ok: true });
+    }
 
     if (request.method === 'POST' && url.pathname === '/api/push/subscribe') {
       let body; try { body = await request.json(); } catch (_) { return json(request, { error: 'bad_json' }, 400); }

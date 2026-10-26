@@ -45,9 +45,13 @@ const rateBuckets = new Map(); // per-isolate best effort (KV ছাড়াই
 /* AI audit 2026-10-16: the allowlist used to accept ANY *.github.io and ANY
    *.pages.dev site, so a stranger's page could spend this TTS quota from a
    visitor's browser. Only the app's own origins (and their preview
-   subdomains) are allowed now; a request carrying any other Origin is refused. */
-const originAllowed = origin => /^https:\/\/([a-z0-9-]+\.)?(admissionsky|admissionhub)\.pages\.dev$/.test(origin)
-  || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+   subdomains) are allowed now; a request carrying any other Origin is refused.
+
+   BUG-002 (2026-10-26 audit): localhost / 127.0.0.1 were still accepted here.
+   A page served on a developer machine could then make credentialed
+   cross-origin calls and read the response with a signed-in student's session.
+   Production dropped those on 2026-10-22 (cors-policy.mjs); this copy did not. */
+const originAllowed = origin => /^https:\/\/([a-z0-9-]+\.)?(admissionsky|admissionhub)\.pages\.dev$/.test(origin);
 
 const corsHeaders = request => {
   const origin = request.headers.get('Origin') || '';

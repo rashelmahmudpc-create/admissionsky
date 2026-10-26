@@ -32859,9 +32859,10 @@ var NEWS_SCHEMA = {
   },
   required: ["news"]
 };
+var previewOriginsAllowed = false;
 var cors = (request) => {
   const origin = request.headers.get("Origin") || "";
-  const ok2 = /^https:\/\/([a-z0-9-]+\.)?(admissionsky|admissionhub)\.pages\.dev$/.test(origin) || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) || /^https:\/\/[a-z0-9-]+\.e2b\.app$/.test(origin);
+  const ok2 = /^https:\/\/([a-z0-9-]+\.)?(admissionsky|admissionhub)\.pages\.dev$/.test(origin) || previewOriginsAllowed && /^https:\/\/[a-z0-9-]+\.e2b\.app$/.test(origin);
   const headers = { "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, X-AH-App", "Access-Control-Max-Age": "86400" };
   if (ok2) headers["Access-Control-Allow-Origin"] = origin;
   return headers;
@@ -33359,6 +33360,7 @@ async function handleErrorReport(request, env) {
 var gk_agent_worker_default = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    previewOriginsAllowed = String(env.ALLOW_PREVIEW_ORIGINS || "") === "1";
     if (url.pathname === "/api/ai/sky-health" && request.method === "GET" && env.SKY_AI) {
       const headers = { "x-sky-ai-caller": "admission-gk" };
       try {

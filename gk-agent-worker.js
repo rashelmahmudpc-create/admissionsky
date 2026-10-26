@@ -98,9 +98,17 @@ const NEWS_SCHEMA = {
   required: ['news']
 };
 
+/* BUG-002 (2026-10-26 audit). The allowlist used to accept localhost /
+   127.0.0.1 (and *.e2b.app) as well, which let any page served on a developer
+   machine make credentialed cross-origin calls and read the response with the
+   signed-in student's session. Production stopped accepting those on
+   2026-10-22 in cors-policy.mjs, but this handler kept its own copy. The
+   preview origin is now opt-in via ALLOW_PREVIEW_ORIGINS, unset in production. */
+let previewOriginsAllowed = false;
 const cors = request => {
   const origin = request.headers.get('Origin') || '';
-  const ok = /^https:\/\/([a-z0-9-]+\.)?(admissionsky|admissionhub)\.pages\.dev$/.test(origin) || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) || /^https:\/\/[a-z0-9-]+\.e2b\.app$/.test(origin); // e2b = workspace-প্রিভিউ
+  const ok = /^https:\/\/([a-z0-9-]+\.)?(admissionsky|admissionhub)\.pages\.dev$/.test(origin)
+    || (previewOriginsAllowed && /^https:\/\/[a-z0-9-]+\.e2b\.app$/.test(origin));
   const headers = { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, X-AH-App', 'Access-Control-Max-Age': '86400' };
   if (ok) headers['Access-Control-Allow-Origin'] = origin;
   return headers;
@@ -584,6 +592,7 @@ async function handleErrorReport(request, env) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    previewOriginsAllowed = String(env.ALLOW_PREVIEW_ORIGINS || '') === '1';
     /* F0.1 / DV-01 (Sky AI blueprint), first route through the new sky-ai
      * Worker via the SKY_AI service binding. Only this new health path is
      * forwarded; every existing /api/ai/* route is still served here. Without

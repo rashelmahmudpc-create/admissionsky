@@ -183,24 +183,38 @@
   };
 
   // ── Delivery: worker → Telegram + Web Push (+ state sync for cron fallback) ──
+  /* BUG-001 (2026-10-26): /api/notify/dispatch now requires a real proof of
+     identity, because the static X-AH-App header ships in this bundle and
+     anyone could read it and message every subscriber. A control device sends
+     the owner's admin token, exactly as cloud-content-sync.js does for
+     /api/cloud/publish. */
+  const dispatchHeaders = () => {
+    const base = { 'Content-Type': 'application/json', 'X-AH-App': APP_HEADER };
+    let token = '';
+    try { token = sessionStorage.getItem('ahAdminTok') || ''; } catch (_) {}
+    return token ? { ...base, Authorization: 'Bearer ' + token } : base;
+  };
   const dispatch = async (chosen, snapshot) => {
     if (!endpoint) return 'off';
     try {
-      await fetch(endpoint + '/api/notify/dispatch', {
+      const res = await fetch(endpoint + '/api/notify/dispatch', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-AH-App': APP_HEADER },
+        headers: dispatchHeaders(),
         body: JSON.stringify({
           telegram: { text: `${chosen.title}\n\n${chosen.body}` },
           state: { streak: snapshot.streak, todayQuestions: snapshot.todayQ, lastOpen: todayKey() }
         })
       });
+      // 403 means this device holds no owner token; say so instead of reporting
+      // a delivery that never happened.
+      if (res && res.status === 403) return 'forbidden';
       return 'ok';
     } catch (_) { return 'fail'; } // spec §46: failure কখনো app break করবে না
   };
   const syncState = async () => {
     if (!endpoint) return;
     try {
-      await fetch(endpoint + '/api/notify/dispatch', {
+      await fetch(endpoint + '/api/notify/state', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-AH-App': APP_HEADER },
         body: JSON.stringify({ state: { streak: streakNow(), todayQuestions: todayQuestions(), lastOpen: todayKey() } })
       });
