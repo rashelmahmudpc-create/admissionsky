@@ -1,0 +1,13 @@
+name = "admission-hub-ai-proxy"
+main = "worker.js"
+compatibility_date = "2026-08-27"
+
+[vars]
+ALLOWED_ORIGIN = "https://admissionhub.pages.dev"
+BROWSER_USE_MODEL = "gpt-5.6-luna"
+
+# Per-IP daily request guard (3/day). The namespace already existed for this
+# Worker; it was never bound because the Worker itself was never deployed.
+[[kv_namespaces]]
+binding = "AI_ANALYSIS_KV"
+id = "cee3eb70336a4a58a9d2324381dc3f46"
