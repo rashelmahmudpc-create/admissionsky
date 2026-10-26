@@ -144,11 +144,28 @@ async function getRun(runId, env) {
   return json({ runId, status: 'completed', analysis }, 200, env);
 }
 
+/* ALLOWED_ORIGIN only sets a response header; it does not decide anything.
+   Without a real check any site could POST /analyze and spend the owner's
+   Browser Use quota (the per-IP guard gives every visitor of that site its own
+   three). So the Origin is enforced here, and a request with no Origin — which
+   a browser always sends for a cross-origin POST — is refused too. */
+function originAllowed(request, env) {
+  const origin = request.headers.get('Origin') || '';
+  const allow = String(env.ALLOWED_ORIGINS || env.ALLOWED_ORIGIN || '')
+    .split(',').map(o => o.trim()).filter(Boolean);
+  if (!allow.length) allow.push('https://admissionhub.pages.dev', 'https://admissionsky.pages.dev');
+  return allow.includes(origin);
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(env) });
     const url = new URL(request.url);
     if (url.pathname === '/health') return json({ ok: true, service: 'admission-hub-ai-proxy' }, 200, env);
+    const isAnalyze = url.pathname === '/analyze' || url.pathname.startsWith('/analyze/');
+    if (isAnalyze && !originAllowed(request, env)) {
+      return json({ error: 'forbidden' }, 403, env);
+    }
     if (request.method === 'POST' && url.pathname === '/analyze') return createRun(request, env);
     if (request.method === 'GET' && url.pathname.startsWith('/analyze/')) return getRun(url.pathname.split('/').pop(), env);
     return json({ error: 'Not found.' }, 404, env);
