@@ -1,7 +1,7 @@
 const API_BASE = 'https://api.browser-use.com/api/v4';
 const MAX_BODY_BYTES = 64 * 1024;
 const MAX_TASK_CHARS = 48_000;
-const MAX_DAILY_REQUESTS = 3;
+const MAX_DAILY_REQUESTS = 1; // owner decision 2026-10-27: one AI report per day
 const MAX_POLL_SECONDS = 90;
 
 function corsHeaders(env) {

@@ -183,22 +183,24 @@
     busy = true; render();
     let ok = 0;
     try {
-      for (let i = 0; i < missing.length; i += 25) {
-        const chunk = missing.slice(i, i + 25);
-        setStatus(`AI ব্যাখ্যা আসছে… (${Math.min(i + chunk.length, missing.length)}/${missing.length}), প্রয়োজনে Google-এ তথ্য মিলিয়ে নিচ্ছে`);
-        const payload = { schemaVersion: 'admission-hub-result-analysis-v1', result: { id: 'notebook', title: 'Mistake Notebook', examType: 'ভুল সংকলন', completedAt: new Date().toISOString() }, previousResults: [], subjectPerformance: [], topicPerformance: [], requestType: 'question_explanation_batch', explanationQuestions: chunk.map((q) => ({ id: q.id, prompt: q.prompt, options: q.options, selected: q.selectedIndex >= 0 ? optText(q, q.selectedIndex) : 'উত্তর দেওয়া হয়নি', correct: optText(q, q.answerIndex), subject: q.subject, topic: q.topic, difficulty: 'মাঝারি', status: 'wrong' })) };
-        const token = await getTurnstileToken(siteKey);
-        const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(Object.assign({}, payload, { turnstileToken: token })) });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-        const text = data.analysis || data.result || data.text || (data.runId ? await pollRun(endpoint, data.runId) : '');
-        const parsed = parseJson(text);
-        const rows = Array.isArray(parsed?.explanations) ? parsed.explanations : (parsed && parsed.questionId ? [parsed] : []);
-        const wanted = new Set(chunk.map((q) => q.id));
-        rows.forEach((row) => { if (row && wanted.has(String(row.questionId))) { const q = chunk.find((x) => String(x.id) === String(row.questionId)); if (q) EXPL[explKey(q)] = row; ok++; } });
-        saveExpl(); render(); busy = true;
-      }
-      setStatus(`✅ ${ok}টি নতুন ব্যাখ্যা যোগ হয়েছে।`);
+      /* One batch a day: the server accepts a single request and takes at most
+         30 questions in it. Sending 30 once beats looping in 25s, which spent
+         the day's only request and then failed part-way with a 429. */
+      const chunk = missing.slice(0, 30);
+      const leftOver = missing.length - chunk.length;
+      setStatus(`AI ব্যাখ্যা আসছে… (${chunk.length}/${missing.length})`);
+      const payload = { schemaVersion: 'admission-hub-result-analysis-v1', result: { id: 'notebook', title: 'Mistake Notebook', examType: 'ভুল সংকলন', completedAt: new Date().toISOString() }, previousResults: [], subjectPerformance: [], topicPerformance: [], requestType: 'question_explanation_batch', explanationQuestions: chunk.map((q) => ({ id: q.id, prompt: q.prompt, options: q.options, selected: q.selectedIndex >= 0 ? optText(q, q.selectedIndex) : 'উত্তর দেওয়া হয়নি', correct: optText(q, q.answerIndex), subject: q.subject, topic: q.topic, difficulty: 'মাঝারি', status: 'wrong' })) };
+      const token = await getTurnstileToken(siteKey);
+      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(Object.assign({}, payload, { turnstileToken: token })) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      const text = data.analysis || data.result || data.text || (data.runId ? await pollRun(endpoint, data.runId) : '');
+      const parsed = parseJson(text);
+      const rows = Array.isArray(parsed?.explanations) ? parsed.explanations : (parsed && parsed.questionId ? [parsed] : []);
+      const wanted = new Set(chunk.map((q) => q.id));
+      rows.forEach((row) => { if (row && wanted.has(String(row.questionId))) { const q = chunk.find((x) => String(x.id) === String(row.questionId)); if (q) EXPL[explKey(q)] = row; ok++; } });
+      saveExpl(); render(); busy = true;
+      setStatus(leftOver > 0 ? `✅ ${ok}টি যোগ হয়েছে। দৈনিক সীমা ১, তাই বাকি ${leftOver}টি আগামীকাল আসবে।` : `✅ ${ok}টি নতুন ব্যাখ্যা যোগ হয়েছে।`);
     } catch (e) {
       setStatus(`ব্যাখ্যা পাওয়া যায়নি: ${e?.message || 'অজানা সমস্যা'}, পরে আবার চেষ্টা করো।`);
     } finally { busy = false; render(); }
