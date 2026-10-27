@@ -42,6 +42,7 @@ on:
       - 'observability/**'
       - 'observability.js'
       - 'sky-ai/**'
+      - 'ai-proxy/**'
       - '_worker.js'
       - 'scripts/pages-dist.mjs'
       # Self-reference, so editing this workflow publishes immediately instead
@@ -183,6 +184,47 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: '4.35.0'
           command: deploy --config wrangler.toml
+
+      # ai-proxy was deployed once by hand and then dropped out of CI: every
+      # Pages bundle excludes the directory, and no workflow uploaded it, so the
+      # security fixes committed to ai-proxy/worker.js stayed in the repo while
+      # the live Worker kept the old origin check. That is how BUG-001/002
+      # survived the audit. Deploying it here makes the committed code live, and
+      # the check below fails if the live origin allowlist disagrees.
+      - name: Deploy the AI proxy
+        working-directory: ai-proxy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4.35.0 deploy --config wrangler.toml
+
+      # BUG-002: a non-allowlisted Origin must be refused, and the two real hosts
+      # must not be. The audit proved the opposite was live (admissionsky got a
+      # 403 while a forged Origin got a 202), so this compares the live behaviour
+      # with the allowlist this commit declares.
+      - name: Verify the AI proxy origin allowlist
+        run: |
+          set -eu
+          url="https://admission-hub-ai-proxy.admissionhub.workers.dev/analyze"
+          for attempt in 1 2 3 4 5; do
+            blocked="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 -X POST -H 'Origin: https://evil.example' -H 'Content-Type: application/json' -d '{}' "$url" || true)"
+            printf 'attempt %s: forged origin -> %s\n' "$attempt" "${blocked:-none}"
+            if [ "$blocked" = "403" ]; then break; fi
+            if [ "$attempt" -eq 5 ]; then
+              echo "::error title=AI proxy still accepts a forged origin::a non-allowlisted Origin was not refused, so /analyze is unguarded (BUG-001/002)."
+              exit 1
+            fi
+            sleep 6
+          done
+          for origin in https://admissionsky.pages.dev https://admissionhub.pages.dev; do
+            code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 -X POST -H "Origin: $origin" -H 'Content-Type: application/json' -d '{}' "$url" || true)"
+            printf '%s -> %s\n' "$origin" "${code:-none}"
+            if [ "$code" = "403" ]; then
+              echo "::error title=Real site refused::$origin got 403, so the AI report cannot work from the live site (BUG-002)."
+              exit 1
+            fi
+          done
+          echo "::notice title=AI proxy allowlist correct::the real hosts are accepted and a forged origin is refused."
 
       - name: Report whether sky-ai can answer chat itself
         run: |
@@ -434,3 +476,33 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: '4.35.0'
           command: pages deploy dist --project-name admissionsky --branch main
+
+      # BUG-003: the deployed HTML has to carry the AI endpoint, or the weekly
+      # report dies in the browser with "Secure AI endpoint পাওয়া যায়নি" and no
+      # visible reason. The repo had it while the live bytes did not, and nothing
+      # compared the two — so the drift went unnoticed until an audit found it.
+      # A deploy that publishes HTML without the tag is the failure this catches.
+      - name: Verify the live HTML carries the AI endpoint
+        run: |
+          set -eu
+          expected="$(grep -oE "ADMISSION_HUB_AI_ENDPOINT='[^']+'" index.html | head -1 | sed "s/.*'\([^']*\)'/\1/" || true)"
+          if [ -z "$expected" ]; then
+            echo "::error title=AI endpoint missing in repo::index.html declares no ADMISSION_HUB_AI_ENDPOINT, so the weekly report cannot work anywhere."
+            exit 1
+          fi
+          for host in https://admissionsky.pages.dev/ https://admissionhub.pages.dev/; do
+            for attempt in 1 2 3 4 5; do
+              body="$(curl -sS --max-time 20 "$host?cb=$RANDOM" || true)"
+              got="$(printf '%s' "$body" | grep -oE "ADMISSION_HUB_AI_ENDPOINT='[^']+'" | head -1 | sed "s/.*'\([^']*\)'/\1/" || true)"
+              printf '%s attempt %s: expected %s, live %s\n' "$host" "$attempt" "$expected" "${got:-none}"
+              if [ "$got" = "$expected" ]; then
+                echo "::notice title=AI endpoint live::$host serves $expected."
+                break
+              fi
+              if [ "$attempt" -eq 5 ]; then
+                echo "::error title=AI endpoint stale::$host does not serve the endpoint this commit declares. The weekly report is dead in production."
+                exit 1
+              fi
+              sleep 6
+            done
+          done
