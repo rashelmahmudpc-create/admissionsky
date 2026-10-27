@@ -23,13 +23,49 @@ const kvStore = (seed = {}) => {
 const withFresh = (fn) => async () => { __resetKeySyncForTests(); return fn(); };
 
 test('a credential that only exists in env is copied, by name, and nothing else', withFresh(async () => {
-  const env = { AI_KEY_SYNC: 'on', PUB_KV: kvStore(), CLOUDFLARE_ACCOUNT_ID: 'acct-123', CLOUDFLARE_AI_API_KEY: 'cf-secret' };
+  const kv = kvStore({ 'secret:AI_KEYS': JSON.stringify({ GROQ_API_KEY: 'kv-groq' }) });
+  const env = { AI_KEY_SYNC: 'on', PUB_KV: kv, CLOUDFLARE_ACCOUNT_ID: 'acct-123', CLOUDFLARE_AI_API_KEY: 'cf-secret' };
   const r = await syncProviderKeysToKv(env);
   assert.equal(r.ok, true);
   assert.deepEqual(r.added.sort(), ['CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_AI_API_KEY']);
-  const stored = JSON.parse(env.PUB_KV.bag.get('secret:AI_KEYS'));
+  const stored = JSON.parse(kv.bag.get('secret:AI_KEYS'));
   assert.equal(stored.CLOUDFLARE_ACCOUNT_ID, 'acct-123');
   assert.equal(stored.CLOUDFLARE_AI_API_KEY, 'cf-secret');
+  assert.equal(stored.GROQ_API_KEY, 'kv-groq', 'the name that was already there is still there');
+}));
+
+test('a read that comes back empty is NOT an empty file — nothing is written', withFresh(async () => {
+  // This is the accident: the first deploy read no blob (one KV miss), treated it
+  // as `{}`, and wrote the two environment-only names over a file that held eight.
+  // The providers a room could reach went 8 -> 2 and chat fell back. A shared
+  // credential file is created by the owner-authorised workflow, not here.
+  const kv = kvStore();
+  const env = { AI_KEY_SYNC: 'on', PUB_KV: kv, GEMINI_KEYS: 'g', CLOUDFLARE_ACCOUNT_ID: 'acct' };
+  const r = await syncProviderKeysToKv(env);
+  assert.equal(r.ok, true);
+  assert.equal(r.skipped, 'no-blob');
+  assert.deepEqual(r.added, []);
+  assert.equal(kv.writes.length, 0, 'a missing file stays missing');
+  assert.equal(kv.bag.has('secret:AI_KEYS'), false);
+}));
+
+test('an empty object is treated as a read problem, not as an invitation', withFresh(async () => {
+  const kv = kvStore({ 'secret:AI_KEYS': '{}' });
+  const env = { AI_KEY_SYNC: 'on', PUB_KV: kv, GEMINI_KEYS: 'g' };
+  const r = await syncProviderKeysToKv(env);
+  assert.equal(r.ok, false);
+  assert.equal(r.reason, 'empty-blob');
+  assert.equal(kv.writes.length, 0);
+}));
+
+test('the write can only add — every name in the file survives the merge', withFresh(async () => {
+  const before = { GEMINI_KEYS: 'g', GROQ_API_KEY: 'q', OPENROUTER_API_KEYS: 'o' };
+  const kv = kvStore({ 'secret:AI_KEYS': JSON.stringify(before) });
+  const env = { AI_KEY_SYNC: 'on', PUB_KV: kv, CLOUDFLARE_ACCOUNT_ID: 'acct', CLOUDFLARE_AI_API_KEY: 'cf' };
+  await syncProviderKeysToKv(env);
+  const after = JSON.parse(kv.bag.get('secret:AI_KEYS'));
+  for (const [name, value] of Object.entries(before)) assert.equal(after[name], value, `${name} survived`);
+  assert.deepEqual(Object.keys(after).sort(), [...Object.keys(before), 'CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_AI_API_KEY'].sort());
 }));
 
 test('the result carries names, never secrets', withFresh(async () => {
@@ -54,7 +90,7 @@ test('a value already in KV is never overwritten', withFresh(async () => {
 test('it stops writing once the gap is closed', withFresh(async () => {
   // The KV write budget on the free plan is 1,000 a day; a per-request write would
   // spend it on nothing.
-  const kv = kvStore();
+  const kv = kvStore({ 'secret:AI_KEYS': JSON.stringify({ GEMINI_KEYS: 'g' }) });
   const env = { AI_KEY_SYNC: 'on', PUB_KV: kv, CLOUDFLARE_AI_API_KEY: 'x' };
   await syncProviderKeysToKv(env);
   assert.equal(kv.writes.length, 1);
@@ -87,7 +123,14 @@ test('a malformed blob is left alone, not replaced', withFresh(async () => {
 test('no KV, or a failing write, changes nothing', withFresh(async () => {
   assert.equal((await syncProviderKeysToKv({ AI_KEY_SYNC: 'on', GEMINI_KEYS: 'k' })).reason, 'no-kv');
   __resetKeySyncForTests();
-  const env = { AI_KEY_SYNC: 'on', PUB_KV: { get: async () => null, put: async () => { throw new Error('kv down'); } }, GEMINI_KEYS: 'k' };
+  const env = {
+    AI_KEY_SYNC: 'on',
+    PUB_KV: {
+      get: async () => JSON.stringify({ GEMINI_KEYS: 'g' }),
+      put: async () => { throw new Error('kv down'); }
+    },
+    CLOUDFLARE_AI_API_KEY: 'k'
+  };
   const r = await syncProviderKeysToKv(env);
   assert.equal(r.ok, false);
   assert.deepEqual(r.added, [], 'a failed write reports nothing as added');
@@ -96,7 +139,7 @@ test('no KV, or a failing write, changes nothing', withFresh(async () => {
 test('after a sync the other room sees the same provider — the point of it all', withFresh(async () => {
   // One KV, two Workers: env-only credential → copied → both compute the same
   // readiness from the SAME namespace. This is the property parity checks for.
-  const shared = kvStore();
+  const shared = kvStore({ 'secret:AI_KEYS': JSON.stringify({ GROQ_API_KEY: 'q' }) });
   const admissionGk = { AI_KEY_SYNC: 'on', PUB_KV: shared, CLOUDFLARE_ACCOUNT_ID: 'acct', CLOUDFLARE_AI_API_KEY: 'key', GEMINI_KEYS: 'g' };
   const skyAi = { PUB_KV: shared }; // its own environment has nothing
   const before = await providerReadiness(skyAi);
@@ -135,7 +178,7 @@ test('the automatic pass is off unless explicitly armed', withFresh(async () => 
   // this module is the only code that writes that file. Until the file's shape
   // can be observed, guessing is worse than waiting — chat falls back meanwhile,
   // so no student is affected.
-  const kv = kvStore();
+  const kv = kvStore({ 'secret:AI_KEYS': JSON.stringify({ GROQ_API_KEY: 'q' }) });
   const env = { PUB_KV: kv, GEMINI_KEYS: 'k' };
   const r = await syncProviderKeysToKv(env);
   assert.equal(r.skipped, 'disabled');
