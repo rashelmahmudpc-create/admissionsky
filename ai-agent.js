@@ -805,6 +805,17 @@ const pickKey = (env, kv, name) => String((env && env[name]) || kv[name] || '').
 
    One definition, used by both sides, so the two lists are comparable by
    construction rather than by careful maintenance. */
+/* Every credential name a provider can come from, in one list. Used by
+   providerReadiness() and by the env→KV sync (ai-key-sync.mjs), so a provider can
+   never be "known to the router" but unknown to the sync. */
+export const PROVIDER_KEY_NAMES = Object.freeze([
+  'GEMINI_KEYS',
+  'GROQ_API_KEY',
+  'CLOUDFLARE_ACCOUNT_ID',
+  'CLOUDFLARE_AI_API_KEY',
+  ...COMPAT_PROVIDERS.map((p) => p.key)
+]);
+
 export async function providerReadiness(env) {
   const kv = await aiKeyOverlay(env);
   const has = (name) => !!pickKey(env, kv, name);

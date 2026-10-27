@@ -2,6 +2,7 @@
 import pubHandler, { publishGlobal } from './public-worker.js';
 import { tryRouteToSkyAi } from './sky-ai-route.mjs';
 import { providerReadiness, readyProviderNames } from './ai-agent.js';
+import { syncProviderKeysToKv } from './ai-key-sync.mjs';
 import { runDailyReport } from './sky-daily-report.mjs';
 import { handleInternalEmailRequest } from './email-gateway/worker/handler.mjs';
 import { createNativeAuthHandler } from './auth-native/worker/public-auth-handler.mjs';
@@ -593,6 +594,24 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     previewOriginsAllowed = String(env.ALLOW_PREVIEW_ORIGINS || '') === '1';
+    /* F0.1 step 4j follow-up: put any credential that exists only in THIS
+     * Worker's environment into KV, where both rooms can read it. Measurement
+     * found exactly that gap — admission-gk could reach `cloudflare`, sky-ai could
+     * not, so chat quietly stayed on the fallback.
+     *
+     * Off the request path (waitUntil), once per isolate, names only in the log,
+     * and it never overwrites what KV already has. A failure changes nothing:
+     * the deployment behaves exactly as it does today. */
+    try {
+      const p = syncProviderKeysToKv(env).then((r) => {
+        if (r && r.added && r.added.length) {
+          // Names, never values. This is the one line that explains, later, why
+          // sky-ai suddenly reported a provider it did not have before.
+          try { console.log(JSON.stringify({ evt: 'ai.keys.synced', names: r.added })); } catch (_) {}
+        }
+      }).catch(() => {});
+      if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(p);
+    } catch (_) { /* never fail a request for this */ }
     /* F0.1 / DV-01 (Sky AI blueprint), first route through the new sky-ai
      * Worker via the SKY_AI service binding. Only this new health path is
      * forwarded; every existing /api/ai/* route is still served here. Without

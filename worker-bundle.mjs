@@ -3881,6 +3881,13 @@ async function aiKeyOverlay(env) {
   return out;
 }
 var pickKey = (env, kv2, name) => String(env && env[name] || kv2[name] || "").trim();
+var PROVIDER_KEY_NAMES = Object.freeze([
+  "GEMINI_KEYS",
+  "GROQ_API_KEY",
+  "CLOUDFLARE_ACCOUNT_ID",
+  "CLOUDFLARE_AI_API_KEY",
+  ...COMPAT_PROVIDERS.map((p) => p.key)
+]);
 async function providerReadiness(env) {
   const kv2 = await aiKeyOverlay(env);
   const has2 = (name) => !!pickKey(env, kv2, name);
@@ -5987,6 +5994,42 @@ var public_worker_default = {
     }
   }
 };
+
+// ai-key-sync.mjs
+var KV_KEY = "secret:AI_KEYS";
+var doneInThisIsolate = false;
+async function syncProviderKeysToKv(env, { force = false } = {}) {
+  if (!force && doneInThisIsolate) return { ok: true, skipped: "already-checked", added: [] };
+  doneInThisIsolate = true;
+  const kv2 = env && env.PUB_KV;
+  if (!kv2 || typeof kv2.get !== "function" || typeof kv2.put !== "function") {
+    return { ok: false, reason: "no-kv", added: [] };
+  }
+  let blob = {};
+  try {
+    const raw = await kv2.get(KV_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) blob = parsed;
+  } catch (_) {
+    return { ok: false, reason: "unreadable", added: [] };
+  }
+  const added = [];
+  const next = { ...blob };
+  for (const name of PROVIDER_KEY_NAMES) {
+    if (next[name] && String(next[name]).trim()) continue;
+    const value = String(env && env[name] || "").trim();
+    if (!value) continue;
+    next[name] = value;
+    added.push(name);
+  }
+  if (!added.length) return { ok: true, added: [] };
+  try {
+    await kv2.put(KV_KEY, JSON.stringify(next));
+  } catch (_) {
+    return { ok: false, reason: "write-failed", added: [] };
+  }
+  return { ok: true, added };
+}
 
 // email-gateway/core/constants.mjs
 var EMAIL_GATEWAY_VERSION = "phase2b-2";
@@ -33364,6 +33407,19 @@ var gk_agent_worker_default = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     previewOriginsAllowed = String(env.ALLOW_PREVIEW_ORIGINS || "") === "1";
+    try {
+      const p = syncProviderKeysToKv(env).then((r) => {
+        if (r && r.added && r.added.length) {
+          try {
+            console.log(JSON.stringify({ evt: "ai.keys.synced", names: r.added }));
+          } catch (_) {
+          }
+        }
+      }).catch(() => {
+      });
+      if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(p);
+    } catch (_) {
+    }
     if (url.pathname === "/api/ai/sky-health" && request.method === "GET" && env.SKY_AI) {
       const headers = { "x-sky-ai-caller": "admission-gk" };
       try {
