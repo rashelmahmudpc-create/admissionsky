@@ -21,9 +21,10 @@ import { handleActionsPost } from './actions.mjs';
 import { handleChat, chatReadiness } from './chat.mjs';
 import { handleStatus } from './status.mjs';
 import { neededProviders, missingProviders } from './parity.mjs';
+import { aiKeyBlobShape } from '../ai-agent.js';
 import { aiStateStore } from '../ai-state-do.mjs';
 
-export const SKY_AI_VERSION = 'sky-ai-f0.1-4j-parity';
+export const SKY_AI_VERSION = 'sky-ai-f0.1-4l-key-shape';
 
 /* F0.1 step 4d: what /health reports about this Worker's dependencies.
  *
@@ -95,7 +96,12 @@ export async function handle(request, env = {}) {
        * nothing was sent to compare against. `ok: true` is the only answer that
        * proves chat really is answered here — the provider list alone cannot tell
        * "has a key" from "has every key the other room has". */
-      parity: await providerParity(request, env)
+      parity: await providerParity(request, env),
+      /* F0.1 step 4l: the SHAPE of the credential file — present? how many names?
+       * which are providers? A mismatch alone cannot distinguish "missing one
+       * credential" from "the whole file is gone", and those need different fixes.
+       * No value, no length, no prefix ever leaves here. */
+      aiKeys: await aiKeyBlobShape(env)
     });
   }
 

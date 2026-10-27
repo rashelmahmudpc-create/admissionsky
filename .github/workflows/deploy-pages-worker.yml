@@ -317,6 +317,17 @@ jobs:
           if printf '%s' "$providers" | grep -q 'gemini'; then
             echo "::notice title=Sky AI providers present::${providers}"
           fi
+          # The shape of the credential file, never its contents. Without this, a
+          # mismatch cannot be told apart from a missing file, and those two need
+          # different fixes.
+          aiKeys="$(printf '%s' "$body" | grep -oE '"aiKeys":\{[^}]*\}' | head -1 || true)"
+          echo "::notice title=Sky AI key file::${aiKeys:-no shape reported}"
+          case "$aiKeys" in
+            *'"present":true'*) ;;
+            *)
+              echo "::warning title=Sky AI credential file missing or unreadable::${aiKeys:-none} — both rooms read KV secret:AI_KEYS; if it is gone, the providers that lived only there are unreachable from either room."
+              ;;
+          esac
       # F-04: the public auth route must answer on the app Worker, whether it is
       # served in process (AUTH_ROUTE=local) or forwarded to admission-auth
       # (AUTH_ROUTE=service). One curl proves the path a student actually uses.

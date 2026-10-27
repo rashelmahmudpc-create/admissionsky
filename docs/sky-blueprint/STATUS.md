@@ -126,6 +126,25 @@ Source of truth: Notion "Sky AI v1.0" → main page section **"🚦 এজেন
     logs names — never values. Tests cover each of those refusals, plus the
     property that matters: after a sync, the other room computes the same
     readiness from the same namespace.
+- **F0.1 step 4l ⏳ (2026-10-27): the fix is disarmed until its effect is seen.**
+  The deploy after 4k reported the **opposite** of what it intended: sky-ai's
+  provider list came back *empty* and parity wanted *more* names, not fewer. The
+  sync is the only writer of `secret:AI_KEYS`, and its logic is additive, so the
+  change cannot explain the result — which means the write may have damaged the
+  blob, or the blob was already damaged and the sync merely exposed it. Guessing
+  between those two costs the same in credentials as getting it wrong.
+  - The automatic sync is now **off unless `AI_KEY_SYNC=on`**; `force` still
+    works, so the module and its tests stay honest.
+  - `/health.aiKeys` reports the **shape** of `secret:AI_KEYS` —
+    `{present, count, providers, reason}` with `reason` in
+    `no-kv | absent | read-failed | unparseable | not-an-object`. Never a value,
+    never a length, never a prefix. That distinguishes "one credential is missing"
+    from "the whole file is gone", which need different fixes.
+  - The deploy prints that shape as `Sky AI key file` and warns when the blob is
+    absent or unreadable, so the answer arrives with the deploy rather than in a
+    session that has no Cloudflare credentials.
+  - **Lesson:** a write to a shared credential store is not an experiment to run
+    twice. Observe the store first, state the fix from what is observed.
 - **Superseded — `/api/ai/status` blocking note.** Status is a
   report about which AI engine and keys are available, and those keys are
   secrets on `admission-gk`. sky-ai has no `GEMINI_KEYS`/`GROQ_API_KEY`, so it
@@ -137,6 +156,12 @@ Source of truth: Notion "Sky AI v1.0" → main page section **"🚦 এজেন
   F0.1 step 4 — move the remaining `/api/ai/*` routes into sky-ai one at a time, `/api/ai/chat` last.
 
 ## Work log (append at the bottom)
+- 2026-10-27 · F0.1 step 4l · sync disarmed behind `AI_KEY_SYNC=on`; `/health.aiKeys`
+  reports the shape of KV `secret:AI_KEYS` (present/count/providers/reason, never a
+  value) and the deploy prints it as `Sky AI key file` · 13 key-sync tests + 116
+  sky-ai/routing/binding tests green · shell guard now also runs on `ai-agent.js`,
+  `ai-key-sync*` and `sky-ai/**` so these suites cannot be skipped again · next:
+  read the shape from a deploy, restore whatever is missing, only then re-arm.
 - 2026-10-25 · F0.1 step 4d · `POST /api/ai/recall` moved to sky-ai with the
   AI_STATE cross-script binding + `/health` dependency report + deploy assertion;
   42 sky-ai/routing tests and 78 AI/recall tests green · PR (this branch) ·

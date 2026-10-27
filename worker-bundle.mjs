@@ -5999,6 +5999,8 @@ var public_worker_default = {
 var KV_KEY = "secret:AI_KEYS";
 var doneInThisIsolate = false;
 async function syncProviderKeysToKv(env, { force = false } = {}) {
+  const armed = String(env && env.AI_KEY_SYNC || "").toLowerCase() === "on";
+  if (!armed && !force) return { ok: true, skipped: "disabled", added: [] };
   if (!force && doneInThisIsolate) return { ok: true, skipped: "already-checked", added: [] };
   doneInThisIsolate = true;
   const kv2 = env && env.PUB_KV;
