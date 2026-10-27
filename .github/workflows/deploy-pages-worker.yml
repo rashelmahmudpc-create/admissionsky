@@ -216,13 +216,21 @@ jobs:
             fi
             sleep 6
           done
+          # A Worker upload returns before every edge has the new isolate, so a
+          # real host can briefly still see the previous allowlist. Retry instead
+          # of reading that lag as a failure -- the first run of this check failed
+          # exactly that way, one second after its own deploy.
           for origin in https://admissionsky.pages.dev https://admissionhub.pages.dev; do
-            code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 -X POST -H "Origin: $origin" -H 'Content-Type: application/json' -d '{}' "$url" || true)"
-            printf '%s -> %s\n' "$origin" "${code:-none}"
-            if [ "$code" = "403" ]; then
-              echo "::error title=Real site refused::$origin got 403, so the AI report cannot work from the live site (BUG-002)."
-              exit 1
-            fi
+            for attempt in 1 2 3 4 5; do
+              code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 -X POST -H "Origin: $origin" -H 'Content-Type: application/json' -d '{}' "$url" || true)"
+              printf '%s attempt %s -> %s\n' "$origin" "$attempt" "${code:-none}"
+              if [ "$code" != "403" ]; then break; fi
+              if [ "$attempt" -eq 5 ]; then
+                echo "::error title=Real site refused::$origin got 403, so the AI report cannot work from the live site (BUG-002)."
+                exit 1
+              fi
+              sleep 6
+            done
           done
           echo "::notice title=AI proxy allowlist correct::the real hosts are accepted and a forged origin is refused."
 
