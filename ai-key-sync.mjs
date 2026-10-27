@@ -16,6 +16,13 @@
  *   missing, and only if something was actually missing.
  *
  * WHAT IT WILL NEVER DO:
+ *   - CREATE the blob. If `secret:AI_KEYS` does not read back, this stops. The
+ *     first deploy of this module read no blob (a KV miss) and wrote env-only
+ *     names, which replaced an eight-name file with three — the very accident
+ *     that made 4l necessary. A shared credential file is created by the
+ *     owner-authorised workflow (ai-key-set.yml), never by request-path code;
+ *   - shrink it: the merged file must hold at least every name it held before,
+ *     and an empty or non-object file is a read problem, not an invitation;
  *   - overwrite a value that is already in KV (an operator may have rotated one
  *     there deliberately; env is only used to fill a gap);
  *   - log, return or report any secret — the result carries NAMES only;
@@ -55,14 +62,24 @@ export async function syncProviderKeysToKv(env, { force = false } = {}) {
   if (!kv || typeof kv.get !== 'function' || typeof kv.put !== 'function') {
     return { ok: false, reason: 'no-kv', added: [] };
   }
-  let blob = {};
+  let blob = null;
   try {
     const raw = await kv.get(KV_KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) blob = parsed;
+    /* A MISS IS NOT AN EMPTY FILE. `null` here can mean "no such key" or "this
+       read did not reach the storage" — and the two are indistinguishable from
+       inside a Worker. Treating the second as the first is what replaced the
+       eight-name file with three names on the first deploy: the merge was
+       correct, the input was not. So: no blob, no write. */
+    if (!raw) return { ok: true, skipped: 'no-blob', added: [] };
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return { ok: false, reason: 'not-an-object', added: [] };
+    }
+    if (!Object.keys(parsed).length) return { ok: false, reason: 'empty-blob', added: [] };
+    blob = parsed;
   } catch (_) {
-    /* A malformed blob is treated as empty rather than overwritten with junk:
-       we would rather copy nothing than destroy an operator's file. */
+    /* Malformed: leave it exactly as it is. We would rather copy nothing than
+       destroy a file we cannot read. */
     return { ok: false, reason: 'unreadable', added: [] };
   }
 
@@ -76,6 +93,11 @@ export async function syncProviderKeysToKv(env, { force = false } = {}) {
     added.push(name);
   }
   if (!added.length) return { ok: true, added: [] };
+  /* Cannot happen with the merge above, and asserted anyway: this module is only
+     allowed to add. A write that would drop a name is refused, not attempted. */
+  for (const name of Object.keys(blob)) {
+    if (!(name in next)) return { ok: false, reason: 'would-shrink', added: [] };
+  }
 
   try { await kv.put(KV_KEY, JSON.stringify(next)); } catch (_) { return { ok: false, reason: 'write-failed', added: [] }; }
   // NAMES only. The values must never reach a log.

@@ -126,7 +126,7 @@ Source of truth: Notion "Sky AI v1.0" → main page section **"🚦 এজেন
     logs names — never values. Tests cover each of those refusals, plus the
     property that matters: after a sync, the other room computes the same
     readiness from the same namespace.
-- **F0.1 step 4l ⏳ (2026-10-27): the fix is disarmed until its effect is seen.**
+- **F0.1 step 4l ✅ (2026-10-27): the store was observed first, and it named the bug.**
   The deploy after 4k reported the **opposite** of what it intended: sky-ai's
   provider list came back *empty* and parity wanted *more* names, not fewer. The
   sync is the only writer of `secret:AI_KEYS`, and its logic is additive, so the
@@ -143,6 +143,26 @@ Source of truth: Notion "Sky AI v1.0" → main page section **"🚦 এজেন
   - The deploy prints that shape as `Sky AI key file` and warns when the blob is
     absent or unreadable, so the answer arrives with the deploy rather than in a
     session that has no Cloudflare credentials.
+  - **Observed (deploy 40553147983):** `Sky AI key file {"present":true,"count":3,
+    "providers":["CLOUDFLARE_ACCOUNT_ID","CLOUDFLARE_AI_API_KEY","GEMINI_KEYS"]}` and
+    `Sky AI parity ok ["cloudflare","gemini"]`. The file exists, and both rooms read
+    the same names — what 4k set out to achieve is true.
+  - **What went wrong, now provable from the code:** that file holds exactly the
+    names admission-gk carries in its *own environment*. The six KV-only names
+    (cerebras, cohere, groq, mistral, openrouter, vercel) are gone. The sync's read
+    came back empty, and the old code treated an empty read as `{}` — so its merge
+    was correct and its input was not, and it wrote env-only names over a file that
+    held eight. From inside a Worker a KV miss and a missing key look identical.
+  - Fixed in the same change: `syncProviderKeysToKv` now refuses to write unless it
+    read a NON-EMPTY object — `skipped: 'no-blob'` for a miss, `empty-blob` /
+    `not-an-object` / `unreadable` for a bad file, `would-shrink` as a final guard —
+    and it never creates the file; `ai-key-set.yml` (owner-authorised) does that.
+    Six new tests hold those refusals, including the exact accident: eight names in,
+    none lost. The automatic pass stays **off**: parity is ok, so it has nothing
+    left to add.
+  - The six lost names can only be re-entered from the provider dashboards. Chat
+    does not need them: it is answered by `cloudflare` and `gemini`, and the
+    fallback to admission-gk is untouched.
   - **Lesson:** a write to a shared credential store is not an experiment to run
     twice. Observe the store first, state the fix from what is observed.
 - **Superseded — `/api/ai/status` blocking note.** Status is a
@@ -156,7 +176,13 @@ Source of truth: Notion "Sky AI v1.0" → main page section **"🚦 এজেন
   F0.1 step 4 — move the remaining `/api/ai/*` routes into sky-ai one at a time, `/api/ai/chat` last.
 
 ## Work log (append at the bottom)
-- 2026-10-27 · F0.1 step 4l · sync disarmed behind `AI_KEY_SYNC=on`; `/health.aiKeys`
+- 2026-10-27 · F0.1 step 4l, outcome · deploy 40553147983 printed the file's shape:
+  3 names, and `parity ok [cloudflare, gemini]` — both rooms read the same keys, so
+  4k's goal holds. The 3 names are exactly admission-gk's env names, which is the
+  proof: the sync's read came back empty and it wrote env-only names over a file of
+  eight. Now it refuses to write unless it read a non-empty object, and never
+  creates the file · 16 key-sync tests + 77 AI/routing/wiring tests green, both
+  bundle guards clean · next: the four kept PRs, then F0.2 `SKY_FLAGS`.
   reports the shape of KV `secret:AI_KEYS` (present/count/providers/reason, never a
   value) and the deploy prints it as `Sky AI key file` · 13 key-sync tests + 116
   sky-ai/routing/binding tests green · shell guard now also runs on `ai-agent.js`,

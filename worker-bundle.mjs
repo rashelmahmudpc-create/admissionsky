@@ -6007,11 +6007,16 @@ async function syncProviderKeysToKv(env, { force = false } = {}) {
   if (!kv2 || typeof kv2.get !== "function" || typeof kv2.put !== "function") {
     return { ok: false, reason: "no-kv", added: [] };
   }
-  let blob = {};
+  let blob = null;
   try {
     const raw = await kv2.get(KV_KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) blob = parsed;
+    if (!raw) return { ok: true, skipped: "no-blob", added: [] };
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { ok: false, reason: "not-an-object", added: [] };
+    }
+    if (!Object.keys(parsed).length) return { ok: false, reason: "empty-blob", added: [] };
+    blob = parsed;
   } catch (_) {
     return { ok: false, reason: "unreadable", added: [] };
   }
@@ -6025,6 +6030,9 @@ async function syncProviderKeysToKv(env, { force = false } = {}) {
     added.push(name);
   }
   if (!added.length) return { ok: true, added: [] };
+  for (const name of Object.keys(blob)) {
+    if (!(name in next)) return { ok: false, reason: "would-shrink", added: [] };
+  }
   try {
     await kv2.put(KV_KEY, JSON.stringify(next));
   } catch (_) {
