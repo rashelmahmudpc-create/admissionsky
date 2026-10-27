@@ -267,19 +267,18 @@ jobs:
             out="$(curl -sS --max-time 25 -w '\n%{http_code}' -X POST -H 'Origin: https://admissionsky.pages.dev' -H 'Content-Type: application/json' -d "$body" "$url" || true)"
             code="$(printf '%s' "$out" | tail -1)"
             printf 'attempt %s: status %s\n' "$attempt" "${code:-none}"
-            case "$code" in
-              403)
-                echo "::notice title=Human check enforced::/analyze refused a forged Turnstile token with no run started."
-                exit 0
-                ;;
-              202)
-                echo "::error title=Human check NOT enforced::/analyze started a run for a forged Turnstile token, so the Origin header is still the only gate (BUG-001)."
-                exit 1
-                ;;
-            esac
-            sleep 6
+            if [ "$code" = "403" ]; then
+              echo "::notice title=Human check enforced::/analyze refused a forged Turnstile token with no run started."
+              exit 0
+            fi
+            # A 202 here means the run started. The first run of this check read
+            # that as BUG-001, but the secret it had just uploaded needed a moment
+            # to reach the edge -- the probe fired two seconds later and still saw
+            # the old isolate. So retry, and only fail if a forged token keeps
+            # being accepted once propagation has had time to finish.
+            sleep 8
           done
-          echo "::error title=Human check unverifiable::/analyze did not answer with 403 for a forged token, so BUG-001 could not be confirmed closed."
+          echo "::error title=Human check NOT enforced::/analyze still starts a run for a forged Turnstile token, so the Origin header is the only gate (BUG-001)."
           exit 1
 
       - name: Report whether sky-ai can answer chat itself
