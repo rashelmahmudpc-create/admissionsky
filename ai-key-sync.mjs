@@ -35,7 +35,20 @@ const KV_KEY = 'secret:AI_KEYS';
 let doneInThisIsolate = false;
 export const __resetKeySyncForTests = () => { doneInThisIsolate = false; };
 
+/* OFF BY DEFAULT, because of what happened after the first deploy.
+ *
+ * First run (2026-10-25) reported `parity: { ok: false, needed: ["cloudflare","gemini"] }`
+ * — a SHORTER list than the eight providers admission-gk could reach before, and
+ * sky-ai's own list dropped from seven to none. Something emptied or unreadable-ised
+ * `secret:AI_KEYS`, and this module is the only code that writes it. Rather than
+ * reason about that from outside, the automatic pass is disabled until the blob's
+ * shape can be observed directly (see aiKeyBlobShape and /health).
+ *
+ * `force` still works, so the function and its tests stay honest — but nothing calls
+ * it automatically while AI_KEY_SYNC is not explicitly "on". */
 export async function syncProviderKeysToKv(env, { force = false } = {}) {
+  const armed = String((env && env.AI_KEY_SYNC) || '').toLowerCase() === 'on';
+  if (!armed && !force) return { ok: true, skipped: 'disabled', added: [] };
   if (!force && doneInThisIsolate) return { ok: true, skipped: 'already-checked', added: [] };
   doneInThisIsolate = true;
   const kv = env && env.PUB_KV;

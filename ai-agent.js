@@ -816,6 +816,28 @@ export const PROVIDER_KEY_NAMES = Object.freeze([
   ...COMPAT_PROVIDERS.map((p) => p.key)
 ]);
 
+/* The SHAPE of the credential blob, never its contents: is it there, how many
+   names does it hold, and which of them are providers we know. Added because a
+   parity mismatch alone cannot say whether a room is missing a credential or
+   missing the whole file — and the difference decides the fix.
+   Returns no value, no length, no prefix. */
+export async function aiKeyBlobShape(env) {
+  const kv = env && env.PUB_KV;
+  if (!kv || typeof kv.get !== 'function') return { present: false, reason: 'no-kv' };
+  let raw = null;
+  try { raw = await kv.get(AI_KV_JSON_KEY); } catch (_) { return { present: false, reason: 'read-failed' }; }
+  if (!raw) return { present: false, reason: 'absent' };
+  let parsed = null;
+  try { parsed = JSON.parse(raw); } catch (_) { return { present: true, reason: 'unparseable' }; }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { present: true, reason: 'not-an-object' };
+  const names = Object.keys(parsed).filter((k) => parsed[k] && String(parsed[k]).trim());
+  return {
+    present: true,
+    count: names.length,
+    providers: names.filter((k) => PROVIDER_KEY_NAMES.includes(k)).sort()
+  };
+}
+
 export async function providerReadiness(env) {
   const kv = await aiKeyOverlay(env);
   const has = (name) => !!pickKey(env, kv, name);
