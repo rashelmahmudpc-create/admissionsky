@@ -24,10 +24,12 @@
 
 import { agentStatus } from '../ai-agent.js';
 import { trustedUid, missingProviders, applyEnvPassthrough } from './parity.mjs';
+import { corsHeaders } from '../cors-policy.mjs';
 
+/* BUG-005: no wildcard. The provider/model list is owner-only, so ACAO is
+   emitted only for an allowlisted Origin (cors-policy.mjs). */
 const HEADERS = {
   'Content-Type': 'application/json',
-  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization,content-type,x-ah-app,x-ah-guest',
   'Access-Control-Allow-Methods': 'GET,OPTIONS',
   'cache-control': 'no-store',
@@ -47,5 +49,5 @@ export async function handleStatus(request, env = {}) {
   // redacts. A status body is small and not streamed, so nothing is buffered
   // that the student was waiting for.
   const body = await res.text();
-  return new Response(body, { status: res.status, headers: HEADERS });
+  return new Response(body, { status: res.status, headers: { ...HEADERS, ...corsHeaders(request) } });
 }
