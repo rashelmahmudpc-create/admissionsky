@@ -53,8 +53,13 @@ jobs:
         run: npm run check:worker-bundle
       - name: Run test
         if: ${{ steps.apply.outputs.count != '0' }}
+        env:
+          # BUG-004: never interpolate ${{ }} into the script text -- GitHub
+          # substitutes before the shell parses it, so a value like 'x; rm -rf'
+          # would execute. Passing it through the environment keeps it data.
+          TEST_FILE: ${{ inputs.test_file }}
         run: |
-          f="${{ inputs.test_file }}"
+          f="$TEST_FILE"
           [ -z "$f" ] && f=sky-ai-binding.test.mjs
           [ -f "$f" ] && node --test "$f" || echo "no test file $f"
       - name: Commit and push

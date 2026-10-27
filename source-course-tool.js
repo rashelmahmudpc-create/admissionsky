@@ -200,7 +200,13 @@
        * recorded hash still renders, but its scripts are never executed.
        * Update the hash in COURSE_DEFS whenever a course file legitimately
        * changes, or that course's interactivity stops. */
-      const integrityOk = await sha256Hex(stripInjectedBeacon(text)) === String(def.hash || '').toLowerCase();
+      /* BUG-007: an empty def.hash used to compare against '' and, if the file
+       * also hashed to something, fail closed by luck. Make that explicit: a
+       * course with no recorded hash is never executed, so a regression that
+       * drops the hash cannot silently re-open the new Function() sink. */
+      const recordedHash = String(def.hash || '').trim().toLowerCase();
+      const integrityOk = recordedHash.length === 64
+        && await sha256Hex(stripInjectedBeacon(text)) === recordedHash;
       if (!integrityOk) console.error(`source-course integrity mismatch for "${key}", its scripts will not run`);
       const doc = new DOMParser().parseFromString(text, 'text/html');
       const styles = Array.from(doc.querySelectorAll('style')).map(s => s.textContent || '').join('\n');

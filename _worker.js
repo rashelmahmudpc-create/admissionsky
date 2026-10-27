@@ -2,6 +2,8 @@
    Same-origin /api/* requests are proxied to the production Workers; all other
    requests are served from Pages assets. No client or service credential is
    stored here. */
+import { corsHeaders } from './cors-policy.mjs';
+
 const ORIGIN = 'https://admission-gk.admissionhub.workers.dev';
 const VOICE_ORIGIN = 'https://admission-voice.admissionhub.workers.dev';
 /* P23, the live voice AGENT is served by the main Worker, not the vocabulary
@@ -195,7 +197,9 @@ export default {
       } catch (_) {
         return new Response(JSON.stringify({ error: 'api-unavailable', at: Date.now() }), {
           status: 502,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          // BUG-005: never '*' here. corsHeaders returns {} (plus Vary: Origin)
+          // for a non-allowlisted Origin, so the response is unreadable to it.
+          headers: { 'Content-Type': 'application/json', ...corsHeaders(request) }
         });
       }
     }

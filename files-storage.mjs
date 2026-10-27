@@ -278,8 +278,11 @@ export async function handleFilesStorageRequest(request, env) {
       headers: {
         'Content-Type': type,
         'Content-Length': String(obj.size),
-        'Cache-Control': 'public, max-age=31536000, immutable',
-        'Access-Control-Allow-Origin': '*'
+        // BUG-008: an unguessable key is not a licence for a wildcard. Keep a
+        // long cache but let the browser cache it privately, and do not invite
+        // arbitrary sites to read it via CORS.
+        'Cache-Control': 'private, max-age=86400',
+        'X-Content-Type-Options': 'nosniff'
       }
     });
   }
