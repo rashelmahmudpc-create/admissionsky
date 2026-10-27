@@ -198,6 +198,25 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx --yes wrangler@4.35.0 deploy --config wrangler.toml
 
+      # BUG-001 stayed open even after the code was right: /analyze reads
+      # TURNSTILE_SECRET_KEY, but the secret was only ever bound to admission-gk,
+      # so the proxy saw an empty value and skipped the check. Binding it here is
+      # what turns the verification on. Absent secret = explicit notice, not a
+      # silent pass, because an unverified /analyze is the finding itself.
+      - name: Bind the Turnstile secret to the AI proxy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+        run: |
+          set -eu
+          if [ -z "${TURNSTILE_SECRET_KEY:-}" ]; then
+            echo "::warning title=Turnstile not bound to the AI proxy::TURNSTILE_SECRET_KEY is unset, so /analyze still trusts a forgeable Origin header alone (BUG-001)."
+            exit 0
+          fi
+          printf '%s' "$TURNSTILE_SECRET_KEY" | npx --yes wrangler@4.35.0 secret put TURNSTILE_SECRET_KEY --name admission-hub-ai-proxy
+          echo "::notice title=Turnstile bound::the AI proxy now verifies the human check server-side."
+
       # BUG-002: a non-allowlisted Origin must be refused, and the two real hosts
       # must not be. The audit proved the opposite was live (admissionsky got a
       # 403 while a forged Origin got a 202), so this compares the live behaviour
@@ -233,6 +252,35 @@ jobs:
             done
           done
           echo "::notice title=AI proxy allowlist correct::the real hosts are accepted and a forged origin is refused."
+
+      # BUG-001: an Origin check is forgeable, so the guard is only real when a
+      # bad Turnstile token is refused. The Turnstile check runs BEFORE any quota
+      # is spent, so the healthy answer (403) costs nothing; only the broken case
+      # reaches a run. This is what proves the secret bound above actually took
+      # effect, rather than being present but unread.
+      - name: Verify the AI proxy rejects a forged human check
+        run: |
+          set -eu
+          url="https://admission-hub-ai-proxy.admissionhub.workers.dev/analyze"
+          body='{"schemaVersion":"admission-hub-result-analysis-v1","requestType":"weekly_report","result":{"id":"deploy-probe","title":"deploy probe"},"turnstileToken":"deploy-probe-invalid-token"}'
+          for attempt in 1 2 3 4 5; do
+            out="$(curl -sS --max-time 25 -w '\n%{http_code}' -X POST -H 'Origin: https://admissionsky.pages.dev' -H 'Content-Type: application/json' -d "$body" "$url" || true)"
+            code="$(printf '%s' "$out" | tail -1)"
+            printf 'attempt %s: status %s\n' "$attempt" "${code:-none}"
+            case "$code" in
+              403)
+                echo "::notice title=Human check enforced::/analyze refused a forged Turnstile token with no run started."
+                exit 0
+                ;;
+              202)
+                echo "::error title=Human check NOT enforced::/analyze started a run for a forged Turnstile token, so the Origin header is still the only gate (BUG-001)."
+                exit 1
+                ;;
+            esac
+            sleep 6
+          done
+          echo "::error title=Human check unverifiable::/analyze did not answer with 403 for a forged token, so BUG-001 could not be confirmed closed."
+          exit 1
 
       - name: Report whether sky-ai can answer chat itself
         run: |
