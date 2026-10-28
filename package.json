@@ -39,11 +39,11 @@
     "test:descope": "node --test --test-concurrency=1 descope-otp.test.mjs"
   },
   "dependencies": {
-    "jsdom": "^29.1.1"
+    "jsdom": "^30.1.3"
   },
   "devDependencies": {
-    "better-sqlite3": "^12.11.1",
-    "fake-indexeddb": "^6.2.5",
-    "playwright-core": "1.55.0"
+    "better-sqlite3": "^13.0.3",
+    "fake-indexeddb": "^6.2.6",
+    "playwright-core": "1.64.1"
   }
 }
