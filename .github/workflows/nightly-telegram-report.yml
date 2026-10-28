@@ -3,8 +3,15 @@ name: Nightly Bangla Report (Telegram)
 # Every night at 23:00 Asia/Dhaka (17:00 UTC) collects the last 24 hours of
 # this repo (guards on main, Actions runs, commits, open PRs/issues) and sends
 # a short Bangla summary to Telegram. Read-only: it never changes the repo.
-# Needs secrets TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID; without them the
-# report is still written to the run's Job Summary.
+#
+# It reads its own secrets, REPORT_TELEGRAM_BOT_TOKEN / REPORT_TELEGRAM_CHAT_ID,
+# and deliberately NOT the generic TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID.
+# Those generic names are the OTP and security-alert bot: the auth deploy binds
+# them into the admission-auth Worker as TG_BOT_TOKEN, so a report bot sitting
+# under the same name would be published as the login bot and send one-time
+# codes from the wrong account. Separate names make that mix-up impossible.
+# The generic pair is still accepted as a fallback so an existing setup keeps
+# working. Without either pair the report is written to the Job Summary only.
 on:
   schedule:
     - cron: '0 17 * * *'
@@ -86,12 +93,23 @@ jobs:
 
       - name: Send to Telegram
         env:
-          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TG_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # The report's own names come first; the generic pair is only a
+          # fallback for a repository that has not split them yet.
+          TG_TOKEN: ${{ secrets.REPORT_TELEGRAM_BOT_TOKEN || secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT: ${{ secrets.REPORT_TELEGRAM_CHAT_ID || secrets.TELEGRAM_CHAT_ID }}
         run: |
           if [ -z "$TG_TOKEN" ] || [ -z "$TG_CHAT" ]; then
-            echo "::warning::TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID not set — report is only in the Job Summary"
+            echo "::warning::REPORT_TELEGRAM_BOT_TOKEN / REPORT_TELEGRAM_CHAT_ID not set — report is only in the Job Summary"
             exit 0
+          fi
+          # Refuse to run if the report bot is somehow the login bot: that would
+          # post the nightly summary from the account students get OTP codes
+          # from. A wrong identity is worse than a silent night.
+          BOT_ID="$(curl -sS --fail-with-body "https://api.telegram.org/bot${TG_TOKEN}/getMe" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("result",{}).get("username",""))' 2>/dev/null || true)"
+          echo "report bot: ${BOT_ID:-unknown}"
+          if [ "$BOT_ID" = "AdmissionHubVerifyBot" ]; then
+            echo "::error::the report token belongs to the OTP bot (AdmissionHubVerifyBot) — refusing to send"
+            exit 1
           fi
           curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
             --data-urlencode "chat_id=${TG_CHAT}" \
