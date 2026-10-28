@@ -1,0 +1,39 @@
+# Gitleaks config for admission-hub-demo.
+#
+# The full git history is scanned on every PR (secret-scan-gitleaks.yml).
+# Everything below allow-lists material that is NOT a credential; each entry
+# says why so a reviewer can verify it instead of trusting it.
+#
+# Real secrets are NOT allow-listed here. If a genuine key is ever committed,
+# this scan must fail and the key must be rotated.
+
+title = "admission-hub-demo gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = """
+Non-credential material:
+
+* paths — test fixtures (*.test.mjs), vendored SDKs, node_modules, the
+  service worker (sw.js: only precache SHA-256 integrity hashes), and dist/
+  (build output regenerated from the sources that are themselves scanned).
+* regexes — Firebase Web API keys (AIza..., public by design; restricted by
+  HTTP referrer in Google Cloud Console), the public Firebase project id,
+  the web-push VAPID *public* key, and internal dictionary/cache names.
+"""
+paths = [
+  '''(^|/)[^/]*\.test\.mjs$''',
+  '''^sdk/''',
+  '''^node_modules/''',
+  '''^sw\.js$''',
+  '''^dist/''',
+]
+regexes = [
+  '''AIza[0-9A-Za-z_\-]{35}''',
+  '''admissionsky-997d2''',
+  '''BJtpFY7isSDAQy7ck7zNQjNfmhAu4w-bcQ3_eFUTQbITSHBJO5f6n5ayYm_-TE7vNcnZ_1Ib45DVmxQkyLIFDsY''',
+  '''admission[-_]phase[0-9]+[-_]dictionary[-_]v[0-9]+''',
+  '''admission_phase345_v1''',
+]

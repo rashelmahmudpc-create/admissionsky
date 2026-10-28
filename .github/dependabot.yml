@@ -1,0 +1,25 @@
+# Dependabot: weekly, grouped, low-noise dependency updates.
+# Times are Asia/Dhaka. PR limits keep the 100+ guard workflows from flooding.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: friday
+      time: "10:00"
+      timezone: Asia/Dhaka
+    open-pull-requests-limit: 3
+    groups:
+      npm-all:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+      timezone: Asia/Dhaka
+    open-pull-requests-limit: 2
+    groups:
+      actions-all:
+        patterns: ["*"]
