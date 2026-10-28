@@ -1,10 +1,10 @@
 /*
- * Install Guide — Admission Hub
+ * Install Guide, Admission Hub
  *
  * A short, one-tap invitation to keep the app on the phone.
- *  · Android — a single button opens the browser's real install prompt, so the
+ *  · Android, a single button opens the browser's real install prompt, so the
  *    student is added in one tap.
- *  · iPhone/iPad — Apple does not let any web page install itself, so Safari
+ *  · iPhone/iPad, Apple does not let any web page install itself, so Safari
  *    shows the Share → Add to Home Screen steps. Tapping the primary button
  *    reveals that short guide on demand (the demo animation is tucked here too)
  *    instead of front-loading it.
@@ -116,7 +116,7 @@
       <div class="ahig-card" tabindex="-1">
         <button class="ahig-close" type="button" aria-label="বন্ধ করুন">✕</button>
         <h2 class="ahig-title" id="ahig-title">পড়াশোনা থাকুক হাতের কাছেই 📚</h2>
-        <p class="ahig-lead">Admission Hub হোম স্ক্রিনে যোগ করুন — এক ক্লিকে খুলবে, অফলাইনেও পড়া যাবে।</p>
+        <p class="ahig-lead">Admission Hub হোম স্ক্রিনে যোগ করুন, এক ক্লিকে খুলবে, অফলাইনেও পড়া যাবে।</p>
         <div class="ahig-detail" hidden>
           ${demoMarkup(p)}
           <div class="ahig-howtitle">যেভাবে যোগ করবেন</div>

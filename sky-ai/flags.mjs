@@ -1,4 +1,4 @@
-/* Sky AI feature flags + canary — F0.2 / DV-02 (blueprint v1.0).
+/* Sky AI feature flags + canary, F0.2 / DV-02 (blueprint v1.0).
  *
  * One flag = { on, percent, beta, killed }:
  *   killed  -> always off (kill switch, wins over everything)

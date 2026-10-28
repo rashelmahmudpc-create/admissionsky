@@ -309,7 +309,7 @@ export class MemoryAuthRepository {
     return { profile: copy(this.profiles.get(session.user.id) || null) };
   }
 
-  // Phase 7 — mirrors SqliteAuthRepository profile API (same behavior,
+  // Phase 7, mirrors SqliteAuthRepository profile API (same behavior,
   // in-memory storage).
   #withDefaults(profile, now) {
     return {
@@ -414,7 +414,7 @@ export class MemoryAuthRepository {
     const user = this.users.get(entry[0]);
     const accountState = this.accountStates.get(entry[0]);
     // Phase 6 fact: suspension lives in the account state, deactivation in
-    // auth_users.status — both must be active for a public surface.
+    // auth_users.status, both must be active for a public surface.
     if (!user || user.status !== 'active' || (accountState?.status && accountState.status !== 'active')) {
       return { error: AUTH_ERROR_CODES.PUBLIC_PROFILE_NOT_FOUND };
     }

@@ -1,4 +1,4 @@
-/* Student data sync — server-side student-owned learning data.
+/* Student data sync, server-side student-owned learning data.
  *
  * The browser's IndexedDB stays the fast/offline working copy, but it is no
  * longer the only permanent record: every student-owned row is mirrored into D1
@@ -26,7 +26,7 @@ const SESSION_COOKIE = '__Host-ah_session';
 const SESSION_TOKEN_RE = /^[A-Za-z0-9_-]{40,96}$/;
 
 /* Student-owned stores. Static/shared content (questions, topics, vocabulary,
- * subjects) is NOT here on purpose — it is already server-side product data. */
+ * subjects) is NOT here on purpose, it is already server-side product data. */
 const STUDENT_TABLES = Object.freeze({
   examResults: 'user_exam_results',
   exams: 'user_exams',

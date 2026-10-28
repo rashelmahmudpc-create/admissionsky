@@ -1,4 +1,4 @@
-/* P09 — Advanced Analytics insight engine.
+/* P09, Advanced Analytics insight engine.
  *
  * Pure and dependency-free (like question-engine.js), so it runs in the browser
  * as window.AhAnalyticsInsights and under node:test for verification. It turns
@@ -168,7 +168,7 @@
     return { overall, samples: accs.length };
   }
 
-  /* Plain-language insight cards, built only from what the data supports — no
+  /* Plain-language insight cards, built only from what the data supports, no
      insight is emitted when there is nothing to say. */
   function insights(model) {
     const cards = [];
@@ -180,22 +180,22 @@
     const revision = topics.filter(t => t.status === STATUS.REVISION).slice(0, 3);
 
     if (strong.length) cards.push({ kind: 'positive', title: 'শক্ত দিক', text: `এই টপিকগুলোতে তুমি ভালো করছ: ${strong.map(t => t.topicId).join(', ')}।` });
-    if (improving.length) cards.push({ kind: 'positive', title: 'উন্নতি হচ্ছে', text: `সম্প্রতি উন্নতি করেছ: ${improving.map(t => t.topicId).join(', ')} — এভাবে চালিয়ে যাও।` });
+    if (improving.length) cards.push({ kind: 'positive', title: 'উন্নতি হচ্ছে', text: `সম্প্রতি উন্নতি করেছ: ${improving.map(t => t.topicId).join(', ')}, এভাবে চালিয়ে যাও।` });
     if (weak.length) cards.push({ kind: 'attention', title: 'দুর্বল দিক', text: `এখানে আরও অনুশীলন দরকার: ${weak.map(t => `${t.topicId} (${t.accuracy}%)`).join(', ')}।` });
-    if (declining.length) cards.push({ kind: 'attention', title: 'কমে যাচ্ছে', text: `এই টপিকগুলোতে নম্বর নামছে: ${declining.map(t => t.topicId).join(', ')} — আবার রিভিশন দাও।` });
+    if (declining.length) cards.push({ kind: 'attention', title: 'কমে যাচ্ছে', text: `এই টপিকগুলোতে নম্বর নামছে: ${declining.map(t => t.topicId).join(', ')}, আবার রিভিশন দাও।` });
     if (revision.length) cards.push({ kind: 'attention', title: 'রিভিশন বাকি', text: `${revision.reduce((a, t) => a + t.pendingMistakes, 0)}টি ভুল-প্রশ্ন এখনো রিভিশন হয়নি (${revision.map(t => t.topicId).join(', ')})।` });
 
     const d = model.difficulty || {};
     const weakest = DIFFS.filter(x => d[x] && d[x].attempted >= 3).sort((a, b) => d[a].accuracy - d[b].accuracy)[0];
-    if (weakest && d[weakest].accuracy < 70) cards.push({ kind: 'neutral', title: 'কঠিনতা-ভিত্তিক', text: `${weakest} প্রশ্নে তোমার নির্ভুলতা ${d[weakest].accuracy}% — এটাই সবচেয়ে দুর্বল স্তর।` });
+    if (weakest && d[weakest].accuracy < 70) cards.push({ kind: 'neutral', title: 'কঠিনতা-ভিত্তিক', text: `${weakest} প্রশ্নে তোমার নির্ভুলতা ${d[weakest].accuracy}%, এটাই সবচেয়ে দুর্বল স্তর।` });
 
     const imp = model.improvement || {};
     if (imp.samples >= 2 && Math.abs(imp.overall) >= 3) {
-      cards.push({ kind: imp.overall > 0 ? 'positive' : 'attention', title: 'উন্নতির হার', text: imp.overall > 0 ? `গড় নির্ভুলতা ${imp.overall} পয়েন্ট বেড়েছে আগের তুলনায়।` : `গড় নির্ভুলতা ${Math.abs(imp.overall)} পয়েন্ট কমেছে — সময় দাও।` });
+      cards.push({ kind: imp.overall > 0 ? 'positive' : 'attention', title: 'উন্নতির হার', text: imp.overall > 0 ? `গড় নির্ভুলতা ${imp.overall} পয়েন্ট বেড়েছে আগের তুলনায়।` : `গড় নির্ভুলতা ${Math.abs(imp.overall)} পয়েন্ট কমেছে, সময় দাও।` });
     }
 
     const wp = model.patterns || {};
-    if (wp.repeated && wp.repeated.length) cards.push({ kind: 'attention', title: 'বারবার ভুল', text: `${wp.repeated.length}টি প্রশ্নে তুমি একাধিকবার ভুল করেছ — এগুলো আগে রিভিশন করো।` });
+    if (wp.repeated && wp.repeated.length) cards.push({ kind: 'attention', title: 'বারবার ভুল', text: `${wp.repeated.length}টি প্রশ্নে তুমি একাধিকবার ভুল করেছ, এগুলো আগে রিভিশন করো।` });
     return cards;
   }
 

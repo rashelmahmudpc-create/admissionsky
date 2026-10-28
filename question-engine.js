@@ -1,4 +1,4 @@
-/* Admission Hub — P07 Intelligent Question Engine.
+/* Admission Hub, P07 Intelligent Question Engine.
  *
  * The question bank's own quality layer. It gives every question a difficulty,
  * a type, a concept tag and an expected solving time; checks that the answer
@@ -7,7 +7,7 @@
  * same single-pass analyser, so it stays fast as the bank grows to lakhs.
  *
  * Shipped as a classic script (window/self UMD) and loaded verbatim by
- * node:test, so the tested code is the shipped code — never a re-implementation.
+ * node:test, so the tested code is the shipped code, never a re-implementation.
  * No storage writes happen here: callers persist via applyTags().
  *
  * Exposed as window.AhQuestionEngine / self.AhQuestionEngine and module.exports.
@@ -42,7 +42,7 @@
 
   /* Question words ("কী", "কোনটি", "কত", "which" …) carry no subject matter, so
      they are stripped before word-overlap comparison. Without this, "X কী?" and
-     "X কোনটি?" look 60% similar instead of identical — a real duplicate that is
+     "X কোনটি?" look 60% similar instead of identical, a real duplicate that is
      also the most common duplicate this bank produces. */
   const QWORDS = new Set(['কী', 'কি', 'কে', 'কত', 'কোন', 'কোনটি', 'নিচের', 'কেন', 'কোথায়', 'কখন',
     'what', 'who', 'which', 'when', 'where', 'how', 'the', 'a', 'an', 'of', 'is', 'are', 'in', 'on', 'and', 'was', 'were']);
@@ -52,7 +52,7 @@
     return kept.length ? kept : t;
   }
 
-  /* Jaccard over word sets — order-insensitive, cheap, good for "same question,
+  /* Jaccard over word sets, order-insensitive, cheap, good for "same question,
      reworded" cases (the common duplicate in this bank). */
   function jaccard(a, b) {
     const A = new Set(a), B = new Set(b);
@@ -63,7 +63,7 @@
     return union ? inter / union : 0;
   }
 
-  /* Character bigram Dice — catches near-identical strings that differ by a
+  /* Character bigram Dice, catches near-identical strings that differ by a
      couple of characters, which word-Jaccard can miss on short questions. */
   function bigrams(s) {
     const t = normalizeText(s).replace(/ /g, '');
@@ -105,7 +105,7 @@
   }
 
   /* Difficulty: a blend of intrinsic cues (question/option length, numeric
-     content) and — when the bank knows it — observed accuracy from stats. The
+     content) and, when the bank knows it, observed accuracy from stats. The
      observed signal wins when there is enough of it, because real student
      performance beats any heuristic. */
   function difficultyScore(q) {
@@ -352,7 +352,7 @@
     };
   }
 
-  /* Apply tags in bulk without touching storage — returns new array; the caller
+  /* Apply tags in bulk without touching storage, returns new array; the caller
      persists the changed records. */
   function applyTags(questions) {
     return (Array.isArray(questions) ? questions : []).map(tagQuestion);

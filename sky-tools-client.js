@@ -1,4 +1,4 @@
-/* AdmissionSky — agent phase 1, in-app tools (owner 2026-10-17).
+/* AdmissionSky, agent phase 1, in-app tools (owner 2026-10-17).
    These five tools need data that lives on this device (CACHE.questions,
    CACHE.examResults, the in-app knowledge bank), so they run here: instant, no
    server call, no AI limit used. READ-only: nothing is saved or deleted.
@@ -74,13 +74,13 @@
     if (!m || !p.length) return null;
     const n = count(text);
     const pick = shuffle(p, seed || Date.now()).slice(0, n);
-    const lines = ['📝 **' + m.name + ' — ' + bn(pick.length) + 'টা প্রশ্নের কুইজ**', ''];
+    const lines = ['📝 **' + m.name + ', ' + bn(pick.length) + 'টা প্রশ্নের কুইজ**', ''];
     pick.forEach((q, i) => {
       lines.push('**' + bn(i + 1) + '.** ' + String(q.question).trim());
       q.options.slice(0, 6).forEach((o, j) => lines.push('   ' + LET[j] + ') ' + String(o).trim()));
       lines.push('');
     });
-    lines.push('✅ উত্তর এভাবে লেখো: **' + pick.slice(0, 3).map((_, i) => bn(i + 1) + '-ক').join(' ') + (pick.length > 3 ? ' …' : '') + '** — আমি মিলিয়ে নম্বর দেব।');
+    lines.push('✅ উত্তর এভাবে লেখো: **' + pick.slice(0, 3).map((_, i) => bn(i + 1) + '-ক').join(' ') + (pick.length > 3 ? ' …' : '') + '**, আমি মিলিয়ে নম্বর দেব।');
     if (pick.length < n) lines.push('', '📌 এই টপিকে এখন ' + bn(pick.length) + 'টা প্রশ্নই আছে।');
     return { text: lines.join('\n'), quiz: pick.map((q) => ({ id: q.id, a: ansIndex(q) })) };
   }
@@ -102,7 +102,7 @@
       if (got === it.a) { right++; rows.push(bn(i + 1) + '. ✅ ' + LET[got]); }
       else {
         const q = byId[it.id];
-        const exp = q && q.explanation ? ' — ' + String(q.explanation).trim().slice(0, 160) : '';
+        const exp = q && q.explanation ? ', ' + String(q.explanation).trim().slice(0, 160) : '';
         rows.push(bn(i + 1) + '. ' + (got < 0 ? '⏭️ উত্তর দাওনি' : '❌ ' + LET[got]) + ' → সঠিক: **' + LET[it.a] + (q ? ') ' + String(q.options[it.a]).trim() : '') + '**' + exp);
       }
     });
@@ -122,7 +122,7 @@
     }
     if (!rows.length) return { text: '🔎 প্রশ্নব্যাংকে এ নিয়ে কোনো প্রশ্ন পাইনি। অন্য শব্দে খুঁজে দেখো, বা আমাকে সরাসরি প্রশ্ন করো।', go: 'question-bank' };
     const c = cache();
-    const lines = ['🔎 **প্রশ্নব্যাংকে ' + bn(rows.length) + 'টা প্রশ্ন পেয়েছি**' + (rows.length > SEARCH_MAX ? ' — প্রথম ' + bn(SEARCH_MAX) + 'টা:' : ''), ''];
+    const lines = ['🔎 **প্রশ্নব্যাংকে ' + bn(rows.length) + 'টা প্রশ্ন পেয়েছি**' + (rows.length > SEARCH_MAX ? ', প্রথম ' + bn(SEARCH_MAX) + 'টা:' : ''), ''];
     rows.slice(0, SEARCH_MAX).forEach((q, i) => {
       const tn = nameOf(c.topics, q.topicId);
       lines.push(bn(i + 1) + '. ' + String(q.question).trim() + (tn ? '  _(' + tn + ')_' : ''));
@@ -165,7 +165,7 @@
       if (tools.length >= MAX_TOOLS) break;
       let r = null;
       try { r = fn(); } catch (_) { r = null; }
-      if (r) { steps.push('টুল চালিয়েছি — ' + LABEL[name]); tools.push(name); return Object.assign({ steps, tools }, r); }
+      if (r) { steps.push('টুল চালিয়েছি, ' + LABEL[name]); tools.push(name); return Object.assign({ steps, tools }, r); }
     }
     return null;
   }

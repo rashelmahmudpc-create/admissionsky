@@ -1,15 +1,13 @@
-// Admission Hub — Public Product Worker (account system retired, v221)
+// Admission Hub, Public Product Worker (account system retired, v221)
 // Active routes: public content · Firebase-account/ephemeral-guest AI · content admin.
 // The former login/profile/onboarding/session/state APIs are intentionally absent.
-import { agentChat, agentStatus, agentRecall, agentInstructions, sanitizeAiPrefs, AI_PREFS_DEFAULT, clearAiMemory } from './ai-agent.js';
-import {
-  authorizeAction, makeProposal, confirmProposal, proposalSummary,
-  makeAuditRecord, parseAudit, appendAudit, STATUS, actionsEnabled
-} from './action-engine.js';
+import { agentChat, agentStatus, agentRecall, agentInstructions, sanitizeAiPrefs, AI_PREFS_DEFAULT, clearAiEverything, providerReadiness, readyProviderNames } from './ai-agent.js';
+import { actionsEnabled } from './action-engine.js';
+import { proposeAction, confirmAction, readAudit } from './ai-actions.mjs';
 import { checkAbuse, isGuarded } from './p14-abuse-guard.mjs';
 import { recordError, summarizeErrors } from './p19-error-monitor.mjs';
 import { listReports } from './sky-daily-report.mjs';
-import { forwardWithIdentity } from './sky-ai-route.mjs';
+import { forwardWithIdentity, forwardWithIdentityBody } from './sky-ai-route.mjs';
 import { createSnapshot, listSnapshots, restoreSnapshot } from './p19-backup.mjs';
 
 const JSONH = {
@@ -27,7 +25,7 @@ const onlyRows = rows => (Array.isArray(rows) ? rows : []).filter(row => row && 
   return clean;
 });
 /* A cheap, deterministic string hash (FNV-1a). The signature must change when a
-   word's meaning, synonym/antonym gloss or tips change — a length-only
+   word's meaning, synonym/antonym gloss or tips change, a length-only
    fingerprint does not, so a corrected gloss would never leave the KV blob: the
    D1 read path would keep serving the stale copy forever. */
 const hashText = text => {
@@ -158,7 +156,7 @@ async function anonymousAiIdentity(request, env, countUsage = true) {
     let count = 0;
     try { count = Number((await env.PUB_KV.get(key)) || 0); } catch (_) {}
     const cap = Math.max(40, Math.min(800, Number(env.AGENT_PUBLIC_DAILY_CAP || 240)));
-    if (count >= cap) throw Object.assign(new Error('আজকের public AI সীমা শেষ — কাল আবার চেষ্টা করো।'), { status: 429 });
+    if (count >= cap) throw Object.assign(new Error('আজকের public AI সীমা শেষ, কাল আবার চেষ্টা করো।'), { status: 429 });
     try { await env.PUB_KV.put(key, String(count + 1), { expirationTtl: 172800 }); } catch (_) {}
   }
   return `guest-${deviceHash.slice(0, 40)}`;
@@ -169,6 +167,94 @@ async function aiRequestIdentity(request, env, countUsage = true) {
   const uid = await anonymousAiIdentity(request, env, countUsage);
   return { uid, persistMemory: false, authenticated: false };
 }
+
+/* Is this request the owner's? The admin token is his own proof of identity, the
+   same gate /api/admin/* uses. No token configured means nobody, which keeps the
+   old fail-closed behaviour. */
+const ownerRequest = (request, env) => {
+  const token = String(request.headers.get('Authorization') || '').replace('Bearer ', '').trim();
+  return Boolean(env.ADMIN_TOKEN) && tokenEquals(token, env.ADMIN_TOKEN);
+};
+
+/* What a NON-owner may see of the AI status. This is the only definition: the
+   answer is applied to whatever body comes back, local or forwarded, so the split
+   cannot leak a field by omission.
+ *
+ * Owner-only cost view: the provider list, model ids, the fallback chain, the
+ * per-day limit and the pricing/observability block expose which keys are live
+ * and what the AI costs.
+ *
+ * BUG-002 (2026-10-25 audit): the remaining blocks are an attacker's map, not the
+ * student's. `state` names the state store and its schema version, `tools` lists
+ * every declared tool with its permission and owner-scope, `memory` gives the
+ * memory mode and scope, and `response` names the exact filter classes plus which
+ * ones block — precisely the list to craft an evasion against. The app's own
+ * shell (ok, agent, streaming, pv) is untouched, because the student's client
+ * reads those. */
+const REDACTED_STATUS_FIELDS = [
+  'providers', 'models', 'chain', 'limits', 'observability',
+  'state', 'tools', 'memory', 'response', 'actions', 'context'
+];
+
+const redactAiStatus = (data, isOwner) => {
+  if (isOwner || !data || typeof data !== 'object') return data;
+  const out = { ...data };
+  for (const field of REDACTED_STATUS_FIELDS) delete out[field];
+  return out;
+};
+
+/* The headers a status request needs across the service binding: which providers
+   must be reachable, and the settings that shape the report (a different daily
+   cap or model list would describe a different deployment). */
+const statusHopHeaders = (env, needed) => {
+  const headers = { 'x-sky-need-providers': needed.join(',') };
+  for (const name of ['AGENT_DAILY_CAP', 'AGENT_GEMINI_MODELS', 'AGENT_GROQ_MODELS', 'AGENT_CLOUDFLARE_MODELS', 'AGENT_FIRST_CHUNK_MS']) {
+    const value = env && env[name];
+    if (value != null && String(value) !== '') headers['x-sky-env-' + name.toLowerCase().replace(/_/g, '-')] = String(value);
+  }
+  return headers;
+};
+
+/* F0.1 step 4h: the model call, with sky-ai given the first chance and
+   admission-gk always the last word.
+
+   Three things are decided HERE rather than inside the other room, because this
+   Worker is where they are known for certain:
+
+   1. ONE REQUEST ID per chat (`reqId`). It travels in the header AND is handed to
+      the local agentChat, so the quota counter sees the same id on both sides and
+      a repeated attempt replays the first decision instead of spending a second
+      message from the student's daily allowance.
+   2. WHICH PROVIDERS must be reachable. sky-ai answers only if it can reach every
+      one of these (see sky-ai/chat.mjs); otherwise it declines and the local path
+      below answers exactly as it does today. A room with fewer keys never gets to
+      answer with a weaker model.
+   3. THE SETTINGS that change the answer (daily cap, model overrides), so both
+      sides behave identically rather than drifting apart silently.
+
+   No providers here means nothing to gain: skip the hop and save the round trip. */
+const chatWithFallback = async (request, env, identity, { stream }) => {
+  const reqId = crypto.randomUUID();
+  const local = { stream, persistMemory: identity.persistMemory, reqId };
+  let needed = [];
+  try { needed = readyProviderNames(await providerReadiness(env)); } catch (_) { needed = []; }
+  if (needed.length) {
+    const headers = {
+      'x-sky-need-providers': needed.join(','),
+      'x-sky-req-id': reqId,
+      'x-sky-persist-memory': identity.persistMemory === false ? '0' : '1'
+    };
+    for (const name of ['AGENT_DAILY_CAP', 'AGENT_GEMINI_MODELS', 'AGENT_GROQ_MODELS', 'AGENT_CLOUDFLARE_MODELS', 'AGENT_FIRST_CHUNK_MS']) {
+      const value = env && env[name];
+      if (value != null && String(value) !== '') headers['x-sky-env-' + name.toLowerCase().replace(/_/g, '-')] = String(value);
+    }
+    try {
+      const viaSky = await forwardWithIdentityBody(request, env, identity.uid, undefined, headers);
+      if (viaSky) return viaSky;
+    } catch (_) { /* the local path below is the whole point of the fallback */ }
+  }
+  return await agentChat(request, env, identity.uid, local);
+};
 
 export const publishGlobal = async (env, full) => {
   if (!env || !env.PUB_KV) return { error: 'no-pub-kv' };
@@ -191,7 +277,7 @@ export const publishGlobal = async (env, full) => {
   try { previousMeta = JSON.parse((await env.PUB_KV.get('pubContentMeta')) || '{"v":0}'); } catch (_) {}
   if (previousMeta.sig === sig && previousMeta.v) {
     /* The body is unchanged, but a meta written before `categories` existed has
-       no per-category totals — backfill them once so the A–Z grid can show real
+       no per-category totals, backfill them once so the A–Z grid can show real
        numbers on a first-ever open without a content re-publish. */
     const counts = previousMeta.counts || countsOf({ subjects, topics, questions, vocabulary, vocabularyMaster });
     if (!previousMeta.categories) {
@@ -232,12 +318,12 @@ export const publishGlobal = async (env, full) => {
     return { error: 'integrity' };
   }
   if (fingerprintGlobal(roundTrip) !== sig) return { error: 'integrity' };
-  /* P13 — mirror the small lists into D1 before the meta that signs them. The
+  /* P13, mirror the small lists into D1 before the meta that signs them. The
      D1 read path serves the bank from `content_lists`, so a publish that
      removes rows must land in D1 too, or /api/content keeps serving the stale
      rows whose hash still matches. `content_lists` is the authoritative mirror:
      kinds that vanished from the document are deleted, present kinds replaced.
-     Failure here is non-fatal — KV stays correct on its own, and the stale D1
+     Failure here is non-fatal, KV stays correct on its own, and the stale D1
      copy stops matching once the sig below changes. */
   if (env.PROFILE_DB) {
     try {
@@ -265,7 +351,7 @@ export const publishGlobal = async (env, full) => {
   return { published: true, v: doc.v, counts: meta.counts };
 };
 
-/* P14 — content integrity. The published doc carries `sig`, a fingerprint of
+/* P14, content integrity. The published doc carries `sig`, a fingerprint of
    the live shapes, and `counts`. This recomputes both from the stored doc and
    reports any drift, so a publication that was silently mangled (or a tampered
    KV value) is visible from an admin check instead of surfacing as a user bug. */
@@ -283,16 +369,7 @@ export const verifyIntegrity = doc => {
   return { ok: mismatches.length === 0, v: source.v || 0, sig: source.sig || '', expectedSig: expected, counts, mismatches };
 };
 
-const readAudit = async (env, uid) => {
-  try {
-    const raw = await env.PUB_KV.get('actaudit:' + uid);
-    return parseAudit(raw, uid);
-  } catch (_) { return []; }
-};
 
-const writeAudit = async (env, uid, records) => {
-  await env.PUB_KV.put('actaudit:' + uid, JSON.stringify(records));
-};
 
 const admin = async (request, env, path) => {
   const token = String(request.headers.get('Authorization') || '').replace('Bearer ', '').trim();
@@ -321,19 +398,19 @@ const admin = async (request, env, path) => {
     if (full && Array.isArray(full.questions) && full.questions.some(row => row && row.id)) {
       const result = await publishGlobal(env, full);
       if (result.error === 'empty') return json({ error: 'প্রশ্ন খালি' }, 400);
-      if (result.error === 'too-large') return json({ error: 'কনটেন্ট আকারসীমার বেশি — কমানো ছবি বাদ দিয়ে আবার চেষ্টা করো', code: 'too-large' }, 413);
-      if (result.error === 'integrity') return json({ error: 'কনটেন্ট যাচাইয়ে ব্যর্থ — আগের সংস্করণই থাকল', code: 'integrity' }, 409);
+      if (result.error === 'too-large') return json({ error: 'কনটেন্ট আকারসীমার বেশি, কমানো ছবি বাদ দিয়ে আবার চেষ্টা করো', code: 'too-large' }, 413);
+      if (result.error === 'integrity') return json({ error: 'কনটেন্ট যাচাইয়ে ব্যর্থ, আগের সংস্করণই থাকল', code: 'integrity' }, 409);
       return json(result);
     }
     return json({ error: 'প্রশ্ন খালি' }, 400);
   }
   if (path === '/api/admin/ai-daily-report' && request.method === 'GET') {
-    /* Anonymous daily AI report — counts only, newest first. */
+    /* Anonymous daily AI report, counts only, newest first. */
     const days = new URL(request.url).searchParams.get('days');
     return json(await listReports(env.PUB_KV, days || 7));
   }
   if (path === '/api/admin/errors' && request.method === 'GET') {
-    /* P19 — what the Worker actually caught. Reads the same KV the catch block
+    /* P19, what the Worker actually caught. Reads the same KV the catch block
        writes; an empty list is reported as empty, never padded. */
     let log = [];
     try {
@@ -343,11 +420,11 @@ const admin = async (request, env, path) => {
     return json(summarizeErrors(log));
   }
   if (path === '/api/admin/backup' && request.method === 'GET') {
-    /* P19 — what snapshots exist, newest first. Real index, never padded. */
+    /* P19, what snapshots exist, newest first. Real index, never padded. */
     return json(await listSnapshots(env));
   }
   if (path === '/api/admin/backup' && request.method === 'POST') {
-    /* P19 — take a snapshot now. The daily cron does this too; this is the
+    /* P19, take a snapshot now. The daily cron does this too; this is the
        on-demand door for the owner before a risky change. */
     try {
       const entry = await createSnapshot(env);
@@ -357,7 +434,7 @@ const admin = async (request, env, path) => {
     }
   }
   if (path === '/api/admin/restore' && request.method === 'POST') {
-    /* P19 — write a snapshot's KV keys back. Explicit key, explicit action:
+    /* P19, write a snapshot's KV keys back. Explicit key, explicit action:
        the body must name the snapshot, so a bare POST cannot guess a target. */
     const body = await request.json().catch(() => ({}));
     const key = String(body.key || '').trim();
@@ -374,13 +451,13 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
     try {
-      /* P14 — public-API abuse ceiling. Counted per network, before any route
+      /* P14, public-API abuse ceiling. Counted per network, before any route
          work, so a scripted flood of AI/write calls is stopped at the edge
          rather than reaching the model or KV. Content GETs are excluded. */
       if (isGuarded(request, path)) {
         const guard = await checkAbuse(request, env, { salt: env.PUBLIC_RATE_SALT || '' });
         if (!guard.allowed) {
-          return json({ error: 'rate_limited', message: 'একটু বেশি অনুরোধ এসেছে — কিছুক্ষণ পরে আবার চেষ্টা করো।', retryAfter: guard.retryAfter }, 429);
+          return json({ error: 'rate_limited', message: 'একটু বেশি অনুরোধ এসেছে, কিছুক্ষণ পরে আবার চেষ্টা করো।', retryAfter: guard.retryAfter }, 429);
         }
       }
       if (path === '/api/health') return json({ ok: true, accountSystem: 'retired', legacyAccountSystem: 'retired', nativeAuth: 'cloudflare-native-v1', identity: 'firebase-account-or-ephemeral-guest', at: Date.now() });
@@ -419,7 +496,7 @@ export default {
         return json({ v: doc.v || 0, at: doc.at || 0, sig: doc.sig || '', counts: countsOf(doc), categories: categoryCountsOf(doc) });
       }
       if (path === '/api/content' && request.method === 'GET') {
-        /* P13 — optional D1 fast path. Enabled by a flag row in content_meta
+        /* P13, optional D1 fast path. Enabled by a flag row in content_meta
            (set by the p13-d1-backfill workflow), not by a Worker variable, so
            the Free-plan 64-variable cap is not touched. The D1 copy is served
            only when its stored sig matches /api/content/meta's live sig; the
@@ -435,7 +512,7 @@ export default {
               if (meta && meta.sig && (await reader.sig()) === String(meta.sig)) {
                 const limit = Number(url.searchParams.get('limit'));
                 if (Number.isFinite(limit) && limit > 0) {
-                  /* P13 — paged read. Pull one bounded page from D1 (keyset on
+                  /* P13, paged read. Pull one bounded page from D1 (keyset on
                      the indexed key), never the whole table: a full scan of a
                      large `questions` table is what blew the Worker CPU budget
                      and returned `1102`. The small mirrored lists ride along. */
@@ -469,23 +546,27 @@ export default {
       if (path.startsWith('/api/admin/')) return admin(request, env, path);
       if (path === '/api/ai/status' && request.method === 'GET') {
         const identity = await aiRequestIdentity(request, env, false);
+        /* F0.1 step 4i: sky-ai answers this when the route is listed in
+           sky-ai-route.mjs — and it returns the COMPLETE body on purpose. What a
+           caller may see is decided here, once, by redactAiStatus(), for the
+           forwarded answer and the local one alike. The owner token exists only
+           on this Worker, so a copy of that decision on the far side would be
+           both impossible to trust and free to drift. */
+        const isOwner = ownerRequest(request, env);
+        let needed = [];
+        try { needed = readyProviderNames(await providerReadiness(env)); } catch (_) { needed = []; }
+        if (needed.length) {
+          const headers = statusHopHeaders(env, needed);
+          const viaSky = await forwardWithIdentity(request, env, identity.uid, undefined, headers);
+          if (viaSky) {
+            const data = await viaSky.json().catch(() => null);
+            if (data) return json(redactAiStatus(data, isOwner), viaSky.status);
+            // A body this Worker cannot parse is not worth showing; fall through.
+          }
+        }
         const res = await agentStatus(request, env, identity.uid);
-        /* Owner-only cost view. The provider list, model ids, the fallback
-           chain, the per-day limit and the pricing/observability block expose
-           which keys are live and what the AI costs; a student must not read
-           them. The admin token is the owner's own proof of identity (the same
-           gate /api/admin/* uses), so only that requester gets the full body.
-           Everyone else keeps the generic shape the app already relies on. */
-        const token = String(request.headers.get('Authorization') || '').replace('Bearer ', '').trim();
-        if (env.ADMIN_TOKEN && tokenEquals(token, env.ADMIN_TOKEN)) return res;
         const data = await res.json().catch(() => null);
-        if (!data) return res;
-        delete data.providers;
-        delete data.models;
-        delete data.chain;
-        delete data.limits;
-        delete data.observability;
-        return json(data, res.status);
+        return data ? json(redactAiStatus(data, isOwner), res.status) : res;
       }
       if (path === '/api/ai/prefs' && request.method === 'GET') {
         const identity = await aiRequestIdentity(request, env, false);
@@ -501,6 +582,16 @@ export default {
         } catch (_) { prefs = null; }
         return json({ prefs: prefs || AI_PREFS_DEFAULT });
       }
+      /* F0.2 / DV-02: this student's evaluated Sky flags (on/percent/beta/
+         killed). Evaluated by sky-ai, which needs the uid admission-gk already
+         verified; a guest keeps DEFAULT_FLAGS (every flag off), so shipping
+         this changes nothing for anyone until a flag is turned on. */
+      if (path === '/api/ai/sky-flags' && request.method === 'GET') {
+        const identity = await aiRequestIdentity(request, env, false);
+        const viaSky = identity.uid ? await forwardWithIdentity(request, env, identity.uid) : null;
+        if (viaSky) return viaSky;
+        return json({ ok: true, flags: {}, source: 'gk-fallback' });
+      }
       if (path === '/api/ai/prefs' && request.method === 'POST') {
         const identity = await aiRequestIdentity(request, env, false);
         // Personalization is saved per ACCOUNT (guest uids are ephemeral by design).
@@ -511,7 +602,7 @@ export default {
         try {
           await env.PUB_KV.put('aiprefs:' + identity.uid, JSON.stringify(prefs));
         } catch (_) {
-          return json({ error: 'save_failed', message: 'এখন save করা গেল না — আবার চেষ্টা করো।' }, 500);
+          return json({ error: 'save_failed', message: 'এখন save করা গেল না, আবার চেষ্টা করো।' }, 500);
         }
         return json({ ok: true, prefs });
       }
@@ -521,6 +612,16 @@ export default {
       if (path === '/api/ai/instructions' && (request.method === 'GET' || request.method === 'POST' || request.method === 'DELETE')) {
         const identity = await aiRequestIdentity(request, env, false);
         if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'নির্দেশনা সেভ করতে লগইন করো।' }, 401);
+        /* F0.1 step 4e: sky-ai answers this when the route is listed in
+           sky-ai-route.mjs. The 401 above stays here because identity is resolved
+           here. NOTE the body is read AFTER the forward, never before: reading it
+           first would consume it and leave the fallback with nothing, so a failed
+           forward would silently clear the student's note instead of saving it.
+           The forwarder clones, so this request is still readable below. */
+        const viaSky = request.method === 'GET'
+          ? await forwardWithIdentity(request, env, identity.uid)
+          : await forwardWithIdentityBody(request, env, identity.uid);
+        if (viaSky) return viaSky;
         const body = request.method === 'POST' ? await request.json().catch(() => null) : null;
         return await agentInstructions(env, identity.uid, request.method, body);
       }
@@ -530,14 +631,18 @@ export default {
       if (path === '/api/ai/memory/clear' && request.method === 'POST') {
         const identity = await aiRequestIdentity(request, env, false);
         if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI মেমরি মুছতে লগইন করো।' }, 401);
+        /* F0.1 step 4f: sky-ai answers this when the route is listed in
+           sky-ai-route.mjs. Forwarded BEFORE the local work, and the local work
+           is idempotent (deleting the same keys twice is the same as once), so a
+           lost answer can only cost a second, harmless attempt — never a
+           half-cleared account. WHAT gets deleted is defined once, in
+           clearAiEverything(). */
+        const viaSky = await forwardWithIdentityBody(request, env, identity.uid);
+        if (viaSky) return viaSky;
         try {
-          await clearAiMemory(env, identity.uid);
-          await env.PUB_KV.delete('aiprefs:' + identity.uid);
-          await env.PUB_KV.delete('aiinstr:' + identity.uid);
-          await env.PUB_KV.delete('actaudit:' + identity.uid);
-          await env.PUB_KV.delete('actprop:' + identity.uid);
+          await clearAiEverything(env, identity.uid);
         } catch (_) {
-          return json({ error: 'clear_failed', message: 'এখন মুছে ফেলা গেল না — আবার চেষ্টা করো।' }, 500);
+          return json({ error: 'clear_failed', message: 'এখন মুছে ফেলা গেল না, আবার চেষ্টা করো।' }, 500);
         }
         return json({ ok: true, message: 'তোমার AI মেমরি মুছে ফেলা হয়েছে।' });
       }
@@ -547,57 +652,46 @@ export default {
       if (path === '/api/ai/actions/propose' && request.method === 'POST') {
         const identity = await aiRequestIdentity(request, env, false);
         if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI action ব্যবহার করতে লগইন করো।' }, 401);
-        const body = await request.json().catch(() => null);
-        const name = String(body?.action || '');
-        const auth = authorizeAction(name, { uid: identity.uid, args: body?.args, enabled: actionsEnabled(env) });
-        if (!auth.allowed) return json({ error: 'action_denied', reason: auth.reason }, 403);
-        const proposal = makeProposal(name, { uid: identity.uid, args: auth.args, id: crypto.randomUUID(), enabled: actionsEnabled(env) });
-        if (!proposal) return json({ error: 'action_denied', reason: 'no-proposal' }, 403);
-        try {
-          await env.PUB_KV.put('actprop:' + identity.uid, JSON.stringify(proposal), { expirationTtl: Math.ceil((proposal.expiresAt - Date.now()) / 1000) });
-          const audit = await readAudit(env, identity.uid);
-          await writeAudit(env, identity.uid, appendAudit(audit, makeAuditRecord({ proposal, status: STATUS.PROPOSED, uid: identity.uid }), identity.uid));
-        } catch (_) {
-          return json({ error: 'propose_failed', message: 'এখন proposal তৈরি করা গেল না — আবার চেষ্টা করো।' }, 500);
+        /* F0.1 step 4g: sky-ai answers this when the route is listed in
+           sky-ai-route.mjs — but ONLY while write actions are enabled here.
+           sky-ai has no USE_WRITE_ACTIONS, so forwarding during a kill-switch
+           would turn the switch back on. The body is read after the forward, so
+           the fallback below still has it. */
+        if (actionsEnabled(env)) {
+          const viaSky = await forwardWithIdentityBody(request, env, identity.uid);
+          if (viaSky) return viaSky;
         }
-        return json({ ok: true, proposal: { id: proposal.id, action: proposal.action, permission: proposal.permission, riskLevel: proposal.riskLevel, summary: proposal.summary, expiresAt: proposal.expiresAt } });
+        const body = await request.json().catch(() => null);
+        const r = await proposeAction(env, identity.uid, body);
+        return json(r.body, r.status);
       }
       if (path === '/api/ai/actions/confirm' && request.method === 'POST') {
         const identity = await aiRequestIdentity(request, env, false);
         if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI action ব্যবহার করতে লগইন করো।' }, 401);
+        /* F0.1 step 4g. Confirming is the one route that CHANGES something on the
+           student's behalf, and it is single-use by design: the proposal is
+           consumed before the write. That ordering is what makes the fallback
+           safe — if sky-ai confirms and the answer is lost, the retry below finds
+           no proposal and refuses, so an action can be applied once at most. It
+           can never be applied twice. */
+        if (actionsEnabled(env)) {
+          const viaSky = await forwardWithIdentityBody(request, env, identity.uid);
+          if (viaSky) return viaSky;
+        }
         const body = await request.json().catch(() => null);
-        const token = String(body?.token || '');
-        let stored = null;
-        try {
-          const raw = await env.PUB_KV.get('actprop:' + identity.uid);
-          stored = raw ? JSON.parse(raw) : null;
-        } catch (_) { stored = null; }
-        const decision = confirmProposal(stored, token, identity.uid, { enabled: actionsEnabled(env) });
-        if (!decision.ok) {
-          const audit = await readAudit(env, identity.uid);
-          if (stored) await writeAudit(env, identity.uid, appendAudit(audit, makeAuditRecord({ proposal: stored, status: decision.status, uid: identity.uid, detail: decision.reason }), identity.uid));
-          return json({ error: 'confirm_denied', reason: decision.reason }, 403);
-        }
-        // Single-use: consume the proposal before the write so a replay finds nothing.
-        try {
-          await env.PUB_KV.delete('actprop:' + identity.uid);
-          if (decision.action === 'prefs.write') {
-            const prefs = sanitizeAiPrefs(decision.args);
-            await env.PUB_KV.put('aiprefs:' + identity.uid, JSON.stringify(prefs));
-          }
-        } catch (_) {
-          const audit = await readAudit(env, identity.uid);
-          await writeAudit(env, identity.uid, appendAudit(audit, makeAuditRecord({ proposal: stored, status: STATUS.FAILED, uid: identity.uid, detail: 'write-failed' }), identity.uid));
-          return json({ error: 'action_failed', message: 'কাজটা সম্পন্ন করা গেল না — আবার চেষ্টা করো।' }, 500);
-        }
-        const audit = await readAudit(env, identity.uid);
-        const record = makeAuditRecord({ proposal: stored, status: STATUS.CONFIRMED, uid: identity.uid });
-        await writeAudit(env, identity.uid, appendAudit(audit, record, identity.uid));
-        return json({ ok: true, action: decision.action, status: STATUS.CONFIRMED });
+        const r = await confirmAction(env, identity.uid, body);
+        return json(r.body, r.status);
       }
       if (path === '/api/ai/actions/audit' && request.method === 'GET') {
         const identity = await aiRequestIdentity(request, env, false);
         if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI action ব্যবহার করতে লগইন করো।' }, 401);
+        /* F0.1 step 4c / DV-01: served by sky-ai (same body) only while write
+           actions are enabled here (sky-ai has no USE_WRITE_ACTIONS); any sky-ai
+           miss or error falls back to the local answer below. */
+        if (actionsEnabled(env)) {
+          const viaSky = await forwardWithIdentity(request, env, identity.uid);
+          if (viaSky) return viaSky;
+        }
         return json({ ok: true, actionsEnabled: actionsEnabled(env), audit: await readAudit(env, identity.uid) });
       }
       /* Sky recall (owner plan step 2): the reminder shown when the chat opens.
@@ -606,6 +700,15 @@ export default {
         const identity = await aiRequestIdentity(request, env, false);
         if (!identity.authenticated) return json({ error: 'sign_in_required', recall: null }, 401);
         if (identity.persistMemory === false) return json({ ok: true, recall: null });
+        /* F0.1 step 4d: sky-ai answers this when it is listed in
+           SKY_AI_POST_IDENTITY_ROUTES. The two checks above stay here on
+           purpose — the 401 and the "this student turned memory off" case are
+           decisions about identity, and identity is resolved by this Worker.
+           Anything sky-ai cannot serve (no binding, no internal key, a 404 or a
+           5xx) returns null and the two lines below answer exactly as they do
+           today. forwardPostWithIdentity clones the body for that reason. */
+        const viaSky = await forwardWithIdentityBody(request, env, identity.uid);
+        if (viaSky) return viaSky;
         const body = await request.json().catch(() => null);
         return await agentRecall(env, identity.uid, body);
       }
@@ -614,17 +717,17 @@ export default {
         /* M7: AI chat is signed-in only. Refuse the guest here, before the
            public rate-limit counter or any KV write, so a guest leaves no trace. */
         if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI চ্যাট ব্যবহার করতে লগইন করো।' }, 401);
-        return await agentChat(request, env, identity.uid, { persistMemory: identity.persistMemory });
+        return await chatWithFallback(request, env, identity, { stream: true });
       }
       if (path === '/api/ai' && request.method === 'POST') {
         const identity = await aiRequestIdentity(request, env, false);
         if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI চ্যাট ব্যবহার করতে লগইন করো।' }, 401);
-        return await agentChat(request, env, identity.uid, { stream: false, persistMemory: identity.persistMemory });
+        return await chatWithFallback(request, env, identity, { stream: false });
       }
       return json({ error: 'not-found' }, 404);
     } catch (error) {
       const status = Number(error?.status) || 500;
-      /* P19 — an uncaught route failure must leave a trace. A 4xx is a caller
+      /* P19, an uncaught route failure must leave a trace. A 4xx is a caller
          mistake the caller already sees; only a real failure (5xx) is recorded,
          so the log stays a list of things that actually broke. Best-effort:
          recordError never throws and never delays the reply. */

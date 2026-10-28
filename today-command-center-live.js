@@ -1,4 +1,4 @@
-/* Today Command Center — settings-driven target and active learning time. */
+/* Today Command Center, settings-driven target and active learning time. */
 (() => {
   'use strict';
   const route = () => String(location.hash || '').replace(/^#\/?/, '').split('?')[0] || 'dashboard';

@@ -1,3 +1,4 @@
+import { allowedOrigin } from '../../cors-policy.mjs';
 import { AUTH_ERROR_CODES, errorFromRepository, failAuth, NativeAuthError } from './errors.mjs';
 import {
   AuthHmac,
@@ -46,7 +47,7 @@ export const passkeyRpIdForOrigin = origin => {
   } catch { return PASSKEY_RP_ID; }
 };
 
-// Phase 6 — risk-signal scopes stored in the existing auth_rate_limits table
+// Phase 6, risk-signal scopes stored in the existing auth_rate_limits table
 // (no new table). Both are count-only: the huge limits mean they measure,
 // they never hard-block.
 export const SECURITY_RISK_SCOPES = Object.freeze({
@@ -136,7 +137,7 @@ const FIREBASE_OPERATION_LIMITS = Object.freeze({
     Object.freeze({ scope: 'firebase-profile-ip-hour', source: 'ip', limit: 300, windowMs: 60 * 60 * 1000 }),
     Object.freeze({ scope: 'firebase-profile-global-minute', source: 'global', limit: 1000, windowMs: 60 * 1000 })
   ]),
-  // Phase 7 — profile patch + avatar + public reads.
+  // Phase 7, profile patch + avatar + public reads.
   'profile-patch': Object.freeze([
     Object.freeze({ scope: 'firebase-profile-email-day', source: 'email', limit: 30, windowMs: 24 * 60 * 60 * 1000 }),
     Object.freeze({ scope: 'firebase-profile-device-day', source: 'device', limit: 60, windowMs: 24 * 60 * 60 * 1000 }),
@@ -180,14 +181,14 @@ const assertRepository = repository => {
   return repository;
 };
 
+/* D-5 / A1.5 ②: the trusted-origin list lives in cors-policy.mjs. This copy
+ * still trusted http://localhost and every *.admissionhub.pages.dev preview
+ * host, which meant a preview build could write session/device context with a
+ * production-equivalent origin. */
 const trustedContextOrigin = value => {
-  try {
-    const url = new URL(String(value || ''));
-    if (url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname)) return url.origin;
-    if (url.protocol !== 'https:') return '';
-    if (url.hostname === PASSKEY_RP_ID || url.hostname === 'admissionsky.pages.dev' || /^[a-z0-9-]+\.admissionhub\.pages\.dev$/i.test(url.hostname) || url.hostname === 'admission-gk.admissionhub.workers.dev') return url.origin;
-  } catch {}
-  return '';
+  const candidate = String(value || '');
+  if (!allowedOrigin(candidate)) return '';
+  try { return new URL(candidate).origin; } catch { return ''; }
 };
 
 const normalizeContext = context => Object.freeze({
@@ -242,7 +243,7 @@ export function normalizeOnboardingProfile(value = {}, now = Date.now()) {
   if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day || age < 8 || age > 80) {
     failAuth(AUTH_ERROR_CODES.INVALID_INPUT);
   }
-  // Phase 7B2 — signup now collects mobile too (single source of truth:
+  // Phase 7B2, signup now collects mobile too (single source of truth:
   // signup data must appear in the Profile without a second entry).
   const mobile = String(value.mobile || '').replace(/[\s()-]/g, '');
   if (mobile && !/^\+?[0-9]{8,15}$/.test(mobile)) failAuth(AUTH_ERROR_CODES.INVALID_INPUT);
@@ -262,7 +263,7 @@ const validChallengeId = value => {
   return challengeId;
 };
 
-// Phase 7 — avatar upload validation (blueprint §11). Magic-byte checks are
+// Phase 7, avatar upload validation (blueprint §11). Magic-byte checks are
 // done server-side after base64 decode; client filenames are never trusted.
 const AVATAR_MIME_MAGIC = Object.freeze({
   'image/jpeg': Object.freeze([0xff, 0xd8, 0xff]),
@@ -293,7 +294,7 @@ export function normalizeProfilePatch(value = {}, now = Date.now()) {
       if (bio.length > 280 || /[\r\n\u0000]/.test(bio)) failAuth(AUTH_ERROR_CODES.INVALID_INPUT);
       fields.bio = bio;
     } else if (key === 'dob') {
-      // Canonical date value (YYYY-MM-DD) or '' to clear — never a display string.
+      // Canonical date value (YYYY-MM-DD) or '' to clear, never a display string.
       const v = String(raw || '').trim();
       if (v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) failAuth(AUTH_ERROR_CODES.INVALID_INPUT);
       if (v) {
@@ -313,7 +314,7 @@ export function normalizeProfilePatch(value = {}, now = Date.now()) {
       }
       fields.dob = v;
     } else if (key === 'school' || key === 'higherInstitution') {
-      // null/'' clears; otherwise { name (required), district? } — id is server-owned.
+      // null/'' clears; otherwise { name (required), district? }, id is server-owned.
       if (raw === null || raw === '') { fields[key] = null; continue; }
       if (!raw || typeof raw !== 'object' || Array.isArray(raw)) failAuth(AUTH_ERROR_CODES.INVALID_INPUT);
       const instName = cleanProfileText(raw.name, 120);
@@ -385,7 +386,7 @@ export function normalizeProfilePatch(value = {}, now = Date.now()) {
 export class CloudflareNativeAuthEngine {
   constructor({ repository, hmacSecret, now = () => Date.now(), cryptoImpl = globalThis.crypto, passkeyRpId = PASSKEY_RP_ID, passkeyOrigins = PASSKEY_RP_IDS.map(id => `https://${id}`), securityConfigRaw = '', avatarStore = null } = {}) {
     this.repository = assertRepository(repository);
-    // Phase 7 — provider-agnostic avatar store (D1ProfileStore); avatar
+    // Phase 7, provider-agnostic avatar store (D1ProfileStore); avatar
     // objects are keyed by the canonical firebase subject ref (the provider
     // set is frozen at ['firebase'] by the Identity Core protection contract).
     this.avatarStore = avatarStore || null;
@@ -395,7 +396,7 @@ export class CloudflareNativeAuthEngine {
     this.crypto = cryptoImpl;
     this.passkeyRpId = String(passkeyRpId || PASSKEY_RP_ID);
     this.passkeyOrigins = Object.freeze([...new Set(passkeyOrigins.map(value => new URL(value).origin))]);
-    // Phase 6 — effective security config (env override via
+    // Phase 6, effective security config (env override via
     // SECURITY_CONFIG_JSON is validated; bad overrides fall back to the
     // frozen conservative baseline).
     this.securityConfig = resolveSecurityConfig(securityConfigRaw);
@@ -440,7 +441,7 @@ export class CloudflareNativeAuthEngine {
 
   /* The RP ID for the current request. A passkey is bound to one exact domain,
    * so a device that created its passkey on admissionsky.pages.dev must be
-   * verified against admissionsky.pages.dev — not the legacy host. Derive it
+   * verified against admissionsky.pages.dev, not the legacy host. Derive it
    * from the (already validated) context origin, never from raw client input. */
   #passkeyRpId(context) {
     const origin = String(context?.origin || '');
@@ -461,9 +462,9 @@ export class CloudflareNativeAuthEngine {
       eventType: `firebase-${operation}`,
       subjectRef: input.email ? refs.emailRef : null
     }));
-    // Phase 6 — escalating cooldown after repeated failed logins (§14):
+    // Phase 6, escalating cooldown after repeated failed logins (§14):
     // measured from recorded failures (auth_rate_limits state), applied as a
-    // delay within the current window. Ceiling 60 min — never a lockout.
+    // delay within the current window. Ceiling 60 min, never a lockout.
     let retryAfter = 0;
     if (operation === 'login' && input.email) {
       const config = this.securityConfig;
@@ -494,7 +495,7 @@ export class CloudflareNativeAuthEngine {
     });
   }
 
-  // Phase 6 — record one failed login attempt (count-only risk scope).
+  // Phase 6, record one failed login attempt (count-only risk scope).
   // Called by the public handler only on credential-rejection, so the
   // cooldown measures real failures, not total attempts.
   async recordLoginFailure(input = {}, requestContext = {}) {
@@ -530,11 +531,11 @@ export class CloudflareNativeAuthEngine {
     return Object.freeze({ accepted: true, ...(retryAfter ? { retryAfter } : {}) });
   }
 
-  // Phase 6 — risk decision for a login attempt (§3, §4, §30).
+  // Phase 6, risk decision for a login attempt (§3, §4, §30).
   //
   // Inputs are already-normalized server-side facts (never raw PII). The
   // decision is fail-safe: if evaluation cannot complete, sensitive actions
-  // fall toward a challenge — never a silent proceed (§30-§31).
+  // fall toward a challenge, never a silent proceed (§30-§31).
   async #loginRiskDecision({ email, subject, refs, now, verified, newDevice }) {
     const config = this.securityConfig;
     const signals = {
@@ -570,12 +571,12 @@ export class CloudflareNativeAuthEngine {
         })).trusted);
         const state = await this.repository.getAccountState({ userId: identity.user.id, now });
         signals.accountState = state.status || 'active';
-        // A trusted device has, by definition, been seen before — it must
+        // A trusted device has, by definition, been seen before, it must
         // not itself raise the risk level.
         if (trusted) signals.newDevice = false;
       }
     } catch {
-      // Fall through to the fail-safe below — an evaluation outage must not
+      // Fall through to the fail-safe below, an evaluation outage must not
       // silently allow a sensitive action, and must not lock normal logins
       // out when the risk engine is the thing that failed.
       // 2026-10-18: a verified account on a device whose cookie is already known
@@ -605,7 +606,7 @@ export class CloudflareNativeAuthEngine {
     const risk = evaluateRisk(signals, config);
     const actions = risk.actions;
     // A trusted device skips the new-device challenge (fast path), but a
-    // CRITICAL account fact always blocks — trust never outranks authority.
+    // CRITICAL account fact always blocks, trust never outranks authority.
     const challenge = actions.block ? null : (trusted ? null : actions.challenge);
     return Object.freeze({
       level: risk.level,
@@ -700,7 +701,7 @@ export class CloudflareNativeAuthEngine {
     if (refreshToken.length < 20 || refreshToken.length > 4096 || /[\r\n\u0000;]/.test(refreshToken)) {
       failAuth(AUTH_ERROR_CODES.TELEGRAM_VERIFICATION_INVALID);
     }
-    // Phase 6 — purpose-bound ticket (new-device challenge reuses the
+    // Phase 6, purpose-bound ticket (new-device challenge reuses the
     // existing ticket flow). Only known purposes are accepted; anything
     // else falls back to the legacy (purpose-less) verification ticket.
     const purpose = Object.values(SECURITY_PURPOSES).includes(input.purpose) ? input.purpose : null;
@@ -877,7 +878,7 @@ export class CloudflareNativeAuthEngine {
   }
 
   // -------------------------------------------------------------------
-  // Phase 7 — Profile & Personal Identity (blueprint §3-§36)
+  // Phase 7, Profile & Personal Identity (blueprint §3-§36)
   // The profile is a consumer of the protected Identity/Session/Security
   // cores: every operation below starts from the verified session
   // (#firebaseIdentity) and never rewrites identity or auth fields.
@@ -892,7 +893,7 @@ export class CloudflareNativeAuthEngine {
     return btoa(binary);
   }
 
-  // High-dynamic blueprint §01/§04/§05/§13/§14 — deterministic rule table.
+  // High-dynamic blueprint §01/§04/§05/§13/§14, deterministic rule table.
   // No AI, no behavioral inference; only real account/profile state.
   profileContext({ profile = null, completion = 0, lastLoginAt = null, now = Date.now() }) {
     const DAY_MS = 86_400_000;
@@ -1307,7 +1308,7 @@ export class CloudflareNativeAuthEngine {
     return Object.freeze({ revoked: Boolean(result?.revoked) });
   }
 
-  // Phase 6 — device trust management (§5-§7). All three require a valid
+  // Phase 6, device trust management (§5-§7). All three require a valid
   // session for the caller's own account; trust never touches other users.
   async trustCurrentDevice(input = {}, requestContext = {}) {
     const identity = await this.#firebaseIdentity(input, requestContext, AUTH_ERROR_CODES.SESSION_INVALID);
@@ -1332,8 +1333,8 @@ export class CloudflareNativeAuthEngine {
     return Object.freeze({ trusted: true, expiresAt: result.expiresAt, policyVersion: config.policyVersion });
   }
 
-  // Phase 6 Chunk 4 — recent login history for the signed-in user (§27).
-  // Privacy boundary: method, coarse browser class and time only — no IP,
+  // Phase 6 Chunk 4, recent login history for the signed-in user (§27).
+  // Privacy boundary: method, coarse browser class and time only, no IP,
   // no location, no raw device identifier, no raw email.
   async securityHistory(input = {}, requestContext = {}) {
     const identity = await this.#firebaseIdentity(input, requestContext, AUTH_ERROR_CODES.SESSION_INVALID);
@@ -1362,7 +1363,7 @@ export class CloudflareNativeAuthEngine {
     });
   }
 
-  // Phase 6 Chunk 4 — admin security health (counts + rates, refs only).
+  // Phase 6 Chunk 4, admin security health (counts + rates, refs only).
   async securityHealth() {
     const now = Number(this.now());
     const windowMs = 15 * 60 * 1000;
@@ -1380,7 +1381,7 @@ export class CloudflareNativeAuthEngine {
     });
   }
 
-  // Phase 6 Chunk 4 — paged security event ledger (refs only, no PII).
+  // Phase 6 Chunk 4, paged security event ledger (refs only, no PII).
   async securityEventsPage(input = {}) {
     const limit = Math.min(Math.max(Number(input.limit) || 50, 1), 200);
     const before = input.before ? Number(input.before) : null;
@@ -1401,7 +1402,7 @@ export class CloudflareNativeAuthEngine {
     });
   }
 
-  // Phase 6 Chunk 4 — step-up-gated trusted-device revocation.
+  // Phase 6 Chunk 4, step-up-gated trusted-device revocation.
   async revokeTrustedDevice(input = {}, requestContext = {}) {
     const token = String(input.sessionToken || '').trim();
     if (!/^[A-Za-z0-9_-]{40,96}$/.test(token)) failAuth(AUTH_ERROR_CODES.SESSION_INVALID);
@@ -1466,7 +1467,7 @@ export class CloudflareNativeAuthEngine {
     return Object.values(SECURITY_PURPOSES).includes(purpose) ? purpose : null;
   }
 
-  // Phase 6 — open a purpose-bound security challenge (§11). v1 methods are
+  // Phase 6, open a purpose-bound security challenge (§11). v1 methods are
   // email and Telegram (passkey is reserved in the registry). The challenge
   // reuses the existing verification ticket material for delivery; the
   // security binding (purpose, single-use, device) lives in the challenge row.
@@ -1512,7 +1513,7 @@ export class CloudflareNativeAuthEngine {
         allowTelegramLink: true
       }, requestContext);
     } catch (cause) {
-      // Delivery failed: no silent bypass — the challenge is cancelled and
+      // Delivery failed: no silent bypass, the challenge is cancelled and
       // the sensitive action stays unavailable until a challenge succeeds.
       this.repository.cancelSecurityChallenge({ challengeRef });
       throw cause instanceof NativeAuthError ? cause : new NativeAuthError(AUTH_ERROR_CODES.BACKUP_UNAVAILABLE);
@@ -1530,7 +1531,7 @@ export class CloudflareNativeAuthEngine {
     });
   }
 
-  // Phase 6 — verify a challenge (§12): single-use, purpose-bound,
+  // Phase 6, verify a challenge (§12): single-use, purpose-bound,
   // device-bound, attempt-capped, expiring, non-replayable.
   async verifyChallenge(input = {}, requestContext = {}) {
     this.#requireVerification();
@@ -1621,7 +1622,7 @@ export class CloudflareNativeAuthEngine {
     }
   }
 
-  // Phase 6 — the shared step-up gate (§12). A presented stepUpToken is
+  // Phase 6, the shared step-up gate (§12). A presented stepUpToken is
   // validated (constant-time MAC, device-bound) and consumed exactly once;
   // without one, the action is allowed only while the session is recent AND
   // current risk stays below ELEVATED. Otherwise the client's 2-step arm
@@ -1665,7 +1666,7 @@ export class CloudflareNativeAuthEngine {
     }
   }
 
-  // Phase 6 — step-up-gated logout-all (§12).
+  // Phase 6, step-up-gated logout-all (§12).
   async revokeAllSessions(input = {}, requestContext = {}) {
     const token = String(input.sessionToken || '').trim();
     if (!/^[A-Za-z0-9_-]{40,96}$/.test(token)) failAuth(AUTH_ERROR_CODES.SESSION_INVALID);

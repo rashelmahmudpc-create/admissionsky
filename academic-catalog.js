@@ -1,6 +1,6 @@
-/* Admission Hub — Academic Catalog Engine (code-native, zero-raster)
+/* Admission Hub, Academic Catalog Engine (code-native, zero-raster)
    Owner spec: units/subjects come from the selected university + admission
-   session — NEVER a generic A/B/C/D assumption in the UI.
+   session, NEVER a generic A/B/C/D assumption in the UI.
    Source of truth: official admission portals / prospectuses
    (admission.cu.ac.bd, admission.ru.ac.bd, apply.ku.ac.bd, …).
    Maintainable data layer: UI selectors (UniversitySelector / UnitSelector /
@@ -23,25 +23,25 @@
     humanities: ['Bangla', 'English', 'Economics', 'Civics', 'Logic', 'Islamic Studies', 'Geography', 'History', 'Social Work', 'Psychology']
   };
   const GROUPS = {
-    sciencePhysics: { label: 'Science — Physics Group', subjects: SUBJECTS.sciencePhysics },
-    scienceBiology: { label: 'Science — Biology Group', subjects: SUBJECTS.scienceBiology },
+    sciencePhysics: { label: 'Science, Physics Group', subjects: SUBJECTS.sciencePhysics },
+    scienceBiology: { label: 'Science, Biology Group', subjects: SUBJECTS.scienceBiology },
     commerce: { label: 'Business / Commerce', subjects: SUBJECTS.commerce },
     humanities: { label: 'Arts / Humanities', subjects: SUBJECTS.humanities }
   };
   const U = (id, group) => Object.freeze({ id: id, label: id, group });
   const UNITS = {
-    // DU — 6 units (A, B, C, D, E, F)
+    // DU, 6 units (A, B, C, D, E, F)
     du: { A: U('A', 'sciencePhysics'), B: U('B', 'commerce'), C: U('C', 'humanities'), D: U('D', 'scienceBiology'), E: U('E', 'sciencePhysics'), F: U('F', 'commerce') },
-    // RU — 3 units (A, B, C) per admission.ru.ac.bd
+    // RU, 3 units (A, B, C) per admission.ru.ac.bd
     ru: { A: U('A', 'sciencePhysics'), B: U('B', 'commerce'), C: U('C', 'humanities') },
-    // CU — 7 units (A, B, B1, B2, C, D, D1) per admission.cu.ac.bd
+    // CU, 7 units (A, B, B1, B2, C, D, D1) per admission.cu.ac.bd
     cu: { A: U('A', 'sciencePhysics'), B: U('B', 'commerce'), B1: U('B1', 'commerce'), B2: U('B2', 'commerce'), C: U('C', 'humanities'), D: U('D', 'scienceBiology'), D1: U('D1', 'scienceBiology') },
-    // KU / JU / SU / BU — 5 units (A–E)
+    // KU / JU / SU / BU, 5 units (A–E)
     ku: { A: U('A', 'sciencePhysics'), B: U('B', 'commerce'), C: U('C', 'humanities'), D: U('D', 'scienceBiology'), E: U('E', 'sciencePhysics') },
     ju: { A: U('A', 'sciencePhysics'), B: U('B', 'commerce'), C: U('C', 'humanities'), D: U('D', 'scienceBiology'), E: U('E', 'sciencePhysics') },
     su: { A: U('A', 'sciencePhysics'), B: U('B', 'commerce'), C: U('C', 'humanities'), D: U('D', 'scienceBiology'), E: U('E', 'sciencePhysics') },
     bu: { A: U('A', 'sciencePhysics'), B: U('B', 'commerce'), C: U('C', 'humanities'), D: U('D', 'scienceBiology'), E: U('E', 'sciencePhysics') },
-    // BUET / IUT — single admission, no unit system (never A/B/C/D)
+    // BUET / IUT, single admission, no unit system (never A/B/C/D)
     buet: { BUET: U('BUET', 'sciencePhysics') },
     iut: { IUT: U('IUT', 'sciencePhysics') }
   };
@@ -59,7 +59,7 @@
     { id: 'iut', name: 'IUT', aliases: ['ইউটিউ', 'IUT', 'Islamic University of Technology'], units: sameForAllSessions(UNITS.iut) }
   ];
 
-  // 2025-26 confirmed from current prospectuses; 2026-27 provisional v1 —
+  // 2025-26 confirmed from current prospectuses; 2026-27 provisional v1 -
   // same unit structure until the next official prospectus is published.
   const SESSIONS = [
     { id: '2025-26', label: '2025-26', status: 'confirmed' },

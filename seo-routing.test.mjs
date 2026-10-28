@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { readFileSync } from 'node:fs';
 import worker from './_worker.js';
 
 /* Emulates Cloudflare Pages static-asset behaviour: known files are served with
@@ -148,6 +149,40 @@ test('preview surfaces are reachable but marked noindex', async () => {
     '/profile-v2.html', '/profile-v2']) {
     const res = await get(path);
     assert.equal(res.status, 200, `${path} must stay reachable`);
+  }
+});
+
+test('every preview document actually carries a noindex robots meta', () => {
+  /* The reachability test above passed while four of these documents had no
+     robots meta at all, so "reachable but noindex" was only half true and the
+     crawler was free to index an internal admin screen. The route status and
+     the document's own meta are two different things; this reads the file. */
+  const files = ['splash-preview.html', 'ai-performance-analysis-live.html',
+    'notification-command-center.html', 'profile-v2.html',
+    'students-control-center.html', 'verification-control-center.html'];
+  for (const file of files) {
+    const html = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8');
+    assert.match(html, /<meta\s+name="robots"\s+content="[^"]*noindex/,
+      `${file} must declare noindex in its own head`);
+  }
+});
+
+test('the owner\'s personal email is published only as a contact address', () => {
+  /* notification-command-center.html hardcodes the admin's address as sample
+     data; that is acceptable only while the document is noindex, which the test
+     above enforces. privacy.html and data-deletion.html do publish the address
+     on purpose -- a reachable contact is what the privacy and data-deletion
+     rules require -- so on an indexable page the address is allowed only inside
+     a mailto: link, never as bare text or sample data. */
+  const indexable = ['index.html', 'privacy.html', 'data-deletion.html'];
+  const ADDRESS = 'rashelmahmudpc@gmail\\.com|rashelzayan3@gmail\\.com';
+  for (const file of indexable) {
+    const html = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8');
+    /* Drop the whole mailto anchor, link text included: the visible address in
+       "যোগাযোগ / Contact: <a ...>address</a>" is part of the contact block. */
+    const bare = html.replace(/<a\b[^>]*mailto:[^>]*>[\s\S]*?<\/a>/gi, '');
+    assert.doesNotMatch(bare, new RegExp(ADDRESS),
+      `${file} is indexed, so the owner's address may appear only inside a mailto contact link`);
   }
 });
 

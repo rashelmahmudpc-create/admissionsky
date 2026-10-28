@@ -1,8 +1,8 @@
-/* v111 — Voice pipeline for Vocabulary (provider = Cartesia, ElevenLabs fallback).
+/* v111, Voice pipeline for Vocabulary (provider = Cartesia, ElevenLabs fallback).
    Generate once → save binary audio bytes in IndexedDB (voiceCache) → instant offline playback.
    API key কখনো client-side থাকে না: অ্যাপ শুধু নিজের Cloudflare Worker proxy-তে কথা বলে।
    Worker Main = Cartesia (CARTESIA_API_KEY); key না থাকলে বা Cartesia ব্যর্থ হলে
-   স্বয়ংক্রিয়ভাবে ElevenLabs-এ ফিরে যায় — তাই audio কখনো ভাঙে না।
+   স্বয়ংক্রিয়ভাবে ElevenLabs-এ ফিরে যায়, তাই audio কখনো ভাঙে না।
    Priority: custom uploaded voice → provider audio (cache → generate) → Web Speech TTS fallback. */
 (() => {
   'use strict';
@@ -13,7 +13,7 @@
     voiceId: '',                            // খালি = worker-এর Cartesia default (Daniel, en) / বাংলায় Skylar
     modelId: '',                            // খালি = worker-এর sonic-3.6
     outputFormat: "mp3_22050_32",
-    lang: 'en-US',                          // accent/locale — এক জায়গা থেকে বদলাও
+    lang: 'en-US',                          // accent/locale, এক জায়গা থেকে বদলাও
     voiceSettings: Object.freeze({ stability: 0.5, similarity_boost: 0.75, style: 0, use_speaker_boost: true, speed: 1.0 }),
     speed: 0.95,                           // calmer/clearer reading
     settingsVersion: 5,                     // voice/model বদলালে এই সংখ্যা বাড়ালেই পুরনো cache conflict-মুক্ত
@@ -80,12 +80,12 @@
   const allRows = () => dbReady() ? Promise.resolve(dbGetAll('voiceCache')).catch(() => [...mem.values()]) : Promise.resolve([...mem.values()]);
   const delRow = key => dbReady() ? Promise.resolve(dbDelRaw('voiceCache', key)).catch(() => false) : (mem.delete(key), Promise.resolve(true));
 
-  // ── Secure endpoint (worker URL — secret নয়, key নয়) ────────────────────────
-  /* P20 (v204) — ডিফল্ট এখন same-origin: pages._worker.js /api/voice → admission-voice worker।
+  // ── Secure endpoint (worker URL, secret নয়, key নয়) ────────────────────────
+  /* P20 (v204), ডিফল্ট এখন same-origin: pages._worker.js /api/voice → admission-voice worker।
      কেন: ① মালিক-নেটে *.workers.dev ব্লক (P15-প্রমাণ); ② voice-worker-এর CORS-allowlist-এ pages.dev ছিল না
      (শুধু github.io/localhost) → সরাসরি-ডাকে ব্রাউজার "Failed to fetch"; ③ hub-অ্যাপের পুরনো
      এন্ডপয়েন্ট-মৃত (DNS-নেই); ④ পাইরেট-কপিতে অন্য-এন্ডপয়েন্ট-সেভ-থাকতে-পারে। same-origin-পথে সব পার। */
-  const DEFAULT_ENDPOINT = ''; /* '' = same-origin (/api/voice) — পছন্দের পথ */
+  const DEFAULT_ENDPOINT = ''; /* '' = same-origin (/api/voice), পছন্দের পথ */
   let proxyUrl = DEFAULT_ENDPOINT;
   let voiceOff = false;
   try {
@@ -176,7 +176,7 @@
   };
 
   const fallbackTts = (word, btn, reason, warn) => {
-    if (warn) window.toast?.('📴 অফলাইন — এই word-এর ElevenLabs voice এখনো নামেনি। Internet-এ থাকলে একবার ক্লিকেই নেমে যাবে।');
+    if (warn) window.toast?.('📴 অফলাইন, এই word-এর ElevenLabs voice এখনো নামেনি। Internet-এ থাকলে একবার ক্লিকেই নেমে যাবে।');
     const tts = window.VocabularyPronunciation?.speakTtsOnly;
     if (typeof tts === 'function') { try { tts(word); } catch (_) {} }
     if (warn) btnState(btn, 'warn');
@@ -225,7 +225,7 @@
       }, blob, cachePermit); } catch (storageError) { window.__lastVoiceError = String(storageError?.message || 'voice-cache-save-failed').slice(0, 90); }
       playBlob(blob);
       btnState(btn, cached ? 'ok' : 'warn');
-      if (cached) window.toast?.('✓ Voice saved — এখন অফলাইনেও বাজবে');
+      if (cached) window.toast?.('✓ Voice saved, এখন অফলাইনেও বাজবে');
       else if (canCache(cachePermit)) window.toast?.('Voice বাজছে, তবে offline cache save হয়নি।');
       return done(cached ? 'generated' : 'generated-uncached', word, 1);
     } catch (err) {
@@ -233,7 +233,7 @@
       btnState(btn, 'error');
       const why = String((err && err.message) || '').slice(0, 90);
       window.__lastVoiceError = why || 'unknown';
-      window.toast?.('⚠ Voice হয়নি (' + (why || 'অজানা') + ') — বিল্ট-ইন voice চলছে');
+      window.toast?.('⚠ Voice হয়নি (' + (why || 'অজানা') + '), বিল্ট-ইন voice চলছে');
       return fallbackTts(word, btn, 'error');
     } finally { pending.delete(key); }
   };
@@ -311,13 +311,13 @@
     if (typeof window.confirmModal === 'function') return window.confirmModal(title, message, action, 'Clear voices', true);
     if (window.confirm(message)) action();
   };
-  const confirmClearAll = () => confirmBox('Clear all vocabulary voices', 'সব cached ElevenLabs voice মুছে ফেলতে চান? Vocabulary ডেটা ও custom uploaded voice অক্ষত থাকবে — পরে কোনো word চাইলে আবার একবার generate হবে।', async () => {
+  const confirmClearAll = () => confirmBox('Clear all vocabulary voices', 'সব cached ElevenLabs voice মুছে ফেলতে চান? Vocabulary ডেটা ও custom uploaded voice অক্ষত থাকবে, পরে কোনো word চাইলে আবার একবার generate হবে।', async () => {
     try {
       const count = await clearAll();
       window.toast?.(`🗑 ${count}টি voice cache মুছে গেছে (vocabulary অক্ষত)`);
     } catch (error) {
       window.__lastVoiceError = String(error?.message || 'voice-cache-clear-failed').slice(0, 90);
-      window.toast?.('Voice cache clear failed — আবার চেষ্টা করুন।');
+      window.toast?.('Voice cache clear failed, আবার চেষ্টা করুন।');
     } finally { hydrateSettingsSection().catch(() => {}); }
   });
   const confirmClearCategory = category => {
@@ -335,13 +335,13 @@
     <div class="vm-voice-section" style="padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--card)">
       <b style="font-size:13px">🔊 Vocabulary Voices <span style="color:var(--sub);font-weight:400;font-size:11px">(ElevenLabs · generate once → offline playback)</span></b>
       <div id="vmVoiceStatus" style="margin-top:8px;color:var(--sub);font-size:12px;line-height:1.7">…লোড হচ্ছে…</div>
-      <label style="display:block;margin-top:12px;font-size:11px;font-weight:700;color:var(--sub)">Secure worker endpoint (API key worker secret-এ — অ্যাপে কখনো নয়)</label>
+      <label style="display:block;margin-top:12px;font-size:11px;font-weight:700;color:var(--sub)">Secure worker endpoint (API key worker secret-এ, অ্যাপে কখনো নয়)</label>
       <input id="vmVoiceEndpoint" style="width:100%;margin-top:5px" placeholder="https://your-voice-worker.workers.dev" autocomplete="off" onchange="VocabularyElevenLabs.saveEndpoint(this.value);window.toast?.('Voice endpoint save হয়েছে');VocabularyElevenLabs.hydrateSettingsSection('${escape(category)}')">
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
         <button type="button" class="btn ghost sm" onclick="VocabularyElevenLabs.confirmClearCategory('${escape(category)}')">🧹 এই category-র voice cache</button>
         <button type="button" class="btn ghost sm" onclick="VocabularyElevenLabs.confirmClearAll()">🗑 সব voice cache</button>
       </div>
-      <small style="display:block;margin-top:9px;color:var(--sub);font-size:11px;line-height:1.5">Cached voice অফলাইনেও বাজে। Clear করলে শুধু audio যায় — vocabulary ডেটা ও 🎧 custom voice অক্ষত। ডিফল্ট worker চলছে; বন্ধ করতে চাইলে ঘরে লেখো <code>off</code>।</small>
+      <small style="display:block;margin-top:9px;color:var(--sub);font-size:11px;line-height:1.5">Cached voice অফলাইনেও বাজে। Clear করলে শুধু audio যায়, vocabulary ডেটা ও 🎧 custom voice অক্ষত। ডিফল্ট worker চলছে; বন্ধ করতে চাইলে ঘরে লেখো <code>off</code>।</small>
     </div>`;
   const hydrateSettingsSection = async category => {
     const box = document.getElementById('vmVoiceStatus');
@@ -352,8 +352,8 @@
       const status = await categoryStatus(category);
       if (status.total) statusLine = `<br>${escape(String(category || 'ALL'))} category: Total <b>${status.total}</b> · Voice Ready <b>${status.ready}</b> · Not generated <b>${status.missing}</b>`;
     } catch (_) {}
-    const endpointLabel = voiceOff ? 'বন্ধ (off)' : (proxyUrl ? escape(proxyUrl) : 'same-origin (অ্যাপ-প্রক্সি) — ডিফল্ট');
-    box.innerHTML = `Endpoint: <code style="font-size:11px">${endpointLabel}</code><br>Saved voices: <b>${summary.count}</b> · Storage: <b>${fmtBytes(summary.bytes)}</b>${statusLine}${voiceOff ? '<br>⚠ Voice generation বন্ধ আছে — cached ও বিল্ট-ইন voice চলবে।' : ''}`;
+    const endpointLabel = voiceOff ? 'বন্ধ (off)' : (proxyUrl ? escape(proxyUrl) : 'same-origin (অ্যাপ-প্রক্সি), ডিফল্ট');
+    box.innerHTML = `Endpoint: <code style="font-size:11px">${endpointLabel}</code><br>Saved voices: <b>${summary.count}</b> · Storage: <b>${fmtBytes(summary.bytes)}</b>${statusLine}${voiceOff ? '<br>⚠ Voice generation বন্ধ আছে, cached ও বিল্ট-ইন voice চলবে।' : ''}`;
     const input = document.getElementById('vmVoiceEndpoint');
     if (input && proxyUrl && !input.value) input.value = proxyUrl;
   };

@@ -1,5 +1,5 @@
 /*
- * Question Card Game Visual — Admission Hub.
+ * Question Card Game Visual, Admission Hub.
  * Design reminder: apply the Memorizing Match layered mint card language only to question/review surfaces;
  * preserve every existing data attribute, answer state, navigation path, and click handler.
  */

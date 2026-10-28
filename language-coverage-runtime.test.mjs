@@ -25,7 +25,10 @@ const DASHBOARD = read('dashboard-v2.js');
    so a stand-in would let a broken contract pass. */
 const I18N = (() => {
   const html = read('index.html');
-  const start = html.indexOf('/* ADMISSION HUB — Global i18n Engine');
+  /* Anchor on the two phrases, not on the punctuation between them: the
+     shipped-copy typography pass (29a1ac7) rewrites interstitial em dashes,
+     which used to break this lookup even though the engine was intact. */
+  const start = html.search(/\/\*\s*ADMISSION HUB[^\n]*Global i18n Engine/);
   const marker = html.indexOf('window.AhI18n', start);
   const end = html.indexOf('})();', marker);
   assert.ok(start >= 0 && marker > start && end > marker, 'AhI18n engine block not found in index.html');

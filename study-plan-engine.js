@@ -1,7 +1,7 @@
-/* Admission Hub — P17 student-facing action agent: "prepare me".
+/* Admission Hub, P17 student-facing action agent: "prepare me".
  *
  * The student presses one button ("আমাকে প্রস্তুত করো") and this engine turns
- * what the app already knows — exam history, per-topic ability, mistakes — into
+ * what the app already knows, exam history, per-topic ability, mistakes, into
  * an ordered, honest study plan: which topics first, why, how many questions,
  * at what difficulty, over the next few days.
  *
@@ -83,7 +83,7 @@
   }
 
   /* The ranked list the agent works down: weakest first, but a topic the student
-     has barely touched is not called "weak" — it is marked as unattempted. */
+     has barely touched is not called "weak", it is marked as unattempted. */
   function priorities(topics, mistakes) {
     const missed = new Map();
     for (const m of (Array.isArray(mistakes) ? mistakes : [])) {
@@ -99,12 +99,12 @@
       if (t.attempts < 3) {
         // Too little data to call it strong or steady. A wrong answer here is
         // still a real signal, so it goes to the top rather than being excused.
-        if (t.wrongCount > 0) { kind = 'weak'; reason = 'কম অনুশীলন, আর ভুল হয়েছে — শুরু থেকে ধরো'; }
-        else { kind = 'new'; reason = 'এখনো কম অনুশীলন — ভিত গড়ো'; }
-      } else if (t.ability < 50) { kind = 'weak'; reason = 'সঠিক উত্তর কম — আগে এটা ঠিক করো'; }
-      else if (t.ability < 75) { kind = 'steady'; reason = 'মাঝামাঝি — একটু অনুশীলনে ভালো হবে'; }
-      else { kind = 'strong'; reason = 'ভালো করছো — কঠিন প্রশ্নে ধরে রাখো'; }
-      if (repeats >= 2 && kind !== 'new') { kind = 'weak'; reason = 'বারবার ভুল হচ্ছে — বিশেষভাবে দেখো'; }
+        if (t.wrongCount > 0) { kind = 'weak'; reason = 'কম অনুশীলন, আর ভুল হয়েছে, শুরু থেকে ধরো'; }
+        else { kind = 'new'; reason = 'এখনো কম অনুশীলন, ভিত গড়ো'; }
+      } else if (t.ability < 50) { kind = 'weak'; reason = 'সঠিক উত্তর কম, আগে এটা ঠিক করো'; }
+      else if (t.ability < 75) { kind = 'steady'; reason = 'মাঝামাঝি, একটু অনুশীলনে ভালো হবে'; }
+      else { kind = 'strong'; reason = 'ভালো করছো, কঠিন প্রশ্নে ধরে রাখো'; }
+      if (repeats >= 2 && kind !== 'new') { kind = 'weak'; reason = 'বারবার ভুল হচ্ছে, বিশেষভাবে দেখো'; }
       // Lower score = higher urgency. A thin-data topic sits mid-pack unless it
       // has a wrong answer, which the kind above already escalates.
       const score = t.ability - (repeats * 4) - (t.attempts < 3 && t.wrongCount === 0 ? 15 : 0);
@@ -184,11 +184,11 @@
 
   /* One honest sentence the student can read first. Never promises a rank. */
   function message(overall, prio, topics) {
-    if (!topics.length) return 'এখনো পরীক্ষার ডেটা নেই — একটি পরীক্ষা দাও, তারপর পরিকল্পনা সাজাবো।';
+    if (!topics.length) return 'এখনো পরীক্ষার ডেটা নেই, একটি পরীক্ষা দাও, তারপর পরিকল্পনা সাজাবো।';
     const weakest = prio.find((p) => p.kind === 'weak') || prio[0];
     const band = overall.band;
     const bandBn = band === 'easy' ? 'সহজ' : band === 'hard' ? 'কঠিন' : 'মাঝারি';
-    return `তোমার সামগ্রিক সামর্থ্য ${overall.ability}% — এখন ${bandBn} প্রশ্নে অনুশীলন করলে সবচেয়ে লাভ হবে। ` +
+    return `তোমার সামগ্রিক সামর্থ্য ${overall.ability}%, এখন ${bandBn} প্রশ্নে অনুশীলন করলে সবচেয়ে লাভ হবে। ` +
       `প্রথমে "${weakest.topicId}"-এ মন দাও: ${weakest.reason}।`;
   }
 

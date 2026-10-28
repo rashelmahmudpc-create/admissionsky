@@ -2,7 +2,7 @@
  *
  * sky-replies.json and mcq_final.json are served from the Pages root with no
  * authentication, so once a phone number or email reaches one of them it is
- * public forever — a later rollback cannot un-publish what a crawler already
+ * public forever, a later rollback cannot un-publish what a crawler already
  * archived. The header of sky-replies.json already promises phone/email were
  * stripped from the Drive source; nothing enforced that promise. This does.
  *
@@ -37,7 +37,7 @@ for (const file of targets) {
   try {
     text = readFileSync(file, 'utf8');
   } catch {
-    console.error(`pii-scan: ${file} is missing — the deploy would ship without it`);
+    console.error(`pii-scan: ${file} is missing, the deploy would ship without it`);
     failures++;
     continue;
   }

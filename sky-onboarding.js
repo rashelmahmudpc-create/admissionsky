@@ -1,9 +1,9 @@
-/* Admission Sky — the owner's bird-led signup and log-in flows, wired to the
+/* Admission Sky, the owner's bird-led signup and log-in flows, wired to the
  * real account backend.
  *
  * The two screens are the owner's own previews (signup-flow-preview-v2 and the
  * log-in flow). This file is the live version of them: same bird, same colour
- * fields, same step order — but every step that needs the server now calls the
+ * fields, same step order, but every step that needs the server now calls the
  * real account API through window.AdmissionSkyBridge, which account-access.js
  * publishes. Nothing here talks to the network directly, and nothing here makes
  * a decision about whether an account is verified: the bridge owns all of that.
@@ -53,7 +53,7 @@ const disposableEmail = () => (typeof window.ADMISSION_HUB_isDisposableEmail ===
   ? window.ADMISSION_HUB_isDisposableEmail
   : () => false);
 const disposableMessage = () => window.ADMISSION_HUB_DISPOSABLE_EMAIL_MESSAGE
-  || 'এই ইমেইল সেবাটি দিয়ে অ্যাকাউন্ট খোলা যায় না—একটি স্থায়ী ইমেইল ব্যবহার করুন।';
+  || 'এই ইমেইল সেবাটি দিয়ে অ্যাকাউন্ট খোলা যায় না, একটি স্থায়ী ইমেইল ব্যবহার করুন।';
 const emailAcceptable = value => EMAIL_RE.test(value) && !disposableEmail()(value);
 
 const SIGNUP_CTA = ['পরের ধাপ', 'পরের ধাপ', 'পরের ধাপ', 'পরের ধাপ', 'অ্যাকাউন্ট তৈরি করো', 'কোড পাঠাও', 'যাচাই করো', ''];
@@ -62,7 +62,7 @@ const SIGNUP_SAY = [
   () => 'আমি স্কাই। তোমার পুরো নামটা বলো?',
   () => 'জন্ম তারিখটা ঠিক করে নাও, তারপর এগোই।',
   () => 'এখন কোন স্তরে পড়ছ? স্কুলটা খুঁজে নাও।',
-  () => 'তোমার ইমেইলটা দাও—এখানেই সব আসবে।',
+  () => 'তোমার ইমেইলটা দাও, এখানেই সব আসবে।',
   () => 'এবার পাসওয়ার্ড। আমি দেখব না!',
   () => 'কোডটা কোথায় পাঠাব? বেছে নাও।',
   () => state.method === 'telegram'
@@ -122,7 +122,7 @@ const METHOD_CARDS = `<button class="mc sel" data-m="email" type="button"><span 
 // Firebase link instead. The link sets Firebase's own verified flag, so there is
 // no code to type: offering the OTP box here would strand the student on a form
 // that can never be filled.
-const LINK_PANEL = `<div class="lk" id="sky-lk"><div class="lki" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 8 8 6 8-6"/></svg><i><svg viewBox="0 0 24 24"><path d="m6 12 4 4 8-9"/></svg></i></div><b>ইমেইলে লিংক পাঠানো হয়েছে</b><p id="sky-lk-p">লিংকে ট্যাপ করে এখানে ফিরে এসো।</p><button class="lnk" id="sky-lk-c" type="button">লিংক খুলেছি — যাচাই করো</button></div>`;
+const LINK_PANEL = `<div class="lk" id="sky-lk"><div class="lki" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 8 8 6 8-6"/></svg><i><svg viewBox="0 0 24 24"><path d="m6 12 4 4 8-9"/></svg></i></div><b>ইমেইলে লিংক পাঠানো হয়েছে</b><p id="sky-lk-p">লিংকে ট্যাপ করে এখানে ফিরে এসো।</p><button class="lnk" id="sky-lk-c" type="button">লিংক খুলেছি, যাচাই করো</button></div>`;
 
 const DONE_PANEL = `<div class="dn" id="sky-dn"><h2 id="sky-dn-h"></h2><p>তোমার অ্যাকাউন্ট প্রস্তুত</p><div class="ld"><u></u></div></div>`;
 const SIGNUP_SCREENS = [
@@ -160,7 +160,7 @@ const CARD = `<main class="app" id="sky-app">${BACK}
 /* ---------------------------------------------------------------- helpers */
 const bridge = () => window.AdmissionSkyBridge || null;
 const within = (promise, ms) => Promise.race([promise, new Promise((_, reject) => setTimeout(() => {
-  const error = new Error('সংযোগ খুব ধীর—আবার চেষ্টা করো।');
+  const error = new Error('সংযোগ খুব ধীর, আবার চেষ্টা করো।');
   error.userMessage = error.message;
   reject(error);
 }, ms))]);
@@ -299,7 +299,7 @@ const startOtp = () => {
 
 const beginChallenge = async () => {
   const api = bridge();
-  if (!api) return fail('Account সেবা পাওয়া যাচ্ছে না—পেজটি একবার refresh করো।');
+  if (!api) return fail('Account সেবা পাওয়া যাচ্ছে না, পেজটি একবার refresh করো।');
   setBusy(true);
   try {
     const result = await within(state.method === 'telegram' ? api.startTelegram() : api.startEmail(), 60000);
@@ -322,7 +322,7 @@ const beginChallenge = async () => {
     }
     startResendCountdown(state.resend);
   } catch (error) {
-    fail(api.friendly ? api.friendly(error) : 'কোড পাঠানো যায়নি—আবার চেষ্টা করো।');
+    fail(api.friendly ? api.friendly(error) : 'কোড পাঠানো যায়নি, আবার চেষ্টা করো।');
   } finally { setBusy(false); }
 };
 
@@ -368,9 +368,9 @@ const checkLink = async () => {
       go(lastScreen());
       return;
     }
-    fail('এখনো যাচাই হয়নি—ইমেইলের লিংকে ট্যাপ করে আবার চেষ্টা করো।');
+    fail('এখনো যাচাই হয়নি, ইমেইলের লিংকে ট্যাপ করে আবার চেষ্টা করো।');
   } catch (error) {
-    fail(api.friendly ? api.friendly(error) : 'যাচাই করা যায়নি—আবার চেষ্টা করো।');
+    fail(api.friendly ? api.friendly(error) : 'যাচাই করা যায়নি, আবার চেষ্টা করো।');
   } finally { setBusy(false); }
 };
 
@@ -384,7 +384,7 @@ const verifyCode = async () => {
   const code = otpBoxes().map(o => o.value).join('');
   if (code.length < 6 || state.busy) return;
   const api = bridge();
-  if (!api) return fail('Account সেবা পাওয়া যাচ্ছে না—পেজটি একবার refresh করো।');
+  if (!api) return fail('Account সেবা পাওয়া যাচ্ছে না, পেজটি একবার refresh করো।');
   setBusy(true);
   const otp = $('sky-otp');
   try {
@@ -457,7 +457,7 @@ const back = () => {
 
 const submitSignup = async () => {
   const api = bridge();
-  if (!api) return fail('Account সেবা পাওয়া যাচ্ছে না—পেজটি একবার refresh করো।');
+  if (!api) return fail('Account সেবা পাওয়া যাচ্ছে না, পেজটি একবার refresh করো।');
   setBusy(true);
   const button = cta();
   if (button) button.classList.add('busy');
@@ -500,13 +500,13 @@ const submitSignup = async () => {
       setTimeout(() => mood(''), 1200);
       return;
     }
-    fail(api.friendly ? api.friendly(error) : 'অ্যাকাউন্ট তৈরি করা যায়নি—আবার চেষ্টা করো।');
+    fail(api.friendly ? api.friendly(error) : 'অ্যাকাউন্ট তৈরি করা যায়নি, আবার চেষ্টা করো।');
   }
 };
 
 const doLogin = async () => {
   const api = bridge();
-  if (!api) return fail('Account সেবা পাওয়া যাচ্ছে না—পেজটি একবার refresh করো।');
+  if (!api) return fail('Account সেবা পাওয়া যাচ্ছে না, পেজটি একবার refresh করো।');
   setBusy(true);
   const button = cta();
   if (button) button.classList.add('busy');
@@ -529,7 +529,7 @@ const doLogin = async () => {
     if (button) button.classList.remove('busy');
     setBusy(false);
     const hint = $('sky-lpw-h');
-    if (hint) { hint.className = 'hint err'; hint.textContent = api.friendly ? api.friendly(error) : 'ঢোকা যায়নি—আবার চেষ্টা করো।'; }
+    if (hint) { hint.className = 'hint err'; hint.textContent = api.friendly ? api.friendly(error) : 'ঢোকা যায়নি, আবার চেষ্টা করো।'; }
     mood('sad'); kick('shake');
     const field = $('sky-lf-pw');
     if (field) field.classList.add('bad');
@@ -898,15 +898,15 @@ const bindLogin = () => {
   const provider = async (name, label, call) => {
     if (state.busy) return;
     const api = bridge();
-    if (!api) return fail('Account সেবা পাওয়া যাচ্ছে না—পেজটি একবার refresh করো।');
+    if (!api) return fail('Account সেবা পাওয়া যাচ্ছে না, পেজটি একবার refresh করো।');
     setBusy(true); mood('listen'); talk(label);
     try {
       const done = await call(api);
-      if (!done) { mood(''); $('sky-lem-h').className = 'hint err'; $('sky-lem-h').textContent = `${name} সাইন-ইন সম্পন্ন হয়নি—ইমেইল দিয়ে চেষ্টা করো।`; return; }
+      if (!done) { mood(''); $('sky-lem-h').className = 'hint err'; $('sky-lem-h').textContent = `${name} সাইন-ইন সম্পন্ন হয়নি, ইমেইল দিয়ে চেষ্টা করো।`; return; }
       api.finish(); go(4);
     } catch (error) {
       $('sky-lem-h').className = 'hint err';
-      $('sky-lem-h').textContent = api.friendly ? api.friendly(error) : `${name} সাইন-ইন সম্পন্ন হয়নি—ইমেইল দিয়ে চেষ্টা করো।`;
+      $('sky-lem-h').textContent = api.friendly ? api.friendly(error) : `${name} সাইন-ইন সম্পন্ন হয়নি, ইমেইল দিয়ে চেষ্টা করো।`;
     } finally { setBusy(false); }
   };
   $('sky-b-google').addEventListener('click', () => provider('Google', 'গুগলের সাথে যুক্ত হচ্ছি…', api => api.google()));
@@ -916,17 +916,17 @@ const bindLogin = () => {
   $('sky-b-forgot').addEventListener('click', async () => {
     if (state.busy) return;
     const api = bridge();
-    if (!api) return fail('Account সেবা পাওয়া যাচ্ছে না—পেজটি একবার refresh করো।');
+    if (!api) return fail('Account সেবা পাওয়া যাচ্ছে না, পেজটি একবার refresh করো।');
     const email = em.value.trim();
     if (!emailAcceptable(email)) { $('sky-lem-h').className = 'hint err'; $('sky-lem-h').textContent = EMAIL_RE.test(email) ? disposableMessage() : 'আগে তোমার ইমেইলটা লিখো।'; em.focus(); return; }
     setBusy(true);
     try {
       await api.forgot(email);
       $('sky-lpw-h').className = 'hint ok';
-      $('sky-lpw-h').textContent = 'রিসেট লিংক পাঠানোর চেষ্টা করা হয়েছে—ইনবক্স দেখো।';
+      $('sky-lpw-h').textContent = 'রিসেট লিংক পাঠানোর চেষ্টা করা হয়েছে, ইনবক্স দেখো।';
     } catch (error) {
       $('sky-lpw-h').className = 'hint err';
-      $('sky-lpw-h').textContent = api.friendly ? api.friendly(error) : 'এখন পাঠানো যাচ্ছে না—একটু পরে চেষ্টা করো।';
+      $('sky-lpw-h').textContent = api.friendly ? api.friendly(error) : 'এখন পাঠানো যাচ্ছে না, একটু পরে চেষ্টা করো।';
     } finally { setBusy(false); }
   });
   $('sky-b-signup').addEventListener('click', () => { const api = bridge(); if (api) api.showSignup(); });
@@ -1047,7 +1047,7 @@ const bindOtp = () => {
       state.resend = Number(result && result.resendAfter || 45);
       startResendCountdown(state.resend);
     } catch (error) {
-      fail(api.friendly ? api.friendly(error) : 'নতুন কোড পাঠানো যায়নি—একটু পরে চেষ্টা করো।');
+      fail(api.friendly ? api.friendly(error) : 'নতুন কোড পাঠানো যায়নি, একটু পরে চেষ্টা করো।');
     } finally { setBusy(false); }
   });
 };

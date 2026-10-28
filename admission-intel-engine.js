@@ -1,7 +1,7 @@
-/* Admission Hub — P18 Admission Intelligence Engine.
+/* Admission Hub, P18 Admission Intelligence Engine.
  *
- * Turns what the app already knows about a student — their chosen university,
- * unit and session, plus their own exam history — into admission intelligence:
+ * Turns what the app already knows about a student, their chosen university,
+ * unit and session, plus their own exam history, into admission intelligence:
  * which of the official eligible subjects are covered and which are untouched,
  * which topics are weak, what question pattern their history shows, and a
  * prioritised revision plan that lands on the exam date.
@@ -146,7 +146,7 @@
     const perDay = clamp(Math.round(num((opts && opts.perDay) || 25)) || 25, 5, 100);
     const pool = stats.slice();
     // Unpractised official subjects are a priority in their own right, but we
-    // cannot invent topics for them — we name the subject and say "শুরু করো".
+    // cannot invent topics for them, we name the subject and say "শুরু করো".
     const untouched = coverageInfo.untouched.slice();
     const days = [];
     let cursor = 0;
@@ -160,12 +160,12 @@
           topicId: focus.topicId, name: focus.name, kind: focus.accuracy < 50 ? 'weak' : focus.accuracy < 75 ? 'steady' : 'strong',
           accuracy: focus.accuracy, questions: perDay,
           why: focus.confident
-            ? `তোমার ${focus.asked}টি প্রশ্নে দক্ষতা ${focus.accuracy}% — এখানে সময় দিলে সবচেয়ে বেশি লাভ।`
-            : `মাত্র ${focus.asked}টি প্রশ্ন হয়েছে, তাই এখনো নিশ্চিত নই — বেশি অভ্যাস দরকার।`
+            ? `তোমার ${focus.asked}টি প্রশ্নে দক্ষতা ${focus.accuracy}%, এখানে সময় দিলে সবচেয়ে বেশি লাভ।`
+            : `মাত্র ${focus.asked}টি প্রশ্ন হয়েছে, তাই এখনো নিশ্চিত নই, বেশি অভ্যাস দরকার।`
         });
       }
       if (extraSubject) {
-        blocks.push({ subject: extraSubject, kind: 'new', questions: 0, why: 'এই সাবজেক্টে এখনো কোনো প্রশ্ন করোনি — শুরু করা দরকার।' });
+        blocks.push({ subject: extraSubject, kind: 'new', questions: 0, why: 'এই সাবজেক্টে এখনো কোনো প্রশ্ন করোনি, শুরু করা দরকার।' });
       }
       days.push({ day: d + 1, blocks });
       if (focus) cursor += 1;
@@ -174,7 +174,7 @@
   }
 
   function message(rows, coverageInfo, stats, daysLeft) {
-    if (!rows.length) return 'এখনো পরীক্ষার ডেটা নেই — কয়েকটি প্রশ্ন করলেই তোমার জন্য পরিকল্পনা সাজাতে পারব।';
+    if (!rows.length) return 'এখনো পরীক্ষার ডেটা নেই, কয়েকটি প্রশ্ন করলেই তোমার জন্য পরিকল্পনা সাজাতে পারব।';
     const weakest = stats.find((s) => s.confident) || stats[0];
     const bits = [`তোমার ${rows.length}টি উত্তর থেকে বলছি`];
     if (coverageInfo.total) bits.push(`অফিসিয়াল ${coverageInfo.total}টি সাবজেক্টের মধ্যে ${coverageInfo.covered}টিতে অভ্যাস হয়েছে`);

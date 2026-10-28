@@ -114,7 +114,10 @@ test('Google, Passkey, and the explicit Email-or-Telegram selector are public wi
   assert.match(wrangler, /VERIFICATION_AUTH_ACTIVATION = "enabled"/);
   // The email OTP slots are enabled with declared daily caps and rotate ahead of
   // Telegram, but their provider identities stay server-side.
-  assert.match(wrangler, /VERIFICATION_ORCHESTRATOR_CONFIG = '\{"enabled":true,"providers":\[\{"id":"otp-a","enabled":true,"priority":10,"dailyQuota":300/);
+  // F-02 added a "policy" object between "enabled" and "providers"; the order of
+  // those two keys is not the contract, the slots below are.
+  assert.match(wrangler, /VERIFICATION_ORCHESTRATOR_CONFIG = '\{"enabled":true,("policy":\{[^}]*\},)?"providers":\[\{"id":"otp-a","enabled":true,"priority":10,"dailyQuota":300/);
+  assert.match(wrangler, /"deliveryBudgetMs":25000/);
   assert.match(wrangler, /\{"id":"otp-b","enabled":true,"priority":20,"dailyQuota":100/);
   assert.match(wrangler, /\{"id":"otp-c","enabled":true,"priority":45,"dailyQuota":200/);
   assert.match(wrangler, /\{"id":"otp-d","enabled":true,"priority":35,"dailyQuota":100/);
@@ -275,18 +278,19 @@ test('credentials remain in server-managed HttpOnly cookies and are never return
   assert.doesNotMatch(client, /localStorage|Authorization\s*:\s*['"`]Bearer/i);
   assert.match(client, /const OAUTH_REDIRECT_FLAG = 'ah-oauth-redirect'/);
   assert.match(client, /const GOOGLE_REDIRECT_FLAG = 'ah-google-redirect'/);
+  assert.match(client, /const TELEGRAM_LOGIN_FLAG = 'ah-telegram-login-pending'/);
   assert.doesNotMatch(client, /DIRECT_GOOGLE|initTokenClient/);
   const storageCalls = [...client.matchAll(/sessionStorage\.(setItem|getItem|removeItem)\(([^)]*)\)/g)];
   assert.equal((client.match(/sessionStorage/g) || []).length, storageCalls.length,
     'all tab storage use must be an explicitly checked direct method call');
   // +2: the fixed Firebase pendingRedirect mark restored after a lost tab
   // (apply-google-return-recovery-20261017). Still never a token or profile.
-  assert.equal(storageCalls.length, 8, 'only the six OAuth boolean flag accesses plus the two Firebase pending-mark calls are permitted');
+  assert.equal(storageCalls.length, 11, 'only the six OAuth boolean flag accesses, the three Telegram login-pending flag accesses, and the two Firebase pending-mark calls are permitted');
   assert.match(client, /const pendingKey = `firebase:pendingRedirect:\$\{GOOGLE_AUTH_API_KEY\}:\$\{appName\}`;/);
   for (const [, method, args] of storageCalls) {
     const permitted = method === 'setItem'
-      ? /^(?:(?:OAUTH_REDIRECT_FLAG|GOOGLE_REDIRECT_FLAG),\s*'1'|pendingKey,\s*'"true"')$/
-      : /^(?:OAUTH_REDIRECT_FLAG|GOOGLE_REDIRECT_FLAG|pendingKey)$/;
+      ? /^(?:(?:OAUTH_REDIRECT_FLAG|GOOGLE_REDIRECT_FLAG|TELEGRAM_LOGIN_FLAG),\s*'1'|pendingKey,\s*'"true"')$/
+      : /^(?:OAUTH_REDIRECT_FLAG|GOOGLE_REDIRECT_FLAG|TELEGRAM_LOGIN_FLAG|pendingKey)$/;
     assert.match(args.trim(), permitted, 'tab storage must never hold a token, profile or session');
   }
   assert.match(client, /ENTRY_COOKIE = 'ah_entry_v1'/);

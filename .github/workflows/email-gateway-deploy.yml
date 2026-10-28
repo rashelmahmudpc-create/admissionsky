@@ -31,10 +31,20 @@ jobs:
         run: |
           npm run test:email
           npm run test:native-auth
+      # The project key is the public Firebase Web API key of admissionsky-997d2
+      # (project 916950643726), not a secret in the confidential sense. It is
+      # inlined as a fallback for the same reason the app deploy inlines it: the
+      # repository secret is not present, and a missing secret used to fail this
+      # gate with API_KEY_MISSING before anything was deployed. A repository
+      # secret, if one is ever added, still wins.
       - name: Validate Firebase project and authorized Pages domain
         env:
-          FIREBASE_WEB_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
-        run: node auth-native/operations/verify-firebase-config.mjs
+          FIREBASE_SECRET_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
+        run: |
+          set -eu
+          KEY="${FIREBASE_SECRET_KEY:-AIzaSyCMYPy-qANPN1pPPI1B957wwKezmotK_NI}"
+          test "${#KEY}" -eq 39
+          FIREBASE_WEB_API_KEY="$KEY" node auth-native/operations/verify-firebase-config.mjs
       - name: Verify exact Worker bundle
         run: npm run check:worker-bundle
       - name: Inspect existing Worker secret binding names

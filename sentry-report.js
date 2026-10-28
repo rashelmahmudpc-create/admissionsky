@@ -1,15 +1,15 @@
-// 🛰️ PHASE 26 — client error reporting to Sentry (owner order 2026-10-17).
+// 🛰️ PHASE 26, client error reporting to Sentry (owner order 2026-10-17).
 //
 // The P19 monitor (`p19-error-monitor.mjs`) records failures the *Worker* sees.
-// An error that happens inside the student's browser — a thrown handler, a
-// rejected promise — never reaches it, so the owner hears about those only when
+// An error that happens inside the student's browser, a thrown handler, a
+// rejected promise, never reaches it, so the owner hears about those only when
 // a student complains. This module closes that gap: it reports those failures
 // to Sentry, where the owner's agent reads them and tells him in Bengali.
 //
 // Four rules shape this module:
 //
 //  1. **Never send student data.** The payload carries the error, the pathname
-//     and the user agent — never a uid, email, phone, name, or the query string
+//     and the user agent, never a uid, email, phone, name, or the query string
 //     (a query can carry a token or an id). `buildEvent` is the only thing that
 //     assembles a payload and it copies from an allowlist, so a caller cannot
 //     leak a field by adding one.
@@ -18,7 +18,7 @@
 //     exception string cannot be published to a third party.
 //  3. **Never break the page.** Every entry point is wrapped; a failure to
 //     report must never become a second error. No script is loaded from a
-//     third-party CDN — the module talks to the ingest host itself — so no CSP
+//     third-party CDN, the module talks to the ingest host itself, so no CSP
 //     `script-src` change is needed.
 //  4. **Bounded.** A render loop that throws 10,000 times must not send 10,000
 //     events: repeats collapse by signature and a hard cap ends the page's
@@ -27,7 +27,7 @@
 export const SENTRY_VERSION = 'sentry-report-v1';
 
 /**
- * The project DSN. A DSN is a *public* write-only key — it is meant to ship in
+ * The project DSN. A DSN is a *public* write-only key, it is meant to ship in
  * client code, and it can do nothing but submit events to this one project.
  * Kept here rather than fetched so reporting works on the very first error,
  * before any network round-trip has completed.
@@ -69,7 +69,7 @@ export function sanitizeText(text) {
 
 /**
  * Split a DSN into the three parts the store endpoint needs, or null when the
- * string is not a DSN. Pure — the caller decides what to do with a null.
+ * string is not a DSN. Pure, the caller decides what to do with a null.
  */
 export function parseDsn(dsn) {
   const m = String(dsn || '').match(
@@ -205,7 +205,7 @@ export function post(dsn, event, fetchImpl) {
 }
 
 /**
- * P27 — the owner's phone alert (owner order 2026-10-17).
+ * P27, the owner's phone alert (owner order 2026-10-17).
  *
  * This goes to our own Worker, not to Telegram: the bot token stays server-side
  * (a token in the browser can be read by anyone), and the request stays

@@ -99,7 +99,7 @@
   function renderSubjectList() {
     const subs = [...CACHE.subjects].sort((a, b) => (a.order || 0) - (b.order || 0));
     const search = (ExplorerState.query || '').toLowerCase();
-    /* Mistake Bank ও Smart Revision এখন Bank সেকশনের অংশ — আলাদা bottom tab নেই। */
+    /* Mistake Bank ও Smart Revision এখন Bank সেকশনের অংশ, আলাদা bottom tab নেই। */
     const bankTools = `<div class="ah-bank-tools">
       <button class="ah-bank-tool" type="button" onclick="navigate('mistakes-bank')"><span class="ic" aria-hidden="true">❌</span><span>Mistake Bank</span><i>›</i></button>
       <button class="ah-bank-tool" type="button" onclick="navigate('smart-revision')"><span class="ic" aria-hidden="true">🔁</span><span>Smart Revision</span><i>›</i></button>

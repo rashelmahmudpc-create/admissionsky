@@ -1,4 +1,4 @@
-/* Admission Hub — P13 load-test harness (pure, offline).
+/* Admission Hub, P13 load-test harness (pure, offline).
  *
  * Simulates many concurrent students hitting the read path and reports the
  * latency distribution + error rate, so a scaling claim is measured. It drives

@@ -1,4 +1,4 @@
-/* Phase 5 — AI Safety, Policy and Human-Approval Layer.
+/* Phase 5, AI Safety, Policy and Human-Approval Layer.
  *
  * The intelligence core predicts and recommends. This module is the wall between
  * those recommendations and the student, and it exists because the Phase 5 spec
@@ -79,7 +79,7 @@ export function requiresApproval(kind, context = {}) {
 }
 
 /* A proposal is only actionable once a named human approved it, and a modified
- * approval has to carry the human's edited payload — an "approved but changed"
+ * approval has to carry the human's edited payload, an "approved but changed"
  * record with no replacement text would silently send the AI's original. */
 export function approvalSatisfied(approval = null) {
   if (!approval) return { ok: false, reason: 'no-approval' };
@@ -159,7 +159,7 @@ export function applyNotificationPolicy(candidate = {}, intelligenceDecision = {
     narrowed: false,
     copy: copy.copy,
     /* The student-facing text is the sanitised copy, never the raw generator
-     * output — so a caller cannot accidentally send the pre-filter version. */
+     * output, so a caller cannot accidentally send the pre-filter version. */
     attribution: {
       generated: Boolean(candidate.generated),
       model: candidate.model || null,
@@ -185,7 +185,7 @@ export const COPY_VIOLATIONS = Object.freeze([
   { id: 'misleading_claim', patterns: [/(১০০%|নিশ্চিতভাবে)/, /(100%|guaranteed|never fail)|\balways\b/i] },
   { id: 'pressure_fomo', patterns: [/(সবাই এখন|ফোমো)/, /\b(fomo|everyone is|miss out)\b/i] },
   /* Credential-shaped strings must never be generated into a message. The word
-   * may sit on either side of the digits — "কোড 483920" and "483920 কোড" are the
+   * may sit on either side of the digits, "কোড 483920" and "483920 কোড" are the
    * same leak. */
   { id: 'secret_leak', patterns: [/(\d{6}[^\d]{0,20}(code|otp|কোড))|((code|otp|কোড)[^\d]{0,20}\d{6})/i, /\b(otp|password|পাসওয়ার্ড|token)\s*[:=]\s*\S+/i] },
   { id: 'raw_identifier', patterns: [/\b[0-9a-f]{32,}\b/i, /\baccount-[0-9a-f]{8,}\b/i] }
@@ -250,7 +250,7 @@ export function groundAnswer(answer, grounded = {}, options = {}) {
     allowed.add(Number((n * 100).toFixed(1)));
     allowed.add(Number((n * 100).toFixed(2)));
   });
-  /* Callers may whitelist figures that are context rather than measurement — the
+  /* Callers may whitelist figures that are context rather than measurement, the
    * window length ("the last 30 days") is the common case, and without it every
    * honest answer would be rejected for naming its own period. */
   for (const extra of (Array.isArray(options.allow) ? options.allow : [])) {
@@ -261,7 +261,7 @@ export function groundAnswer(answer, grounded = {}, options = {}) {
   /* A digit run only counts as a figure when it stands alone. Without the
    * lookarounds, an identifier ("l3") or a hyphenated label ("day-7") would be
    * read as a claim and every honest answer would be rejected. Negative values
-   * are deliberately not extracted — no metric in this product is negative, and
+   * are deliberately not extracted, no metric in this product is negative, and
    * "day-7" is far more common than a real minus sign. */
   const found = text.match(/(?<![\w-])\d+(?:[.,]\d+)?(?![\w])/g) || [];
   const ungrounded = [];

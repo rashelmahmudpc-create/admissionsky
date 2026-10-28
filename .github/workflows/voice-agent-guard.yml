@@ -1,7 +1,19 @@
 name: Voice Agent Guard
+permissions:
+  contents: read
 on:
   push:
     branches: [main]
+    paths:
+      - 'voice-agent*.mjs'
+      - 'voice-agent*.html'
+      - 'voice-agent-core.mjs'
+      - 'voice-agent-providers.mjs'
+      - 'memory-engine.js'
+      - 'wrangler.toml'
+      - 'gk-agent-worker.js'
+      - 'package.json'
+      - '.github/workflows/voice-agent-guard.yml'
   pull_request:
     paths:
       - 'voice-agent*.mjs'

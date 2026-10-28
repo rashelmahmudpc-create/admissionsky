@@ -1,11 +1,11 @@
 /**
- * 🎙️ P23 — OWNER GATE
+ * 🎙️ P23, OWNER GATE
  *
  * The voice page is for the owner alone, so it is protected by a password
  * rather than a login (owner's call, 2026-10-11: "শুধু আমি ইউজ করবো ... লগইন
  * দেওয়ার দরকার নেই একটি password দিও").
  *
- * The password lives in the Worker as a secret and never reaches the browser —
+ * The password lives in the Worker as a secret and never reaches the browser -
  * the page only ever sees a signed cookie. This is deliberately a gate, not an
  * account system: one password, one owner, no user records, nothing to leak
  * beyond the page itself.
@@ -16,7 +16,7 @@
  * the gate costs no Durable Object and survives a deploy. Because the payload
  * carries its own expiry, the Worker checks it without any lookup.
  *
- * The secret to sign with is VOICE_PAGE_PASSWORD — the password the owner
+ * The secret to sign with is VOICE_PAGE_PASSWORD, the password the owner
  * typed, used directly as the HMAC key. Nothing extra to configure: setting the
  * password is the whole setup, and changing the password invalidates every old
  * cookie. It is deliberately the only source: the pre-existing VOICE_ACCESS_TOKEN

@@ -1,5 +1,5 @@
 /**
- * 🎙️ ADMISSION HUB — Secure Voice Proxy (Cloudflare Worker)
+ * 🎙️ ADMISSION HUB, Secure Voice Proxy (Cloudflare Worker)
  * v105 · provider-aware: Cartesia (default) with an automatic ElevenLabs fallback
  * generate-once → level-2 server cache → audio to browser
  *
@@ -9,30 +9,30 @@
  * 3. Worker → Settings → Variables & Secrets:
  *      • Add Secret:  CARTESIA_API_KEY = <তোমার Cartesia API key>   (প্রধান)
  *      • Add Secret:  ELEVENLABS_API_KEY = <তোমার ElevenLabs API key> (বিকল্প/fallback)
- *        (key শুধু এখানে থাকবে — অ্যাপ/frontend/localStorage/IndexedDB-তে কখনো নয়)
+ *        (key শুধু এখানে থাকবে, অ্যাপ/frontend/localStorage/IndexedDB-তে কখনো নয়)
  * 4. (Optional, level-2 persistent cache) Storage & Databases → KV → Create namespace
  *      → Worker → Settings → Bindings → KV namespace: variable name  VOICE_KV
  * 5. অ্যাপে: Vocabulary → ⚙ Category settings → Vocabulary Voices →
  *      endpoint-এ এই worker-এর URL পেস্ট (যেমন https://admission-voice.<subdomain>.workers.dev)
  *
  * Provider: Cartesia ব্যবহার হয় যখন CARTESIA_API_KEY আছে (অথবা অনুরোধে provider=cartesia);
- * না থাকলে স্বয়ংক্রিয়ভাবে ElevenLabs-এ ফিরে যায় — তাই audio কখনো ভাঙে না।
+ * না থাকলে স্বয়ংক্রিয়ভাবে ElevenLabs-এ ফিরে যায়, তাই audio কখনো ভাঙে না।
  *
  * Security: এই worker ছাড়া কেউ কোনো key দেখবে না। Origin allowlist +
- * app-header + per-IP rate limit — যেন অচেনা কেউ তোমার quota পোড়াতে না পারে।
+ * app-header + per-IP rate limit, যেন অচেনা কেউ তোমার quota পোড়াতে না পারে।
  */
 
-const DEFAULT_VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'; // Sarah — clear American, free-plan API-allowed
+const DEFAULT_VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'; // Sarah, clear American, free-plan API-allowed
 const DEFAULT_MODEL_ID = 'eleven_flash_v2_5';    // low-latency + cost-efficient
-const DEFAULT_FORMAT = 'mp3_22050_32';           // ছোট ফাইল — দ্রুত লোড
+const DEFAULT_FORMAT = 'mp3_22050_32';           // ছোট ফাইল, দ্রুত লোড
 
 /* Cartesia (Sonic). Chosen as the default provider: Bengali on every tier,
    ~4x the audio per dollar at the entry plan, and quality on par with ElevenLabs. */
 const CARTESIA_URL = 'https://api.cartesia.ai/tts/bytes';
 const CARTESIA_VERSION = '2026-08-14';           // current required API version
 const CARTESIA_MODEL = 'sonic-3.6';
-const CARTESIA_VOICE_ID = '47c38ca4-5f35-497b-b1a3-415245fb35e1'; // Daniel — clear American male
-const CARTESIA_VOICE_ID_BN = 'db6b0ed5-d5d3-463d-ae85-518a07d3c2b4'; // Skylar — primary multilingual fallback
+const CARTESIA_VOICE_ID = '47c38ca4-5f35-497b-b1a3-415245fb35e1'; // Daniel, clear American male
+const CARTESIA_VOICE_ID_BN = 'db6b0ed5-d5d3-463d-ae85-518a07d3c2b4'; // Skylar, primary multilingual fallback
 const CARTESIA_FORMAT = { container: 'mp3', sample_rate: 44100, bit_rate: 128000 };
 const CARTESIA_SPEED = 0.95;                     // slightly slower reads as calmer/clearer
 const cleanSpeed = value => { const n = Number(value); return Number.isFinite(n) && n >= 0.6 && n <= 1.5 ? Math.round(n * 100) / 100 : CARTESIA_SPEED; };
@@ -45,13 +45,17 @@ const rateBuckets = new Map(); // per-isolate best effort (KV ছাড়াই
 /* AI audit 2026-10-16: the allowlist used to accept ANY *.github.io and ANY
    *.pages.dev site, so a stranger's page could spend this TTS quota from a
    visitor's browser. Only the app's own origins (and their preview
-   subdomains) are allowed now; a request carrying any other Origin is refused. */
-const originAllowed = origin => /^https:\/\/([a-z0-9-]+\.)?(admissionsky|admissionhub)\.pages\.dev$/.test(origin)
-  || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+   subdomains) are allowed now; a request carrying any other Origin is refused.
+
+   BUG-002 (2026-10-26 audit): localhost / 127.0.0.1 were still accepted here.
+   A page served on a developer machine could then make credentialed
+   cross-origin calls and read the response with a signed-in student's session.
+   Production dropped those on 2026-10-22 (cors-policy.mjs); this copy did not. */
+const originAllowed = origin => /^https:\/\/([a-z0-9-]+\.)?(admissionsky|admissionhub)\.pages\.dev$/.test(origin);
 
 const corsHeaders = request => {
   const origin = request.headers.get('Origin') || '';
-  /* P20 (v204): pages.dev-ও-অনুমোদিত — আগে ছিল শুধু github.io+localhost, তাই pages.dev-পেজ থেকে
+  /* P20 (v204): pages.dev-ও-অনুমোদিত, আগে ছিল শুধু github.io+localhost, তাই pages.dev-পেজ থেকে
      সরাসরি-ডাক CORS-এ আটকাত। (অ্যাপ-এখন same-origin-প্রক্সি-ব্যবহার-করে; তবু-allowlist-অসম্পূর্ণ-ছিল।) */
   const ok = originAllowed(origin);
   const headers = {
@@ -93,7 +97,7 @@ const clean = (value, re) => (typeof value === 'string' && re.test(value) ? valu
 /* Is the text Bengali (so Cartesia should use a bn-capable voice/language)? */
 const isBengali = text => /[\u0980-\u09FF]/.test(String(text || ''));
 
-/* The voice actually used for a phrase — needed so the cache key can include it. */
+/* The voice actually used for a phrase, needed so the cache key can include it. */
 function resolveVoice(word, voiceId) {
   return voiceId || (isBengali(word) ? CARTESIA_VOICE_ID_BN : CARTESIA_VOICE_ID);
 }
@@ -140,7 +144,7 @@ async function elevenAudio(env, word, voiceId, modelId, format) {
       'Accept': 'audio/mpeg'
     },
     body: JSON.stringify({
-      text: word, // শুধু word — meaning/explanation কখনো audio-তে যায় না
+      text: word, // শুধু word, meaning/explanation কখনো audio-তে যায় না
       model_id: modelId,
       voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0, use_speaker_boost: true, speed: 1.0 }
     })
@@ -182,7 +186,7 @@ export default {
     }
 
     if (!env.CARTESIA_API_KEY && !env.ELEVENLABS_API_KEY) {
-      return json(request, { error: 'worker not configured — set CARTESIA_API_KEY secret' }, 503);
+      return json(request, { error: 'worker not configured, set CARTESIA_API_KEY secret' }, 503);
     }
     if (request.headers.get('X-AH-App') !== 'admission-hub') {
       return json(request, { error: 'forbidden' }, 403);
@@ -239,7 +243,7 @@ export default {
       } catch (_) { /* edge cache unavailable → continue */ }
     }
 
-    // Level-2 cache: server-side — browser storage মুছে গেলেও কোনো TTS কল লাগবে না
+    // Level-2 cache: server-side, browser storage মুছে গেলেও কোনো TTS কল লাগবে না
     if (env.VOICE_KV) {
       try {
         const hit = await env.VOICE_KV.get(cacheKey, { type: 'arrayBuffer' });
@@ -300,7 +304,7 @@ export default {
     }
 
     // Permanence: no expirationTtl, so a phrase is paid for once and stays for
-    // the life of the account — every later student is served from the cache.
+    // the life of the account, every later student is served from the cache.
     if (env.VOICE_KV) {
       try { await env.VOICE_KV.put(cacheKey, buffer); } catch (_) {}
     }

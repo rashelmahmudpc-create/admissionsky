@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <style id="ah-pre-css">html.ah-pre #app,html.ah-pre #navRoot{visibility:hidden!important}</style>
 <script>/* hide the app shell until the account page has decided (no old-view flash); fail-open after 2.5s */document.documentElement.classList.add("ah-pre");setTimeout(function(){document.documentElement.classList.remove("ah-pre")},2500);</script>
-<title>Admission Hub — ভর্তি প্রস্তুতি, প্রশ্নব্যাংক ও বিজ্ঞপ্তি</title>
+<title>Admission Hub | ভর্তি প্রস্তুতি, প্রশ্নব্যাংক ও বিজ্ঞপ্তি</title>
 <link rel="stylesheet" href="./dashboard-v2.css?v=dash2f13-theme">
 
 <link rel="manifest" href="manifest.json">
@@ -26,9 +26,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script>
-/* ADMISSION HUB — Global Appearance Engine (blueprint §18):
+/* ADMISSION HUB, Global Appearance Engine (blueprint §18):
    light / dark / system / green (Premium Green). Single source of truth:
-   <html data-theme="..."> — app chrome, profile, sheets all follow. */
+   <html data-theme="...">, app chrome, profile, sheets all follow. */
 (function () {
   var KEY = 'ah-appearance';
   var MODES = ['light', 'dark', 'system', 'green'];
@@ -99,7 +99,7 @@
   apply();
 })();
 
-/* ADMISSION HUB — Global i18n Engine (blueprint §17): bn (default) / en.
+/* ADMISSION HUB, Global i18n Engine (blueprint §17): bn (default) / en.
    Canonical key: ahLang (AI page reads it too). Markup contract for the
    whole app: [data-bn]/[data-en] text, [data-ph-bn]/[data-ph-en] placeholder,
    [data-aria-bn]/[data-aria-en] aria-label. */
@@ -155,7 +155,7 @@
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="./icons/icon-192.png" sizes="192x192">
-<meta name="description" content="বাংলাদেশের বিশ্ববিদ্যালয়, মেডিকেল ও গুচ্ছ ভর্তি পরীক্ষার বিজ্ঞপ্তি, ভিজ্যুয়াল কোর্স, প্রশ্নব্যাংক ও ফলাফল এক জায়গায় — স্মার্ট প্রগ্রেস ট্র্যাকিংসহ।">
+<meta name="description" content="বাংলাদেশের বিশ্ববিদ্যালয়, মেডিকেল ও গুচ্ছ ভর্তি পরীক্ষার বিজ্ঞপ্তি, ভিজ্যুয়াল কোর্স, প্রশ্নব্যাংক ও ফলাফল এক জায়গায়, স্মার্ট প্রগ্রেস ট্র্যাকিংসহ।">
 <link rel="canonical" href="https://admissionsky.pages.dev/">
 <!-- Google Search Console ownership proof for the owner's property. The token
      is host-specific: a future custom domain needs its own property and tag. -->
@@ -166,16 +166,16 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Admission Hub">
 <meta property="og:locale" content="bn_BD">
-<meta property="og:title" content="Admission Hub — ভর্তি প্রস্তুতি, প্রশ্নব্যাংক ও বিজ্ঞপ্তি">
-<meta property="og:description" content="বিশ্ববিদ্যালয়, মেডিকেল ও গুচ্ছ ভর্তির বিজ্ঞপ্তি, ভিজ্যুয়াল কোর্স ও প্রশ্নব্যাংক এক জায়গায় — প্রগ্রেস ট্র্যাকিংসহ।">
+<meta property="og:title" content="Admission Hub | ভর্তি প্রস্তুতি, প্রশ্নব্যাংক ও বিজ্ঞপ্তি">
+<meta property="og:description" content="বিশ্ববিদ্যালয়, মেডিকেল ও গুচ্ছ ভর্তির বিজ্ঞপ্তি, ভিজ্যুয়াল কোর্স ও প্রশ্নব্যাংক এক জায়গায়, প্রগ্রেস ট্র্যাকিংসহ।">
 <meta property="og:url" content="https://admissionsky.pages.dev/">
 <meta property="og:image" content="https://admissionsky.pages.dev/og-image.png">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Admission Hub — ভর্তি প্রস্তুতির হাব">
+<meta property="og:image:alt" content="Admission Hub | ভর্তি প্রস্তুতির হাব">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Admission Hub — ভর্তি প্রস্তুতি, প্রশ্নব্যাংক ও বিজ্ঞপ্তি">
+<meta name="twitter:title" content="Admission Hub | ভর্তি প্রস্তুতি, প্রশ্নব্যাংক ও বিজ্ঞপ্তি">
 <meta name="twitter:description" content="বিশ্ববিদ্যালয়, মেডিকেল ও গুচ্ছ ভর্তির বিজ্ঞপ্তি, ভিজ্যুয়াল কোর্স ও প্রশ্নব্যাংক এক জায়গায়।">
 <meta name="twitter:image" content="https://admissionsky.pages.dev/og-image.png">
 <script type="application/ld+json">
@@ -305,7 +305,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,#app::-webkit-scrollbar,.setup-s
 /* P16: on a laptop/tablet the phone column would look like a sliver down the
    middle of a wide screen. Widen it and calm the bottom bar into a centred
    floating pill so the app reads as finished, not stretched. Phones are
-   untouched — this only ever applies at >=900px. */
+   untouched, this only ever applies at >=900px. */
 @media(min-width:900px){
   body #app{max-width:1080px; padding-bottom:calc(96px + var(--safe-b));}
   body #navRoot .bottomnav{left:50%!important;right:auto!important;width:auto!important;max-width:640px!important;
@@ -533,7 +533,7 @@ label.flabel{font-size:calc(12.5px * var(--ah-ts,1)); color:var(--sub); font-wei
 	.time-tag.slow { background: #fef3c7; color: #d97706; }
 	.time-tag.vslow { background: #fee2e2; color: #ef4444; }
 
-	/* Phase 2 — Result & Deep Analysis styles */
+	/* Phase 2, Result & Deep Analysis styles */
 	.result-section-title{font-size:calc(15px * var(--ah-ts,1)); font-weight:800; margin:20px 0 9px; color:var(--text);}
 	.result-mini-grid{display:grid; grid-template-columns:1fr 1fr; gap:9px;}
 	.result-mini-card{background:var(--mint); border-radius:12px; padding:11px 12px;}
@@ -794,8 +794,8 @@ textarea{min-height:96px}
     // red pill trains the owner to ignore the pill entirely.
     if (/abort|interrupted|the operation was aborted|Script error/i.test(msg) && !e.filename) return;
     // A parse error on a .js asset has two very different causes:
-    //   1. the download was truncated (flaky network) — a reload really fixes it
-    //   2. the file itself has a syntax defect — refreshing never fixes it
+    //   1. the download was truncated (flaky network), a reload really fixes it
+    //   2. the file itself has a syntax defect, refreshing never fixes it
     // Distinguish them by re-fetching the asset and parsing the server's copy.
     // Never tell the user "incomplete file, refresh" for a genuine code defect.
     // Only a SYNCHRONOUS parse failure carries a usable filename AND a column.
@@ -807,7 +807,7 @@ textarea{min-height:96px}
       fetch(src, { cache: 'no-store' })
         .then((r) => r.text())
         .then((text) => {
-          // An empty body is a truncated download, never a code defect — the
+          // An empty body is a truncated download, never a code defect, the
           // SyntaxError came straight from the parse, so there is nothing to parse.
           let serverCopyOk = true;
           if (!text.trim()) serverCopyOk = true;
@@ -816,7 +816,7 @@ textarea{min-height:96px}
           }
           if (!serverCopyOk) {
             trace('err-script-defect', src);
-            show('Error', 'স্ক্রিপ্টে সমস্যা আছে — ' + fname + '। রিফ্রেশ করলে ঠিক হবে না; এটা আমাদের দিক থেকে ঠিক করতে হবে। (' + msg + ')');
+            show('Error', 'স্ক্রিপ্টে সমস্যা আছে, ' + fname + '। রিফ্রেশ করলে ঠিক হবে না; এটা আমাদের দিক থেকে ঠিক করতে হবে। (' + msg + ')');
             return;
           }
           try {
@@ -829,7 +829,7 @@ textarea{min-height:96px}
               return;
             }
             trace('err-truncated', src);
-            show('Error', 'নেটওয়ার্ক থেকে ফাইল অসম্পূর্ণ এসেছে — ' + fname + '। আরেকবার রিফ্রেশ করলে ঠিক হবে।');
+            show('Error', 'নেটওয়ার্ক থেকে ফাইল অসম্পূর্ণ এসেছে, ' + fname + '। আরেকবার রিফ্রেশ করলে ঠিক হবে।');
           } catch (_) {
             show('Error', msg);
             trace('err', msg);
@@ -848,7 +848,7 @@ textarea{min-height:96px}
     const r = e && e.reason;
     if (!r) return;
     const rmsg = String((r && r.message) || r);
-    // Aborted fetches and navigation-cancelled work reject by design — they are
+    // Aborted fetches and navigation-cancelled work reject by design, they are
     // not crashes. Reporting them as red pills hides the real defects.
     if (r && (r.name === 'AbortError' || /abort|interrupted|cancelled|canceled/i.test(rmsg))) {
       trace('reject-benign', rmsg);
@@ -861,7 +861,7 @@ textarea{min-height:96px}
 })();
 </script>
 <script src="./session-persist.js?v=session-v2"></script>
-<!-- Phase 1 Analytics Foundation — single choke point for GA4. Loads early and
+<!-- Phase 1 Analytics Foundation, single choke point for GA4. Loads early and
      blocking so its route/auth listeners are registered before the first
      render dispatches admission:route-rendered. Inert until start() runs. -->
 <script src="./analytics-service.js?v=analytics-p2-v2-insights"></script>
@@ -970,8 +970,8 @@ textarea{min-height:96px}
 <div id="modalRoot"></div>
 <noscript>
 <main class="ah-nojs" aria-label="Admission Hub">
-<h1>Admission Hub — ভর্তি প্রস্তুতি, প্রশ্নব্যাংক ও বিজ্ঞপ্তি</h1>
-<p>বাংলাদেশের বিশ্ববিদ্যালয়, মেডিকেল ও গুচ্ছ ভর্তি পরীক্ষার প্রস্তুতি এক জায়গায় — বিজ্ঞপ্তি, ভিজ্যুয়াল কোর্স, প্রশ্নব্যাংক, মডেল টেস্ট ও অগ্রগতির হিসাব।</p>
+<h1>Admission Hub, ভর্তি প্রস্তুতি, প্রশ্নব্যাংক ও বিজ্ঞপ্তি</h1>
+<p>বাংলাদেশের বিশ্ববিদ্যালয়, মেডিকেল ও গুচ্ছ ভর্তি পরীক্ষার প্রস্তুতি এক জায়গায়, বিজ্ঞপ্তি, ভিজ্যুয়াল কোর্স, প্রশ্নব্যাংক, মডেল টেস্ট ও অগ্রগতির হিসাব।</p>
 <h2>যা যা পাবেন</h2>
 <ul>
 <li>বিশ্ববিদ্যালয়, মেডিকেল ও গুচ্ছ ভর্তির বিজ্ঞপ্তি এক জায়গায়</li>
@@ -982,19 +982,19 @@ textarea{min-height:96px}
 </ul>
 <h2>ভিজ্যুয়াল কোর্স</h2>
 <ul>
-<li><a href="/courses/prottoy/">প্রত্যয় — Visual Admission Master Guide</a></li>
-<li><a href="/courses/somas/">সমাস — University Admission Master Guide</a></li>
-<li><a href="/courses/sandhi/">সন্ধি — University Admission Master Guide</a></li>
+<li><a href="/courses/prottoy/">প্রত্যয়, Visual Admission Master Guide</a></li>
+<li><a href="/courses/somas/">সমাস, University Admission Master Guide</a></li>
+<li><a href="/courses/sandhi/">সন্ধি, University Admission Master Guide</a></li>
 <li><a href="/courses/prottoy-master/">প্রত্যয় • Interactive Master Guide</a></li>
 </ul>
 <h2>শুরু করুন</h2>
-<p>পুরো অ্যাপটি চালাতে ব্রাউজারে JavaScript চালু রাখুন। তারপর <a href="/">Admission Hub</a> খুলে বিনামূল্যে শুরু করুন — অগ্রগতি আপনার নিজের ডিভাইসেই সংরক্ষিত থাকে।</p>
+<p>পুরো অ্যাপটি চালাতে ব্রাউজারে JavaScript চালু রাখুন। তারপর <a href="/">Admission Hub</a> খুলে বিনামূল্যে শুরু করুন, অগ্রগতি আপনার নিজের ডিভাইসেই সংরক্ষিত থাকে।</p>
 </main>
 </noscript>
 <script type="module" src="./sentry-report.js?v=sentry-v2"></script>
 <script defer src="./institutions-bd.js?v=bd-institutions-v2"></script>
 <script defer src="./language-engine.js?v=lang-v5-single-email-button"></script>
-<script>window.ADMISSION_HUB_TURNSTILE_SITEKEY='0x4AAAAAAFYX5IGYQ0F-3DU9';</script>
+<script>window.ADMISSION_HUB_TURNSTILE_SITEKEY='0x4AAAAAAFYX5IGYQ0F-3DU9';window.ADMISSION_HUB_AI_ENDPOINT='https://admission-hub-ai-proxy.admissionhub.workers.dev/analyze';</script>
 <script defer src="./account-access.js?v=20261021-turnstile-v1&startup=fast1"></script>
 <script defer src="./email-policy-client.js?v=20261018-allowlist-v1"></script>
 <script src="./app-seed.js?v=sky-flow-20261018-v12" defer></script>
@@ -1040,7 +1040,7 @@ textarea{min-height:96px}
     if(isTransientStorageError(reason)||isDetachedCourseDomError(reason)){
       event.preventDefault();
       console.warn('[Admission Hub] Recovered from a transient local database transaction error.',reason);
-      try{ if(typeof toast==='function') toast('Local data busy—please try that action again.'); }catch(_){}
+      try{ if(typeof toast==='function') toast('Local data busy-please try that action again.'); }catch(_){}
       return;
     }
     fallback(reason,event.target);
@@ -1107,7 +1107,7 @@ const toScopedRecord=obj=>({...obj,id:scopedRecordId(obj.id),__ahOwner:DATA_SCOP
 const fromScopedRecord=obj=>obj&&obj.__ahOwner===DATA_SCOPE?Object.fromEntries(Object.entries({...obj,id:obj.__ahId}).filter(([key])=>key!=='__ahOwner'&&key!=='__ahId')):null;
 /* The public backend fills the local stores over fetch, where `localStorage` is
    scoped to the guest *user id*. That guest id is regenerated per browser, so it
-   never matches the fetch context's user — and every pulled row was dropped by
+   never matches the fetch context's user, and every pulled row was dropped by
    fromScopedRecord's owner check. The stores were physically full (6,256 rows in
    vocabularyMaster) while every screen read 0. Downloaded content carries no
    ownership metadata, so treat it as public device content: readable by the
@@ -1137,7 +1137,7 @@ function reopenDb(){
   __dbReopenPromise = (async()=>{
     DB = null; window.__ahDbStale = false;
     try { await openDB(); }
-    catch(err){ useMemoryStorage(err); console.warn('[Admission Hub] DB reopen failed — memory mode.', err); }
+    catch(err){ useMemoryStorage(err); console.warn('[Admission Hub] DB reopen failed, memory mode.', err); }
   })().finally(()=>{ __dbReopenPromise = null; });
   return __dbReopenPromise;
 }
@@ -1587,19 +1587,19 @@ const NAV_TABS=[
 ];
 
 function baseTab(path){
-  if(path.startsWith('ai-chat')) return ''; /* মালিক-নির্দেশ ২০২৬-০৯-০৮: AI চ্যাট-রুট সম্পূর্ণ বাদ — removedRoute-এ redirect */
+  if(path.startsWith('ai-chat')) return ''; /* মালিক-নির্দেশ ২০২৬-০৯-০৮: AI চ্যাট-রুট সম্পূর্ণ বাদ, removedRoute-এ redirect */
   if(path.startsWith('smart-formatter')) return 'smart-formatter';
-  /* History এখন Exam সেকশনের ভিতরে — তাই Exam tab-ই active হয়। */
+  /* History এখন Exam সেকশনের ভিতরে, তাই Exam tab-ই active হয়। */
   if(path.startsWith('exam')||path.startsWith('history')) return 'exam';
   if(path.startsWith('question-bank')||path.startsWith('subject')||path.startsWith('topic')||path.startsWith('question')||path.startsWith('add-question')||path.startsWith('edit-question')) return 'question-bank';
   /* Mistake Bank ও Smart Revision এখন Bank-এর ভিতরের টুল। */
   if(path==='mistakes-bank'||path==='smart-revision') return 'question-bank';
   if(path.startsWith('notes')) return '';
-  if(path==='notifications') return ''; /* full-screen inbox — no bottom-nav tab (bell entry) */
+  if(path==='notifications') return ''; /* full-screen inbox, no bottom-nav tab (bell entry) */
   if(path.startsWith('study-hub/quick-notes')) return 'study-hub/quick-notes';
   if(path.startsWith('progress/plan')) return 'dashboard';
   if(path.startsWith('progress')) return 'dashboard';
-  if(path==='my-profile') return 'my-profile'; /* Phase 7 — Profile tab (route name avoids the retired 'profile' legacy route) */
+  if(path==='my-profile') return 'my-profile'; /* Phase 7, Profile tab (route name avoids the retired 'profile' legacy route) */
   return 'dashboard';
 }
 
@@ -1667,7 +1667,7 @@ function confirmModal(title, body, onYes, yesLabel, danger){
 function render(){
   if(window.__admissionBootStatus==='loading') return renderStartupLoading();
   if(window.__admissionBootStatus==='failed') return;
-  /* Phase 7 — pretty public profile URL: /AH-XXXXXX (path-based; _redirects serves the SPA). */
+  /* Phase 7, pretty public profile URL: /AH-XXXXXX (path-based; _redirects serves the SPA). */
   const ppMatch=String(location.pathname||'').match(/^\/(AH-[A-Z2-9]{6})\/?$/i);
   if(ppMatch){
     const pid=ppMatch[1].toUpperCase();
@@ -1699,27 +1699,27 @@ function render(){
   if(p==='exam/running') return renderExamRunning();
   if(p==='exam/flash-summary') return renderFlashSummary();
   if(p==='exam/result') return renderExamResult();
-  /* Exam-এর ভিতরের History/Attempts রুট — পুরোনো /history ডিপ-লিংকও অটুট থাকে। */
+  /* Exam-এর ভিতরের History/Attempts রুট, পুরোনো /history ডিপ-লিংকও অটুট থাকে। */
   if(p==='exam/history'||p==='exam/attempts') return renderHistory();
   if(p.startsWith('exam/history/')||p.startsWith('exam/attempts/')) return renderHistoryDetail(p.split('/')[2]);
   if(p==='history') return renderHistory();
   if(p.startsWith('history/')) return renderHistoryDetail(p.split('/')[1]);
   if(p==='mistakes') return renderMistakes();
   if(p==='progress') return renderProgress();
-  if(p==='my-profile') return (window.renderProfilePage ? window.renderProfilePage() : renderProfileFallback()); /* Phase 7 — never a silent dashboard fallback (owner bug 2026-09-17: "কিছুই আসছে না") */
+  if(p==='my-profile') return (window.renderProfilePage ? window.renderProfilePage() : renderProfileFallback()); /* Phase 7, never a silent dashboard fallback (owner bug 2026-09-17: "কিছুই আসছে না") */
   if(p==='settings') return renderDashboard();
   if(p==='dictionary'||p==='question-bank/settings') return renderLazyToolFallback(p);
   renderDashboard();
 }
-/* Profile renderer missing (profile-ui.js failed to load/run) — a VISIBLE,
+/* Profile renderer missing (profile-ui.js failed to load/run), a VISIBLE,
  * recoverable state instead of silently re-rendering the dashboard
  * (owner bug 2026-09-17: "প্রোফাইল বাটনে কিল্ক করলে কিছুই আসছে না"). */
-/* A tool's script can finish AFTER the user reaches its route — a slow link, or
+/* A tool's script can finish AFTER the user reaches its route, a slow link, or
  * a device still on a stale shell. The old behavior stranded them on a dead
  * "লোড হয়নি" card until they pressed Retry by hand (owner screenshots
- * 2026-10-12: "ভাই এসব কি তাহলে" — path=ai inside the card). Watch for the
+ * 2026-10-12: "ভাই এসব কি তাহলে", path=ai inside the card). Watch for the
  * renderer and re-render the moment it is ready, but only while the user is
- * still on that same route — never yank them off a page they moved to. */
+ * still on that same route, never yank them off a page they moved to. */
 const LAZY_RENDERER = { ai: 'renderAiAgentPage', dictionary: 'renderDictionaryV2', 'question-bank/settings': 'renderQuestionBankV2' };
 const __ahRenderWait = {};
 function waitForRenderer(path, test){
@@ -1734,7 +1734,7 @@ function waitForRenderer(path, test){
 }
 function renderProfileFallback(){
   waitForRenderer('my-profile', () => typeof window.renderProfilePage === 'function');
-  renderShell(`<div style="text-align:center;padding:56px 20px"><div style="font-size:calc(40px * var(--ah-ts,1))">👤</div><h2 style="margin:10px 0 6px;font-size:calc(18px * var(--ah-ts,1))">Profile লোড হয়নি</h2><p style="font-size:calc(13px * var(--ah-ts,1));color:#64748b;margin:0 auto;max-width:380px;line-height:1.7">একটু পর আবার চেষ্টা করুন — বা পেজটা Refresh করুন।</p><div style="display:flex;gap:10px;justify-content:center;margin-top:16px"><button class="btn" onclick="location.reload()">🔄 Retry</button><button class="btn ghost" onclick="navigate('dashboard')">🏠 Home</button></div></div>`,{title:'Profile'});
+  renderShell(`<div style="text-align:center;padding:56px 20px"><div style="font-size:calc(40px * var(--ah-ts,1))">👤</div><h2 style="margin:10px 0 6px;font-size:calc(18px * var(--ah-ts,1))">Profile লোড হয়নি</h2><p style="font-size:calc(13px * var(--ah-ts,1));color:#64748b;margin:0 auto;max-width:380px;line-height:1.7">একটু পর আবার চেষ্টা করুন, বা পেজটা Refresh করুন।</p><div style="display:flex;gap:10px;justify-content:center;margin-top:16px"><button class="btn" onclick="location.reload()">🔄 Retry</button><button class="btn ghost" onclick="navigate('dashboard')">🏠 Home</button></div></div>`,{title:'Profile'});
 }
 function renderLazyToolFallback(path){
   const fnName = LAZY_RENDERER[path];
@@ -1744,7 +1744,7 @@ function renderLazyToolFallback(path){
   try{diag.push('storage='+(typeof STORAGE_MODE!=='undefined'?STORAGE_MODE:'?')+',db='+(typeof DB!=='undefined'&&DB?'open':'null'));}catch(_){}
   try{const fb=window.__admissionStorageFallback;if(fb&&fb.active)diag.push('fallback='+String(fb.error||'active').slice(0,90));}catch(_){}
   try{diag.push('trace='+(JSON.parse(localStorage.getItem('ah-trace')||'[]').map(x=>x[1]).join('>')).slice(-90));}catch(_){}
-  renderShell(`<div style="text-align:center;padding:56px 20px;color:#64748b"><div style="font-size:calc(44px * var(--ah-ts,1))">📡</div><h2 style="color:#172033;margin:10px 0 7px;font-size:calc(20px * var(--ah-ts,1))">এই অংশটা এখনো লোড হয়নি</h2><p style="max-width:420px;margin:0 auto;line-height:1.7;font-size:calc(13px * var(--ah-ts,1))">ইন্টারনেট সংযোগ দুর্বল বা অফলাইনে পেজের এই অংশ আসেনি। Retry চাপলে আবার চেষ্টা হবে — তোমার ডেটা নিরাপদ।</p><p style="margin-top:10px;color:#b3261e;font-size:calc(11px * var(--ah-ts,1));overflow-wrap:anywhere">${esc(diag.join(' | '))}</p><div style="display:flex;gap:10px;justify-content:center;margin-top:16px"><button class="btn" onclick="location.reload()">🔄 Retry</button><button class="btn ghost" onclick="navigate('dashboard')">🏠 Home</button></div></div>`,{title:'Loading problem'});
+  renderShell(`<div style="text-align:center;padding:56px 20px;color:#64748b"><div style="font-size:calc(44px * var(--ah-ts,1))">📡</div><h2 style="color:#172033;margin:10px 0 7px;font-size:calc(20px * var(--ah-ts,1))">এই অংশটা এখনো লোড হয়নি</h2><p style="max-width:420px;margin:0 auto;line-height:1.7;font-size:calc(13px * var(--ah-ts,1))">ইন্টারনেট সংযোগ দুর্বল বা অফলাইনে পেজের এই অংশ আসেনি। Retry চাপলে আবার চেষ্টা হবে, তোমার ডেটা নিরাপদ।</p><p style="margin-top:10px;color:#b3261e;font-size:calc(11px * var(--ah-ts,1));overflow-wrap:anywhere">${esc(diag.join(' | '))}</p><div style="display:flex;gap:10px;justify-content:center;margin-top:16px"><button class="btn" onclick="location.reload()">🔄 Retry</button><button class="btn ghost" onclick="navigate('dashboard')">🏠 Home</button></div></div>`,{title:'Loading problem'});
 }
 
 /* ================= DASHBOARD ================= */
@@ -2267,8 +2267,8 @@ function startQuestionPractice(id){
   if(!CACHE.questions.some(q=>q.id===id)){toast('Question not found'); return;}
   ExamSetup=freshSetup(); ExamSetup.mode='flash'; ExamSetup.onlyQuestionIds=[id]; ExamSetup.subjectIds=[]; ExamSetup.topicIds=[]; ExamSetup.totalCount=1; ExamSetup.randomizeQ=false; ExamSetup.randomizeOpt=false; navigate('exam/setup');
 }
-function subjectName(id){const s=CACHE.subjects.find(x=>x.id===id); return s?s.name:'—';}
-function topicName(id){const t=CACHE.topics.find(x=>x.id===id); return t?(window.topicHierarchy?.topicDisplayName?window.topicHierarchy.topicDisplayName(t):t.name):'—';}
+function subjectName(id){const s=CACHE.subjects.find(x=>x.id===id); return s?s.name:'-';}
+function topicName(id){const t=CACHE.topics.find(x=>x.id===id); return t?(window.topicHierarchy?.topicDisplayName?window.topicHierarchy.topicDisplayName(t):t.name):'-';}
 
 function openSubjectForm(id){
   const s = id ? CACHE.subjects.find(x=>x.id===id) : null;
@@ -2541,7 +2541,7 @@ function renderQuestionForm(qid){
   const subId=document.getElementById('qfSubject').value;
   const sel=document.getElementById('qfTopic');
   const topics=topicsOf(subId);
-  sel.innerHTML = topics.length ? topics.map(t=>`<option value="${t.id}" ${t.id===selectedTopicId?'selected':''}>${esc(t.name)}</option>`).join('') : `<option value="">(no topics — add one first)</option>`;
+  sel.innerHTML = topics.length ? topics.map(t=>`<option value="${t.id}" ${t.id===selectedTopicId?'selected':''}>${esc(t.name)}</option>`).join('') : `<option value="">(no topics, add one first)</option>`;
 }
 async function saveQuestionForm(qid){
   const subjectId=document.getElementById('qfSubject').value;
@@ -2567,7 +2567,7 @@ async function saveQuestionForm(qid){
 }
 
 /* ================= BULK QUESTION IMPORT / PARSER =================
-   Additive module — reuses the existing 'questions' store and schema.
+   Additive module, reuses the existing 'questions' store and schema.
    Imported questions are saved with dbPut('questions', {...}) using the
    exact same object shape as saveQuestionForm() above, so they behave
    identically to manually-added questions everywhere in the app. */
@@ -2607,7 +2607,7 @@ function renderImportQuestions(){
 function renderImportHome(){
   const html=`
   <div class="card">
-    <div class="muted">Import many questions at once. They're saved into your existing Question Bank and work exactly like manually-added questions — usable in exams, editable, movable, deletable.</div>
+    <div class="muted">Import many questions at once. They're saved into your existing Question Bank and work exactly like manually-added questions, usable in exams, editable, movable, deletable.</div>
   </div>
   <div class="row wrap">
     <button class="card" style="text-align:center;cursor:pointer;flex:1 1 45%;" onclick="navigate('add-question')"><div style="font-size:max(16px,calc(22px * var(--ah-ts,1)));">✍️</div><div style="font-size:max(16px,calc(12.5px * var(--ah-ts,1)));margin-top:4px;">Manual Question</div></button>
@@ -2637,7 +2637,7 @@ function fallbackCopy(text){
     const ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
     document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
     toast('Copied to clipboard');
-  }catch(e){ toast('Could not copy — please copy manually'); }
+  }catch(e){ toast('Could not copy, please copy manually'); }
 }
 function copyAIPrompt(){
   const prompt=`Generate 20 multiple choice questions at admission-test level.
@@ -2694,11 +2694,11 @@ function runParseBulkText(){
   if(!text || !text.trim()){toast('Paste some questions first'); return;}
   try{
     const raws=parseBulkText(text).filter(r=>r && (r.question||(r.options||[]).some(o=>o)));
-    if(raws.length===0){toast('No questions detected — check the format'); return;}
+    if(raws.length===0){toast('No questions detected, check the format'); return;}
     buildValidated(raws);
     ImportState.mode='text';
     importSetScreen('preview');
-  }catch(e){ toast('⚠️ Import failed — the text could not be read.'); }
+  }catch(e){ toast('⚠️ Import failed, the text could not be read.'); }
 }
 
 /* ---------- JSON paste screen ---------- */
@@ -2728,7 +2728,7 @@ function renderImportFile(kind){
   const accept = kind==='json' ? '.json,application/json' : '.html,.htm,text/html';
   const html=`
   <div class="card">
-    <div class="muted" style="margin-bottom:10px;">Choose a ${kind==='json'?'.json':'.html'} file from your device. It is read locally — nothing is uploaded anywhere.</div>
+    <div class="muted" style="margin-bottom:10px;">Choose a ${kind==='json'?'.json':'.html'} file from your device. It is read locally, nothing is uploaded anywhere.</div>
     <button class="btn secondary" onclick="document.getElementById('importFileInput').click()">📂 Choose ${kind==='json'?'JSON':'HTML'}File</button>
     <input type="file" id="importFileInput" accept="${accept}" class="hide" onchange="handleImportFile(event,'${kind}')">
     <div id="importFileName" class="muted" style="margin-top:8px;"></div>
@@ -2754,7 +2754,7 @@ function handleImportFile(ev, kind){
       buildValidated(raws);
       ImportState.mode=kind;
       importSetScreen('preview');
-    }catch(e){ toast('⚠️ Import failed — the file format could not be read.'); }
+    }catch(e){ toast('⚠️ Import failed, the file format could not be read.'); }
   };
   reader.onerror=()=>{ toast('⚠️ Could not read the file'); };
   reader.readAsText(file);
@@ -2848,7 +2848,7 @@ function parseBulkText(text){
 function parseJSONText(text){
   let data;
   try{ data=JSON.parse(text); }
-  catch(e){ return {error:'⚠️ Invalid JSON — please check the format and try again.'}; }
+  catch(e){ return {error:'⚠️ Invalid JSON, please check the format and try again.'}; }
   let arr = Array.isArray(data) ? data : (Array.isArray(data.questions) ? data.questions : null);
   if(!arr) return {error:'⚠️ JSON must be an array of questions.'};
   const items = arr.map(item=>{
@@ -3017,7 +3017,7 @@ function renderImportPreview(){
       <span class="pill ${v.status==='valid'?'':'red'}">${v.status==='valid'?(v.isDuplicate?'Duplicate':'Valid'):'Invalid'}</span>
     </div>
     <div style="margin:4px 0; font-weight:600;">${esc((v.raw.question||'(no text)').slice(0,100))}</div>
-    ${v.raw.options.map((o,idx)=>`<div class="muted">${String.fromCharCode(65+idx)}. ${esc(o||'—')} ${idx===v.raw.answerIndex?'✓':''}</div>`).join('')}
+    ${v.raw.options.map((o,idx)=>`<div class="muted">${String.fromCharCode(65+idx)}. ${esc(o||'-')} ${idx===v.raw.answerIndex?'✓':''}</div>`).join('')}
   </div>`).join('')}
   ${st.validated.length>st.visibleCount? `<button class="btn ghost" onclick="ImportState.visibleCount+=20; render()">Load more (${st.validated.length-st.visibleCount} remaining)</button>` : ''}<div style="height:14px;"></div>
   <div class="row" style="position:sticky; bottom:calc(74px + var(--safe-b)); background:var(--bg); padding:10px 0; z-index:10;">
@@ -3112,7 +3112,7 @@ function saveFixModal(idx){
 /* ---------- Save (chunked, non-blocking) ---------- */
 async function saveImportedQuestions(){
   const st=ImportState;
-  if(st.saving){toast('Import is already running — please wait.');return;}
+  if(st.saving){toast('Import is already running, please wait.');return;}
   st.saving=true;
   const destination=Object.freeze({subjectId:String(st.destSubjectId||''),topicId:String(st.destTopicId||'')});
   try{
@@ -3205,7 +3205,7 @@ function freshSetup(){
 function renderExamCenter(){
   if(!ExamSetup) ExamSetup=freshSetup();
   const modes = [
-    {id:'mock', icon:'📝', name:'Mock Test', desc:'Real exam simulation — timed, no feedback.'},
+    {id:'mock', icon:'📝', name:'Mock Test', desc:'Real exam simulation, timed, no feedback.'},
     {id:'flash', icon:'⚡', name:'Flash Test', desc:'Instant feedback after each question.'},
     {id:'mistake', icon:'❌', name:'Mistake Test', desc:'Practice only from your Mistake Bank.'},
     {id:'history', icon:'🕘', name:'My Attempts', desc:'Exam history, scores and full result analysis.', href:'exam/history'},
@@ -3278,7 +3278,7 @@ function renderExamSetup(){
 
   if(step === 1){
     stepHtml = `
-      <div class="h2" style="margin-top:0;">Step 1 — Choose Exam Type</div>
+      <div class="h2" style="margin-top:0;">Step 1, Choose Exam Type</div>
       <div class="exam-center-grid">
         ${[
           {id:'mock', icon:'📝', name:'Mock Test'},
@@ -3294,7 +3294,7 @@ function renderExamSetup(){
     `;
   } else if(step === 2){
     stepHtml = `
-      <div class="h2" style="margin-top:0;">Step 2 — Choose Subjects</div>
+      <div class="h2" style="margin-top:0;">Step 2, Choose Subjects</div>
       <div class="row wrap">
         ${subs.map(s=>`<button class="chip ${st.subjectIds.includes(s.id)?'active':''}" onclick="toggleSetupSubject('${s.id}')">${s.icon||''} ${esc(s.name)}</button>`).join('')}
       </div>
@@ -3302,7 +3302,7 @@ function renderExamSetup(){
     `;
   } else if(step === 3){
     stepHtml = `
-      <div class="h2" style="margin-top:0;">Step 3 — Choose Topics</div>
+      <div class="h2" style="margin-top:0;">Step 3, Choose Topics</div>
       <div class="row wrap">
         <button class="chip ${st.topicIds.length===0?'active':''}" onclick="ExamSetup.topicIds=[]; render()">All Topics</button>
         ${availTopics.map(t=>`<button class="chip ${st.topicIds.includes(t.id)?'active':''}" onclick="toggleSetupTopic('${t.id}')">${esc(t.subName)} · ${esc(t.name)}</button>`).join('')}
@@ -3310,7 +3310,7 @@ function renderExamSetup(){
     `;
   } else if(step === 4){
     stepHtml = `
-      <div class="h2" style="margin-top:0;">Step 4 — Exam Configuration</div>
+      <div class="h2" style="margin-top:0;">Step 4, Exam Configuration</div>
 
       <label class="flabel">Question Count (Available: ${availQ})</label>
         <div class="row wrap">${[10,20,30,50,100,200,300,500].filter(c=>c<=availQ).map(c=>`<button class="chip ${st.totalCount===c?'active':''}" onclick="ExamSetup.totalCount=${c}; render()">${c}</button>`).join('')}</div>
@@ -3345,14 +3345,14 @@ function renderExamSetup(){
     `;
   } else if(step === 5){
     stepHtml = `
-      <div class="h2" style="margin-top:0;">Step 5 — Time Limit</div>
+      <div class="h2" style="margin-top:0;">Step 5, Time Limit</div>
       <div class="row wrap">${[5,10,20,30,60,120,180,0].map(m=>`<button class="chip ${st.duration===m?'active':''}" onclick="ExamSetup.duration=${m}; render()">${m===0?'No Time':m>=60?`${m/60} hr`:m+' min'}</button>`).join('')}</div>
       <input type="number" value="${st.duration}" min="0" max="720" step="1" inputmode="numeric" aria-label="Timer in minutes" oninput="ExamSetup.duration=Math.min(720,Math.max(0,parseInt(this.value)||0))" style="margin-top:8px;" placeholder="Custom minutes (e.g. 120)">
       <div class="muted" style="margin-top:10px;">Recommended: 1 min per question. You can use 120 minutes (2 hours) or 180 minutes (3 hours).</div>
     `;
   } else if(step === 6){
     stepHtml = `
-      <div class="h2" style="margin-top:0;">Step 6 — Scoring</div>
+      <div class="h2" style="margin-top:0;">Step 6, Scoring</div>
       <label class="flabel">Marks Per Correct Answer</label>
       <div class="row wrap">${[1,1.5,2,5].map(m=>`<button class="chip ${st.marksPerQ===m?'active':''}" onclick="ExamSetup.marksPerQ=${m}; render()">+${m}</button>`).join('')}</div>
       <label class="flabel" style="margin-top:16px;">Negative Marking (per wrong answer)</label>
@@ -3360,7 +3360,7 @@ function renderExamSetup(){
     `;
   } else if(step === 7){
     stepHtml = `
-      <div class="h2" style="margin-top:0;">Step 7 — Interface</div>
+      <div class="h2" style="margin-top:0;">Step 7, Interface</div>
       <div class="card" onclick="ExamSetup.layout='scrolling'; render()" style="border:2px solid ${st.layout==='scrolling'?'var(--emerald)':'var(--line)'}; cursor:pointer;">
         <b>Scrolling Feed</b><div class="muted">All questions on one page. Best for review.</div>
       </div>
@@ -3370,7 +3370,7 @@ function renderExamSetup(){
     `;
   } else if(step === 8){
     stepHtml = `
-      <div class="h2" style="margin-top:0;">Step 8 — Options</div>
+      <div class="h2" style="margin-top:0;">Step 8, Options</div>
       <div class="card">
         <div class="togglerow"><div>Randomize Question Order</div><div class="toggle ${st.randomizeQ?'on':''}" onclick="ExamSetup.randomizeQ=!ExamSetup.randomizeQ; render()"><div class="dot"></div></div></div>
         <div class="togglerow" style="border-bottom:none;"><div>Randomize Options</div><div class="toggle ${st.randomizeOpt?'on':''}" onclick="ExamSetup.randomizeOpt=!ExamSetup.randomizeOpt; render()"><div class="dot"></div></div></div>
@@ -3378,7 +3378,7 @@ function renderExamSetup(){
     `;
   } else if(step === 9){
     stepHtml = `
-      <div class="h2" style="margin-top:0;">Step 9 — Review Settings</div>
+      <div class="h2" style="margin-top:0;">Step 9, Review Settings</div>
       <div class="card">
         <div class="togglerow"><div>Show Explanation after Exam</div><div class="toggle ${st.showExplanation?'on':''}" onclick="ExamSetup.showExplanation=!ExamSetup.showExplanation; render()"><div class="dot"></div></div></div>
         <div class="togglerow" style="border-bottom:none;"><div>Instant Feedback (Flash Mode only)</div><div class="toggle ${st.instantFeedback?'on':''}" onclick="ExamSetup.instantFeedback=!ExamSetup.instantFeedback; render()"><div class="dot"></div></div></div>
@@ -3386,7 +3386,7 @@ function renderExamSetup(){
     `;
   } else if(step === 10){
     stepHtml = `
-      <div class="h2" style="margin-top:0;">Step 10 — Instructions</div>
+      <div class="h2" style="margin-top:0;">Step 10, Instructions</div>
       <div style="font-size:calc(14px * var(--ah-ts,1)); line-height:1.6; color:var(--sub);">
         <p>• <b>Timer Persistence:</b> The timer survives page refreshes.</p>
         <p>• <b>Auto-Save:</b> Answers are saved as you go.</p>
@@ -3395,10 +3395,10 @@ function renderExamSetup(){
       </div>
     `;
   } else if(step === 11){
-    stepHtml = `<div class="h2" style="margin-top:0;">Step 11 — Instructions</div><div class="card"><b>One calm session at a time.</b><div class="muted" style="margin-top:8px;line-height:1.6">Your answers auto-save during the session. Mock Test timing and review behavior remain unchanged.</div></div>`;
+    stepHtml = `<div class="h2" style="margin-top:0;">Step 11, Instructions</div><div class="card"><b>One calm session at a time.</b><div class="muted" style="margin-top:8px;line-height:1.6">Your answers auto-save during the session. Mock Test timing and review behavior remain unchanged.</div></div>`;
   } else if(step === 12){
     const customTotal=st.distribution==='custom'?Object.values(st.customCounts).reduce((a,b)=>a+(parseInt(b)||0),0):st.totalCount;
-    stepHtml=`<div class="h2" style="margin-top:0;">Step 12 — Final Review</div><div class="card exam-ready"><div class="row" style="align-items:flex-start;gap:13px"><div class="ready-icon">✓</div><div><div class="muted" style="text-transform:uppercase;letter-spacing:.08em;font-weight:800">Exam Ready</div><h2 style="margin:4px 0 6px;font-size:calc(23px * var(--ah-ts,1))">Your session is configured</h2><div class="muted">Review the essentials below, then start the existing Exam Engine.</div></div></div><div class="grid2" style="margin-top:18px"><div class="stat-card"><div class="v">${st.mode.toUpperCase()}</div><div class="l">Mode</div></div><div class="stat-card"><div class="v">${customTotal}</div><div class="l">Questions</div></div><div class="stat-card"><div class="v">${st.duration?st.duration+'m':'∞'}</div><div class="l">Time</div></div><div class="stat-card"><div class="v">+${st.marksPerQ}</div><div class="l">Per correct</div></div></div></div>`;
+    stepHtml=`<div class="h2" style="margin-top:0;">Step 12, Final Review</div><div class="card exam-ready"><div class="row" style="align-items:flex-start;gap:13px"><div class="ready-icon">✓</div><div><div class="muted" style="text-transform:uppercase;letter-spacing:.08em;font-weight:800">Exam Ready</div><h2 style="margin:4px 0 6px;font-size:calc(23px * var(--ah-ts,1))">Your session is configured</h2><div class="muted">Review the essentials below, then start the existing Exam Engine.</div></div></div><div class="grid2" style="margin-top:18px"><div class="stat-card"><div class="v">${st.mode.toUpperCase()}</div><div class="l">Mode</div></div><div class="stat-card"><div class="v">${customTotal}</div><div class="l">Questions</div></div><div class="stat-card"><div class="v">${st.duration?st.duration+'m':'∞'}</div><div class="l">Time</div></div><div class="stat-card"><div class="v">+${st.marksPerQ}</div><div class="l">Per correct</div></div></div></div>`;
   }
 
   const html = `
@@ -3437,7 +3437,7 @@ function wizardBack(){
 function setExamSelectionMode(mode){ExamSetup.selectionMode=mode; ExamSetup.randomizeQ=mode==='random'||mode==='mixed'; render();}
 function examSelectionDescription(mode){return ({random:'Shuffle the selected pool for a fresh mix.',newest:'Prioritize the most recently added questions.',unattempted:'Prioritize questions with no recorded attempts.',wrong:'Prioritize questions previously answered incorrectly.',bookmarked:'Practice only bookmarked questions when available.',weak:'Prioritize topics with the lowest real accuracy.',mixed:'Blend unattempted, wrong, bookmarked, and random questions.'})[mode]||'Choose how questions are selected.';}
 function parseCustomSerialSpec(raw){
-  const text=String(raw||'').replace(/[০-৯]/g,d=>String('০১২৩৪৫৬৭৮৯'.indexOf(d))).replace(/[，、]/g,',').replace(/[–—−]/g,'-').trim();
+  const text=String(raw||'').replace(/[০-৯]/g,d=>String('০১২৩৪৫৬৭৮৯'.indexOf(d))).replace(/[，、]/g,',').replace(/[–-−]/g,'-').trim();
   if(!text)return {numbers:[],error:'Custom serial লিখুন, যেমন 1-20 বা 45-50।'};
   const numbers=[];
   for(const token of text.split(',')){
@@ -3487,7 +3487,7 @@ function weakTopicIds(){
   CACHE.questions.forEach(q=>{const st=q.stats||{}; const attempts=st.attempts||0; if(!by[q.topicId]) by[q.topicId]={attempts:0,correct:0}; by[q.topicId].attempts+=attempts; by[q.topicId].correct+=st.correct||0;});
   return Object.entries(by).filter(([,v])=>v.attempts>0).sort((a,b)=>(a[1].correct/Math.max(1,a[1].attempts))-(b[1].correct/Math.max(1,b[1].attempts))).map(([id])=>id);
 }/* P08-EXAMSELECT:start */
-/* P08 — adaptive-testing foundation. A pure, dependency-free selector that reads
+/* P08, adaptive-testing foundation. A pure, dependency-free selector that reads
    the difficulty/expected-time tags the Question Engine (P07) writes and can
    filter or warm-up-order a paper by difficulty. Kept pure so it is testable
    without a DOM, and defensive so an untagged bank still behaves. */
@@ -3558,7 +3558,7 @@ const ExamSelect=(function(){
     for(const d of DIFFS){ for(let i=0;i<mix[d]&&buckets[d].length;i++) chosen.push(buckets[d].shift()); }
     for(const d of DIFFS){ while(chosen.length<want&&buckets[d].length) chosen.push(buckets[d].shift()); }
     return adaptive(chosen).slice(0,want);
-  }/* P11 — the same selection, but the difficulty mix follows the student's own
+  }/* P11, the same selection, but the difficulty mix follows the student's own
      measured band (from the Adaptive Engine) instead of the fixed target. */
   function selectAdaptiveFor(pool,count,band){
     const list=Array.isArray(pool)?pool:[];
@@ -3586,7 +3586,7 @@ const ExamSelect=(function(){
 function examSelectValidate(){ return ExamSelect.validate(); }
 function adaptiveOrder(pool){ return ExamSelect.adaptive(pool); }function selectAdaptive(pool,count){ return ExamSelect.selectAdaptive(pool,count); }
 function selectAdaptiveForBand(pool,count,band){ return ExamSelect.selectAdaptiveFor(pool,count,band); }
-/* P11 — start an adaptive practice paper sized to the student's own band. */
+/* P11, start an adaptive practice paper sized to the student's own band. */
 function startAdaptivePractice(){
   const band=adaptiveBand();
   try{ ExamSetup=freshSetup(); }catch(_){ return; }
@@ -3597,7 +3597,7 @@ function startAdaptivePractice(){
   if(typeof window.closeAdaptivePanel==='function') window.closeAdaptivePanel();
   navigate('exam/setup');
 }
-/* P11 — read the student's measured difficulty band from the Adaptive Engine.
+/* P11, read the student's measured difficulty band from the Adaptive Engine.
    Falls back to the fixed mix when the engine or history is unavailable. */
 function adaptiveBand(){
   try{ const eng=window.AhAdaptiveEngine; if(!eng||typeof eng.analyze!=='function') return 'mixed';
@@ -3717,7 +3717,7 @@ async function checkResumableExam(){
   return null;
 }
 // AC1: emergency sessionStorage-snapshot (per-tap, performance-hardening.js) কে
-// IndexedDB-থেকে-resume-করা exam-এর সাথে merge — ট্যাব-বন্ধ/eviction-এ শেষ উত্তর হারাবে না।
+// IndexedDB-থেকে-resume-করা exam-এর সাথে merge, ট্যাব-বন্ধ/eviction-এ শেষ উত্তর হারাবে না।
 function applyExamBackup(exam){
   try{
     if(!exam || !window.AdmissionHubPerformance || typeof window.AdmissionHubPerformance.readExamBackup!=='function') return exam;
@@ -4139,7 +4139,7 @@ window.addEventListener('online',()=>{
   if(!e || e.status!=='running' || !submitRetryHandle) return;
   clearTimeout(submitRetryHandle); submitRetryAttempt=0;
   submitRetryHandle=setTimeout(()=>{ const cur=ActiveExam; if(cur && cur.id===e.id && cur.status==='running') void submitExam(true); },300);
-  try{ toast('নেটওয়ার্ক ফিরল — ফলাফল আবার পাঠানো হচ্ছে…'); }catch(_){}
+  try{ toast('নেটওয়ার্ক ফিরল, ফলাফল আবার পাঠানো হচ্ছে…'); }catch(_){}
 });
 async function submitExam(autoSubmit){
   const e=ActiveExam;
@@ -4232,16 +4232,16 @@ async function submitExam(autoSubmit){
   ActiveExam=null;
   navigate(e.mode==='flash' ? 'exam/flash-summary' : 'exam/result');
   } catch(submitErr){
-    console.warn('[AdmissionHub] exam submit failed — retrying…', submitErr);
+    console.warn('[AdmissionHub] exam submit failed, retrying…', submitErr);
     e.isSubmitting=false;
     if(e.status==='running' && submitRetryAttempt<6){
       submitRetryAttempt++;
       const waitMs=Math.min(30000, Math.pow(2,submitRetryAttempt-1)*1500);
       clearTimeout(submitRetryHandle);
       submitRetryHandle=setTimeout(()=>{ const cur=ActiveExam; if(cur && cur.id===examId && cur.status==='running') void submitExam(!!autoSubmit); }, waitMs);
-      try{ toast('ফলাফল সেভ হয়নি — '+(waitMs/1000)+' সেকেন্ডে আবার চেষ্টা হবে…'); }catch(_){}
+      try{ toast('ফলাফল সেভ হয়নি, '+(waitMs/1000)+' সেকেন্ডে আবার চেষ্টা হবে…'); }catch(_){}
     } else {
-      try{ toast('ফলাফল সেভ করা গেল না — পেজ রিফ্রেশ করো; পরীক্ষা সংরক্ষিত আছে'); }catch(_){}
+      try{ toast('ফলাফল সেভ করা গেল না, পেজ রিফ্রেশ করো; পরীক্ষা সংরক্ষিত আছে'); }catch(_){}
     }
   }
 }
@@ -4283,10 +4283,10 @@ function resultPerformanceMessage(r){
   const topics=resultTopicBreakdown(r).filter(t=>t.total>0).sort((a,b)=>(b.wrong+b.skipped)-(a.wrong+a.skipped)||(a.correct/Math.max(1,a.correct+a.wrong))-(b.correct/Math.max(1,b.correct+b.wrong)));
   const priority=topics[0], priorityAccuracy=priority?Math.round(priority.correct/Math.max(1,priority.correct+priority.wrong)*100):null;
   if(!total)return 'এই ফলাফলে কোনো প্রশ্নের পরিসংখ্যান পাওয়া যায়নি।';
-  if(wrong===0&&skipped===0)return `${total}টির মধ্যে ${correct}টি সঠিক হয়েছে — accuracy ${accuracy}%; কোনো ভুল বা উত্তরহীন প্রশ্ন নেই।`;
-  if(priority&&priority.wrong+priority.skipped>0)return `${total}টির মধ্যে ${correct}টি সঠিক, ${wrong}টি ভুল ও ${skipped}টি উত্তরহীন। সবচেয়ে বেশি attention দরকার “${priority.name}” topic-এ — topic accuracy ${priorityAccuracy}%。`;
+  if(wrong===0&&skipped===0)return `${total}টির মধ্যে ${correct}টি সঠিক হয়েছে, accuracy ${accuracy}%; কোনো ভুল বা উত্তরহীন প্রশ্ন নেই।`;
+  if(priority&&priority.wrong+priority.skipped>0)return `${total}টির মধ্যে ${correct}টি সঠিক, ${wrong}টি ভুল ও ${skipped}টি উত্তরহীন। সবচেয়ে বেশি attention দরকার “${priority.name}” topic-এ, topic accuracy ${priorityAccuracy}%。`;
   if(skipped>0)return `${total}টির মধ্যে ${correct}টি সঠিক ও ${wrong}টি ভুল হয়েছে; ${skipped}টি উত্তরহীন ছিল। পরের attempt-এ আগে উত্তর না দেওয়া প্রশ্নগুলো সম্পন্ন করার লক্ষ্য রাখো।`;
-  return `${total}টির মধ্যে ${correct}টি সঠিক ও ${wrong}টি ভুল হয়েছে — accuracy ${accuracy}%; ভুলগুলোর option-level review করলেই পরের score মাপা যাবে।`;
+  return `${total}টির মধ্যে ${correct}টি সঠিক ও ${wrong}টি ভুল হয়েছে, accuracy ${accuracy}%; ভুলগুলোর option-level review করলেই পরের score মাপা যাবে।`;
 }
 function openResultSubject(subjectId){ExplorerState.query=''; ExplorerState.subjectId=subjectId; ExplorerState.topicId=''; ExplorerState.status='all'; ExplorerState.difficulty='all'; ExplorerState.bookmarked=false; ExplorerState.mistakes=false; ExplorerState.recentlyAdded=false; ExplorerState.visibleCount=40; ExplorerState.selected.clear(); navigate('question-bank');}
 function openResultTopic(topicId){ExplorerState.query=''; ExplorerState.subjectId=''; ExplorerState.topicId=topicId; ExplorerState.status='all'; ExplorerState.difficulty='all'; ExplorerState.bookmarked=false; ExplorerState.mistakes=false; ExplorerState.recentlyAdded=false; ExplorerState.visibleCount=40; ExplorerState.selected.clear(); navigate('question-bank');}
@@ -4295,7 +4295,7 @@ function retryResultQuestions(r,mode,kind){
   let rows=(r.snapshot||[]).filter(s=>kind==='wrong'?s.status==='wrong':kind==='skipped'?s.status==='skipped':true);
   if(kind==='weak'){const weak=new Set(resultTopicBreakdown(r).filter(t=>t.total&&t.correct/t.total<.7).map(t=>t.id)); rows=(r.snapshot||[]).filter(s=>weak.has(s.topicId));}
   const ids=[...new Set(rows.map(s=>s.questionId))];
-  if(!ids.length){ toast(kind==='weak'?'এই পরীক্ষায় দুর্বল topic-এর প্রশ্ন পাওয়া যায়নি — Lifetime Weak Topic Test ব্যবহার করো':(kind==='wrong'?'কোনো ভুল প্রশ্ন নেই — মাশাআল্লাহ!':'এই পরীক্ষার প্রশ্নগুলোই revision-এ নেওয়া হচ্ছে')); return; }
+  if(!ids.length){ toast(kind==='weak'?'এই পরীক্ষায় দুর্বল topic-এর প্রশ্ন পাওয়া যায়নি, Lifetime Weak Topic Test ব্যবহার করো':(kind==='wrong'?'কোনো ভুল প্রশ্ন নেই, মাশাআল্লাহ!':'এই পরীক্ষার প্রশ্নগুলোই revision-এ নেওয়া হচ্ছে')); return; }
   ExamSetup=freshSetup();
   ExamSetup.mode=mode;
   ExamSetup.revisionKind=kind==='weak'?'weak':kind==='wrong'?'mistake':kind==='all'?'flash':'';
@@ -4303,7 +4303,7 @@ function retryResultQuestions(r,mode,kind){
   ExamSetup.onlyQuestionIds=ids; ExamSetup.totalCount=ids.length; ExamSetup.randomizeQ=kind!=='all'; ExamSetup.randomizeOpt=false;
   navigate('exam/setup');
 }
-/* Lifetime-level weak topics (for Practice Weak button) — real attempt data only */
+/* Lifetime-level weak topics (for Practice Weak button), real attempt data only */
 function lifetimeWeakTopicIds(limit){
   const by={};
   CACHE.examResults.forEach(r=>{(r.snapshot||[]).forEach(s=>{if(!by[s.topicId]) by[s.topicId]={attempts:0,correct:0}; by[s.topicId].attempts++; if(s.status==='correct') by[s.topicId].correct++;});});
@@ -4331,7 +4331,7 @@ async function startResultWeakPractice(r){if(typeof r==='string') r=(CACHE.examR
 /* Flash Review: start a flash exam with only the wrong questions of this result */
 async function startResultFlashReview(r){if(typeof r==='string') r=(CACHE.examResults.find(x=>x.id===r)||LastResult); if(!r){toast('পরীক্ষার ফলাফল পাওয়া যায়নি'); return;}
   const ids=[...new Set((r.snapshot||[]).filter(s=>s.status==='wrong').map(s=>s.questionId))];
-  if(!ids.length){ toast('কোনো ভুল প্রশ্ন নেই — flash review-এর জন্য আগে পরীক্ষায় ভুল করো'); return; }
+  if(!ids.length){ toast('কোনো ভুল প্রশ্ন নেই, flash review-এর জন্য আগে পরীক্ষায় ভুল করো'); return; }
   ExamSetup=freshSetup(); ExamSetup.mode='flash'; ExamSetup.revisionKind='flash'; ExamSetup.selectionMode='wrong';
   ExamSetup.onlyQuestionIds=ids; ExamSetup.totalCount=ids.length; ExamSetup.randomizeQ=true; ExamSetup.randomizeOpt=false;
   await beginExam();
@@ -4347,7 +4347,7 @@ async function startResultQuickFlash(r){if(typeof r==='string') r=(CACHE.examRes
 
 /* ---- Phase 2: Deep Analysis helpers (real exam data only) ---- */
 function resultWrongRows(r){ return (r.snapshot||[]).filter(s=>s.status==='wrong'); }
-function resultWeaknessLevel(acc){ if(!acc && acc!==0) return {label:'—', cls:''}; if(acc>=75) return {label:'শক্তিশালী', cls:'strong'}; if(acc>=50) return {label:'মাঝারি', cls:'medium'}; return {label:'দুর্বল', cls:'weak'}; }
+function resultWeaknessLevel(acc){ if(!acc && acc!==0) return {label:'-', cls:''}; if(acc>=75) return {label:'শক্তিশালী', cls:'strong'}; if(acc>=50) return {label:'মাঝারি', cls:'medium'}; return {label:'দুর্বল', cls:'weak'}; }
 function resultTopStats(r){
   const sn=r.snapshot||[];
   const att=r.correct+r.wrong+r.skipped;
@@ -4378,7 +4378,7 @@ function resultBanglaInsight(r){
     parts.push('এই পরীক্ষায় শুধু '+esc(withAtt[0].name)+' সাবজেক্ট ছিল। accuracy: '+Math.round(withAtt[0].correct/withAtt[0].total*100)+'%।');
   }
   // skipped
-  if(skipped>=Math.max(1,Math.round(total*0.2))) parts.push('অনেকগুলো প্রশ্ন ('+skipped+') উত্তর দেওয়া হয়নি — সময় ব্যবস্থাপনা বা concept gap থাকতে পারে; পরবর্তী পরীক্ষায় skip কমানোর চেষ্টা করো।');
+  if(skipped>=Math.max(1,Math.round(total*0.2))) parts.push('অনেকগুলো প্রশ্ন ('+skipped+') উত্তর দেওয়া হয়নি, সময় ব্যবস্থাপনা বা concept gap থাকতে পারে; পরবর্তী পরীক্ষায় skip কমানোর চেষ্টা করো।');
   // weak topics
   const weakTb=tb.filter(t=>t.total>0&&(t.correct+t.wrong)>0).map(t=>({t, acc:Math.round(t.correct/(t.correct+t.wrong)*100)})).filter(x=>x.acc<60).sort((a,b)=>a.acc-b.acc);
   if(weakTb.length){
@@ -4482,7 +4482,7 @@ function renderResultView(r, isFresh){
     <section class="result-hero result-hero-premium"><div class="result-premium-kicker">${esc(examTypeLabel(r))} · ${isFresh?'সদ্য সম্পন্ন':'সংরক্ষিত ফলাফল'}</div><div class="result-premium-main"><div class="result-premium-ring" style="--score:${Math.min(100,Math.max(0,Number(accuracy)||0))}%"><div><b>${Math.round(accuracy)}%</b><span>নির্ভুলতা</span></div></div><div class="result-premium-copy"><div class="result-premium-copy-top"><div class="result-premium-trophy">🏆</div><div><h2>${accuracy>=75?'দারুণ করেছো!':accuracy>=50?'ভালো চেষ্টা!':'চেষ্টা চালিয়ে যাও!'}</h2><p>${esc(resultMessage)}</p></div></div><div class="result-premium-scoreplate"><div><b>${Number(r.score||0).toFixed(2)}<small> / ${maxScore.toFixed(2)}</small></b><span>তোমার স্কোর</span></div><div><b>${correct}<small> / ${total}</small></b><span>সঠিক উত্তর</span></div><div><b>−${Number(r.negativeMarks||r.negative||0).toFixed(2)}</b><span>নেগেটিভ</span></div></div></div></div><div class="result-premium-3d" aria-hidden="true"><svg viewBox="0 0 300 58" preserveAspectRatio="none"><path d="M16 42 C70 10 100 48 150 24 S230 10 284 32"/><path d="M16 42 L16 51 M150 24 L150 51 M284 32 L284 51"/></svg><span class="result-3d-node node-q">Q</span><span class="result-3d-node node-check">✓</span><span class="result-3d-node node-score">%</span><small>QUESTION → REVIEW → SCORE</small></div><div class="result-premium-meta"><span>📅 ${new Date(r.date||Date.now()).toLocaleDateString()}</span><span>⚡ ${esc(examTypeLabel(r))}</span><span>🎯 ${total} প্রশ্ন</span></div></section>
     <section class="result-stat-grid"><div><b>${correct}</b><span>সঠিক</span></div><div><b>${wrong}</b><span>ভুল</span></div><div><b>${skipped}</b><span>উত্তরহীন</span></div><div><b>${accuracy}%</b><span>নির্ভুলতা</span></div></section>
     <div class="result-section-title">প্রশ্ন রিভিউ <small>${filtered.length}/${sn.length}</small></div><div class="result-filter-bar">${filters}</div><section class="result-review-list">${filtered.length?filtered.map(reviewCard).join(''):`<div class="result-empty">${ResultFilter==='wrong'?'🎉 এই পরীক্ষায় কোনো ভুল নেই!':ResultFilter==='correct'?'এই ফিল্টারে কোনো সঠিক প্রশ্ন নেই।':ResultFilter==='skipped'?'এই পরীক্ষায় কোনো উত্তরহীন প্রশ্ন নেই।':'এই পরীক্ষায় কোনো প্রশ্নের তথ্য নেই।'}</div>`}</section>
-    <section class="result-next"><b>🎯 এখন কী করবেন?</b><p>${wrong?'ভুল প্রশ্নগুলো আগে Mistake Book-এ সংরক্ষণ করে আবার অনুশীলন করো।':'তোমার ভুল নেই—এখন আরও challenging একটি Mock Test দিয়ে প্রস্তুতি যাচাই করো।'}</p><div class="result-next-actions"><button class="btn" onclick="startResultWeakPractice('${r.id}')">🎯 দুর্বল টপিক অনুশীলন</button><button class="btn secondary" onclick="retryStoredResult('${r.id}','mock','wrong')">🔁 ভুলগুলো আবার দাও</button></div></section>
+    <section class="result-next"><b>🎯 এখন কী করবেন?</b><p>${wrong?'ভুল প্রশ্নগুলো আগে Mistake Book-এ সংরক্ষণ করে আবার অনুশীলন করো।':'তোমার ভুল নেই, এখন আরও challenging একটি Mock Test দিয়ে প্রস্তুতি যাচাই করো।'}</p><div class="result-next-actions"><button class="btn" onclick="startResultWeakPractice('${r.id}')">🎯 দুর্বল টপিক অনুশীলন</button><button class="btn secondary" onclick="retryStoredResult('${r.id}','mock','wrong')">🔁 ভুলগুলো আবার দাও</button></div></section>
     <section class="result-priority"><div class="result-priority-head"><div><div class="result-priority-kicker">Your next 3 steps</div><h3>Priority Revision</h3></div><span class="pill">Admission Focus</span></div><p class="result-priority-intro">এই ফলাফলের ভিত্তিতে পরের revision শুরু করার সবচেয়ে কার্যকর তিনটি পথ বেছে নাও।</p><div class="result-priority-list"><button class="result-priority-card" onclick="startResultFlashReview('${r.id}')"><span class="result-priority-number">1</span><span><strong>Review Wrong Answers</strong><small>${wrong}টি ভুল প্রশ্ন থেকে Flash Review</small></span><span class="result-priority-arrow">›</span></button><button class="result-priority-card" onclick="startResultWeakPractice('${r.id}')"><span class="result-priority-number">2</span><span><strong>Practice Weak Areas</strong><small>${weakTopics.length?weakTopics.length+'টি priority topic':'দুর্বল topic শনাক্ত হলে এখানে আসবে'}</small></span><span class="result-priority-arrow">›</span></button><button class="result-priority-card" onclick="startResultQuickFlash('${r.id}')"><span class="result-priority-number">3</span><span><strong>Start a Quick Flash Test</strong><small>${Math.min(10,total)}টি প্রশ্ন · ৫ মিনিট</small></span><span class="result-priority-arrow">›</span></button></div><button class="btn result-priority-cta" onclick="startResultQuickFlash('${r.id}')">Start Recommended Revision →</button><div class="result-priority-tip"><b>✦</b><span>আজকের সবচেয়ে ভালো কাজ: ভুল প্রশ্নগুলো আবার সমাধান করা।</span></div></section>
     <button class="btn result-back" onclick="navigate('${isFresh?'exam':'history'}')">${isFresh?'Exam Center-এ ফিরে যাও':'Exam History-তে ফিরে যাও'}</button>
   </div>`;
@@ -4741,7 +4741,7 @@ async function doRestore(dataStr, strategy){
   }catch(err){ toast('Restore failed'); }
 }
 function resetStats(){
-  confirmModal('Reset Statistics','This removes exam history, results, mistakes and daily stats — subjects, topics, questions and vocabulary are kept.', async ()=>{
+  confirmModal('Reset Statistics','This removes exam history, results, mistakes and daily stats, subjects, topics, questions and vocabulary are kept.', async ()=>{
     let cleared=false;
     try{
       await dbClearStoresAtomically(['exams','examResults','mistakes','dailyStats','activityLogs']);
@@ -4755,7 +4755,7 @@ function resetStats(){
   }, 'Reset', true);
 }
 function resetAll(){
-  confirmModal('Reset All Data','This permanently deletes EVERYTHING — subjects, topics, questions, exams, vocabulary, settings. This cannot be undone.', async ()=>{
+  confirmModal('Reset All Data','This permanently deletes EVERYTHING, subjects, topics, questions, exams, vocabulary, settings. This cannot be undone.', async ()=>{
     const voices=window.VocabularyElevenLabs;
     voices?.beginUserDataReset?.();
     let cleared=false;
@@ -4826,7 +4826,7 @@ async function boot(){
   }catch(err){
     // A suspended/locked Safari database must not trap the app behind a recovery
     // page. Memory mode is session-only and never clears or rewrites saved IDB data.
-    console.error('[Admission Hub] Data load failed — memory fallback.',err);
+    console.error('[Admission Hub] Data load failed, memory fallback.',err);
     useMemoryStorage(err);
     try{await loadCache();}catch(_){}
   }
@@ -4882,7 +4882,7 @@ function resumeActiveExam(){
   navigate('exam/running');
 }
 
-/* মালিক-নির্দেশ ২০২৬-০৯-০৮: লিগ্যাসি AI-অ্যাসিস্ট্যান্ট (client-key Gemini/Groq) সম্পূর্ণ বাদ — Phase-1 Agent Core (/api/ai/chat) প্রতিস্থাপন করেছে */
+/* মালিক-নির্দেশ ২০২৬-০৯-০৮: লিগ্যাসি AI-অ্যাসিস্ট্যান্ট (client-key Gemini/Groq) সম্পূর্ণ বাদ, Phase-1 Agent Core (/api/ai/chat) প্রতিস্থাপন করেছে */
 /* ================= NEXT MAJOR UPGRADE: additive compatibility layer ================= */
 (function(){
   const originalLoadCache=loadCache;
@@ -4940,10 +4940,10 @@ function resumeActiveExam(){
   function accuracyOf(a){return a.correct+a.wrong?round2(a.correct/(a.correct+a.wrong)*100):0;}
   function bestStreak(){const days=new Set(CACHE.examResults.map(r=>todayKey(new Date(r.date)))); let best=0,run=0; const all=[...days].sort(); for(let i=0;i<all.length;i++){if(i&&new Date(all[i])-new Date(all[i-1])===86400000) run++; else run=1; best=Math.max(best,run);} return best;}
   function dashboardTool(key,icon,label,path){return `<button class="command-tile" onclick="${path?`navigate('${path}')`:'openSmartPracticeModal()'}"><span class="ic">${icon}</span><span class="label">${label}</span></button>`;}
-  /* ═══ P19 (v203) — পুরোনো ড্যাশবোর্ড আজীবন-বন্ধ (মালিক: 'এখনো তো পুরোনো টা থেকে গেছে!') ═══
+  /* ═══ P19 (v203), পুরোনো ড্যাশবোর্ড আজীবন-বন্ধ (মালিক: 'এখনো তো পুরোনো টা থেকে গেছে!') ═══
      এই inline renderDashboard ছিল আসল পুরোনো ড্যাশবোর্ড-ইঞ্জিন (EMERALD অ্যাকাডেমিক-হেডার,
      নমুনা-লক্ষ্য-কার্ড, 'কমান্ড সেন্টার'-কার্ড-গ্রিড, Bank/Courses/Mock টাইল)।
-     এখন স্থায়ী delegation: নতুন ড্যাশবোর্ড থাকলে সেটাই; না-থাকলে শূন্য — পুরোনো আর কখনো নয়। */
+     এখন স্থায়ী delegation: নতুন ড্যাশবোর্ড থাকলে সেটাই; না-থাকলে শূন্য, পুরোনো আর কখনো নয়। */
   renderDashboard=function(){
     if(typeof window.dv2RenderDashboard==='function') return window.dv2RenderDashboard();
     return; /* P19-LEGACY-DASH-KILL: পুরোনো ড্যাশবোর্ড মৃত */
@@ -4952,7 +4952,7 @@ function resumeActiveExam(){
   function setupChoice(active,label,onclick,desc=''){return `<button class="choice ${active?'active':''}" onclick="${onclick}"><b>${label}</b>${desc?`<small>${desc}</small>`:''}</button>`;}
   renderExamSetup=function(){
     if(!ExamSetup){renderExamCenter();return;}if(!ExamSetup.wizardStep) ExamSetup.wizardStep=1; const page=setupPage(), st=ExamSetup, subs=[...CACHE.subjects].sort((a,b)=>a.order-b.order), selectedSubs=st.subjectIds.length?st.subjectIds:subs.map(s=>s.id), topics=subs.filter(s=>selectedSubs.includes(s.id)).flatMap(s=>topicsOf(s.id).map(t=>({...t,subjectName:s.name}))), countAvailableSafe=countAvailable(), sourceLabels=[['random','All Questions'],['unattempted','Unattempted'],['wrong','Mistakes'],['weak','Weak Topics'],['bookmarked','Bookmarked'],['newest','Recently Added'],['mixed','Mixed']];
-    const section=(n,title,body)=>`<section class="setup-section"><h3>Step ${n} — ${title}</h3>${body}</section>`;
+    const section=(n,title,body)=>`<section class="setup-section"><h3>Step ${n}, ${title}</h3>${body}</section>`;
     let content='';
     if(page===1) content=section(1,'Exam Mode',`<div class="choice-grid">${setupChoice(st.mode==='mock','📝 Mock Test',"setExamMode('mock')",'Timed exam simulation')}${setupChoice(st.mode==='flash','⚡ Flash Test',"setExamMode('flash')",'Instant feedback')}</div>`)+section(2,'Subjects',`<div class="filter-row">${setupChoice(st.subjectIds.length===0,'All Subjects',"ExamSetup.subjectIds=[];render()")}${subs.map(s=>setupChoice(st.subjectIds.includes(s.id),`${s.icon||'📘'} ${esc(s.name)}`,`toggleSetupSubject('${s.id}')`)).join('')}</div><div class="muted" style="margin-top:8px">${st.subjectIds.length?st.subjectIds.length+' selected':'All subjects included'}</div>`)+section(3,'Topics',`<div class="filter-row">${setupChoice(st.topicIds.length===0,'All Topics',"ExamSetup.topicIds=[];render()")}${topics.map(t=>setupChoice(st.topicIds.includes(t.id),`${esc(t.subjectName)} · ${esc(t.name)}`,`toggleSetupTopic('${t.id}')`)).join('')}</div>`)+section(4,'Question Source',`<div class="filter-row">${sourceLabels.map(([v,l])=>`<button class="chip ${st.selectionMode===v?'active':''}" onclick="setExamSelectionMode('${v}')">${l}</button>`).join('')}</div>`);
     if(page===2) content=section(5,'Question Count',`<div class="filter-row">${[10,20,30,50,100,200,300,500].filter(n=>n<=countAvailableSafe).map(n=>`<button class="chip ${st.totalCount===n?'active':''}" onclick="ExamSetup.totalCount=${n};render()">${n}</button>`).join('')}<button class="chip ${![10,20,30,50,100,200,300,500].includes(Number(st.totalCount))?'active':''}" onclick="document.getElementById('setupCount').focus()">Custom</button></div><input id="setupCount" type="number" min="1" max="${Math.max(1,countAvailableSafe)}" value="${st.totalCount}" oninput="ExamSetup.totalCount=Math.max(1,Math.min(${Math.max(1,countAvailableSafe)},Number(this.value)||1))">`)+section(6,'Question Distribution',`<div class="filter-row"><button class="chip ${st.distribution==='auto'?'active':''}" onclick="ExamSetup.distribution='auto';render()">Automatic</button><button class="chip ${st.distribution==='custom'?'active':''}" onclick="ExamSetup.distribution='custom';render()">Custom</button></div>${st.distribution==='custom'?`<div class="card" style="margin-top:9px">${topics.map(t=>`<div class="row between" style="margin:7px 0"><span class="muted">${esc(t.subjectName)} · ${esc(t.name)}</span><input style="width:74px;padding:7px" type="number" min="0" value="${st.customCounts[t.id]||0}" oninput="ExamSetup.customCounts['${t.id}']=Number(this.value)||0"></div>`).join('')}</div>`:''}`)+section(7,'Difficulty',`<div class="filter-row">${['easy','medium','hard','mixed'].map(v=>`<button class="chip ${(st.difficulty||'mixed')===v?'active':''}" onclick="ExamSetup.difficulty='${v}';render()">${v[0].toUpperCase()+v.slice(1)}</button>`).join('')}</div>`)+section(8,'Time',`<div class="filter-row">${[5,10,20,30,45,60,120,180].map(n=>`<button class="chip ${Number(st.duration)===n?'active':''}" onclick="ExamSetup.duration=${n};render()">${n>=60?`${n/60} hr`:n+' min'}</button>`).join('')}<button class="chip ${![5,10,20,30,45,60,120,180].includes(Number(st.duration))?'active':''}" onclick="openCustomDuration()">Custom</button></div>`);
@@ -4965,12 +4965,12 @@ function resumeActiveExam(){
   window.openCustomDuration=function(){const v=prompt('Minutes',String(ExamSetup.duration||20)); if(v!==null){ExamSetup.duration=Math.max(0,Number(v)||0);render();}};
   window.openCustomNegative=function(){const v=prompt('Negative mark',String(ExamSetup.negative||0)); if(v!==null){ExamSetup.negative=Math.max(0,Number(v)||0);render();}};
 
-  renderSettings=function(){const s=normalizeSettings(CACHE.settings), cards=s.dashboardCards, toggle=(label,key,group='root')=>`<div class="togglerow"><span>${label}</span><div class="toggle ${((group==='cards'?cards[key]:s[key])?'on':'')}" onclick="toggleUpgrade('${group}','${key}')"><div class="dot"></div></div></div>`; const html=`<div class="explorer-head"><div class="explorer-kicker">Personalization</div><div class="explorer-title">Settings</div><div class="explorer-subtitle">Tune the study environment without touching your existing records.</div><div class="h2" style="margin-top:0">Appearance</div><div class="card"><div class="muted">Theme</div><div class="filter-row" style="margin-top:8px">${[['light','Emerald Light'],['dark','Soft Dark'],['midnight','Midnight'],['focus','Focus Mode']].map(([v,l])=>`<button class="chip ${s.theme===v?'active':''}" onclick="setTheme('${v}')">${l}</button>`).join('')}</div><div class="muted" style="margin-top:12px">Accent</div><div class="filter-row" style="margin-top:8px">${[['emerald','Emerald'],['blue','Blue'],['violet','Violet'],['amber','Amber']].map(([v,l])=>`<button class="chip ${s.accent===v?'active':''}" onclick="setAccent('${v}')">${l}</button>`).join('')}</div><label class="flabel">UI Density</label><select onchange="CACHE.settings.density=this.value;persistUpgradeSetting()"><option value="comfortable" ${s.density==='comfortable'?'selected':''}>Comfortable</option><option value="compact" ${s.density==='compact'?'selected':''}>Compact</option></select><label class="flabel">Card Style</label><select onchange="CACHE.settings.cardStyle=this.value;persistUpgradeSetting()"><option value="soft" ${s.cardStyle==='soft'?'selected':''}>Soft</option><option value="minimal" ${s.cardStyle==='minimal'?'selected':''}>Minimal</option><option value="elevated" ${s.cardStyle==='elevated'?'selected':''}>Elevated</option></select></div><div class="h2">Animation & Feedback</div><div class="card">${toggle('Animations','animation')} ${toggle('Reduced motion','reducedMotion')} ${toggle('Result animation','resultAnimation')} ${toggle('Number animation','numberAnimation')} ${toggle('Page transition','pageTransition')} ${toggle('Sound','sound')} ${toggle('Visual feedback','visual','feedback')} ${toggle('Success effects','success','feedback')} ${toggle('Error effects','error','feedback')}</div><div class="h2">Dashboard cards</div><div class="card">${Object.entries({goal:'Daily goal',streak:'Streak',performance:'Performance',revision:'Smart revision',lifetime:'Lifetime'}).map(([k,l])=>toggle(l,k,'cards')).join('')}</div><div class="h2">Exam defaults</div><div class="card"><label class="flabel">Question count</label><input type="number" value="${s.examDefaults.count}" onchange="CACHE.settings.examDefaults.count=Math.max(1,Number(this.value)||20);persistUpgradeSetting()"><label class="flabel">Duration (minutes)</label><input type="number" value="${s.examDefaults.duration}" onchange="CACHE.settings.examDefaults.duration=Math.max(0,Number(this.value)||20);persistUpgradeSetting()"><label class="flabel">Negative marking</label><input type="number" step=".05" value="${s.examDefaults.negative}" onchange="CACHE.settings.examDefaults.negative=Math.max(0,Number(this.value)||0);persistUpgradeSetting()"><label class="flabel">Marks per question</label><input type="number" step="0.5" min="0.5" value="${s.examDefaults.marksPerQ||1}" onchange="CACHE.settings.examDefaults.marksPerQ=Math.max(0.5,Number(this.value)||1);persistUpgradeSetting()"><label class="flabel">Difficulty</label><select onchange="CACHE.settings.examDefaults.difficulty=this.value;persistUpgradeSetting()"><option value="mixed" ${s.examDefaults.difficulty==='mixed'?'selected':''}>Mixed</option><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select>${toggle('Auto-save','autoSave','examDefaults')}${toggle('Resume exam','resume','examDefaults')}${toggle('Submit confirmation','confirmSubmit','examDefaults')}</div>${window.BugAgent?.settingsCard?.()||''}<div class="h2">Notifications</div><div class="card"><div class="muted" style="font-size:calc(12px * var(--ah-ts,1));line-height:1.55">ঠিক সময়ে ছোট রিমাইন্ডার — Telegram + iPhone push। কারণ না থাকলে কিছুই পাঠায় না।</div><button class="btn secondary" style="margin-top:10px" onclick="NotificationHub.openSettings()">⚙️ Notification Settings</button><button class="btn ghost sm" style="margin-top:8px" onclick="NotificationHub.openCenter()">🔔 Notification Center</button></div><div class="h2">Data management</div><div class="card"><div class="muted">Questions: ${CACHE.questions.length.toLocaleString()} · Exams: ${CACHE.examResults.length} · History: ${CACHE.examResults.length} · Vocabulary: ${CACHE.vocabulary.length}</div><button class="btn secondary" style="margin-top:12px" onclick="exportBackup()">📦 Export Full Backup</button><button class="btn ghost" style="margin-top:8px" onclick="document.getElementById('restoreFile').click()">📥 Import Backup</button><input id="restoreFile" type="file" accept="application/json" class="hide" onchange="handleRestoreFile(event)"></div><div class="h2">Danger zone</div><div class="card"><button class="btn ghost" onclick="resetStats()">Reset Statistics</button><button class="btn ghost" style="margin-top:8px" onclick="confirmModal('Clear Exam History','This deletes only completed exam records and keeps questions and subjects.',()=>{for(const store of ['exams','examResults']) dbClear(store).then(loadCache).then(()=>{toast('Exam history cleared');render()})},'Clear',true)">Clear Exam History</button><button class="btn danger" style="margin-top:8px" onclick="confirmModal('Delete Mistakes','Remove all mistake records while keeping questions and history?',async()=>{await dbClear('mistakes');await loadCache();toast('Mistakes deleted');render()},'Delete',true)">Delete Mistakes</button><button class="btn danger" style="margin-top:8px" onclick="resetAll()">Delete All Data</button></div></div>`; renderShell(html,{title:'Settings'});};
+  renderSettings=function(){const s=normalizeSettings(CACHE.settings), cards=s.dashboardCards, toggle=(label,key,group='root')=>`<div class="togglerow"><span>${label}</span><div class="toggle ${((group==='cards'?cards[key]:s[key])?'on':'')}" onclick="toggleUpgrade('${group}','${key}')"><div class="dot"></div></div></div>`; const html=`<div class="explorer-head"><div class="explorer-kicker">Personalization</div><div class="explorer-title">Settings</div><div class="explorer-subtitle">Tune the study environment without touching your existing records.</div><div class="h2" style="margin-top:0">Appearance</div><div class="card"><div class="muted">Theme</div><div class="filter-row" style="margin-top:8px">${[['light','Emerald Light'],['dark','Soft Dark'],['midnight','Midnight'],['focus','Focus Mode']].map(([v,l])=>`<button class="chip ${s.theme===v?'active':''}" onclick="setTheme('${v}')">${l}</button>`).join('')}</div><div class="muted" style="margin-top:12px">Accent</div><div class="filter-row" style="margin-top:8px">${[['emerald','Emerald'],['blue','Blue'],['violet','Violet'],['amber','Amber']].map(([v,l])=>`<button class="chip ${s.accent===v?'active':''}" onclick="setAccent('${v}')">${l}</button>`).join('')}</div><label class="flabel">UI Density</label><select onchange="CACHE.settings.density=this.value;persistUpgradeSetting()"><option value="comfortable" ${s.density==='comfortable'?'selected':''}>Comfortable</option><option value="compact" ${s.density==='compact'?'selected':''}>Compact</option></select><label class="flabel">Card Style</label><select onchange="CACHE.settings.cardStyle=this.value;persistUpgradeSetting()"><option value="soft" ${s.cardStyle==='soft'?'selected':''}>Soft</option><option value="minimal" ${s.cardStyle==='minimal'?'selected':''}>Minimal</option><option value="elevated" ${s.cardStyle==='elevated'?'selected':''}>Elevated</option></select></div><div class="h2">Animation & Feedback</div><div class="card">${toggle('Animations','animation')} ${toggle('Reduced motion','reducedMotion')} ${toggle('Result animation','resultAnimation')} ${toggle('Number animation','numberAnimation')} ${toggle('Page transition','pageTransition')} ${toggle('Sound','sound')} ${toggle('Visual feedback','visual','feedback')} ${toggle('Success effects','success','feedback')} ${toggle('Error effects','error','feedback')}</div><div class="h2">Dashboard cards</div><div class="card">${Object.entries({goal:'Daily goal',streak:'Streak',performance:'Performance',revision:'Smart revision',lifetime:'Lifetime'}).map(([k,l])=>toggle(l,k,'cards')).join('')}</div><div class="h2">Exam defaults</div><div class="card"><label class="flabel">Question count</label><input type="number" value="${s.examDefaults.count}" onchange="CACHE.settings.examDefaults.count=Math.max(1,Number(this.value)||20);persistUpgradeSetting()"><label class="flabel">Duration (minutes)</label><input type="number" value="${s.examDefaults.duration}" onchange="CACHE.settings.examDefaults.duration=Math.max(0,Number(this.value)||20);persistUpgradeSetting()"><label class="flabel">Negative marking</label><input type="number" step=".05" value="${s.examDefaults.negative}" onchange="CACHE.settings.examDefaults.negative=Math.max(0,Number(this.value)||0);persistUpgradeSetting()"><label class="flabel">Marks per question</label><input type="number" step="0.5" min="0.5" value="${s.examDefaults.marksPerQ||1}" onchange="CACHE.settings.examDefaults.marksPerQ=Math.max(0.5,Number(this.value)||1);persistUpgradeSetting()"><label class="flabel">Difficulty</label><select onchange="CACHE.settings.examDefaults.difficulty=this.value;persistUpgradeSetting()"><option value="mixed" ${s.examDefaults.difficulty==='mixed'?'selected':''}>Mixed</option><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select>${toggle('Auto-save','autoSave','examDefaults')}${toggle('Resume exam','resume','examDefaults')}${toggle('Submit confirmation','confirmSubmit','examDefaults')}</div>${window.BugAgent?.settingsCard?.()||''}<div class="h2">Notifications</div><div class="card"><div class="muted" style="font-size:calc(12px * var(--ah-ts,1));line-height:1.55">ঠিক সময়ে ছোট রিমাইন্ডার, Telegram + iPhone push। কারণ না থাকলে কিছুই পাঠায় না।</div><button class="btn secondary" style="margin-top:10px" onclick="NotificationHub.openSettings()">⚙️ Notification Settings</button><button class="btn ghost sm" style="margin-top:8px" onclick="NotificationHub.openCenter()">🔔 Notification Center</button></div><div class="h2">Data management</div><div class="card"><div class="muted">Questions: ${CACHE.questions.length.toLocaleString()} · Exams: ${CACHE.examResults.length} · History: ${CACHE.examResults.length} · Vocabulary: ${CACHE.vocabulary.length}</div><button class="btn secondary" style="margin-top:12px" onclick="exportBackup()">📦 Export Full Backup</button><button class="btn ghost" style="margin-top:8px" onclick="document.getElementById('restoreFile').click()">📥 Import Backup</button><input id="restoreFile" type="file" accept="application/json" class="hide" onchange="handleRestoreFile(event)"></div><div class="h2">Danger zone</div><div class="card"><button class="btn ghost" onclick="resetStats()">Reset Statistics</button><button class="btn ghost" style="margin-top:8px" onclick="confirmModal('Clear Exam History','This deletes only completed exam records and keeps questions and subjects.',()=>{for(const store of ['exams','examResults']) dbClear(store).then(loadCache).then(()=>{toast('Exam history cleared');render()})},'Clear',true)">Clear Exam History</button><button class="btn danger" style="margin-top:8px" onclick="confirmModal('Delete Mistakes','Remove all mistake records while keeping questions and history?',async()=>{await dbClear('mistakes');await loadCache();toast('Mistakes deleted');render()},'Delete',true)">Delete Mistakes</button><button class="btn danger" style="margin-top:8px" onclick="resetAll()">Delete All Data</button></div></div>`; renderShell(html,{title:'Settings'});};
   window.toggleUpgrade=async function(group,key){const s=normalizeSettings(CACHE.settings); if(group==='cards') s.dashboardCards[key]=s.dashboardCards[key]===false; else if(group==='feedback') s.feedback[key]=s.feedback[key]===false; else if(group==='examDefaults') s.examDefaults[key]=s.examDefaults[key]===false; else if(key==='animation') s.animation=s.animation==='on'?'off':'on'; else s[key]=!s[key]; CACHE.settings=s; await dbPut('settings',s); applyUpgradePrefs(); render();};
 
   function mistakeRows(){return CACHE.mistakes.map(m=>{const q=CACHE.questions.find(x=>x.id===m.questionId); if(!q)return null; const attempts=Math.max(Number(m.attempts||0),Number(q.stats&&q.stats.attempts||0),Number(m.wrongCount||0)); const wrong=Math.max(Number(m.wrongCount||0),Number(q.stats&&q.stats.wrong||0)); const correct=Math.max(0,Number(m.correctCount||0),Number(q.stats&&q.stats.correct||0)); const acc=attempts?round2(correct/attempts*100):0; const age=Math.max(0,Date.now()-Number(m.lastWrongAt||m.updatedAt||0)); const priority=wrong>=5||acc<50?'high':wrong>=2||acc<75?'medium':'low'; return {m,q,attempts,wrong,correct,acc,age,priority};}).filter(Boolean);}
   renderMistakes=function(){const filter=window.MistakeFilter||'all', now=Date.now(), rows=mistakeRows().filter(r=>filter==='all'||filter==='today'?(filter==='all'||todayKey(new Date(r.m.lastWrongAt||0))===todayKey()):filter==='frequent'?r.wrong>=3:filter==='recent'?r.age<7*86400000:filter==='critical'?r.priority==='high':filter==='weak'?r.acc<70:filter==='mastered'?r.m.mastered===true:filter==='pending'?r.m.mastered!==true:true).sort((a,b)=>({high:0,medium:1,low:2}[a.priority]-({high:0,medium:1,low:2}[b.priority])||b.wrong-a.wrong)); const pendingCt=rows.filter(r=>r.m.mastered!==true).length, masteredCt=rows.length-pendingCt; const html=`<div class="explorer-head"><div class="explorer-kicker">Revision System</div><div class="explorer-title">Mistake Bank 2.0</div><div class="explorer-subtitle">${rows.length} mistakes · <b>${pendingCt} pending</b> · ${masteredCt} mastered</div></div><div class="row wrap" style="gap:7px;margin-bottom:10px"><button class="btn sm" onclick="openMistakePracticeModal()">🔁 Practice My Mistakes</button><button class="btn secondary sm" onclick="startMistakeExam('flash')">⚡ Flash</button></div><div class="filter-row" style="margin-bottom:12px">${[['all','All'],['pending','Needs Review'],['mastered','Mastered'],['today','Today'],['frequent','Frequently Wrong'],['recent','Recently Wrong'],['critical','Critical'],['weak','Weak Topic']].map(([v,l])=>`<button class="chip ${(filter===v?'active':'')}" onclick="MistakeFilter='${v}';render()">${l}</button>`).join('')}</div>${rows.length?rows.map(r=>`<article class="card mistake-row priority-${r.priority}" style="cursor:pointer"><div class="row between" style="align-items:flex-start;gap:8px"><div style="min-width:0;flex:1"><b>${esc(r.q.question||'Untitled')}</b><div class="muted" style="margin-top:5px">${esc(subjectName(r.q.subjectId))} · ${esc(topicName(r.q.topicId))}</div></div><span class="pill ${r.priority==='high'?'red':'orange'}">${r.priority.toUpperCase()}</span>${r.m.mastered?`<span class="pill" style="background:var(--mint);color:var(--emerald-d);margin-left:6px">✓ MASTERED</span>`:''}</div><div class="history-tool-stats"><span>Wrong ${r.wrong}×</span><span>Attempts ${r.attempts}</span><span>Correct ${r.correct}</span><span>Accuracy ${r.acc}%</span></div><div class="row wrap" style="margin-top:9px;gap:6px"><button class="btn ghost sm" onclick="event.stopPropagation();startQuestionPractice(['${r.q.id}'])">Review</button><button class="btn secondary sm" onclick="event.stopPropagation();beginExamFromPool([CACHE.questions.find(q=>q.id==='${r.q.id}')],'flash')">Flash Test</button><button class="btn ghost sm" onclick="event.stopPropagation();toggleQuestionBookmark('${r.q.id}')">${r.q.bookmarked?'★':'☆'} Bookmark</button><button class="btn ghost sm" onclick="event.stopPropagation();setMistakeMastered('${r.q.id}',${!r.m.mastered})">${r.m.mastered?'↩️ আবার শিখি':'✅ শিখে গেছি'}</button><button class="btn danger sm" onclick="event.stopPropagation();removeMistake('${r.m.id}')">Remove</button></div></article>`).join(''):emptyState('✅','Mistake Bank is Empty','Wrong answers will appear here automatically after completed exams.')}`; renderShell(html,{title:'Mistake Bank',back:"navigate('exam')"});};
-  window.MistakeFilter='all'; window.setMistakeMastered=async function(qid,val){const m=CACHE.mistakes.find(x=>x.questionId===qid);if(!m){toast('Mistake record not found');return;}m.mastered=val===true;m.revisionStatus=m.mastered?'mastered':'pending';if(m.mastered)m.masteredAt=Date.now();else delete m.masteredAt;await dbPut('mistakes',m);CACHE.mistakes=await dbGetAll('mistakes');toast(m.mastered?'✅ শিখে গেছি — Mastered':'↩️ আবার অনুশীলনে');render();};
+  window.MistakeFilter='all'; window.setMistakeMastered=async function(qid,val){const m=CACHE.mistakes.find(x=>x.questionId===qid);if(!m){toast('Mistake record not found');return;}m.mastered=val===true;m.revisionStatus=m.mastered?'mastered':'pending';if(m.mastered)m.masteredAt=Date.now();else delete m.masteredAt;await dbPut('mistakes',m);CACHE.mistakes=await dbGetAll('mistakes');toast(m.mastered?'✅ শিখে গেছি, Mastered':'↩️ আবার অনুশীলনে');render();};
   window.removeMistake=async function(id){await dbDel('mistakes',id);CACHE.mistakes=await dbGetAll('mistakes');toast('Removed from Mistake Bank');render();};
   window.openMistakePracticeModal=function(){openModal(`<h3>Practice My Mistakes</h3><div class="muted">Choose a real question set from your mistake records.</div><div class="filter-row" style="margin-top:12px">${[10,20,50,100].map(n=>`<button class="chip" onclick="startMistakeCount(${n},'flash')">${n}</button>`).join('')}</div>`);};
   window.startMistakeCount=async function(n,mode){const pool=mistakeRows().sort((a,b)=>b.wrong-a.wrong).slice(0,n).map(r=>r.q);closeModal();if(pool.length)beginExamFromPool(pool,mode);else toast('No mistakes to revise');};
@@ -5156,7 +5156,7 @@ window.__admissionBootPromise.catch(error => console.error('[Admission Hub] boot
     const plan={id:uid(),name:'90-Day Admission Master Plan',startDate:start||isoDate(),duration:90,activeDayIndex:0,createdAt:Date.now(),archivedAt:null};
     await dbPut(planStore,plan); const days=[]; for(let i=0;i<90;i++) days.push(makeDay(plan,i)); await dbPutMany(dayStore,days); await refreshPlans(); planWindowStart=0; toast('90-day plan created'); render();
   }
-  function planAnalysis(plan,days){const completed=days.filter(d=>d.completed).length;const topics=days.reduce((n,d)=>n+planDoneCount(d),0), total=days.reduce((n,d)=>n+planTaskCount(d),0);const elapsed=Math.max(0,Math.min(90,Math.floor((new Date()-new Date(plan.startDate+'T12:00:00'))/86400000)+1));const expected=pct(elapsed,90), actual=pct(completed,90);const health=actual+5>=expected?['🟢','On Track']:actual+15>=expected?['🟡','Slightly Behind']:['🔴','Behind Schedule'];let recommendation=health[1]==='On Track'?'আপনার পরিকল্পনা ভালোভাবে এগোচ্ছে—আজকের লক্ষ্যটি সম্পন্ন করুন।':health[1]==='Slightly Behind'?'গতির সাথে ফিরতে প্রতিদিন আরও একটি ছোট টপিক যোগ করুন।':'আজ ২৫ মিনিটের একটি ফোকাসড রিভিশন সেশন দিয়ে পিছিয়ে থাকা দিনগুলো ধরুন।';return {completed,topics,total,elapsed,expected,actual,health,recommendation};}
+  function planAnalysis(plan,days){const completed=days.filter(d=>d.completed).length;const topics=days.reduce((n,d)=>n+planDoneCount(d),0), total=days.reduce((n,d)=>n+planTaskCount(d),0);const elapsed=Math.max(0,Math.min(90,Math.floor((new Date()-new Date(plan.startDate+'T12:00:00'))/86400000)+1));const expected=pct(elapsed,90), actual=pct(completed,90);const health=actual+5>=expected?['🟢','On Track']:actual+15>=expected?['🟡','Slightly Behind']:['🔴','Behind Schedule'];let recommendation=health[1]==='On Track'?'আপনার পরিকল্পনা ভালোভাবে এগোচ্ছে, আজকের লক্ষ্যটি সম্পন্ন করুন।':health[1]==='Slightly Behind'?'গতির সাথে ফিরতে প্রতিদিন আরও একটি ছোট টপিক যোগ করুন।':'আজ ২৫ মিনিটের একটি ফোকাসড রিভিশন সেশন দিয়ে পিছিয়ে থাকা দিনগুলো ধরুন।';return {completed,topics,total,elapsed,expected,actual,health,recommendation};}
   function openPlanCreate(){openModal(`<h3>90-Day Admission Plan</h3><p class="muted">Choose a start date. Future dates are supported and all 90 calendar days are generated safely in your device timezone.</p><label class="flabel">Start date</label><input id="planStartDate" type="date" min="${isoDate()}" value="${isoDate()}"><button class="btn" style="margin-top:14px" onclick="createAdmissionPlan(document.getElementById('planStartDate').value)">Create 90-Day Plan</button>`);}
   window.createAdmissionPlan=createPlan;
   window.openPlanCreate=openPlanCreate;
@@ -5172,7 +5172,7 @@ window.__admissionBootPromise.catch(error => console.error('[Admission Hub] boot
   function renderPlan(){const p=activePlan();if(!p){renderShell(`<div class="explorer-head"><div class="explorer-kicker">Admission Roadmap</div><div class="explorer-title">90-Day Master Plan</div><div class="explorer-subtitle">Build a calendar-safe study roadmap connected to your existing subjects, topics, and Mock Test flow.</div></div><div class="card premium-hero"><h2 style="margin:0">Your next 90 days, organized.</h2><p style="opacity:.8">Create a plan to generate every date, day name, task checklist, MCQ target, and progress record.</p><button class="btn" style="background:#fff;color:var(--emerald-d)" onclick="openPlanCreate()">Create 90-Day Plan</button></div>`,{title:'Master Plan'});return;}const days=(CACHE.planDays||[]).filter(d=>d.planId===p.id).sort((a,b)=>a.index-b.index);const a=planAnalysis(p,days), activeIndex=Math.min(89,p.activeDayIndex||0);planWindowStart=Math.max(0,Math.min(80,planWindowStart));const visible=days.slice(planWindowStart,planWindowStart+10);renderShell(`<div class="explorer-head"><div class="explorer-kicker">Admission Roadmap</div><div class="explorer-title">90-Day Master Plan</div><div class="explorer-subtitle">${p.paused?'Paused · ':''}Day ${activeIndex+1}/90 · ${a.recommendation}</div></div><section class="premium-hero"><div class="row between"><div><div style="font-size:calc(11px * var(--ah-ts,1));letter-spacing:.08em;font-weight:800;opacity:.8">PLAN HEALTH ${a.health[0]}</div><div style="font-size:calc(22px * var(--ah-ts,1));font-weight:800;margin-top:4px">${a.health[1]}</div></div></div><div class="phase-grid" style="margin-top:16px"><div><b>${Math.max(0,90-a.completed)}</b><small>Days remaining</small></div><div><b>${a.actual}%</b><small>Overall progress</small></div><div><b>${a.topics}</b><small>Tasks completed</small></div><div><b>${computeStreak()}</b><small>Study streak</small></div></div></section><div class="row wrap" style="gap:7px;margin-bottom:10px"><button class="btn sm" onclick="changePlanStart()">Change start</button><button class="btn sm" onclick="openWidgetSyncModal()">📲 Widget Sync</button><button class="btn ghost sm" onclick="pauseAdmissionPlan()">${p.paused?'Resume':'Pause'}</button><button class="btn ghost sm" onclick="resetFuturePlan()">Reset future</button></div><div class="plan-window"><button class="chip" onclick="planWindowStart=Math.max(0,planWindowStart-10);render()">← Earlier</button>${[0,10,20,30,40,50,60,70,80].map(n=>`<button class="chip ${planWindowStart===n?'active':''}" onclick="planWindowStart=${n};render()">Days ${n+1}-${Math.min(90,n+10)}</button>`).join('')}<button class="chip" onclick="planWindowStart=Math.min(80,planWindowStart+10);render()">Later →</button></div>${visible.map(d=>planDayCard(d,d.index===activeIndex)).join('')}`,{title:'90-Day Master Plan'});}
   window.renderAdmissionPlan=renderPlan;
 
-  function comparisonHtml(){const today=phaseAggregate(phaseDayResults()), yesterday=phaseAggregate(phaseDayResults(localDayKey(addDays(new Date(),-1))));const rows=[['Questions',today.questions,yesterday.questions],['Accuracy',phaseAccuracy(today)+'%',phaseAccuracy(yesterday)+'%'],['Study time',fmtTime(today.time),fmtTime(yesterday.time)],['Mock tests',today.exams,yesterday.exams]];const delta=(a,b)=>{if(a===b)return '<span class="change-flat">→ 0%</span>';const n=typeof a==='number'&&typeof b==='number'?(b?Math.round((a-b)/b*100):100):null;return `<span class="${a>b?'change-up':'change-down'}">${a>b?'↑':'↓'} ${n===null?'':Math.abs(n)+'%'}</span>`};const message=today.questions===0&&yesterday.questions===0?'আজ ও গতকাল কোনো সংরক্ষিত অনুশীলন নেই—প্রথম একটি বাস্তব সেশন শুরু করুন।':today.questions>=yesterday.questions?'আজকের অনুশীলন গতকালের চেয়ে ভালো—এই ধারাটি বজায় রাখুন।':'আজকের গতি গতকালের তুলনায় কম; একটি ছোট ১০ প্রশ্নের সেশন দিয়ে শুরু করুন।';return `<div class="h2">Today vs Yesterday</div><div class="card"><div class="muted">বাস্তব সংরক্ষিত ডেটা · ${planTitle(new Date())}</div>${rows.map((r,i)=>`<div class="row between" style="padding:11px 0;border-bottom:${i<rows.length-1?'1px solid var(--line)':'0'}"><span>${r[0]}</span><span><b>${r[1]}</b> <span class="muted">vs ${r[2]}</span> &nbsp;${delta(r[1],r[2])}</span></div>`).join('')}<div class="insight-card" style="margin:10px 0 0">${message}</div></div>`;}
+  function comparisonHtml(){const today=phaseAggregate(phaseDayResults()), yesterday=phaseAggregate(phaseDayResults(localDayKey(addDays(new Date(),-1))));const rows=[['Questions',today.questions,yesterday.questions],['Accuracy',phaseAccuracy(today)+'%',phaseAccuracy(yesterday)+'%'],['Study time',fmtTime(today.time),fmtTime(yesterday.time)],['Mock tests',today.exams,yesterday.exams]];const delta=(a,b)=>{if(a===b)return '<span class="change-flat">→ 0%</span>';const n=typeof a==='number'&&typeof b==='number'?(b?Math.round((a-b)/b*100):100):null;return `<span class="${a>b?'change-up':'change-down'}">${a>b?'↑':'↓'} ${n===null?'':Math.abs(n)+'%'}</span>`};const message=today.questions===0&&yesterday.questions===0?'আজ ও গতকাল কোনো সংরক্ষিত অনুশীলন নেই, প্রথম একটি বাস্তব সেশন শুরু করুন।':today.questions>=yesterday.questions?'আজকের অনুশীলন গতকালের চেয়ে ভালো, এই ধারাটি বজায় রাখুন।':'আজকের গতি গতকালের তুলনায় কম; একটি ছোট ১০ প্রশ্নের সেশন দিয়ে শুরু করুন।';return `<div class="h2">Today vs Yesterday</div><div class="card"><div class="muted">বাস্তব সংরক্ষিত ডেটা · ${planTitle(new Date())}</div>${rows.map((r,i)=>`<div class="row between" style="padding:11px 0;border-bottom:${i<rows.length-1?'1px solid var(--line)':'0'}"><span>${r[0]}</span><span><b>${r[1]}</b> <span class="muted">vs ${r[2]}</span> &nbsp;${delta(r[1],r[2])}</span></div>`).join('')}<div class="insight-card" style="margin:10px 0 0">${message}</div></div>`;}
 
 
   /* ---------- Planner Today JSON API (for the iOS widget) ---------- */
@@ -5188,7 +5188,7 @@ window.__admissionBootPromise.catch(error => console.error('[Admission Hub] boot
     const days=(CACHE.planDays||[]).filter(d=>d.planId===p.id).sort((a,b)=>a.index-b.index);
     let day=days.find(d=>d.actualDate===todayIso) || null;
     if(!day){
-      // No exact match — fall back to the active day of the plan (user may have changed the start date)
+      // No exact match, fall back to the active day of the plan (user may have changed the start date)
       day=(CACHE.planDays||[]).find(d=>d.planId===p.id && d.index===Number(p.activeDayIndex||0)) || days[0] || null;
     }
     if(!day) return {error:'no_days'};
@@ -5222,7 +5222,7 @@ window.__admissionBootPromise.catch(error => console.error('[Admission Hub] boot
     catch(_){}
     return plannerTodayPayload();
   };
-  /* Full plan export: all 90 days with tasks, progress, dates — for the iOS widget static sync. */
+  /* Full plan export: all 90 days with tasks, progress, dates, for the iOS widget static sync. */
   function plannerFullPayload(){
     const p=activePlan();
     if(!p) return {error:'no_plan'};
@@ -5251,11 +5251,11 @@ window.__admissionBootPromise.catch(error => console.error('[Admission Hub] boot
   /* Widget Sync: copy the full plan JSON or download planner.json for the iOS widget. */
   window.widgetSyncPlan=async function(){
     const payload=await window.getPlannerFullJson();
-    if(payload.error){toast('কোনো 90-Day Plan পাওয়া যায়নি — আগে Plan তৈরি করো');return;}
+    if(payload.error){toast('কোনো 90-Day Plan পাওয়া যায়নি, আগে Plan তৈরি করো');return;}
     const json=JSON.stringify(payload,null,1);
     try{
       await navigator.clipboard.writeText(json);
-      toast('Plan JSON কপি হয়েছে — widget গাইডে পেস্ট করো');
+      toast('Plan JSON কপি হয়েছে, widget গাইডে পেস্ট করো');
     }catch(_){
       const blob=new Blob([json],{type:'application/json'});
       const a=document.createElement('a');
@@ -5266,7 +5266,7 @@ window.__admissionBootPromise.catch(error => console.error('[Admission Hub] boot
   };
   window.openWidgetSyncModal=async function(){
     const payload=await window.getPlannerFullJson();
-    if(payload.error){toast('কোনো 90-Day Plan পাওয়া যায়নি — আগে Plan তৈরি করো');return;}
+    if(payload.error){toast('কোনো 90-Day Plan পাওয়া যায়নি, আগে Plan তৈরি করো');return;}
     const json=JSON.stringify(payload,null,1);
     const escJ=json.replace(/</g,'&lt;');
     openModal(`
@@ -5348,9 +5348,9 @@ window.__admissionBootPromise.catch(error => console.error('[Admission Hub] boot
       const errors=[],warnings=[]; const opts=(r.options||[]).slice(0,4); while(opts.length<4)opts.push('');
       if(!r.question) errors.push('Question text is missing'); opts.forEach((o,j)=>{if(!String(o||'').trim())errors.push('Option '+String.fromCharCode(65+j)+' is missing')});
       if(!(r.answerIndex>=0&&r.answerIndex<4))errors.push('Correct answer is missing or invalid');
-      if(!r.explanation)warnings.push('Explanation is missing'); if(r.confidence==='low')errors.push('Low confidence — manual review required');
+      if(!r.explanation)warnings.push('Explanation is missing'); if(r.confidence==='low')errors.push('Low confidence, manual review required');
       const exact=existing.find(q=>normalizeQ(q.question)===normalizeQ(r.question)); const internal=seen.find(x=>normalizeQ(x.question)===normalizeQ(r.question)); const near=!exact&&!internal&&existing.find(q=>nearDuplicate(q.question,r.question));
-      if(near) warnings.push('Possible near-duplicate — review manually; it will not be auto-skipped.');
+      if(near) warnings.push('Possible near-duplicate, review manually; it will not be auto-skipped.');
       const duplicate=exact||internal; seen.push(r);
       return {raw:r,index:i,errors,warnings,duplicate:duplicate?{id:duplicate.id||null,type:'exact',question:duplicate.question}:null,action:'keep',selected:!errors.length,confidence:r.confidence}
     })
@@ -5387,7 +5387,7 @@ window.__admissionBootPromise.catch(error => console.error('[Admission Hub] boot
       await loadCache();closeModal();toast(done+' questions saved safely');FEATURE.screen='success';FEATURE.saved=done;render();
     }catch(error){console.error('[Admission Hub] Smart Formatter import failed',error);toast(`Import failed: ${error?.message||error}`)}finally{FEATURE.saving=false}
   }
-  function renderFormatter(){const subs=[...CACHE.subjects].sort((a,b)=>a.order-b.order), roots=parserRootTopics(FEATURE.subjectId||subs[0]?.id||''), subtopics=parserLeafTopics(FEATURE.rootTopicId);const previewStart=FEATURE.topicId?nextQuestionNumberForTopic(FEATURE.topicId):1;if(FEATURE.screen==='home')return renderShell(`<div class="card phase5-panel"><div class="explorer-kicker">Phase 5 · deterministic preprocessing</div><div class="explorer-title">Smart Formatter 2.0</div><div class="explorer-subtitle">Raw Questions → layered detection → safe standard output → existing parser/storage. AI is optional and never required.</div><div class="formatter-step"><b>1</b><span>Numbering, option, answer, explanation, and boundary detection.</span></div><div class="formatter-step"><b>2</b><span>Preserves option order and answer mapping; low confidence never auto-saves.</span></div><div class="formatter-step"><b>3</b><span>Preview, duplicate decisions, manual correction, and chunked IndexedDB save.</span></div></div><div class="card"><label class="flabel" for="p5Raw">Paste raw questions</label><textarea id="p5Raw" style="min-height:280px" placeholder="Q1. Question text\nA. First option\nB. Second option\nC. Third option\nD. Fourth option\nAnswer: B\nExplanation: Why B is correct"></textarea><div class="row between" style="margin-top:10px"><span id="p5Progress" class="muted">Auto-detects JSON, plain text, or HTML-like input.</span><button class="btn sm" onclick="p5Start()">Detect & format</button></div></div>`,{title:'Smart Formatter',back:"navigate('import-questions')"});if(FEATURE.screen==='success')return renderShell(`<div class="card phase5-panel" style="text-align:center"><div style="font-size:calc(36px * var(--ah-ts,1))">✓</div><div class="big">${FEATURE.saved||0} questions saved</div><div class="muted" style="margin-top:6px">Existing Question Bank and exam behavior were preserved.</div></div><button class="btn" onclick="FEATURE.screen='home';render()">Format more</button>`,{title:'Formatter complete',back:"navigate('question-bank')"});const st=formatterStats();return renderShell(`<div class="card"><div class="row between"><div><div class="explorer-kicker">Detected format</div><b>${FEATURE.format.toUpperCase()}</b></div><span class="pill">${st.total} items</span></div><div class="phase5-grid three" style="margin-top:12px"><div class="phase5-kpi"><b>${st.formatted}</b><span>Formatted</span></div><div class="phase5-kpi"><b>${st.review}</b><span>Needs review</span></div><div class="phase5-kpi"><b>${st.failed}</b><span>Failed</span></div></div><div class="muted" style="margin-top:8px">${st.duplicates} exact/near duplicates detected · ${esc5(FEATURE.format)} detection is rule-based. Current mode: <b>${FEATURE.dupStrategy==='replace'?'Replace exact':'Import duplicates as new'}</b>.</div></div><div class="card"><label class="flabel">Smart destination</label><select onchange="p5SelectSubject(this.value)">${subs.map(s=>`<option value="${s.id}" ${(FEATURE.subjectId||subs[0]?.id)===s.id?'selected':''}>${esc5(s.name)}</option>`).join('')}</select><label class="flabel">Topic</label><select onchange="p5SelectTopic(this.value)"><option value="">Select Topic</option>${roots.map(t=>`<option value="${t.id}" ${FEATURE.rootTopicId===t.id?'selected':''}>${esc5(t.name)}</option>`).join('')}</select><label class="flabel">Sub-topic</label><select onchange="p5SelectSubTopic(this.value)" ${FEATURE.rootTopicId?'':'disabled'}><option value="">Select Sub-topic</option>${subtopics.map(t=>`<option value="${t.id}" ${FEATURE.topicId===t.id?'selected':''}>${esc5(t.name)}</option>`).join('')}</select><button class="btn secondary sm" style="margin-top:10px" onclick="p5AddSubTopic()" ${FEATURE.rootTopicId?'':'disabled'}>+ Add Sub-topic</button><div class="row wrap" style="margin-top:10px"><button class="chip active" onclick="FEATURE.dupStrategy='keep';render()">Import duplicates as new</button><button class="chip ${FEATURE.dupStrategy==='replace'?'active':''}" onclick="FEATURE.dupStrategy='replace';render()">Replace exact</button></div></div><div class="h2">Review before save</div>${FEATURE.items.slice(0,80).map((x,i)=>`<article class="card ${x.errors.length?'phase5-panel danger':x.duplicate?'phase5-panel warn':'phase5-panel'}"><div class="row between"><label><input type="checkbox" ${x.selected?'checked':''} onchange="FEATURE.items[${i}].selected=this.checked"> Q${previewStart+i}</label><span class="${x.confidence==='high'?'confidence-high':x.confidence==='medium'?'confidence-medium':'confidence-low'}">${x.confidence} confidence</span></div><div style="font-weight:700;margin-top:6px">${esc5(x.raw.question||'(missing)')}</div><div class="muted" style="margin-top:5px">${x.raw.options.map((o,j)=>String.fromCharCode(65+j)+'. '+esc5(o||'—')+(j===x.raw.answerIndex?' ✓':'')).join(' · ')}</div>${x.errors.map(e=>`<div class="errbox">${esc5(e)}</div>`).join('')}${x.warnings.map(w=>`<div class="muted" style="margin-top:4px">Warning: ${esc5(w)}</div>`).join('')}${x.duplicate?`<div class="muted" style="margin-top:4px">Duplicate (${x.duplicate.type}) of: ${esc5(x.duplicate.question)}</div>`:''}<button class="btn ghost sm" style="margin-top:8px" onclick="p5Fix(${i})">Manual correction</button></article>`).join('')}${FEATURE.items.length>80?`<div class="muted">Showing first 80 of ${FEATURE.items.length}; all items are included in validation/save.</div>`:''}<div class="row" style="position:sticky;bottom:calc(74px + var(--safe-b));background:var(--bg);padding:10px 0"><button class="btn ghost" style="flex:1" onclick="FEATURE.screen='home';render()">Back</button><button class="btn" style="flex:1" onclick="p5Save()">Save all valid questions</button></div>`,{title:'Formatter preview',back:"navigate('import-questions')"})}
+  function renderFormatter(){const subs=[...CACHE.subjects].sort((a,b)=>a.order-b.order), roots=parserRootTopics(FEATURE.subjectId||subs[0]?.id||''), subtopics=parserLeafTopics(FEATURE.rootTopicId);const previewStart=FEATURE.topicId?nextQuestionNumberForTopic(FEATURE.topicId):1;if(FEATURE.screen==='home')return renderShell(`<div class="card phase5-panel"><div class="explorer-kicker">Phase 5 · deterministic preprocessing</div><div class="explorer-title">Smart Formatter 2.0</div><div class="explorer-subtitle">Raw Questions → layered detection → safe standard output → existing parser/storage. AI is optional and never required.</div><div class="formatter-step"><b>1</b><span>Numbering, option, answer, explanation, and boundary detection.</span></div><div class="formatter-step"><b>2</b><span>Preserves option order and answer mapping; low confidence never auto-saves.</span></div><div class="formatter-step"><b>3</b><span>Preview, duplicate decisions, manual correction, and chunked IndexedDB save.</span></div></div><div class="card"><label class="flabel" for="p5Raw">Paste raw questions</label><textarea id="p5Raw" style="min-height:280px" placeholder="Q1. Question text\nA. First option\nB. Second option\nC. Third option\nD. Fourth option\nAnswer: B\nExplanation: Why B is correct"></textarea><div class="row between" style="margin-top:10px"><span id="p5Progress" class="muted">Auto-detects JSON, plain text, or HTML-like input.</span><button class="btn sm" onclick="p5Start()">Detect & format</button></div></div>`,{title:'Smart Formatter',back:"navigate('import-questions')"});if(FEATURE.screen==='success')return renderShell(`<div class="card phase5-panel" style="text-align:center"><div style="font-size:calc(36px * var(--ah-ts,1))">✓</div><div class="big">${FEATURE.saved||0} questions saved</div><div class="muted" style="margin-top:6px">Existing Question Bank and exam behavior were preserved.</div></div><button class="btn" onclick="FEATURE.screen='home';render()">Format more</button>`,{title:'Formatter complete',back:"navigate('question-bank')"});const st=formatterStats();return renderShell(`<div class="card"><div class="row between"><div><div class="explorer-kicker">Detected format</div><b>${FEATURE.format.toUpperCase()}</b></div><span class="pill">${st.total} items</span></div><div class="phase5-grid three" style="margin-top:12px"><div class="phase5-kpi"><b>${st.formatted}</b><span>Formatted</span></div><div class="phase5-kpi"><b>${st.review}</b><span>Needs review</span></div><div class="phase5-kpi"><b>${st.failed}</b><span>Failed</span></div></div><div class="muted" style="margin-top:8px">${st.duplicates} exact/near duplicates detected · ${esc5(FEATURE.format)} detection is rule-based. Current mode: <b>${FEATURE.dupStrategy==='replace'?'Replace exact':'Import duplicates as new'}</b>.</div></div><div class="card"><label class="flabel">Smart destination</label><select onchange="p5SelectSubject(this.value)">${subs.map(s=>`<option value="${s.id}" ${(FEATURE.subjectId||subs[0]?.id)===s.id?'selected':''}>${esc5(s.name)}</option>`).join('')}</select><label class="flabel">Topic</label><select onchange="p5SelectTopic(this.value)"><option value="">Select Topic</option>${roots.map(t=>`<option value="${t.id}" ${FEATURE.rootTopicId===t.id?'selected':''}>${esc5(t.name)}</option>`).join('')}</select><label class="flabel">Sub-topic</label><select onchange="p5SelectSubTopic(this.value)" ${FEATURE.rootTopicId?'':'disabled'}><option value="">Select Sub-topic</option>${subtopics.map(t=>`<option value="${t.id}" ${FEATURE.topicId===t.id?'selected':''}>${esc5(t.name)}</option>`).join('')}</select><button class="btn secondary sm" style="margin-top:10px" onclick="p5AddSubTopic()" ${FEATURE.rootTopicId?'':'disabled'}>+ Add Sub-topic</button><div class="row wrap" style="margin-top:10px"><button class="chip active" onclick="FEATURE.dupStrategy='keep';render()">Import duplicates as new</button><button class="chip ${FEATURE.dupStrategy==='replace'?'active':''}" onclick="FEATURE.dupStrategy='replace';render()">Replace exact</button></div></div><div class="h2">Review before save</div>${FEATURE.items.slice(0,80).map((x,i)=>`<article class="card ${x.errors.length?'phase5-panel danger':x.duplicate?'phase5-panel warn':'phase5-panel'}"><div class="row between"><label><input type="checkbox" ${x.selected?'checked':''} onchange="FEATURE.items[${i}].selected=this.checked"> Q${previewStart+i}</label><span class="${x.confidence==='high'?'confidence-high':x.confidence==='medium'?'confidence-medium':'confidence-low'}">${x.confidence} confidence</span></div><div style="font-weight:700;margin-top:6px">${esc5(x.raw.question||'(missing)')}</div><div class="muted" style="margin-top:5px">${x.raw.options.map((o,j)=>String.fromCharCode(65+j)+'. '+esc5(o||'-')+(j===x.raw.answerIndex?' ✓':'')).join(' · ')}</div>${x.errors.map(e=>`<div class="errbox">${esc5(e)}</div>`).join('')}${x.warnings.map(w=>`<div class="muted" style="margin-top:4px">Warning: ${esc5(w)}</div>`).join('')}${x.duplicate?`<div class="muted" style="margin-top:4px">Duplicate (${x.duplicate.type}) of: ${esc5(x.duplicate.question)}</div>`:''}<button class="btn ghost sm" style="margin-top:8px" onclick="p5Fix(${i})">Manual correction</button></article>`).join('')}${FEATURE.items.length>80?`<div class="muted">Showing first 80 of ${FEATURE.items.length}; all items are included in validation/save.</div>`:''}<div class="row" style="position:sticky;bottom:calc(74px + var(--safe-b));background:var(--bg);padding:10px 0"><button class="btn ghost" style="flex:1" onclick="FEATURE.screen='home';render()">Back</button><button class="btn" style="flex:1" onclick="p5Save()">Save all valid questions</button></div>`,{title:'Formatter preview',back:"navigate('import-questions')"})}
   window.p5Start=p5Start;window.p5Save=p5Save;window.p5SaveFix=p5SaveFix;window.p5Fix=p5Fix;window.p5SelectSubject=p5SelectSubject;window.p5SelectTopic=p5SelectTopic;window.p5SelectSubTopic=p5SelectSubTopic;window.p5AddSubTopic=p5AddSubTopic;window.FEATURE=FEATURE;
   renderImportHome=function(){ORIGINAL.renderImportHome();const page=document.querySelector('#app .page');if(page&&!page.querySelector('[data-smart-formatter]'))page.insertAdjacentHTML('afterbegin',`<div class="card phase5-panel" data-smart-formatter><div class="row between"><div><b>Smart Formatter 2.0</b><div class="muted">Detect and safely normalize 1000+ raw questions before the existing parser.</div></div><button class="btn sm" onclick="FEATURE.screen='home';navigate('smart-formatter')">Open</button></div></div>`)};
 
@@ -5521,7 +5521,7 @@ window.__admissionBootPromise.catch(error => console.error('[Admission Hub] boot
       document.body.classList.remove('app-booting');
       if(typeof window.__admissionRequestFinalRender==='function') window.__admissionRequestFinalRender({force:true});
       if(hasUsableScreen(app)) return;
-      const quick='<section class="card" data-admission-usable="true" style="margin-top:18px;padding:20px"><span class="pill">ADMISSION HUB</span><h1 style="font-size:calc(24px * var(--ah-ts,1));margin:14px 0 6px">আজকের প্রস্তুতি শুরু করো</h1><p class="muted" style="margin:0 0 18px">Question Bank, Exam, AI ও Progress—সব টুল এক জায়গায়।</p><div class="grid2"><button class="btn" onclick="navigate(\'question-bank\')">📚 Question Bank</button><button class="btn secondary" onclick="navigate(\'exam\')">📝 Exam</button><button class="btn secondary" onclick="navigate(\'ai\')">🤖 AI</button><button class="btn ghost" onclick="navigate(\'progress\')">📊 Progress</button></div></section>';
+      const quick='<section class="card" data-admission-usable="true" style="margin-top:18px;padding:20px"><span class="pill">ADMISSION HUB</span><h1 style="font-size:calc(24px * var(--ah-ts,1));margin:14px 0 6px">আজকের প্রস্তুতি শুরু করো</h1><p class="muted" style="margin:0 0 18px">Question Bank, Exam, AI ও Progress-সব টুল এক জায়গায়।</p><div class="grid2"><button class="btn" onclick="navigate(\'question-bank\')">📚 Question Bank</button><button class="btn secondary" onclick="navigate(\'exam\')">📝 Exam</button><button class="btn secondary" onclick="navigate(\'ai\')">🤖 AI</button><button class="btn ghost" onclick="navigate(\'progress\')">📊 Progress</button></div></section>';
       if(typeof renderShell==='function') renderShell(quick,{title:'Dashboard'});
       else app.innerHTML='<main class="page">'+quick+'</main>';
     }catch(error){console.warn('[Admission Hub] Fast usable shell skipped.',error);}
@@ -5684,7 +5684,7 @@ window.__admissionBootPromise.catch(error => console.error('[Admission Hub] boot
   const fav = word => state.favorites.some(x => norm(x.word || x) === norm(word));
   function render() {
     const r = state.result;
-    const result = r ? `<article class="p2-dict-result"><div class="p2-word-row"><div><div class="p2-kicker">FREE DICTIONARY API · STRUCTURED RESULT</div><h2>${esc(r.word)}</h2><p class="p2-phonetic">${esc(r.phonetic || 'Pronunciation unavailable')}</p></div><button class="p2-favorite ${fav(r.word)?'active':''}" onclick="window.dictionaryFinalFavorite()">${fav(r.word)?'★':'☆'} Favorite</button></div><div class="p2-dict-grid"><section><h3>বাংলা অর্থ</h3><p>${esc(r.banglaMeaning)}</p></section><section><h3>Part of speech</h3><p>${esc(r.partOfSpeech)}</p></section><section class="p2-wide"><h3>English definition</h3><p>${esc(r.definition)}</p></section><section><h3>Multiple meanings</h3>${r.meanings.length?'<ol>'+r.meanings.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol>':'<p>—</p>'}</section><section><h3>Examples</h3>${r.examples.length?r.examples.map(x=>'<p class="p2-example">“'+esc(x)+'”</p>').join(''):'<p>Example পাওয়া যায়নি।</p>'}</section><section><h3>Synonyms</h3><p>${esc(r.synonyms.length?r.synonyms.join(', '):'—')}</p></section><section><h3>Antonyms</h3><p>${esc(r.antonyms.length?r.antonyms.join(', '):'—')}</p></section></div><div class="p2-sources"><h3>Source links</h3>${r.sources.map(s=>'<a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer"><strong>'+esc(s.title)+'</strong><small>'+esc(s.source)+' · '+esc(host(s.url))+'</small></a>').join('')}</div></article>` : '';
+    const result = r ? `<article class="p2-dict-result"><div class="p2-word-row"><div><div class="p2-kicker">FREE DICTIONARY API · STRUCTURED RESULT</div><h2>${esc(r.word)}</h2><p class="p2-phonetic">${esc(r.phonetic || 'Pronunciation unavailable')}</p></div><button class="p2-favorite ${fav(r.word)?'active':''}" onclick="window.dictionaryFinalFavorite()">${fav(r.word)?'★':'☆'} Favorite</button></div><div class="p2-dict-grid"><section><h3>বাংলা অর্থ</h3><p>${esc(r.banglaMeaning)}</p></section><section><h3>Part of speech</h3><p>${esc(r.partOfSpeech)}</p></section><section class="p2-wide"><h3>English definition</h3><p>${esc(r.definition)}</p></section><section><h3>Multiple meanings</h3>${r.meanings.length?'<ol>'+r.meanings.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol>':'<p>-</p>'}</section><section><h3>Examples</h3>${r.examples.length?r.examples.map(x=>'<p class="p2-example">“'+esc(x)+'”</p>').join(''):'<p>Example পাওয়া যায়নি।</p>'}</section><section><h3>Synonyms</h3><p>${esc(r.synonyms.length?r.synonyms.join(', '):'-')}</p></section><section><h3>Antonyms</h3><p>${esc(r.antonyms.length?r.antonyms.join(', '):'-')}</p></section></div><div class="p2-sources"><h3>Source links</h3>${r.sources.map(s=>'<a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer"><strong>'+esc(s.title)+'</strong><small>'+esc(s.source)+' · '+esc(host(s.url))+'</small></a>').join('')}</div></article>` : '';
     const status = state.loading ? '<div class="p2-status">🔎 Dictionary API থেকে যাচাই করা হচ্ছে…</div>' : state.error ? '<div class="p2-error"><strong>শব্দের তথ্য পাওয়া যায়নি।</strong><p>'+esc(state.error)+'</p><button class="p2-secondary" onclick="window.dictionaryFinalRetry()">Retry</button></div>' : '';
     const recent = state.recent.slice(0,10).map(x=>'<button type="button" onclick="window.dictionaryFinalChoose('+JSON.stringify(x.word)+')"><span>'+esc(x.word)+'</span><small>'+esc(x.partOfSpeech||'English')+'</small></button>').join('');
     renderShell('<div class="p2-page"><div class="p2-head"><button class="p2-back" onclick="navigate(\'dashboard\')">← Dictionary</button><div class="p2-kicker">RELIABLE ENGLISH–BANGLA LEXICON</div><h1>Smart Dictionary</h1><p>Dictionary API থেকে pronunciation, part of speech, definitions, examples ও synonyms। বাংলা অর্থের জন্য built-in translation map ও translation fallback ব্যবহৃত হয়।</p></div><form class="p2-search" onsubmit="window.dictionaryFinalSearch(event)"><input id="p2DictInput" value="'+esc(state.query)+'" autocomplete="off" placeholder="Search any English word…" required><button class="p2-primary" type="submit" '+(state.loading?'disabled':'')+'>'+ (state.loading?'Searching…':'Search') +'</button></form>'+status+result+'<section class="p2-recent"><div class="p2-section-title"><h3>Recent searches</h3><span>Saved locally</span></div>'+(recent||'<p class="p2-muted">Searches will appear here.</p>')+'</section></div>', {topbar:false});

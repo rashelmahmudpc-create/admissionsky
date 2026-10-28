@@ -1,7 +1,19 @@
 name: Auth Foundation Guard
+permissions:
+  contents: read
 on:
   push:
     branches: [main]
+    paths:
+      - 'auth/**'
+      - 'auth-foundation.test.mjs'
+      - 'auth-foundation-chaos.test.mjs'
+      - 'auth-protection.test.mjs'
+      - '.github/workflows/auth-foundation-guard.yml'
+      - '.github/CODEOWNERS'
+      - 'docs/AUTH-*'
+      - 'docs/EMAIL-GATEWAY-*'
+      - 'package.json'
   pull_request:
     paths:
       - 'auth/**'

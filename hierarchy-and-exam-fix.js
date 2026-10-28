@@ -304,7 +304,7 @@
     const options = leafPickerOptions(subjectId);
     select.innerHTML = options.length
       ? options.map(t => `<option value="${escH(t.id)}" ${t.id === selectedTopicId ? 'selected' : ''}>${escH(t.pickerName)}</option>`).join('')
-      : '<option value="">(no topics — add one first)</option>';
+      : '<option value="">(no topics, add one first)</option>';
   }
   window.refreshTopicSelect = setTopicSelectorOptions;
 

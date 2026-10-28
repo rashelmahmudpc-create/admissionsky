@@ -1,7 +1,7 @@
 /* Email policy shared by the Worker and the client bundle.
  *
  * Owner order (2026-10-16): a throwaway inbox (temporary-mail services such as
- * temp-mail, yopmail, mailinator) must be stopped at the email field — the OTP
+ * temp-mail, yopmail, mailinator) must be stopped at the email field, the OTP
  * is never sent to one. Disposable domains change constantly, so the list below
  * is a starting denylist, not a proof: it blocks the services a student can
  * reach in one tap today. It is one source of truth, imported by the server
@@ -70,7 +70,7 @@ export function isDisposableEmail(email) {
 }
 
 // The message the student sees. Official, calm, and it names the way forward
-// rather than only refusing — a real address is always welcome.
+// rather than only refusing, a real address is always welcome.
 export const DISPOSABLE_EMAIL_MESSAGE =
   'এই ইমেইলে কোড পাঠানো সম্ভব না। শুধু Gmail, Yahoo, iCloud, Hotmail বা Outlook ইমেইল ব্যবহার করো।';
 

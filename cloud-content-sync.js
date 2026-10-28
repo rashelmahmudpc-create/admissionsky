@@ -1,4 +1,4 @@
-/* Phase 2/3 — global content cloud bridge.
+/* Phase 2/3, global content cloud bridge.
    Fast batched IDB (Android-safe). Never clear-before-write.
    control → POST /api/cloud/publish ; public ← GET /pub/content */
 (() => {
@@ -10,6 +10,14 @@
   const GLOBAL_STORES = ['subjects', 'topics', 'questions', 'vocabulary', 'vocabularyMaster'];
   const META_KEY = 'ahCloudApplied';
   const APP_HEADER = { 'X-AH-App': 'admission-hub', 'Content-Type': 'application/json' };
+  /* BUG-001: the worker no longer accepts the static header as proof on the
+     write routes. A control-role device sends the owner's admin token, which it
+     already holds for the admin pages; without one the publish is refused. */
+  const writeHeaders = () => {
+    let token = '';
+    try { token = sessionStorage.getItem('ahAdminTok') || ''; } catch (_) {}
+    return token ? { ...APP_HEADER, Authorization: 'Bearer ' + token } : APP_HEADER;
+  };
 
   const bootReady = async () => {
     if (window.__admissionBootPromise) {
@@ -111,7 +119,7 @@
     try { if (sessionStorage.getItem('ahCloudFp') === fp) return; } catch (_) {}
     publishing = true;
     try {
-      const res = await apiFetch('/api/cloud/publish', { method: 'POST', headers: APP_HEADER, body: JSON.stringify(full) });
+      const res = await apiFetch('/api/cloud/publish', { method: 'POST', headers: writeHeaders(), body: JSON.stringify(full) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || ('http-' + res.status));
       try { sessionStorage.setItem('ahCloudFp', fp); localStorage.setItem('ahCloudLastPublishAt', String(Date.now())); } catch (_) {}
@@ -153,7 +161,7 @@
   };
   /* A store whose rows are gone from the SERVER must be emptied on the device
      too. applyDoc only writes what it receives, so an emptied vocabulary bank
-     would otherwise leave the device serving its old rows forever — the pull
+     would otherwise leave the device serving its old rows forever, the pull
      would look "already applied" and every screen would keep showing words that
      no longer exist upstream. Owner-ordered vocabulary erase (2026-10-11) is
      the reason this exists. Keys absent from the document are ignored: a
@@ -188,7 +196,7 @@
        is what made the app look like it was loading for hours. Paint from the
        core stores, then hydrate the bank in the background. `applied` is
        returned so the caller saves the signature only once the bank has landed
-       too — otherwise a half-hydrated device would look up to date. */
+       too, otherwise a half-hydrated device would look up to date. */
     if (vocabularyMaster.length) return hydrateVocabularyInBackground(vocabularyMaster.filter(x => x && x.id));
     /* The bank was emptied upstream: reload the tool so a screen that is already
        open stops showing rows that no longer exist. */

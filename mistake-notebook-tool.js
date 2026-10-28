@@ -1,7 +1,7 @@
 /*
- * Mistake Notebook — Admission Hub
+ * Mistake Notebook, Admission Hub
  * সব পরীক্ষার ভুল প্রশ্ন + AI ব্যাখ্যা এক জায়গায়; exam-এর আগে revision।
- * ব্যাখ্যা AI secure proxy (admission-hub-ai-proxy) থেকে আসে — কোনো API key এখানে নেই।
+ * ব্যাখ্যা AI secure proxy (admission-hub-ai-proxy) থেকে আসে, কোনো API key এখানে নেই।
  * Explanation cache result-analysis tool-এর সাথে শেয়ার হয় (ah-explanation-cache)।
  */
 (() => {
@@ -115,7 +115,7 @@
       ${all.length ? `<div class="nb-filters">${[['active','এখনো শেখো'],['have','ব্যাখ্যা আছে'],['missing','ব্যাখ্যা নেই'],['learned','শেখা হয়েছে'],['all','সব']].map(([k, l]) => `<button class="nb-filter ${filter === k ? 'active' : ''}" onclick="MistakeNotebook.setFilter('${k}')">${l}</button>`).join('')}</div>` : ''}
       ${!all.length ? `<div class="nb-empty">এখনো কোনো ভুল প্রশ্ন জমা হয়নি।<br>পরীক্ষা দিলে ভুলগুলো এখানে একে একে জমা হতে থাকবে 📚</div>`
         : !shown.length ? `<div class="nb-empty">এই ফিল্টারে কিছু নেই।</div>`
-        : shown.map((q) => { const exp = explanationOf(q); const mem = memoryOf(q); const learned = isLearned(q); return `<article class="nb-item ${learned ? 'learned' : ''}"><div class="nb-item-head"><span class="nb-qno">${q.count > 1 ? `🔁 ${q.count} বার ভুল · ` : ''}${safe(q.subject || '')}</span>${learned ? '<span class="nb-count" style="background:#dcfce7;color:#15803d">✅ শেখা</span>' : ''}</div><div class="nb-tags">${q.topic ? `<span>${safe(q.topic)}</span>` : ''}<span>${q.date ? new Date(q.date).toLocaleDateString('bn-BD') : ''}</span></div><p class="nb-q">${safe(q.prompt)}</p><div class="nb-ans"><b>তোমার উত্তর:</b> ${safe(q.selectedIndex >= 0 ? optText(q, q.selectedIndex) : 'উত্তর দেওয়া হয়নি')} · <b>সঠিক উত্তর:</b> ${safe(optText(q, q.answerIndex) || 'তথ্য নেই')}</div>${exp ? `<div class="nb-exp"><b>💡 AI ব্যাখ্যা</b>${safe(exp)}${mem ? `<div class="nb-mem">🧠 ${safe(mem)}</div>` : ''}</div>` : `<div class="nb-none">ব্যাখ্যা এখনো নেই — উপরের “🔄 AI ব্যাখ্যা তৈরি করো” বাটনে চাপো।</div>`}<div class="nb-foot"><span class="nb-meta">📚 ${safe(q.examTitle)}</span><button class="nb-learn ${learned ? 'on' : ''}" onclick="MistakeNotebook.toggleLearned('${safe(q.id)}')">${learned ? '✅ শিখে ফেলেছি' : 'শিখে ফেলেছি চিহ্নিত করো'}</button></div></article>`; }).join('')}
+        : shown.map((q) => { const exp = explanationOf(q); const mem = memoryOf(q); const learned = isLearned(q); return `<article class="nb-item ${learned ? 'learned' : ''}"><div class="nb-item-head"><span class="nb-qno">${q.count > 1 ? `🔁 ${q.count} বার ভুল · ` : ''}${safe(q.subject || '')}</span>${learned ? '<span class="nb-count" style="background:#dcfce7;color:#15803d">✅ শেখা</span>' : ''}</div><div class="nb-tags">${q.topic ? `<span>${safe(q.topic)}</span>` : ''}<span>${q.date ? new Date(q.date).toLocaleDateString('bn-BD') : ''}</span></div><p class="nb-q">${safe(q.prompt)}</p><div class="nb-ans"><b>তোমার উত্তর:</b> ${safe(q.selectedIndex >= 0 ? optText(q, q.selectedIndex) : 'উত্তর দেওয়া হয়নি')} · <b>সঠিক উত্তর:</b> ${safe(optText(q, q.answerIndex) || 'তথ্য নেই')}</div>${exp ? `<div class="nb-exp"><b>💡 AI ব্যাখ্যা</b>${safe(exp)}${mem ? `<div class="nb-mem">🧠 ${safe(mem)}</div>` : ''}</div>` : `<div class="nb-none">ব্যাখ্যা এখনো নেই, উপরের “🔄 AI ব্যাখ্যা তৈরি করো” বাটনে চাপো।</div>`}<div class="nb-foot"><span class="nb-meta">📚 ${safe(q.examTitle)}</span><button class="nb-learn ${learned ? 'on' : ''}" onclick="MistakeNotebook.toggleLearned('${safe(q.id)}')">${learned ? '✅ শিখে ফেলেছি' : 'শিখে ফেলেছি চিহ্নিত করো'}</button></div></article>`; }).join('')}
     </div></div>`;
     shell(html);
   }
@@ -183,24 +183,26 @@
     busy = true; render();
     let ok = 0;
     try {
-      for (let i = 0; i < missing.length; i += 25) {
-        const chunk = missing.slice(i, i + 25);
-        setStatus(`AI ব্যাখ্যা আসছে… (${Math.min(i + chunk.length, missing.length)}/${missing.length}) — প্রয়োজনে Google-এ তথ্য মিলিয়ে নিচ্ছে`);
-        const payload = { schemaVersion: 'admission-hub-result-analysis-v1', result: { id: 'notebook', title: 'Mistake Notebook', examType: 'ভুল সংকলন', completedAt: new Date().toISOString() }, previousResults: [], subjectPerformance: [], topicPerformance: [], requestType: 'question_explanation_batch', explanationQuestions: chunk.map((q) => ({ id: q.id, prompt: q.prompt, options: q.options, selected: q.selectedIndex >= 0 ? optText(q, q.selectedIndex) : 'উত্তর দেওয়া হয়নি', correct: optText(q, q.answerIndex), subject: q.subject, topic: q.topic, difficulty: 'মাঝারি', status: 'wrong' })) };
-        const token = await getTurnstileToken(siteKey);
-        const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(Object.assign({}, payload, { turnstileToken: token })) });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-        const text = data.analysis || data.result || data.text || (data.runId ? await pollRun(endpoint, data.runId) : '');
-        const parsed = parseJson(text);
-        const rows = Array.isArray(parsed?.explanations) ? parsed.explanations : (parsed && parsed.questionId ? [parsed] : []);
-        const wanted = new Set(chunk.map((q) => q.id));
-        rows.forEach((row) => { if (row && wanted.has(String(row.questionId))) { const q = chunk.find((x) => String(x.id) === String(row.questionId)); if (q) EXPL[explKey(q)] = row; ok++; } });
-        saveExpl(); render(); busy = true;
-      }
-      setStatus(`✅ ${ok}টি নতুন ব্যাখ্যা যোগ হয়েছে।`);
+      /* One batch a day: the server accepts a single request and takes at most
+         30 questions in it. Sending 30 once beats looping in 25s, which spent
+         the day's only request and then failed part-way with a 429. */
+      const chunk = missing.slice(0, 30);
+      const leftOver = missing.length - chunk.length;
+      setStatus(`AI ব্যাখ্যা আসছে… (${chunk.length}/${missing.length})`);
+      const payload = { schemaVersion: 'admission-hub-result-analysis-v1', result: { id: 'notebook', title: 'Mistake Notebook', examType: 'ভুল সংকলন', completedAt: new Date().toISOString() }, previousResults: [], subjectPerformance: [], topicPerformance: [], requestType: 'question_explanation_batch', explanationQuestions: chunk.map((q) => ({ id: q.id, prompt: q.prompt, options: q.options, selected: q.selectedIndex >= 0 ? optText(q, q.selectedIndex) : 'উত্তর দেওয়া হয়নি', correct: optText(q, q.answerIndex), subject: q.subject, topic: q.topic, difficulty: 'মাঝারি', status: 'wrong' })) };
+      const token = await getTurnstileToken(siteKey);
+      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(Object.assign({}, payload, { turnstileToken: token })) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      const text = data.analysis || data.result || data.text || (data.runId ? await pollRun(endpoint, data.runId) : '');
+      const parsed = parseJson(text);
+      const rows = Array.isArray(parsed?.explanations) ? parsed.explanations : (parsed && parsed.questionId ? [parsed] : []);
+      const wanted = new Set(chunk.map((q) => q.id));
+      rows.forEach((row) => { if (row && wanted.has(String(row.questionId))) { const q = chunk.find((x) => String(x.id) === String(row.questionId)); if (q) EXPL[explKey(q)] = row; ok++; } });
+      saveExpl(); render(); busy = true;
+      setStatus(leftOver > 0 ? `✅ ${ok}টি যোগ হয়েছে। দৈনিক সীমা ১, তাই বাকি ${leftOver}টি আগামীকাল আসবে।` : `✅ ${ok}টি নতুন ব্যাখ্যা যোগ হয়েছে।`);
     } catch (e) {
-      setStatus(`ব্যাখ্যা পাওয়া যায়নি: ${e?.message || 'অজানা সমস্যা'} — পরে আবার চেষ্টা করো।`);
+      setStatus(`ব্যাখ্যা পাওয়া যায়নি: ${e?.message || 'অজানা সমস্যা'}, পরে আবার চেষ্টা করো।`);
     } finally { busy = false; render(); }
   }
 
@@ -212,7 +214,7 @@
     else setStatus('Flash test ইঞ্জিন পাওয়া যায়নি।');
   }
   function toggleLearned(id) { load(); if (LEARNED[id]) delete LEARNED[id]; else LEARNED[id] = Date.now(); saveLearned(); render(); }
-  function resetLearned() { if (!confirm('সব “শিখে ফেলেছি” চিহ্ন মুছে যাবে — নিশ্চিত?')) return; LEARNED = {}; saveLearned(); render(); }
+  function resetLearned() { if (!confirm('সব “শিখে ফেলেছি” চিহ্ন মুছে যাবে, নিশ্চিত?')) return; LEARNED = {}; saveLearned(); render(); }
   function setFilter(k) { filter = k; render(); }
 
   window.MistakeNotebook = { render, explainMissing, flashUnlearned, toggleLearned, resetLearned, setFilter };

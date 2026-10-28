@@ -1,4 +1,4 @@
-/* Profile V2 — mounts the owner's new Profile UI on the my-profile route.
+/* Profile V2, mounts the owner's new Profile UI on the my-profile route.
 
    The new design carries its own :root tokens and 17 class names that also
    exist in the app (card, row, on, chip…), so injecting it into the live DOM
@@ -66,13 +66,13 @@
     /* The frame stops where the nav begins. The app's nav is fixed at the
        bottom of the viewport and paints above this frame (#navRoot z-index
        1000, frame 5), so a frame spanning the whole viewport put the design's
-       bottom-anchored surfaces underneath it — the profile's last card, the
+       bottom-anchored surfaces underneath it, the profile's last card, the
        save bar, and every sheet's action button. Ending the frame above the
        nav clears all of them at once instead of patching each one, and the
        design's own bottom:0 means the bottom of the VISIBLE area.
 
        The height must be explicit. An iframe is a replaced element, so
-       height:auto ignores top/bottom and falls back to the intrinsic 150px —
+       height:auto ignores top/bottom and falls back to the intrinsic 150px -
        that collapsed the frame to a blank strip (owner report, 2026-10-17).
        100dvh, not 100%: the frame is fixed to the viewport, and dvh tracks the
        URL bar as it hides on a phone.
@@ -93,7 +93,7 @@
   }
 
   /* Prepare the design's document for life inside the app frame. Both changes
-     are additive — the design's own stylesheet is left untouched.
+     are additive, the design's own stylesheet is left untouched.
      The theme is handed in as a global, not as data-theme on <html>: the
      design's own boot calls applyTheme(), which removes that attribute when its
      theme is 'auto', so an attribute set here would be erased before first

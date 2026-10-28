@@ -1,4 +1,4 @@
-/* Admission Hub — P11 Adaptive Learning: insight panel.
+/* Admission Hub, P11 Adaptive Learning: insight panel.
  *
  * The visible half of P11. It feeds the student's own exam history to
  * window.AhAdaptiveEngine (see adaptive-engine.js) and shows what the engine
@@ -49,7 +49,7 @@
   const questions = () => (typeof CACHE !== 'undefined' && Array.isArray(CACHE.questions) ? CACHE.questions : []);
   const topicName = (id) => {
     const t = typeof CACHE !== 'undefined' && Array.isArray(CACHE.topics) ? CACHE.topics.find(x => x.id === id) : null;
-    return (t && t.name) || id || '—';
+    return (t && t.name) || id || '-';
   };
 
   const BAND_LABEL = { easy: 'সহজ থেকে শুরু', medium: 'মাঝারি', hard: 'কঠিন', mixed: 'মিশ্র' };
@@ -69,8 +69,8 @@
   }
 
   function speedHtml(s) {
-    const fa = s.fastAccuracy == null ? '—' : s.fastAccuracy + '%';
-    const sa = s.slowAccuracy == null ? '—' : s.slowAccuracy + '%';
+    const fa = s.fastAccuracy == null ? '-' : s.fastAccuracy + '%';
+    const sa = s.slowAccuracy == null ? '-' : s.slowAccuracy + '%';
     return `<div class="ad-row"><span class="ad-name">ধরন</span><b>${esc(SPEED_LABEL[s.profile] || s.profile)}</b></div>
       <div class="ad-row"><span class="ad-name">দ্রুত উত্তরে সঠিক</span><b>${esc(fa)}</b></div>
       <div class="ad-row"><span class="ad-name">ধীর উত্তরে সঠিক</span><b>${esc(sa)}</b></div>
@@ -89,7 +89,7 @@
     return `
       <div class="ad-hero"><small>তোমার সামগ্রিক সামর্থ্য</small><b>${o.ability || 0}%</b>
         <span class="ad-band">${esc(BAND_LABEL[o.band] || o.band)}</span></div>
-      <section class="ad-sec"><h4>টপিক — সামর্থ্য (দুর্বল আগে)</h4>${topicRows(m.topics || [])}</section>
+      <section class="ad-sec"><h4>টপিক, সামর্থ্য (দুর্বল আগে)</h4>${topicRows(m.topics || [])}</section>
       <section class="ad-sec"><h4>উত্তরের ধরন</h4>${speedHtml(m.speed || {})}</section>
       <section class="ad-sec"><h4>তোমার পড়ার ধরন</h4>${patternHtml(m.practicePattern || {})}</section>
       <button class="ad-cta" onclick="window.startAdaptivePractice && window.startAdaptivePractice()">⚡ আমার সামর্থ্য অনুযায়ী অনুশীলন</button>`;

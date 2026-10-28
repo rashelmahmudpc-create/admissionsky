@@ -175,7 +175,11 @@ t('M10-৩০. the rate limit still answers 429 with the same error code and cap
 t('M10-৩০ক. agentChat prefers the AI-state Durable Object and keeps KV as fallback',
   AGENT_SRC.includes("from './ai-state-do.mjs'")
   && AGENT_SRC.includes('const aiState = aiStateStore(env);')
-  && AGENT_SRC.includes('await aiState.consumeQuota(sendCtx.uid, cap)')
+  /* F0.1 step 4h added a request id to this call, so a chat answered by sky-ai and
+     retried by admission-gk is counted once instead of twice. The assertion follows
+     the argument rather than pinning the old literal — it is checking that the
+     Durable Object is preferred, not how many arguments it takes. */
+  && /await aiState\.consumeQuota\(sendCtx\.uid, cap[^)]*\)/.test(AGENT_SRC)
   && AGENT_SRC.includes("return getKv(env.PUB_KV, key);"));
 t('M10-৩০গ. the status endpoint reports which state store is live',
   AGENT_SRC.includes("state: aiStateStore(env) ? { store: 'durable-object'")

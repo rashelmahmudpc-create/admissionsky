@@ -1,10 +1,10 @@
-/* AdmissionSky — agent phase 1: tool runner + server tools (owner 2026-10-17).
+/* AdmissionSky, agent phase 1: tool runner + server tools (owner 2026-10-17).
  *
  * Limits for one question: at most 5 tools, at most 3 steps, 20 s in total and
  * 3 s per tool. A failing or slow tool never stops the answer; it is reported
  * as not done and the rest goes on. Every tool here is READ-only and works on
  * the caller's own data only (stats the student's own app sent with this
- * request) — no argument may name another user.
+ * request), no argument may name another user.
  *
  * Server tools: get_exam_history, analyze_weak_topics, get_app_features,
  * calculate. The other five (search_question_bank, make_quiz, grade_quiz,
@@ -112,7 +112,7 @@ export function getExamHistory(stats) {
 }
 /* Sky memory fix 2026-10-18: `stated` = weak topics the student named in chat
    (long-term memory, this student only). An empty exam record no longer means
-   "nothing is known" — the student's own words count too. */
+   "nothing is known", the student's own words count too. */
 export function analyzeWeakTopics(stats, stated) {
   const rows = stats && Array.isArray(stats.weakTopics) ? stats.weakTopics : [];
   const said = (Array.isArray(stated) ? stated : []).map((s) => String(s || '').trim().slice(0, 80)).filter(Boolean).slice(0, 3);
@@ -138,7 +138,7 @@ function statedWeakLine(r, hi) {
   const said = r.stated.map((s) => '**' + s + '**').join(', ');
   const first = topicBase(r.stated[0]);
   const lead = r.weak.length
-    ? '📝 আগে নিজেও বলেছিলে ' + said + ' দুর্বল — এটাও মাথায় রাখছি।'
+    ? '📝 আগে নিজেও বলেছিলে ' + said + ' দুর্বল, এটাও মাথায় রাখছি।'
     : (r.exams ? '🧠 ' + hi + 'পরীক্ষার ফলে এখনো দুর্বল টপিক ধরা পড়েনি, তবে আগে বলেছিলে ' + said + ' দুর্বল।'
       : '🧠 ' + hi + 'তুমি এখনো পরীক্ষা দাওনি, তবে আগে বলেছিলে ' + said + ' দুর্বল।');
   return r.weak.length ? lead : lead + ' আজ **' + first + '** দিয়ে শুরু করি? চাইলে বলো "' + first + ' থেকে কুইজ দাও"।';
@@ -219,7 +219,7 @@ export async function runTools(steps, ctx = {}) {
     const left = lim.budgetMs - (Date.now() - startedAt);
     if (left <= 0) { for (const c of calls) results.push({ name: c.name, ok: false, error: 'budget' }); break; }
     const done = await Promise.all(calls.map((c) => {
-      try { if (ctx.onStage) ctx.onStage('tool-' + c.name, 'টুল চালাচ্ছি — ' + TOOL_LABELS[c.name]); } catch (_) {}
+      try { if (ctx.onStage) ctx.onStage('tool-' + c.name, 'টুল চালাচ্ছি, ' + TOOL_LABELS[c.name]); } catch (_) {}
       return withTimeout(Promise.resolve().then(() => execOne(c, ctx)).catch(() => ({ ok: false, error: 'failed' })), Math.min(TOOL_MS[c.name] || lim.perToolMs, left))
         .then((r) => Object.assign({ name: c.name }, r));
     }));
@@ -242,7 +242,7 @@ export function renderSimpleAnswer(results, firstName) {
   for (const r of results) {
     if (r.name === 'calculate') {
       if (r.ok) parts.push('🧮 **' + toBnDigits(r.expression) + ' = ' + fmtNumber(r.value) + '**');
-      else parts.push(r.error === 'divide-by-zero' ? '⚠️ শূন্য দিয়ে ভাগ করা যায় না।' : '⚠️ হিসাবটা বুঝতে পারিনি — সংখ্যা আর চিহ্ন (+ − × ÷) দিয়ে আবার লেখো।');
+      else parts.push(r.error === 'divide-by-zero' ? '⚠️ শূন্য দিয়ে ভাগ করা যায় না।' : '⚠️ হিসাবটা বুঝতে পারিনি, সংখ্যা আর চিহ্ন (+ − × ÷) দিয়ে আবার লেখো।');
     } else if (r.name === 'get_datetime') {
       if (r.ok) parts.push(renderDateTime(r));
     } else if (r.name === 'get_exam_history') {
@@ -253,15 +253,15 @@ export function renderSimpleAnswer(results, firstName) {
         '- সঠিকতা: **' + pct(r.accuracy) + '**', '- টানা পড়া: **' + toBnDigits(r.streak) + ' দিন**', '- ভুল-তালিকায়: **' + toBnDigits(r.mistakes) + 'টা**'];
       if (r.weekly && r.prevWeekly) {
         const d = (r.weekly.accuracy | 0) - (r.prevWeekly.accuracy | 0);
-        lines.push('', d >= 0 ? '✅ গত সপ্তাহের চেয়ে সঠিকতা ' + pct(d) + ' বেড়েছে।' : '📌 গত সপ্তাহের চেয়ে সঠিকতা ' + pct(-d) + ' কমেছে — ভুল-তালিকা থেকে রিভিশন দাও।');
+        lines.push('', d >= 0 ? '✅ গত সপ্তাহের চেয়ে সঠিকতা ' + pct(d) + ' বেড়েছে।' : '📌 গত সপ্তাহের চেয়ে সঠিকতা ' + pct(-d) + ' কমেছে, ভুল-তালিকা থেকে রিভিশন দাও।');
       }
       parts.push(lines.join('\n'));
     } else if (r.name === 'analyze_weak_topics') {
       if (!r.ok) continue;
       if (r.empty) { parts.push('🧠 এখনো কোনো টপিকে যথেষ্ট প্রশ্ন দাওনি, তাই দুর্বল টপিক বলা যাচ্ছে না। কয়েকটা পরীক্ষা দিলে আমি বলে দেব।'); continue; }
       if (!r.weak.length) { parts.push(statedWeakLine(r, hi)); continue; }
-      if (r.stated) { parts.push(['🧠 **যেসব টপিকে আরো পড়া দরকার**', ''].concat(r.weak.map((w, i) => toBnDigits(i + 1) + '. ' + w.name + ' — সঠিকতা ' + pct(w.accuracy))).concat(['', statedWeakLine(r, hi), '💡 সবচেয়ে কম যেটায়, সেটা দিয়ে শুরু করো। চাইলে বলো "' + r.weak[0].name + ' থেকে কুইজ দাও"।']).join('\n')); continue; }
-      parts.push(['🧠 **যেসব টপিকে আরো পড়া দরকার**', ''].concat(r.weak.map((w, i) => toBnDigits(i + 1) + '. ' + w.name + ' — সঠিকতা ' + pct(w.accuracy))).concat(['', '💡 সবচেয়ে কম যেটায়, সেটা দিয়ে শুরু করো। চাইলে বলো "' + r.weak[0].name + ' থেকে কুইজ দাও"।']).join('\n'));
+      if (r.stated) { parts.push(['🧠 **যেসব টপিকে আরো পড়া দরকার**', ''].concat(r.weak.map((w, i) => toBnDigits(i + 1) + '. ' + w.name + ', সঠিকতা ' + pct(w.accuracy))).concat(['', statedWeakLine(r, hi), '💡 সবচেয়ে কম যেটায়, সেটা দিয়ে শুরু করো। চাইলে বলো "' + r.weak[0].name + ' থেকে কুইজ দাও"।']).join('\n')); continue; }
+      parts.push(['🧠 **যেসব টপিকে আরো পড়া দরকার**', ''].concat(r.weak.map((w, i) => toBnDigits(i + 1) + '. ' + w.name + ', সঠিকতা ' + pct(w.accuracy))).concat(['', '💡 সবচেয়ে কম যেটায়, সেটা দিয়ে শুরু করো। চাইলে বলো "' + r.weak[0].name + ' থেকে কুইজ দাও"।']).join('\n'));
     }
   }
   return parts.join('\n\n') || null;

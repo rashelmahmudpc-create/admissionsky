@@ -1,14 +1,14 @@
-/* Admission Hub — P18 official question-pattern dataset.
+/* Admission Hub, P18 official question-pattern dataset.
  *
  * The engine (admission-intel-engine.js) already analyses the student's OWN
  * practice history. This file adds the other half of "question pattern": the
- * OFFICIAL test format a university publishes for each unit — how many marks,
+ * OFFICIAL test format a university publishes for each unit, how many marks,
  * how many minutes, MCQ vs written, and the negative-marking rule.
  *
  * Only values taken from a citable source appear here. Every entry carries the
  * `source` it came from and a `status`, so a provisional figure is never shown
  * as confirmed. A university or unit that is absent is reported by the engine
- * as "no official data" — it is NEVER guessed (MASTER_KNOWLEDGE_BASE §43 "never
+ * as "no official data", it is NEVER guessed (MASTER_KNOWLEDGE_BASE §43 "never
  * assume all universities use identical patterns" and §120 "do not invent
  * negative-marking values").
  *
@@ -41,8 +41,8 @@
       // All units except Fine Arts and IBA: 60-mark MCQ (45 min) + 40-mark
       // written (45 min) = 90 minutes total. (Prothom Alo, DU 2025-26 decision.)
       default: P({ total: 100, mcq: 60, written: 40, mcqMinutes: 45, writtenMinutes: 45, negative: 0.25, source: SOURCES.pa, status: 'confirmed' }),
-      E: P({ total: 100, mcq: 40, written: 60, mcqMinutes: 30, writtenMinutes: 60, negative: 0.25, source: SOURCES.pa, status: 'confirmed', note: 'চারুকলা ইউনিট — ৬০ নম্বরের অঙ্কন পরীক্ষা।' }),
-      F: P({ total: 100, mcq: 70, written: 30, mcqMinutes: 90, writtenMinutes: 30, negative: 0.25, source: SOURCES.pa, status: 'confirmed', note: 'আইবিএ ইউনিট — ৩০ নম্বরের বর্ণনামূলক অংশ।' })
+      E: P({ total: 100, mcq: 40, written: 60, mcqMinutes: 30, writtenMinutes: 60, negative: 0.25, source: SOURCES.pa, status: 'confirmed', note: 'চারুকলা ইউনিট, ৬০ নম্বরের অঙ্কন পরীক্ষা।' }),
+      F: P({ total: 100, mcq: 70, written: 30, mcqMinutes: 90, writtenMinutes: 30, negative: 0.25, source: SOURCES.pa, status: 'confirmed', note: 'আইবিএ ইউনিট, ৩০ নম্বরের বর্ণনামূলক অংশ।' })
     },
     // 100 marks, 80 questions, one hour, MCQ only, 0.25 deducted per wrong.
     ru: { default: P({ total: 100, mcq: 100, mcqQuestions: 80, duration: 60, negative: 0.25, pass: 40, source: SOURCES.pa, status: 'confirmed' }) },
@@ -55,7 +55,7 @@
     ju: { default: P({ total: 80, mcq: 80, pass: 28, source: SOURCES.pa, status: 'partial' }) },
     // Per the SUST prospectus, total marks and question counts differ by unit,
     // so only the negative-marking rule is claimed here.
-    su: { default: P({ negative: 0.2, source: SOURCES.sust, status: 'partial', note: 'ইউনিটভেদে মোট নম্বর ও প্রশ্নসংখ্যা ভিন্ন — অফিসিয়াল প্রসপেক্টাস দেখো।' }) },
+    su: { default: P({ negative: 0.2, source: SOURCES.sust, status: 'partial', note: 'ইউনিটভেদে মোট নম্বর ও প্রশ্নসংখ্যা ভিন্ন, অফিসিয়াল প্রসপেক্টাস দেখো।' }) },
     // Single admission test (no unit system): 100-mark MCQ, two hours,
     // Math 35 / Physics 35 / Chemistry 15 / English 15, 0.25 per wrong.
     iut: { default: P({ total: 100, mcq: 100, duration: 120, negative: 0.25, source: SOURCES.pa, status: 'confirmed', note: 'গণিত ৩৫, পদার্থবিজ্ঞান ৩৫, রসায়ন ১৫, ইংরেজি ১৫।' }) }

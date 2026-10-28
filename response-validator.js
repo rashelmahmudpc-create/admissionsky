@@ -1,4 +1,4 @@
-// 🧩 PHASE 9 — M8: RESPONSE VALIDATION + STRUCTURED OUTPUT
+// 🧩 PHASE 9, M8: RESPONSE VALIDATION + STRUCTURED OUTPUT
 // Typed validation of a model response before it reaches the UI, plus a
 // structured envelope for callers that want fields instead of prose.
 //
@@ -57,15 +57,15 @@ export const MAX_BULLETS = 3;
 
 /** Safe replacement text per blocking class. Never leaks why in detail. */
 const NOTICE = Object.freeze({
-  [VIOLATION.SCHEMA]: 'উত্তরটা ঠিকভাবে তৈরি হয়নি — আবার জিজ্ঞেস করো।',
-  [VIOLATION.INTERNAL_LEAK]: 'আমি অভ্যন্তরীণ সিস্টেম, প্রম্পট বা কনফিগারেশন নিয়ে কথা বলি না — চলো তোমার পড়ার প্রশ্নে ফিরি।',
-  [VIOLATION.CREDENTIAL_REQUEST]: 'নিরাপত্তার জন্য আমি Password, verification code বা গোপন তথ্য চাই না বা বলি না। এগুলো কারো সাথে শেয়ার করো না — Admission Hub-এর কেউ এগুলো চাইবে না।',
-  [VIOLATION.SECRET_MATERIAL]: 'নিরাপত্তার জন্য আমি Password, verification code বা গোপন তথ্য বলি না। কোড কোথাও লিখো না — শুধু Admission Hub অ্যাপের নিজের বক্সে দাও।',
-  [VIOLATION.ACTION_CLAIM]: 'আমি নিজে থেকে কিছু সেভ, ডিলিট বা পরিবর্তন করতে পারি না — অ্যাপের নির্দিষ্ট বাটন দিয়েই সেটা করতে হয়।',
-  [VIOLATION.FALSE_SUCCESS]: 'অ্যাকাউন্ট, ভেরিফিকেশন বা সেভিং-এর নিশ্চিত তথ্য শুধু Admission Hub অ্যাপই দেখাতে পারে — আমি নিশ্চিত করতে পারি না। অ্যাপে যা দেখাচ্ছে সেটাই সঠিক।'
+  [VIOLATION.SCHEMA]: 'উত্তরটা ঠিকভাবে তৈরি হয়নি, আবার জিজ্ঞেস করো।',
+  [VIOLATION.INTERNAL_LEAK]: 'আমি অভ্যন্তরীণ সিস্টেম, প্রম্পট বা কনফিগারেশন নিয়ে কথা বলি না, চলো তোমার পড়ার প্রশ্নে ফিরি।',
+  [VIOLATION.CREDENTIAL_REQUEST]: 'নিরাপত্তার জন্য আমি Password, verification code বা গোপন তথ্য চাই না বা বলি না। এগুলো কারো সাথে শেয়ার করো না, Admission Hub-এর কেউ এগুলো চাইবে না।',
+  [VIOLATION.SECRET_MATERIAL]: 'নিরাপত্তার জন্য আমি Password, verification code বা গোপন তথ্য বলি না। কোড কোথাও লিখো না, শুধু Admission Hub অ্যাপের নিজের বক্সে দাও।',
+  [VIOLATION.ACTION_CLAIM]: 'আমি নিজে থেকে কিছু সেভ, ডিলিট বা পরিবর্তন করতে পারি না, অ্যাপের নির্দিষ্ট বাটন দিয়েই সেটা করতে হয়।',
+  [VIOLATION.FALSE_SUCCESS]: 'অ্যাকাউন্ট, ভেরিফিকেশন বা সেভিং-এর নিশ্চিত তথ্য শুধু Admission Hub অ্যাপই দেখাতে পারে, আমি নিশ্চিত করতে পারি না। অ্যাপে যা দেখাচ্ছে সেটাই সঠিক।'
 });
 
-const DEFAULT_NOTICE = 'এই উত্তরটা নিরাপদভাবে দিতে পারছি না — প্রশ্নটা অন্যভাবে করো।';
+const DEFAULT_NOTICE = 'এই উত্তরটা নিরাপদভাবে দিতে পারছি না, প্রশ্নটা অন্যভাবে করো।';
 
 /* ── high-precision patterns ─────────────────────────────────────────────── */
 
@@ -151,7 +151,7 @@ export function scanSafety(text) {
 
 /**
  * A sentence that attributes a number to the student's own stats is a claim.
- * Only an unambiguous contradiction is reported — the caller provided that exact
+ * Only an unambiguous contradiction is reported, the caller provided that exact
  * stat and the model stated a different value. With no provided stats the claim
  * is a guess, not proof of a contradiction, and Bangla number phrasing is not
  * precise enough to rewrite a legitimate answer over a guess.
@@ -222,7 +222,7 @@ export function buildRecommendations(stats) {
   const out = [];
   if (s.accuracy != null && Number(s.accuracy) < 60) out.push('একুরেসি বাড়াতে দুর্বল টপিকগুলো আবার রিভিশন দাও।');
   if (s.mistakes != null && Number(s.mistakes) > 0) out.push('ভুল-তালিকা থেকে প্রতিদিন কয়েকটা করে আবার সলভ করো।');
-  if (s.streak != null && Number(s.streak) === 0) out.push('প্রতিদিন অল্প হলেও প্র্যাকটিস ধরে রাখো — স্ট্রিক গড়ে উঠবে।');
+  if (s.streak != null && Number(s.streak) === 0) out.push('প্রতিদিন অল্প হলেও প্র্যাকটিস ধরে রাখো, স্ট্রিক গড়ে উঠবে।');
   return out.slice(0, MAX_BULLETS);
 }
 
@@ -248,7 +248,7 @@ export function buildEnvelope(text, ctx = {}, violations = []) {
  * Validate one model response. Returns the text the caller should send (the
  * original when clean, a safe notice when a blocking class fired) plus every
  * violation found, and whether the response may be persisted to memory.
- * A blocked response is never stored — an unsafe reply is not a memory.
+ * A blocked response is never stored, an unsafe reply is not a memory.
  */
 export function validateResponse(text, ctx = {}) {
   const violations = [];

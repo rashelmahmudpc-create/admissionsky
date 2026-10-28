@@ -1,8 +1,8 @@
-// 🚨 PHASE 19 — error monitoring (the P19 gap: "monitoring/error-tracking").
+// 🚨 PHASE 19, error monitoring (the P19 gap: "monitoring/error-tracking").
 //
 // The public Worker's fetch() already ends in a catch that turns a thrown error
 // into a JSON 500. That reply told the *caller* something went wrong and told
-// *nobody else* — an uncaught route error was invisible to the owner.
+// *nobody else*, an uncaught route error was invisible to the owner.
 //
 // Two rules shape this module, copied from observability.js:
 //
@@ -12,7 +12,7 @@
 //  2. **A log entry is not a transcript.** Messages are sanitised on the way in
 //     (see sanitizeErrorText) so a credential caught inside an exception string
 //     cannot be written to KV and later read back out through the admin route.
-//     Only the path is kept, never the query string — a query can carry a token.
+//     Only the path is kept, never the query string, a query can carry a token.
 
 export const ERROR_LOG_KEY = 'errlog:v1';
 
@@ -52,7 +52,7 @@ export function sanitizeErrorText(text) {
 
 /**
  * The identity of an error, for grouping repeats. The same route failing the
- * same way 500 times is one kind with count 500, not 500 entries — a bounded
+ * same way 500 times is one kind with count 500, not 500 entries, a bounded
  * log has to group or a loop would evict everything else.
  */
 export function errorSignature(path, message) {
@@ -96,7 +96,7 @@ export function appendError(log, entry) {
   return list.slice(0, MAX_KINDS);
 }
 
-/** Total failures across every kind — the honest "how many" for the owner. */
+/** Total failures across every kind, the honest "how many" for the owner. */
 export function totalErrors(log) {
   return (Array.isArray(log) ? log : []).reduce((n, e) => n + (Number(e?.count) || 0), 0);
 }

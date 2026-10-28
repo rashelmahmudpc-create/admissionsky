@@ -12,8 +12,8 @@ t('dashboard-v2.js defer-লোড (?v=dash2)', H.includes('<script defer src=".
 t('dashboard-v2.css link (?v=dash2)', H.includes('<link rel="stylesheet" href="./dashboard-v2.css?v=dash2f13-theme">'));
 t('sw APP_SHELL-এ dashboard-v2 (js+css)', SW.includes("'./dashboard-v2.js?v=dash2f18-chrome'") && SW.includes("'./dashboard-v2.css?v=dash2f13-theme'"));
 
-t('sw BUILD_ID v350-notes-screen-v2', SW.includes("const BUILD_ID = 'v350-notes-screen-v2'"));
-t('index sw-marker v348', H.includes("const expectedSwVersion = 'v350-notes-screen-v2'") && H.includes('admission-hub-shell-v350-notes-screen-v2'));
+t('sw BUILD_ID v364-sky-goal', SW.includes("const BUILD_ID = 'v364-sky-goal'"));
+t('index sw-marker v348', H.includes("const expectedSwVersion = 'v364-sky-goal'") && H.includes('admission-hub-shell-v364-sky-goal'));
 
 /* ২ — ১৪ মডিউল (মালিকের নতুন ডিজাইন: Scholar Dashboard 3) */
 t('১ Personal Header (avatar+তারিখ+🔔)', V2.includes('id="greet"') && V2.includes('id="today"') && V2.includes('id="themeBtn"') && V2.includes('iconbtn'));

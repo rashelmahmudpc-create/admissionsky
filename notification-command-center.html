@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
+<!-- Internal admin preview: reachable for the owner, but it was indexable and
+     carried no robots meta at all, so it could be crawled like a public page. -->
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
 <title>AdmissionHub · Notification Command Center</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1073,7 +1077,7 @@ img,svg{max-width:100%}
 "use strict";
 (function(){
 /* ============================================================
-   ICONS — inline SVG only
+   ICONS, inline SVG only
    ============================================================ */
 const S = (d,extra) => '<svg class="ns-ico" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"'+(extra||'')+'>'+d+'</svg>';
 const ICONS = {
@@ -1167,7 +1171,7 @@ function ic(name,size,cls){
 }
 
 /* ============================================================
-   I18N — every user-facing string, bn + en
+   I18N, every user-facing string, bn + en
    ============================================================ */
 const T = {
   appName:{bn:"অ্যাডমিশনহাব",en:"AdmissionHub"},
@@ -1200,9 +1204,9 @@ const T = {
   chat_new:{bn:"নতুন চ্যাট",en:"New chat"},
   chat_send:{bn:"পাঠান",en:"Send"},
   chat_greeting:{bn:"আমি কী প্রস্তুত করব?",en:"What should I prepare?"},
-  chat_greeting_sub:{bn:"নোটিফিকেশন, ক্যাম্পেইন, অডিয়েন্স বা অ্যানালিটিক্স — শুধু লিখুন। শেষ পাঠানোর সিদ্ধান্ত আপনার।",en:"Notifications, campaigns, audiences or analytics — just type. The final send stays with you."},
+  chat_greeting_sub:{bn:"নোটিফিকেশন, ক্যাম্পেইন, অডিয়েন্স বা অ্যানালিটিক্স, শুধু লিখুন। শেষ পাঠানোর সিদ্ধান্ত আপনার।",en:"Notifications, campaigns, audiences or analytics, just type. The final send stays with you."},
   chat_started_body:{bn:"বুঝেছি। ধাপে ধাপে এগোচ্ছি।",en:"Understood. Working through it step by step."},
-  chat_prepared_body:{bn:"কনফিগারেশন প্রস্তুত — নিচে সারসংক্ষেপ। অনুমোদন আপনার হাতে।",en:"Configuration is prepared — summary below. Approval is yours."},
+  chat_prepared_body:{bn:"কনফিগারেশন প্রস্তুত, নিচে সারসংক্ষেপ। অনুমোদন আপনার হাতে।",en:"Configuration is prepared, summary below. Approval is yours."},
   chat_open_composer:{bn:"কম্পোজারে খুলুন",en:"Open in composer"},
   chat_review_approve:{bn:"পর্যালোচনা ও অনুমোদন",en:"Review & approve"},
   chat_s1_t:{bn:"৭ দিনের রিমাইন্ডার ক্যাম্পেইন বানাও",en:"Build a 7-day reminder campaign"},
@@ -1233,10 +1237,10 @@ const T = {
   ai_log:{bn:"AI কার্যক্রম",en:"AI activity"},
   ai_no_authority:{bn:"AI কখনও নিজে থেকে পাঠাতে পারে না। শেষ পাঠানোর সিদ্ধান্ত শুধু অ্যাডমিনের।",en:"The AI can never send on its own. Only an administrator makes the final send decision."},
   approval_title:{bn:"অ্যাডমিন অনুমোদন",en:"Administrator approval"},
-  approval_ready_sub:{bn:"কনফিগারেশন প্রস্তুত — পর্যালোচনা করে অনুমোদন দিন",en:"Configuration is ready — review and approve"},
-  approval_approved_sub:{bn:"অনুমোদিত — এখন পাঠানো যাবে",en:"Approved — ready to send"},
-  approval_blocked_sub:{bn:"ব্লক করা হয়েছে — সমস্যা ঠিক করুন",en:"Blocked — fix the issues first"},
-  approval_draft_sub:{bn:"ড্রাফট — অনুমোদনের জন্য তথ্য প্রয়োজন",en:"Draft — needs information before approval"},
+  approval_ready_sub:{bn:"কনফিগারেশন প্রস্তুত, পর্যালোচনা করে অনুমোদন দিন",en:"Configuration is ready, review and approve"},
+  approval_approved_sub:{bn:"অনুমোদিত, এখন পাঠানো যাবে",en:"Approved, ready to send"},
+  approval_blocked_sub:{bn:"ব্লক করা হয়েছে, সমস্যা ঠিক করুন",en:"Blocked, fix the issues first"},
+  approval_draft_sub:{bn:"ড্রাফট, অনুমোদনের জন্য তথ্য প্রয়োজন",en:"Draft, needs information before approval"},
   gate_prepared:{bn:"AI প্রস্তুত",en:"AI prepared"},
   gate_validated:{bn:"ভ্যালিডেশন",en:"Validated"},
   gate_approved:{bn:"অ্যাডমিন অনুমোদিত",en:"Admin approved"},
@@ -1254,7 +1258,7 @@ const T = {
   test_send_to:{bn:"কোথায় পাঠাবেন",en:"Deliver to"},
   test_send_go:{bn:"টেস্ট পাঠান",en:"Send test"},
   test_sent_ok:{bn:"টেস্ট পাঠানো হয়েছে",en:"Test sent"},
-  test_sent_desc:{bn:"শুধু আপনার ডিভাইসে পৌঁছেছে — কোনো শিক্ষার্থীকে নয়।",en:"Delivered to your device only — not to students."},
+  test_sent_desc:{bn:"শুধু আপনার ডিভাইসে পৌঁছেছে, কোনো শিক্ষার্থীকে নয়।",en:"Delivered to your device only, not to students."},
   save_draft:{bn:"ড্রাফট সংরক্ষণ",en:"Save draft"},
   save_template:{bn:"টেমপ্লেট হিসেবে সংরক্ষণ",en:"Save as template"},
   duplicate:{bn:"ডুপ্লিকেট",en:"Duplicate"},
@@ -1282,7 +1286,7 @@ const T = {
   saved_ok:{bn:"সংরক্ষিত",en:"Saved"},
   saved_desc:{bn:"ড্রাফট স্বয়ংক্রিয়ভাবে সংরক্ষিত হয়েছে।",en:"Draft autosaved."},
   sent_sim_title:{bn:"সিমুলেশন সম্পন্ন",en:"Simulation complete"},
-  sent_sim_desc:{bn:"SAMPLE ডেলিভারি — কোনো প্রকৃত পুশ পাঠানো হয়নি।",en:"SAMPLE delivery — no real push was sent."},
+  sent_sim_desc:{bn:"SAMPLE ডেলিভারি, কোনো প্রকৃত পুশ পাঠানো হয়নি।",en:"SAMPLE delivery, no real push was sent."},
   offline_title:{bn:"ডেলিভারি সেবা অফলাইন",en:"Delivery service offline"},
   offline_desc:{bn:"পুশ ও SMS এখন অনুপলব্ধ। ড্রাফট সংরক্ষিত থাকবে এবং কিউ আটকে থাকবে।",en:"Push and SMS are unavailable. Drafts are preserved and the queue is held."},
   offline_recheck:{bn:"আবার যাচাই করুন",en:"Recheck"},
@@ -1409,7 +1413,7 @@ const T = {
   aud_breakdown_uni:{bn:"বিশ্ববিদ্যালয় অনুযায়ী",en:"By university"},
   aud_breakdown_engage:{bn:"এনগেজমেন্ট অনুযায়ী",en:"By engagement"},
   aud_sample:{bn:"অডিয়েন্স প্রিভিউ",en:"Audience preview"},
-  aud_sample_hint:{bn:"সংযুক্ত তথ্য — পৃথক শিক্ষার্থীর গোপন তথ্য দেখানো হয় না",en:"Aggregated only — private student data is never exposed"},
+  aud_sample_hint:{bn:"সংযুক্ত তথ্য, পৃথক শিক্ষার্থীর গোপন তথ্য দেখানো হয় না",en:"Aggregated only, private student data is never exposed"},
   aud_live_hint:{bn:"সংখ্যা সার্ভার থেকে লাইভ আসে",en:"Counts come live from the server"},
   t_need_content:{bn:"সেভ করার আগে টাইটেল ও বডি লিখুন",en:"Write a title and body before saving"},
   t_saved:{bn:"এই সেশনে টেমপ্লেট সেভ হয়েছে",en:"Template saved for this session"},
@@ -1423,9 +1427,9 @@ const T = {
   prev_expand:{bn:"বড়",en:"Large"},
   prev_compact:{bn:"ছোট",en:"Compact"},
   prev_channel:{bn:"চ্যানেল রেন্ডার",en:"Channel rendering"},
-  prev_truncated:{bn:"লম্বা বডি কেটে দেখানো হয়েছে — প্রাপকের ডিভাইসেও কাটা যাবে",en:"Long body is truncated — it will truncate on the recipient's device too"},
+  prev_truncated:{bn:"লম্বা বডি কেটে দেখানো হয়েছে, প্রাপকের ডিভাইসেও কাটা যাবে",en:"Long body is truncated, it will truncate on the recipient's device too"},
   prev_none:{bn:"কোনো কনটেন্ট নেই",en:"No content yet"},
-  prev_none_sub:{bn:"টাইটেল বা বডি লিখুন — প্রিভিউ সাথে সাথে আপডেট হবে।",en:"Write a title or body and the preview updates instantly."},
+  prev_none_sub:{bn:"টাইটেল বা বডি লিখুন, প্রিভিউ সাথে সাথে আপডেট হবে।",en:"Write a title or body and the preview updates instantly."},
   prev_personalized:{bn:"পার্সোনালাইজড নমুনা",en:"Personalized sample"},
   val_title:{bn:"যাচাই",en:"Validation"},
   val_reach:{bn:"রিচ",en:"Reach"},
@@ -1433,11 +1437,11 @@ const T = {
   val_audience_empty:{bn:"অডিয়েন্স নির্বাচন করুন",en:"Select an audience"},
   val_title_required:{bn:"টাইটেল প্রয়োজন",en:"Title is required"},
   val_body_required:{bn:"বডি প্রয়োজন",en:"Body is required"},
-  val_body_short:{bn:"বডি খুব ছোট — কমপক্ষে ১২ অক্ষর",en:"Body is too short — at least 12 characters"},
-  val_title_long:{bn:"টাইটেল ৬৫ অক্ষরের বেশি — প্রাপকের ডিভাইসে কাটা যাবে",en:"Title exceeds 65 characters — it will truncate on device"},
+  val_body_short:{bn:"বডি খুব ছোট, কমপক্ষে ১২ অক্ষর",en:"Body is too short, at least 12 characters"},
+  val_title_long:{bn:"টাইটেল ৬৫ অক্ষরের বেশি, প্রাপকের ডিভাইসে কাটা যাবে",en:"Title exceeds 65 characters, it will truncate on device"},
   val_url_ok:{bn:"টার্গেট লিংক বৈধ",en:"Target link is valid"},
   val_url_missing:{bn:"টার্গেট লিংক নেই",en:"No target link set"},
-  val_url_invalid:{bn:"টার্গেট লিংক অবৈধ — স্কিম বা ডোমেইন ঠিক করুন",en:"Target link is invalid — fix the scheme or domain"},
+  val_url_invalid:{bn:"টার্গেট লিংক অবৈধ, স্কিম বা ডোমেইন ঠিক করুন",en:"Target link is invalid, fix the scheme or domain"},
   val_vars_ok:{bn:"সব ভেরিয়েবল মিলবে",en:"All variables resolve"},
   val_vars_partial:{bn:"{n} জন প্রাপকের জন্য {{exam_date}} মিলবে না",en:"{{exam_date}} will not resolve for {n} recipients"},
   val_vars_bad:{bn:"অজানা ভেরিয়েবল: {list}",en:"Unknown variables: {list}"},
@@ -1460,7 +1464,7 @@ const T = {
   img_uploading:{bn:"আপলোড হচ্ছে…",en:"Uploading…"},
   img_uploaded:{bn:"ছবি আপলোড হয়েছে",en:"Image uploaded"},
   img_upload_failed:{bn:"ছবি আপলোড হয়নি",en:"Image upload failed"},
-  img_too_large:{bn:"ছবি অনেক বড় — ৪ MB সীমা",en:"Image too large — 4 MB limit"},
+  img_too_large:{bn:"ছবি অনেক বড়, ৪ MB সীমা",en:"Image too large, 4 MB limit"},
   img_remove:{bn:"ছবি সরান",en:"Remove image"},
   val_permission:{bn:"পারমিশন যাচাই হয়েছে",en:"Permission verified"},
   val_approval_ok:{bn:"অ্যাডমিন অনুমোদন সম্পন্ন",en:"Admin approval recorded"},
@@ -1473,14 +1477,14 @@ const T = {
   c_sub:{bn:"একাধিক বার্তার সিকোয়েন্স, টাইমলাইন সহ",en:"Multi-message sequences with a timeline"},
   c_new:{bn:"নতুন ক্যাম্পেইন",en:"New campaign"},
   preview_badge:{bn:"প্রিভিউ",en:"Preview"},
-  c_preview_note:{bn:"এটি শুধু একটি প্রিভিউ — এর পেছনে এখনো কোনো ব্যাকএন্ড নেই। ক্যাম্পেইন তৈরি বা অ্যাক্টিভেট করলে তা কেবল এই ব্রাউজারে থাকে এবং রিফ্রেশ করলে মুছে যায়। কোনো সত্যিকারের বার্তা পাঠানো হয় না।",en:"This is a preview only — there is no backend yet. Creating or activating a campaign stays in this browser only and is lost on refresh. No real messages are sent."},
+  c_preview_note:{bn:"এটি শুধু একটি প্রিভিউ, এর পেছনে এখনো কোনো ব্যাকএন্ড নেই। ক্যাম্পেইন তৈরি বা অ্যাক্টিভেট করলে তা কেবল এই ব্রাউজারে থাকে এবং রিফ্রেশ করলে মুছে যায়। কোনো সত্যিকারের বার্তা পাঠানো হয় না।",en:"This is a preview only, there is no backend yet. Creating or activating a campaign stays in this browser only and is lost on refresh. No real messages are sent."},
   c_timeline:{bn:"টাইমলাইন",en:"Timeline"},
   c_messages:{bn:"বার্তা",en:"Messages"},
   c_day:{bn:"দিন",en:"Day"},
   c_add_message:{bn:"বার্তা যোগ করুন",en:"Add message"},
   c_add_message_hint:{bn:"দিন ও কনটেন্ট নির্ধারণ করুন",en:"Set the day and content"},
   c_activate:{bn:"অ্যাক্টিভেট",en:"Activate"},
-  c_activate_note:{bn:"ক্যাম্পেইন অ্যাক্টিভেট করা একটি বড় পদক্ষেপ — অনুমোদন প্রয়োজন।",en:"Activating a campaign is a consequential action — approval required."},
+  c_activate_note:{bn:"ক্যাম্পেইন অ্যাক্টিভেট করা একটি বড় পদক্ষেপ, অনুমোদন প্রয়োজন।",en:"Activating a campaign is a consequential action, approval required."},
   c_pause:{bn:"পজ",en:"Pause"},
   c_resume:{bn:"চালু করুন",en:"Resume"},
   c_cancel:{bn:"বাতিল করুন",en:"Cancel"},
@@ -1579,7 +1583,7 @@ const T = {
   au_title:{en:"Automations",bn:"অটোমেশন"},
   au_sub:{bn:"ট্রিগার → শর্ত → অ্যাকশন",en:"Trigger → condition → action"},
   au_new:{bn:"নতুন অটোমেশন",en:"New automation"},
-  au_preview_note:{bn:"এটি শুধু একটি প্রিভিউ — এর পেছনে এখনো কোনো ব্যাকএন্ড নেই। অটোমেশন তৈরি বা চালু করলে তা কেবল এই ব্রাউজারে থাকে এবং রিফ্রেশ করলে মুছে যায়। কোনো সত্যিকারের অটোমেশন চলে না।",en:"This is a preview only — there is no backend yet. Creating or enabling an automation stays in this browser only and is lost on refresh. No real automation runs."},
+  au_preview_note:{bn:"এটি শুধু একটি প্রিভিউ, এর পেছনে এখনো কোনো ব্যাকএন্ড নেই। অটোমেশন তৈরি বা চালু করলে তা কেবল এই ব্রাউজারে থাকে এবং রিফ্রেশ করলে মুছে যায়। কোনো সত্যিকারের অটোমেশন চলে না।",en:"This is a preview only, there is no backend yet. Creating or enabling an automation stays in this browser only and is lost on refresh. No real automation runs."},
   au_trigger:{bn:"ট্রিগার",en:"Trigger"},
   au_condition:{bn:"শর্ত",en:"Condition"},
   au_action:{bn:"অ্যাকশন",en:"Action"},
@@ -1588,7 +1592,7 @@ const T = {
   au_active:{bn:"সক্রিয়",en:"Active"},
   au_paused:{bn:"পজ করা",en:"Paused"},
   au_draft:{bn:"ড্রাফট",en:"Draft"},
-  au_activate_note:{bn:"অ্যাক্টিভেট করলে স্বয়ংক্রিয়ভাবে নোটিফিকেশন পাঠানো শুরু হবে — অ্যাডমিন অনুমোদন লাগবে।",en:"Activating will start sending notifications automatically — admin approval required."},
+  au_activate_note:{bn:"অ্যাক্টিভেট করলে স্বয়ংক্রিয়ভাবে নোটিফিকেশন পাঠানো শুরু হবে, অ্যাডমিন অনুমোদন লাগবে।",en:"Activating will start sending notifications automatically, admin approval required."},
   au_activated:{bn:"সিমুলেশনে অ্যাক্টিভেট হয়েছে",en:"Activated in simulation"},
   au_activated_desc:{bn:"ট্রিগার এখন থেকে নোটিফিকেশন তৈরি করবে (SAMPLE)।",en:"The trigger will now produce notifications (SAMPLE)."},
   au_paused_ok:{bn:"অটোমেশন পজ করা হয়েছে",en:"Automation paused"},
@@ -1607,8 +1611,8 @@ const T = {
   h_recheck:{bn:"আবার যাচাই করুন",en:"Recheck now"},
   h_rechecked:{bn:"যাচাই সম্পন্ন",en:"Health check complete"},
   h_uptime:{bn:"আপটাইম (৩০ দিন)",en:"Uptime (30 days)"},
-  h_degraded_note:{bn:"ডেলিভারি সেবা ধীর — কিউ আটকে থাকতে পারে।",en:"Delivery service is slow — the queue may be held."},
-  h_banner:{bn:"একটি সেবা অনুপলব্ধ — কিছু সক্ষমতা সীমিত",en:"One service is unavailable — some capabilities are limited"},
+  h_degraded_note:{bn:"ডেলিভারি সেবা ধীর, কিউ আটকে থাকতে পারে।",en:"Delivery service is slow, the queue may be held."},
+  h_banner:{bn:"একটি সেবা অনুপলব্ধ, কিছু সক্ষমতা সীমিত",en:"One service is unavailable, some capabilities are limited"},
   sys_tokens:{bn:"অ্যাডমিন সেশন",en:"Admin session"},
   sys_signout:{bn:"সাইন আউট",en:"Sign out"},
   sys_signout_ok:{bn:"সেশন বন্ধ হয়েছে",en:"Session closed"},
@@ -1634,7 +1638,7 @@ const T = {
   auth_passkey_setup:{bn:"প্রথমবার Passkey সেটআপ করুন",en:"Set up a passkey"},
   auth_passkey_added:{bn:"Passkey যোগ হয়েছে",en:"Passkey added"},
   auth_passkey_ready:{bn:"Passkey চালু আছে",en:"Passkey is enabled"},
-  auth_passkey_enroll_hint:{bn:"টোকেন দিয়ে ঢুকে একবার Passkey যোগ করুন — এরপর টোকেন ছাড়াই ঢুকতে পারবেন।",en:"Sign in with the token once, add a passkey, then you can enter without the token."},
+  auth_passkey_enroll_hint:{bn:"টোকেন দিয়ে ঢুকে একবার Passkey যোগ করুন, এরপর টোকেন ছাড়াই ঢুকতে পারবেন।",en:"Sign in with the token once, add a passkey, then you can enter without the token."},
   audit_title:{bn:"অডিট লগ",en:"Audit log"},
   act_created:{bn:"তৈরি করেছে",en:"created"},
   act_edited:{bn:"সম্পাদনা করেছে",en:"edited"},
@@ -1669,12 +1673,12 @@ const T = {
   sim_data:{en:"SAMPLE",bn:"SAMPLE"},
   live_badge:{en:"Live",bn:"লাইভ"},
   live_empty_title:{en:"No data yet",bn:"এখনো কোনো ডেটা নেই"},
-  live_empty_desc:{bn:"প্রথম নোটিফিকেশন পাঠান — এখানে আসল সংখ্যা দেখা যাবে।",en:"Send your first notification — real numbers appear here."},
-  live_empty_bn:{bn:"প্রথম নোটিফিকেশন পাঠান — তারপর আসল সংখ্যা এখানে দেখাবে।",en:"Send your first notification — real numbers then appear here."},
+  live_empty_desc:{bn:"প্রথম নোটিফিকেশন পাঠান, এখানে আসল সংখ্যা দেখা যাবে।",en:"Send your first notification, real numbers appear here."},
+  live_empty_bn:{bn:"প্রথম নোটিফিকেশন পাঠান, তারপর আসল সংখ্যা এখানে দেখাবে।",en:"Send your first notification, real numbers then appear here."},
   live_reach_devices:{en:"Registered devices",bn:"নিবন্ধিত ডিভাইস"},
   live_no_breakdown:{en:"No breakdown available yet",bn:"এখনো কোনো ব্রেকডাউন নেই"},
   live_server_hint:{en:"Live from the server",bn:"সার্ভার থেকে লাইভ"},
-  none:{en:"—",bn:"—"},
+  none:{en:"-",bn:"-"},
   students:{bn:"শিক্ষার্থী",en:"students"},
   recipients:{bn:"প্রাপক",en:"recipients"},
   today:{bn:"আজ",en:"Today"},
@@ -1692,7 +1696,7 @@ const T = {
   expand:{bn:"খুলুন",en:"Expand"},
   select_placeholder:{bn:"বাছাই করুন…",en:"Select…"},
   type_custom_new:{bn:"নতুন কাস্টম টাইপ",en:"New custom type"},
-  type_custom_hint:{bn:"নাম ও আইকন বাছাই করুন — রঙ শুধু সহায়ক, অর্থ বহন করে না",en:"Pick a name and icon — colour is supportive, never the only signal"},
+  type_custom_hint:{bn:"নাম ও আইকন বাছাই করুন, রঙ শুধু সহায়ক, অর্থ বহন করে না",en:"Pick a name and icon, colour is supportive, never the only signal"},
   type_added:{bn:"কাস্টম টাইপ যোগ হয়েছে",en:"Custom type added"},
   type_added_desc:{bn:"কম্পোজারে নির্বাচনের জন্য উপলব্ধ।",en:"Available to select in the composer."},
   type_name:{bn:"টাইপের নাম",en:"Type name"},
@@ -1701,7 +1705,7 @@ const T = {
   est_reach_short:{bn:"আনুমানিক রিচ",en:"Est. reach"},
   ai_applied:{bn:"AI পরিবর্তন প্রয়োগ করেছে",en:"AI applied a change"},
   ai_ready:{bn:"কনফিগারেশন প্রস্তুত",en:"Configuration prepared"},
-  ai_ready_desc:{bn:"এজেন্ট সবকিছু সাজিয়েছে — অনুমোদন আপনার হাতে।",en:"The agent arranged everything — approval is yours."},
+  ai_ready_desc:{bn:"এজেন্ট সবকিছু সাজিয়েছে, অনুমোদন আপনার হাতে।",en:"The agent arranged everything, approval is yours."},
   ai_fix_url:{bn:"লিংক সমস্যা",en:"Link problem"},
   ai_dup:{bn:"ডুপ্লিকেট শনাক্ত",en:"Duplicate detected"},
   you_edited:{bn:"আপনার পরিবর্তন সংরক্ষিত",en:"Your change was saved"},
@@ -1872,10 +1876,10 @@ const SAMPLE_DATA = {
   segmentsSaved:[],
   automations:[],
   systemHealth:[
-    { key:"push_service", name:{bn:"পুশ সেবা",en:"Push service"}, icon:"bell", status:"unknown", latency:{bn:"—",en:"—"}, checked:null, affected:{bn:"সমস্ত পুশ ডেলিভারি",en:"All push delivery"}, action:{bn:"—",en:"—"}, uptime:{bn:"—",en:"—"} },
-    { key:"fcm_config", name:{bn:"FCM কনফিগ",en:"FCM config"}, icon:"bell", status:"unknown", latency:{bn:"—",en:"—"}, checked:null, affected:{bn:"পুশ টোকেন",en:"Push tokens"}, action:{bn:"—",en:"—"}, uptime:{bn:"—",en:"—"} },
-    { key:"database", name:{bn:"ডেটাবেস",en:"Database"}, icon:"database", status:"unknown", latency:{bn:"—",en:"—"}, checked:null, affected:{bn:"সমস্ত রিড ও রাইট",en:"All reads and writes"}, action:{bn:"—",en:"—"}, uptime:{bn:"—",en:"—"} },
-    { key:"auth", name:{bn:"অথেন্টিকেশন",en:"Authentication"}, icon:"shield", status:"unknown", latency:{bn:"—",en:"—"}, checked:null, affected:{bn:"অ্যাডমিন সেশন",en:"Admin sessions"}, action:{bn:"—",en:"—"}, uptime:{bn:"—",en:"—"} }
+    { key:"push_service", name:{bn:"পুশ সেবা",en:"Push service"}, icon:"bell", status:"unknown", latency:{bn:"-",en:"-"}, checked:null, affected:{bn:"সমস্ত পুশ ডেলিভারি",en:"All push delivery"}, action:{bn:"-",en:"-"}, uptime:{bn:"-",en:"-"} },
+    { key:"fcm_config", name:{bn:"FCM কনফিগ",en:"FCM config"}, icon:"bell", status:"unknown", latency:{bn:"-",en:"-"}, checked:null, affected:{bn:"পুশ টোকেন",en:"Push tokens"}, action:{bn:"-",en:"-"}, uptime:{bn:"-",en:"-"} },
+    { key:"database", name:{bn:"ডেটাবেস",en:"Database"}, icon:"database", status:"unknown", latency:{bn:"-",en:"-"}, checked:null, affected:{bn:"সমস্ত রিড ও রাইট",en:"All reads and writes"}, action:{bn:"-",en:"-"}, uptime:{bn:"-",en:"-"} },
+    { key:"auth", name:{bn:"অথেন্টিকেশন",en:"Authentication"}, icon:"shield", status:"unknown", latency:{bn:"-",en:"-"}, checked:null, affected:{bn:"অ্যাডমিন সেশন",en:"Admin sessions"}, action:{bn:"-",en:"-"}, uptime:{bn:"-",en:"-"} }
   ],
   aiActivity:[],
   audit:[],
@@ -2239,7 +2243,7 @@ function attentionItems(){
     desc:pick(paused[0].pausedReason)||t('none'),cta:{tab:'campaigns',label:'nav_campaigns'}});
   const lowQuota=(state.quota||SAMPLE_DATA.quota).dailyCap-(state.quota||SAMPLE_DATA.quota).used < (state.analytics||SAMPLE_DATA.analytics).reach.estimated;
   if(lowQuota) out.push({tone:'warn',icon:'gauge',title:{bn:'দৈনিক কোটা প্রায় শেষ',en:'Daily quota nearly used'},
-    desc:{bn:'অবশিষ্ট '+fmtNum(SAMPLE_DATA.quota.dailyCap-SAMPLE_DATA.quota.used)+' — আনুমানিক রিচের চেয়ে কম।',en:fmtNum(SAMPLE_DATA.quota.dailyCap-SAMPLE_DATA.quota.used)+' left — below the estimated reach.'},cta:{tab:'compose',label:'nav_compose'}});
+    desc:{bn:'অবশিষ্ট '+fmtNum(SAMPLE_DATA.quota.dailyCap-SAMPLE_DATA.quota.used)+', আনুমানিক রিচের চেয়ে কম।',en:fmtNum(SAMPLE_DATA.quota.dailyCap-SAMPLE_DATA.quota.used)+' left, below the estimated reach.'},cta:{tab:'compose',label:'nav_compose'}});
   out.push({tone:'coral',icon:'sparkle',title:{bn:t('ov_ai_waiting'),en:t('ov_ai_waiting')},desc:{bn:t('ai_sub'),en:t('ai_sub')},cta:{action:'open-ai',label:'ai_open'}});
   return out;
 }
@@ -2550,12 +2554,12 @@ function composeHTML(){
     '<form class="ns-composer" id="nsComposer" novalidate>'+
       stepShell('type','1','cmp_step_type',typeName(c.type),typeBody)+
       stepShell('channel','2','cmp_step_channel',c.channels.map(channelName).join(' · ')||t('none'),channelBody)+
-      stepShell('audience','3','cmp_step_audience',hasAudience?(segName(c.segmentId)||t('aud_advanced')):'—',audienceBody)+
+      stepShell('audience','3','cmp_step_audience',hasAudience?(segName(c.segmentId)||t('aud_advanced')):'-',audienceBody)+
       stepShell('content','4','cmp_step_content',title?title.slice(0,40):t('cmp_content_sum'),contentBody)+
       stepShell('media','5','cmp_step_media',(c.imageUrl?'✓ ':'')+(c.targetUrl||t('cmp_media_sum')),mediaBody)+
       stepShell('more','6','cmp_step_more',(c.utm.enabled?'UTM · ':'')+t('f_priority_'+c.priority),moreBody)+
       stepShell('schedule','7','cmp_step_schedule',c.schedule.mode==='now'?t('schedule_now'):(c.schedule.when?fmtDateTime(new Date(c.schedule.when)):t('schedule_later')),scheduleBody)+
-      stepShell('ab','8','cmp_step_ab',c.ab.enabled?'A / B':'—',abBody)+
+      stepShell('ab','8','cmp_step_ab',c.ab.enabled?'A / B':'-',abBody)+
     '</form>'+
 
     '<aside class="ns-compose-side" aria-label="'+esc(t('prev_title'))+'">'+
@@ -2677,7 +2681,7 @@ function validateConfiguration(){
   add('audience','audience',hasAudience?'ok':'bad',hasAudience?(segName(c.segmentId)||rulesSummary()):t('val_audience_empty'),hasAudience?null:{action:'expand-step',step:'audience'});
 
   add('title','title',title?(title.length>65?'warn':'ok'):'bad',
-    !title?t('val_title_required'):(title.length>65?t('val_title_long'):t('f_title')+' — '+fmtNum(title.length)+'/'+'65'),
+    !title?t('val_title_required'):(title.length>65?t('val_title_long'):t('f_title')+', '+fmtNum(title.length)+'/'+'65'),
     !title?{action:'focus-field',field:'title'}:null);
 
   add('body','body',!body?'bad':(body.length<12?'warn':'ok'),
@@ -2716,7 +2720,7 @@ function validateConfiguration(){
     if(!when||isNaN(when.getTime())){
       add('schedule','schedule','bad',t('val_schedule_past'),{action:'expand-step',step:'schedule'});
     } else if(when.getTime()<=Date.now()){
-      add('schedule','schedule','bad',t('val_schedule_past')+' — '+t('val_schedule_fix'),{action:'focus-field',field:'when'});
+      add('schedule','schedule','bad',t('val_schedule_past')+', '+t('val_schedule_fix'),{action:'focus-field',field:'when'});
     } else {
       const conflict=findConflict(when);
       add('schedule','schedule',conflict?'warn':'ok',conflict?t('val_conflict'):t('val_schedule_ok'),conflict?{action:'goto',tab:'queue'}:null);
@@ -2891,7 +2895,7 @@ function reachPanelHTML(){
   '</section>';
 }
 function sampleStudents(){
-  /* Illustrative preview rows for the reach panel — not live students. */
+  /* Illustrative preview rows for the reach panel, not live students. */
   const base=[
     {name:{bn:"রাফিয়া আক্তার",en:"Rafia Akter"},initial:{bn:"রা",en:"R"},uni:"RU",course:{bn:"ইংরেজি",en:"English"}},
     {name:{bn:"তানভীর হোসেন",en:"Tanvir Hossain"},initial:{bn:"তা",en:"T"},uni:"DU",course:{bn:"পদার্থবিজ্ঞান",en:"Physics"}},
@@ -2921,7 +2925,7 @@ function validationPanelHTML(v){
 }
 
 /* ============================================================
-   APPROVAL PANEL — the human boundary
+   APPROVAL PANEL, the human boundary
    ============================================================ */
 function approvalPanelHTML(v){
   const c=state.compose;
@@ -3849,7 +3853,7 @@ function enableDragDismiss(handle,sheet){
 function doOverlayClose(){ closeOverlay(); afterOverlayClose(); }
 
 /* ============================================================
-   AUTH GATE — token verified against the live Worker
+   AUTH GATE, token verified against the live Worker
    (/api/notifications/history) before the shell opens.
    ============================================================ */
 function authGateHTML(){
@@ -3882,7 +3886,7 @@ function verifyToken(){
   const val=(input.value||'').trim();
   msg.textContent=''; msg.style.color='';
   if(val.length<4){
-    msg.textContent=t('auth_invalid')+' — '+t('auth_invalid_desc');
+    msg.textContent=t('auth_invalid')+', '+t('auth_invalid_desc');
     msg.style.color='var(--danger)';
     input.setAttribute('aria-invalid','true');
     input.focus();
@@ -3895,9 +3899,9 @@ function verifyToken(){
     if(!out.ok){
       NS.api.clearToken();
       btn.disabled=false; btn.innerHTML=ic('shield',17)+esc(t('auth_verify'));
-      if(out.status===403){ msg.textContent=t('auth_invalid')+' — '+t('auth_invalid_desc'); }
-      else if(out.status===503){ msg.textContent=t('auth_verifying')+' — service unavailable'; }
-      else { msg.textContent=t('auth_verifying')+' — connection error ('+out.status+')'; }
+      if(out.status===403){ msg.textContent=t('auth_invalid')+', '+t('auth_invalid_desc'); }
+      else if(out.status===503){ msg.textContent=t('auth_verifying')+', service unavailable'; }
+      else { msg.textContent=t('auth_verifying')+', connection error ('+out.status+')'; }
       msg.style.color='var(--danger)';
       input.setAttribute('aria-invalid','true');
       return;
@@ -3910,7 +3914,7 @@ function verifyToken(){
 }
 
 /* ============================================================
-   PASSKEY LOGIN — enroll once, then enter with the device's own key.
+   PASSKEY LOGIN, enroll once, then enter with the device's own key.
    The token path above stays as the break-glass fallback.
    ============================================================ */
 function b64uToBytes(v){
@@ -3933,7 +3937,7 @@ function passkeySupported(){
 function publicKeyOptions(options,forCreate){
   const pk={challenge:b64uToBytes(options.challenge),timeout:options.timeout,userVerification:options.userVerification};
   if(forCreate){
-    /* create() requires rp:{id,name} — a bare rpId is assertion-only and makes
+    /* create() requires rp:{id,name}, a bare rpId is assertion-only and makes
      * the browser throw before the Face ID / Touch ID prompt can appear. */
     pk.rp={id:(options.rp&&options.rp.id)||options.rpId,name:(options.rp&&options.rp.name)||'AdmissionHub Admin'};
     pk.pubKeyCredParams=(options.pubKeyCredParams||[]).map(p=>({type:p.type,alg:p.alg}));
@@ -3993,7 +3997,7 @@ function onPasskeyButton(){
 function enrollFirstPasskey(){
   const token=(document.getElementById('nsToken')||{}).value||'';
   if(token.trim().length<4){
-    gateMsg(t('auth_passkey_add')+' — '+t('auth_token'),true);
+    gateMsg(t('auth_passkey_add')+', '+t('auth_token'),true);
     const inp=document.getElementById('nsToken'); if(inp) inp.focus();
     return;
   }
@@ -4212,7 +4216,7 @@ function loadTemplates(){
   });
 }
 /* Saving does not have a server endpoint yet, so a saved template lives in this
-   session only — it is never presented as a server-side library entry. */
+   session only, it is never presented as a server-side library entry. */
 function saveTemplateH(){
   const c=state.compose;
   const hasContent=!!((c.bn.title||c.en.title)&&(c.bn.body||c.en.body));
@@ -4732,7 +4736,7 @@ document.addEventListener('click',function(ev){
     case 'pause-campaign': {
       stop();
       const cp=state.campaigns.find(x=>x.id===el.dataset.id);
-      if(cp){ cp.status='paused'; cp.pausedReason={bn:"অ্যাডমিন পজ করেছেন — যাচাই চলছে।",en:"Paused by the admin — under review."}; state.audit.unshift({at:new Date(),actor:'admin',action:'paused',target:cp.name}); }
+      if(cp){ cp.status='paused'; cp.pausedReason={bn:"অ্যাডমিন পজ করেছেন, যাচাই চলছে।",en:"Paused by the admin, under review."}; state.audit.unshift({at:new Date(),actor:'admin',action:'paused',target:cp.name}); }
       render(); toast(t('c_paused_ok'),'ok',pick(cp.name)); break;
     }
     case 'cancel-campaign': {
@@ -4929,7 +4933,7 @@ function chatPlanHTML(p){
       const last=isDone&&i===p.steps.length-1;
       const cls=isDone?(last?'is-wait':'is-done'):(isRun?'is-run':'');
       const iconName=isDone?(last?'lock':'checkCircle'):(isRun?'spinner':'clock');
-      const st=isDone?(last?t('ai_step_wait'):t('ai_step_done')):(isRun?t('ai_step_run'):'—');
+      const st=isDone?(last?t('ai_step_wait'):t('ai_step_done')):(isRun?t('ai_step_run'):'-');
       return '<div class="ns-ai-step '+cls+'">'+ic(iconName,15)+
         '<span style="flex:1;min-width:0">'+esc(pick(s.text))+'</span>'+
         '<span class="ns-dim" style="font-size:11.5px">'+esc(st)+'</span></div>';
@@ -5153,7 +5157,7 @@ const API_SESSION_KEY='ahAdminSess';
 function apiToken(){ try{ return sessionStorage.getItem(API_TOKEN_KEY)||''; }catch(_){ return ''; } }
 function apiSession(){ try{ return sessionStorage.getItem(API_SESSION_KEY)||''; }catch(_){ return ''; } }
 /* Passkey sessions live in sessionStorage too: they are short-lived (30 min) and
- * scoped to this tab, which is the whole point — nothing long-lived to steal. */
+ * scoped to this tab, which is the whole point, nothing long-lived to steal. */
 function setApiSession(v){ try{ v?sessionStorage.setItem(API_SESSION_KEY,v):sessionStorage.removeItem(API_SESSION_KEY); }catch(_){} }
 const API_BASE=(function(){
   try{

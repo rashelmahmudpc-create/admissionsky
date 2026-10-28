@@ -111,7 +111,11 @@ test('signup UI collects Email and Password, clears passwords, and waits for sta
   await waitFor(() => app.document.querySelector('[data-view="verify"]').hidden === false);
 
   const signupCall = app.calls.find(call => call.path.endsWith('/signup'));
-  assert.deepEqual(signupCall.body, { email: 'student@example.com', password: 'Secure-password-44' });
+  const { turnstileToken, ...signupCredentials } = signupCall.body;
+  assert.deepEqual(signupCredentials, { email: 'student@example.com', password: 'Secure-password-44' });
+  // F-03: the signup call carries a Turnstile token field; it is empty only when
+  // the widget did not load, and the server decides whether that is acceptable.
+  assert.equal(typeof turnstileToken, 'string');
   assert.equal(app.calls.filter(call => call.path.endsWith('/signup')).length, 1);
   const resendButton = app.document.querySelector('[data-role="resend-submit"]');
   assert.equal(resendButton.disabled, true);

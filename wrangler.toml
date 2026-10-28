@@ -6,6 +6,9 @@ workers_dev = true
 [vars]
 FIREBASE_CONTINUE_URL = "https://admissionsky.pages.dev/?firebaseVerified=1"
 GOOGLE_AUTH_ACTIVATION = "enabled"
+# F-04 phase 2 switch: "local" = admission-gk answers /api/auth/v1/* itself (today).
+# "service" = forward to admission-auth, falling back in process on transport error.
+AUTH_ROUTE = "service"
 PASSKEY_AUTH_ACTIVATION = "enabled"
 VERIFICATION_AUTH_ACTIVATION = "enabled"
 # Internal admission caps, not provider-reported quotas. otp-a is Brevo (free 300/day)
@@ -38,7 +41,7 @@ VERIFICATION_AUTH_ACTIVATION = "enabled"
 # if this pairing breaks. Dead Simple delivery lands in Gmail spam by design
 # (shared inbox domain) — it is kept only as a final channel, never a primary.
 # timeoutMs (owner 2026-10-16): a timeout fails over at once (no same-slot retry), so each slot gets its real speed: mailers 8s, Logto/Appwrite/Ory/Hanko 12s, Apps Script otp-b 20s (cold start ~11s), Telegram 20s.
-VERIFICATION_ORCHESTRATOR_CONFIG = '{"enabled":true,"providers":[{"id":"otp-a","enabled":true,"priority":10,"dailyQuota":300,"timeoutMs":8000,"label":"secure backup"},{"id":"otp-h","enabled":true,"priority":15,"dailyQuota":1500,"timeoutMs":12000,"label":"secure backup"},{"id":"otp-i","enabled":true,"priority":38,"dailyQuota":1000,"timeoutMs":12000,"label":"secure backup"},{"id":"otp-j","enabled":true,"priority":38,"dailyQuota":300,"timeoutMs":12000,"label":"secure backup"},{"id":"otp-k","enabled":true,"priority":38,"dailyQuota":300,"timeoutMs":12000,"label":"secure backup"},{"id":"otp-l","enabled":true,"priority":38,"dailyQuota":150,"timeoutMs":12000,"label":"secure backup","projectId":"P3Km4McYmZUg8ZzIJfEnf9ZCDkFD"},{"id":"otp-m","enabled":true,"priority":38,"dailyQuota":100,"timeoutMs":12000,"label":"login link","projectId":"P3Km4McYmZUg8ZzIJfEnf9ZCDkFD"},{"id":"otp-b","enabled":true,"priority":20,"dailyQuota":100,"timeoutMs":20000,"label":"secure backup"},{"id":"otp-d","enabled":true,"priority":35,"dailyQuota":100,"timeoutMs":8000,"label":"secure backup"},{"id":"otp-e","enabled":true,"priority":37,"dailyQuota":100,"timeoutMs":8000,"label":"secure backup"},{"id":"otp-f","enabled":true,"priority":38,"dailyQuota":16,"timeoutMs":8000,"label":"secure backup"},{"id":"otp-g","enabled":true,"priority":39,"dailyQuota":165,"timeoutMs":8000,"label":"secure backup"},{"id":"otp-c","enabled":true,"priority":45,"dailyQuota":200,"timeoutMs":8000,"label":"secure backup"},{"id":"telegram","enabled":true,"priority":50,"dailyQuota":172800,"timeoutMs":20000,"label":"secure backup"}]}'
+VERIFICATION_ORCHESTRATOR_CONFIG = '{"enabled":true,"policy":{"deliveryBudgetMs":25000},"providers":[{"id":"otp-a","enabled":true,"priority":10,"dailyQuota":300,"timeoutMs":8000,"label":"secure backup"},{"id":"otp-h","enabled":true,"priority":15,"dailyQuota":1500,"timeoutMs":12000,"label":"secure backup"},{"id":"otp-i","enabled":true,"priority":38,"dailyQuota":1000,"timeoutMs":12000,"label":"secure backup"},{"id":"otp-j","enabled":true,"priority":38,"dailyQuota":300,"timeoutMs":12000,"label":"secure backup"},{"id":"otp-k","enabled":true,"priority":38,"dailyQuota":300,"timeoutMs":12000,"label":"secure backup"},{"id":"otp-l","enabled":true,"priority":38,"dailyQuota":150,"timeoutMs":12000,"label":"secure backup","projectId":"P3Km4McYmZUg8ZzIJfEnf9ZCDkFD"},{"id":"otp-m","enabled":true,"priority":38,"dailyQuota":100,"timeoutMs":12000,"label":"login link","projectId":"P3Km4McYmZUg8ZzIJfEnf9ZCDkFD"},{"id":"otp-b","enabled":true,"priority":20,"dailyQuota":100,"timeoutMs":20000,"label":"secure backup"},{"id":"otp-d","enabled":true,"priority":35,"dailyQuota":100,"timeoutMs":8000,"label":"secure backup"},{"id":"otp-e","enabled":true,"priority":37,"dailyQuota":100,"timeoutMs":8000,"label":"secure backup"},{"id":"otp-f","enabled":true,"priority":38,"dailyQuota":16,"timeoutMs":8000,"label":"secure backup"},{"id":"otp-n","enabled":true,"priority":38,"dailyQuota":100,"timeoutMs":8000,"label":"secure backup"},{"id":"otp-o","enabled":true,"priority":38,"dailyQuota":100,"timeoutMs":8000,"label":"secure backup"},{"id":"otp-q","enabled":true,"priority":38,"dailyQuota":100,"timeoutMs":8000,"label":"secure backup"},{"id":"otp-r","enabled":true,"priority":38,"dailyQuota":60,"timeoutMs":8000,"label":"secure backup"},{"id":"otp-s","enabled":true,"priority":38,"dailyQuota":16,"timeoutMs":8000,"label":"secure backup"},{"id":"otp-t","enabled":true,"priority":38,"dailyQuota":100,"timeoutMs":8000,"label":"secure backup"},{"id":"otp-u","enabled":true,"priority":38,"dailyQuota":130,"timeoutMs":8000,"label":"secure backup"},{"id":"otp-v","enabled":true,"priority":38,"dailyQuota":330,"timeoutMs":12000,"label":"secure backup"},{"id":"otp-w","enabled":true,"priority":38,"dailyQuota":1000,"timeoutMs":12000,"label":"secure backup"},{"id":"otp-x","enabled":true,"priority":38,"dailyQuota":830,"timeoutMs":12000,"label":"secure backup"},{"id":"otp-y","enabled":true,"priority":38,"dailyQuota":1000,"timeoutMs":12000,"label":"secure backup"},{"id":"otp-z","enabled":false,"priority":38,"dailyQuota":330,"timeoutMs":12000,"label":"secure backup"},{"id":"otp-za","enabled":true,"priority":38,"dailyQuota":160,"timeoutMs":12000,"label":"secure backup"},{"id":"otp-g","enabled":true,"priority":39,"dailyQuota":165,"timeoutMs":8000,"label":"secure backup"},{"id":"otp-c","enabled":true,"priority":45,"dailyQuota":200,"timeoutMs":8000,"label":"secure backup"},{"id":"telegram","enabled":true,"priority":50,"dailyQuota":172800,"timeoutMs":20000,"label":"secure backup"}]}'
 # otp-i is Appwrite Cloud Email OTP (project 6ad1e9280025bf4464ee, fra region), added
 # 2026-10-16. Owner order (same day): moved 17 -> 38 so it runs AFTER every branded
 # mailer (own logo/subject; ties sort by id so otp-f MailerSend goes first) and BEFORE
@@ -64,6 +67,18 @@ VERIFICATION_ORCHESTRATOR_CONFIG = '{"enabled":true,"providers":[{"id":"otp-a","
 # otp-f MailerSend 100 -> 16 (free plan 500/month, 100/day).
 # otp-g Dead Simple 150 -> 165 (free plan 5,000/month).
 # otp-l + otp-m share one Descope project: 150 + 100 = 250/day (~7,500 MAU/month).
+# otp-n..otp-u (owner 2026-10-22): Maileroo 100, Elastic Email 100, Mailgun 100,
+# Alibaba DirectMail 60, SparkPost 16, Plunk 100, Loops 130 per day (free plan / 30).
+# All keys live in ONE secret, OTP_RAW (any format; pool-providers.mjs parses it),
+# so the 64-variable ceiling is not crossed. Priority 38: after every branded
+# mailer, before the locked last-resort pair. A slot without keys stays inert.
+# otp-v..otp-y (owner 2026-10-23): hosted IdPs that mail AND check their own code
+# (provider-evidence), each live-probed send -> Gmail Inbox -> verify on 2026-10-23:
+# otp-v Stytch (Test env, 10K MAU/30 = 330), otp-w WorkOS Magic Auth (Staging,
+# subject carries "[STAGING]"; 1000/day own cap), otp-x MojoAuth (25K MAU/30 = 830),
+# otp-y Authgear (no published cap; 1000/day own cap, no secret), otp-z Stack Auth
+# (10K users/30 = 330; DISABLED: its code has letters, the app code box is digits-only), otp-za SuperTokens (<5K MAU/30 = 160). Keys live in ONE
+# secret, OTP_IDP (JSON, see idp-providers.mjs) — the 64th and last Worker variable.
 OTP_A_DAILY_QUOTA = "300"
 OTP_B_DAILY_QUOTA = "100"
 # otp-h (Logto) endpoint, app id and redirect are public values kept in
@@ -152,13 +167,22 @@ new_sqlite_classes = ["AiStateObject"]
 binding = "SKY_AI"
 service = "sky-ai"
 
+# F-04 phase 2 (design: AGENT_RESUME/2026-10-24-f04-admission-auth-worker-design.md).
+# The auth surface can be forwarded to its own Worker. This ships DARK: AUTH_ROUTE
+# stays "local" until the auth Worker has been smoke-tested live, and flipping the
+# var back is the rollback. The binding is not a variable, so it costs nothing
+# against the 64-variable ceiling.
+[[services]]
+binding = "AUTH_WORKER"
+service = "admission-auth"
+
 [[kv_namespaces]]
 binding = "GK_KV"
 id = "b9353515b098427687afcfb8654ed359"
 
 [[kv_namespaces]]
 binding = "PUB_KV"
-id = "b9353515b098427687afcfb8654ed359"
+id = "fd9a455d1be64c2eade1309186462808"
 
 [[kv_namespaces]]
 binding = "OLD_KV"

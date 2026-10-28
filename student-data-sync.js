@@ -2,7 +2,7 @@
  *
  * IndexedDB stays the working copy (instant, offline-safe). This module mirrors
  * every student-owned row to the account on the server so data survives a
- * cleared browser, a new phone, or a year away — and so the notification engine
+ * cleared browser, a new phone, or a year away, and so the notification engine
  * can read real learning state.
  *
  * Contract with the app:
@@ -52,7 +52,7 @@
     try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; }
   };
 
-  /* Stable per-install device id — diagnostics only, never identity. */
+  /* Stable per-install device id, diagnostics only, never identity. */
   const deviceId = (() => {
     let id = readLS(DEVICE_KEY, null);
     if (typeof id === 'string' && /^[\w-]{6,40}$/.test(id)) return id;
@@ -104,7 +104,7 @@
     queue.push(entry);
     if (queue.length > MAX_QUEUE) {
       const dropped = queue.splice(0, queue.length - MAX_QUEUE);
-      console.warn('[StudentSync] queue overflow — dropped oldest ops', dropped.length);
+      console.warn('[StudentSync] queue overflow, dropped oldest ops', dropped.length);
     }
     persistQueue();
     requestBackgroundSync();
@@ -121,7 +121,7 @@
       navigator.serviceWorker.ready
         .then(reg => { if (reg && reg.sync && typeof reg.sync.register === 'function') return reg.sync.register('ah-student-sync'); })
         .catch(() => {});
-    } catch (_) { /* unsupported — the 'online' event is the fallback */ }
+    } catch (_) { /* unsupported, the 'online' event is the fallback */ }
   }
 
   /* A live status stream for the honest offline indicator in the UI. */
@@ -185,7 +185,7 @@
 
         /* Remove exactly the batch we sent; keep anything newer that arrived
          * while the request was in flight, and keep anything the server did
-         * not explicitly acknowledge — a missing ack means "not persisted",
+         * not explicitly acknowledge, a missing ack means "not persisted",
          * not "done", so dropping it would lose the write silently. */
         const sentKeys = new Set(batch.map(op => op.store + '\u0000' + String(op.id)));
         const leftover = [];
@@ -210,7 +210,7 @@
         queue = leftover;
         persistQueue();
         sent += acked;
-        /* If the batch made no progress — nothing acked, everything requeued —
+        /* If the batch made no progress, nothing acked, everything requeued -
          * stop instead of hammering the server with the same ops forever. */
         if (acked === 0) break;
         if (batch.length < BATCH_MAX) break;

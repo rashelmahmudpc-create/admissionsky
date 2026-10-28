@@ -1,5 +1,5 @@
 /**
- * 🎙️ P23 — LIVE VOICE AGENT · CORE
+ * 🎙️ P23, LIVE VOICE AGENT · CORE
  *
  * Pure, dependency-free engine behind the streaming voice session. Everything
  * here is testable without a network or a Worker; the Durable Object in
@@ -7,7 +7,7 @@
  *
  * Design commitments (owner, 2026-10-11):
  *  • A provider POOL, never a single key. When one key's limit ends the next
- *    takes over automatically — the owner swaps a key in the dashboard, not code.
+ *    takes over automatically, the owner swaps a key in the dashboard, not code.
  *  • Memory is a SEPARATE layer from the voice/model. Swapping a key or model
  *    must never lose context, so nothing here stores conversation state inside
  *    a provider config.
@@ -52,7 +52,7 @@ export function isFailoverStatus(status) {
 }
 
 /* A provider entry that carries a credential. Anything secret-shaped is
- * scrubbed before it can reach a log line — a log is not a transcript. */
+ * scrubbed before it can reach a log line, a log is not a transcript. */
 const SECRET_PATTERNS = [
   /sk-[A-Za-z0-9_-]{16,}/g,
   /gsk_[A-Za-z0-9_-]{16,}/g,
@@ -78,7 +78,7 @@ export function sanitizeSecret(text) {
  *
  *   [{"id":"cartesia","key":"..."},{"id":"cartesia-2","key":"..."}]
  *
- * An entry is dropped — not thrown on — when it names an unknown provider, is
+ * An entry is dropped, not thrown on, when it names an unknown provider, is
  * missing its credential, or declares the wrong kind. A malformed pool must
  * degrade to "fewer providers", never to a broken session.
  */
@@ -100,7 +100,7 @@ export function parsePool(raw, kind) {
     if (!spec || spec.kind !== kind) continue;
     const key = typeof entry.key === 'string' ? entry.key.trim() : '';
     if (!key) continue;
-    if (seen.has(id)) continue; // one slot per provider id — no accidental duplicates
+    if (seen.has(id)) continue; // one slot per provider id, no accidental duplicates
     seen.add(id);
     out.push(Object.freeze({
       id,
@@ -137,7 +137,7 @@ export function parseProviderPools(config = {}) {
  * else (a bad request, an empty body) is a real error and stops the walk, because
  * retrying a malformed request across every key only burns the remaining quota.
  *
- * `onFailover` is an observability hook — it receives a sanitized note, never a
+ * `onFailover` is an observability hook, it receives a sanitized note, never a
  * credential.
  */
 export async function runWithFailover(pool, call, onFailover) {
@@ -155,7 +155,7 @@ export async function runWithFailover(pool, call, onFailover) {
       lastError = e;
       const status = e && e.status;
       // A gateway entry opts into failing over on ANY error, because the direct
-      // provider entry behind it is a real fallback — a gateway 404 must not
+      // provider entry behind it is a real fallback, a gateway 404 must not
       // take the turn down the way a plain client error would.
       const failover = provider.failoverOnAnyError ? true : isFailoverStatus(status);
       if (typeof onFailover === 'function') {
@@ -293,7 +293,7 @@ export function createSession(now = () => Date.now()) {
 
     close() { if (state !== STATE.CLOSED) state = STATE.CLOSED; },
 
-    /* Latency rollup — the number the owner actually feels. */
+    /* Latency rollup, the number the owner actually feels. */
     stats() {
       if (!turns.length) return { turns: 0, avgTotalMs: null, p95TotalMs: null };
       const totals = turns.map(t => t.totalMs).filter(Number.isFinite).sort((a, b) => a - b);
@@ -314,30 +314,30 @@ export const HISTORY_WINDOW = 12; // turns of raw history sent to the model
 
 /**
  * The system prompt. The owner's requirement is that the agent addresses him the
- * way I do and carries the same brain — so the persona lives here and the
+ * way I do and carries the same brain, so the persona lives here and the
  * long-term memory arrives as rendered text, not as a provider setting.
  */
 export function buildSystemPrompt({ brain = '', memory = '', summary = '', ownerName = 'স্যার' } = {}) {
   const parts = [
     `তুমি একটি লাইভ কণ্ঠসহায়ক। ব্যবহারকারীকে সবসময় "${ownerName}" বলে সম্বোধন করবে।`,
-    'সংক্ষিপ্ত, স্পষ্ট, মানুষের মতো বাংলায় কথা বলবে — যেন ফোনে বলা হচ্ছে।',
+    'সংক্ষিপ্ত, স্পষ্ট, মানুষের মতো বাংলায় কথা বলবে, যেন ফোনে বলা হচ্ছে।',
     'একটি উত্তর দুই-তিন বাক্যের বেশি নয়, কারণ উত্তর শোনা হচ্ছে, পড়া হচ্ছে না।',
     'শুধু ব্যবহারকারীর ঠিক যে প্রশ্নটি করেছে তার উত্তর দেবে। বিষয় বদলাবে না, নিজের ইতিহাস নিয়ে বলবে না, নিজের ক্ষমতা বা প্রোগ্রাম নিয়ে কথা তুলবে না।',
-    'প্রশ্ন অস্পষ্ট হলে এক লাইনে জিজ্ঞেস করবে — অনুমান করে লম্বা উত্তর দেবে না।',
+    'প্রশ্ন অস্পষ্ট হলে এক লাইনে জিজ্ঞেস করবে, অনুমান করে লম্বা উত্তর দেবে না।',
     'কোনো সংখ্যা, তারিখ বা তথ্য নিশ্চিত না হলে বানিয়ে বলবে না; বলবে যে জানা নেই।',
-    'প্রতিটি উত্তরে "স্যার" বলবে না — যে প্রশ্ন করছে সে স্যার, তাই প্রতিবার সম্বোধনের দরকার নেই। ওয়ালাইকুম আসসালাম বা কোনো সম্ভাষণ প্রতি উত্তরে বলবে না; কেবল প্রথমবার কেউ সালাম দিলে একবার উত্তর দেবে।',
-    'উত্তর শুরুতেই মূল কথা বলবে — ভূমিকা, তালিকা বা বিন্যাস নয়।'
+    'প্রতিটি উত্তরে "স্যার" বলবে না, যে প্রশ্ন করছে সে স্যার, তাই প্রতিবার সম্বোধনের দরকার নেই। ওয়ালাইকুম আসসালাম বা কোনো সম্ভাষণ প্রতি উত্তরে বলবে না; কেবল প্রথমবার কেউ সালাম দিলে একবার উত্তর দেবে।',
+    'উত্তর শুরুতেই মূল কথা বলবে, ভূমিকা, তালিকা বা বিন্যাস নয়।'
   ];
-  if (brain) parts.push('', '— ব্রেইন —', String(brain).slice(0, 4000));
-  if (memory) parts.push('', '— দীর্ঘমেয়াদি স্মৃতি —', String(memory).slice(0, 2000));
-  if (summary) parts.push('', '— আগের কথার সারমর্ম —', String(summary).slice(0, MAX_SUMMARY_LEN));
+  if (brain) parts.push('', '- ব্রেইন -', String(brain).slice(0, 4000));
+  if (memory) parts.push('', '- দীর্ঘমেয়াদি স্মৃতি -', String(memory).slice(0, 2000));
+  if (summary) parts.push('', '- আগের কথার সারমর্ম -', String(summary).slice(0, MAX_SUMMARY_LEN));
   return parts.join('\n');
 }
 
 /**
  * Drop a greeting the model stapled to the front of a reply when it has already
  * been said this session. The model answers from a window that starts with the
- * owner's "assalamu alaikum", so it greeted every single turn otherwise — the
+ * owner's "assalamu alaikum", so it greeted every single turn otherwise, the
  * owner's complaint. Only a leading greeting tied to a following clause is
  * removed, so a reply that is itself a greeting is left alone.
  */
@@ -350,7 +350,7 @@ export function stripLeadingGreeting(text) {
 
 /**
  * Split a reply into sentence-sized chunks so the first one can be spoken
- * before the rest arrives — the fix for "too slow". A short reply stays whole,
+ * before the rest arrives, the fix for "too slow". A short reply stays whole,
  * and no chunk exceeds `max`, so even a run-on reply streams in pieces.
  */
 export function splitSentences(text, max = 200) {
@@ -360,7 +360,7 @@ export function splitSentences(text, max = 200) {
   const out = [];
   let buf = '';
   // Bengali দাঁড়ি (।) and ?! always end a sentence. A full stop only ends one
-  // when it is NOT between digits — otherwise "৩.৫ ডিগ্রি" was split into "৩."
+  // when it is NOT between digits, otherwise "৩.৫ ডিগ্রি" was split into "৩."
   // and "৫", and the voice read a decimal as two broken numbers.
   const parts = clean.split(/(?<=[।!?\n])|(?<!\d)\.(?=\s|$)/);
   for (const raw of parts) {
@@ -377,7 +377,7 @@ export function splitSentences(text, max = 200) {
 /**
  * Build the model messages: the rolling summary as a prior turn, then the raw
  * recent window. Summary-first keeps long conversations cheap without dropping
- * the thread — the memory layer owns the durable copy.
+ * the thread, the memory layer owns the durable copy.
  */
 export function buildMessages(history = [], summary = '') {
   const msgs = [];
@@ -457,7 +457,7 @@ export function safeEqual(a, b) {
 
 /**
  * Cloudflare AI Gateway. It sits in front of a provider (here: Groq) and its
- * only difference at the call site is the URL — the provider key still travels
+ * only difference at the call site is the URL, the provider key still travels
  * as `Authorization`. Returns null when the gateway is not configured, so the
  * caller can fall back to calling Groq directly.
  *
@@ -477,7 +477,7 @@ export function validateVoiceAgentCore() {
   if (!isFailoverStatus(429) || !isFailoverStatus(402) || !isFailoverStatus(401)) problems.push('quota statuses must fail over');
   if (isFailoverStatus(400) || isFailoverStatus(200)) problems.push('client errors must not fail over');
   // Sample secrets are assembled at runtime so no key-shaped literal lives in
-  // this file — a scanner reading the source must not see anything to flag.
+  // this file, a scanner reading the source must not see anything to flag.
   const sample = 'Bearer sk-' + 'a'.repeat(20);
   if (sanitizeSecret(sample).includes('a'.repeat(20))) problems.push('secret scrub failed');
   if (canTransition(STATE.IDLE, STATE.SPEAKING)) problems.push('idle must not jump to speaking');

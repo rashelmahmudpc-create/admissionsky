@@ -1,10 +1,10 @@
-/* ✦ ADMISSION HUB AI — Sky (student study partner)
- * UI: owner-supplied Sky design v2 (sky-chat 2.html, 2026-10-15) — animated
+/* ✦ ADMISSION HUB AI, Sky (student study partner)
+ * UI: owner-supplied Sky design v2 (sky-chat 2.html, 2026-10-15), animated
  *     Sky avatar with props (laptop, book, note, cup, magnifier, calculator,
  *     headphones, cap), hero, live status panel, drawer, bottom sheet, themes.
  * Backend: LIVE. No demo/canned data anywhere in this file.
- *   POST /api/ai/chat              (SSE stream)  — the real tutor
- *   POST /api/ai/actions/propose   /api/ai/actions/confirm — personalization
+ *   POST /api/ai/chat              (SSE stream) , the real tutor
+ *   POST /api/ai/actions/propose   /api/ai/actions/confirm, personalization
  * Theme: follows the app's Global Appearance Engine (window.AhAppearance,
  *   <html data-theme>), so app-dark → chat-dark, app-light → chat-light.
  * Contract kept from the previous chatv1 module: window.renderAiAgentPage.
@@ -122,7 +122,7 @@
   }
 
   /* Per-topic accuracy from the student's own result snapshots, so the tutor can
-     say "your accuracy here is low — revise this". Only academic names leave the
+     say "your accuracy here is low, revise this". Only academic names leave the
      device. */
   const P06_TOPIC_MIN_ATTEMPTS = 3;
   const P06_WEAK_ACC = 70;
@@ -150,7 +150,7 @@
   };
 
   /* Lifetime stats from the app's own store. Returns null when the host page
-     does not expose them — the server then answers without personal stats. */
+     does not expose them, the server then answers without personal stats. */
   function localStats() {
     try {
       if (typeof computeLifetimeStats !== 'function') return null;
@@ -170,7 +170,7 @@
 
   /* Sky recall (owner plan step 2): mistakes the student got wrong in the last
      48 h and has not mastered yet. Only a count and the oldest time leave the
-     phone — never the question text. */
+     phone, never the question text. */
   function recentMistakes() {
     try {
       if (typeof CACHE === 'undefined' || !Array.isArray(CACHE.mistakes)) return null;
@@ -322,7 +322,7 @@
       const st = (typeof localStats === 'function') ? localStats() : null;
       if (!st) return '';
       const weak = (st.weakTopics || []).filter((t) => t && t.name);
-      if (weak.length >= 2) return ahChartSVG({ type: 'bar', title: 'তোমার দুর্বল টপিক — Accuracy %', labels: weak.map((t) => t.name), values: weak.map((t) => t.accuracy) });
+      if (weak.length >= 2) return ahChartSVG({ type: 'bar', title: 'তোমার দুর্বল টপিক, Accuracy %', labels: weak.map((t) => t.name), values: weak.map((t) => t.accuracy) });
       if (Number(st.questions) > 0) return ahChartSVG({ type: 'bar', title: 'তোমার অগ্রগতি', labels: ['প্রশ্ন', 'সঠিক হার %', 'পরীক্ষা'], values: [st.questions, st.accuracy, st.exams] });
     } catch (_) {}
     return '';
@@ -515,14 +515,14 @@
   const T = {
     stageRead: 'তোমার প্রশ্ন বুঝে নিচ্ছি', stageWrite: 'উত্তর লিখছি', stageConnect: 'সার্ভারের সঙ্গে যুক্ত হচ্ছি', stageSend: 'প্রশ্ন পাঠাচ্ছি', stageFirst: 'প্রথম অংশ এসেছে', stageStream: 'উত্তর আসছে', stageChart: 'ছবি/চার্ট সাজাচ্ছি', stageQuiz: 'প্রশ্ন তৈরি করছি', stageDone: 'উত্তর তৈরি',
     title: 'Sky', sub: 'স্টাডি পার্টনার', online: 'অনলাইন',
-    heroTitle: 'আমি স্কাই — তোমার পড়ার সঙ্গী',
-    heroBody: 'ভর্তি প্রস্তুতির প্রশ্ন, MCQ, ব্যাখ্যা আর পড়ার সব সাহায্য — সব এখানে।',
+    heroTitle: 'আমি স্কাই, তোমার পড়ার সঙ্গী',
+    heroBody: 'ভর্তি প্রস্তুতির প্রশ্ন, MCQ, ব্যাখ্যা আর পড়ার সব সাহায্য, সব এখানে।',
     notice: 'স্কাইয়ের উত্তরে ভুল হতে পারে। ভর্তির গুরুত্বপূর্ণ তথ্য অফিসিয়াল সূত্রে যাচাই করুন।',
     tryAsking: 'জিজ্ঞেস করে দেখো',
     chips: [
       ['🧠', 'সহজ করে বুঝাও', 'এই টপিকটা সহজ করে বুঝাও'],
       ['📝', '১০টা MCQ বানাও', '১০টা MCQ বানাও'],
-      ['🎯', 'কুইজ নাও', 'আমাকে কুইজ নাও — ৫টা প্রশ্ন'],
+      ['🎯', 'কুইজ নাও', 'আমাকে কুইজ নাও, ৫টা প্রশ্ন'],
       ['📊', 'পারফরম্যান্স দেখো', 'আমার পারফরম্যান্স বিশ্লেষণ করো'],
       ['📚', 'টপিক শেখাও', 'এই টপিকটা শেখাও']
     ],
@@ -533,14 +533,14 @@
     copy: 'কপি', copied: 'কপি হয়েছে', regen: 'আবার', good: 'ভালো',
     backHome: 'অ্যাপে ফিরুন', homeBtn: 'অ্যাপের হোমে ফিরুন',
     tools: 'স্কাই টুলস', attach: 'কথোপকথনে যোগ করুন',
-    offline: 'এখন ইন্টারনেট নেই — একটু পরে আবার চেষ্টা করো।',
+    offline: 'এখন ইন্টারনেট নেই, একটু পরে আবার চেষ্টা করো।',
     failed: 'উত্তরটা আসেনি। আবার চেষ্টা করো।',
     needLoginLong: [
       'স্কাই উত্তর দিতে পারেনি, কারণ তুমি এখনো লগইন করোনি।',
       '',
-      'লগইন ছাড়া স্কাই তোমার পড়ার অগ্রগতি, ভুলের তালিকা বা লক্ষ্য দেখতে পায় না — তাই সে জানেই না তুমি কোন বিষয়ে কতটা এগিয়েছ। শুধু এই কারণেই উত্তরটা আসেনি; কোনো সমস্যা হয়নি।',
+      'লগইন ছাড়া স্কাই তোমার পড়ার অগ্রগতি, ভুলের তালিকা বা লক্ষ্য দেখতে পায় না, তাই সে জানেই না তুমি কোন বিষয়ে কতটা এগিয়েছ। শুধু এই কারণেই উত্তরটা আসেনি; কোনো সমস্যা হয়নি।',
       '',
-      'লগইন করলে স্কাই তোমার নিজের তথ্য অনুযায়ী উত্তর দিতে পারবে — কোন বিষয়ে দুর্বল, কী অনুশীলন করা দরকার, কোনটা আগে পড়া উচিত।'
+      'লগইন করলে স্কাই তোমার নিজের তথ্য অনুযায়ী উত্তর দিতে পারবে, কোন বিষয়ে দুর্বল, কী অনুশীলন করা দরকার, কোনটা আগে পড়া উচিত।'
     ].join('\n'),
     stopped: 'থামানো হয়েছে', stop: 'থামাও', send: 'পাঠাও', menu: 'মেনু',
     clear: 'সব মুছো', del: 'ডিলিট', pin: 'পিন', ren: 'নাম বদলাও', search: 'খুঁজুন',
@@ -943,7 +943,7 @@
       '<div class="tools">' +
       '<button data-q="ওয়েবে খুঁজে দেখো">' + ic('globe') + 'সার্চ</button>' +
       '<button data-q="১০টা MCQ বানাও">' + ic('mcq') + 'MCQ</button>' +
-      '<button data-q="আমাকে কুইজ নাও — ৫টা প্রশ্ন">' + ic('target') + 'Quiz</button>' +
+      '<button data-q="আমাকে কুইজ নাও, ৫টা প্রশ্ন">' + ic('target') + 'Quiz</button>' +
       '<button data-q="এই টপিকটা সহজ করে বুঝাও">' + ic('bulb') + 'ব্যাখ্যা</button>' +
       '<button data-q="আমার পারফরম্যান্স বিশ্লেষণ করো">' + ic('chart') + 'বিশ্লেষণ</button>' +
       '<button data-q="সারসংক্ষেপ করো">' + ic('sum') + 'সারসংক্ষেপ</button>' +
@@ -1063,7 +1063,7 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
   let msgsEl, mainEl, inpEl, actEl, busy = 0;
 
   /* Live status panel (owner's "proc" design). Every line is a REAL state of
-     the request — sent, first token received, finished — never a canned step. */
+     the request, sent, first token received, finished, never a canned step. */
   function procHtml(m) {
     if (m.role === 'user' || m.error) return '';
     const steps = (m.steps || []).map((x) => '<p>' + esc(x) + '</p>').join('');
@@ -1078,7 +1078,7 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
   /* PR-3: shared-answer note + "আরো বিস্তারিত" chip (data-q sends it to the AI). */
   function faqNote(m) {
     if (!m.faq || m.pending) return '';
-    const more = String(m.q || '').slice(0, 120) + ' — আরো বিস্তারিত বুঝিয়ে বলো';
+    const more = String(m.q || '').slice(0, 120) + ', আরো বিস্তারিত বুঝিয়ে বলো';
     return '<div class="faqm"><span>📌 সবার জন্য জমানো উত্তর</span><button data-q="' + esc(more) + '">আরো বিস্তারিত →</button></div>';
   }
   /* Owner 2026-10-17: support replies get two buttons instead of a printed
@@ -1164,7 +1164,7 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
     const b = r.body || {};
     if (r.status === 401) return 'নির্দেশনা দিতে আগে লগইন করো।';
     if (b.off) return 'এই সুবিধা এখন সাময়িক বন্ধ আছে।';
-    if (r.status !== 200) return b.message || 'এখন সেভ করা গেল না — আবার চেষ্টা করো।';
+    if (r.status !== 200) return b.message || 'এখন সেভ করা গেল না, আবার চেষ্টা করো।';
     if (cmd.op === 'show') return b.text ? 'তোমার নির্দেশনা:\n' + b.text + '\n\nবদলাতে নতুন করে লেখো "নির্দেশনা: …"। মুছতে: "নির্দেশনা মুছে দাও"' : 'তুমি এখনো কোনো নির্দেশনা দাওনি।\n\n' + INSTR_HOWTO;
     if (cmd.op === 'clear') return 'তোমার নির্দেশনা মুছে ফেলেছি। এখন থেকে আগের মতো উত্তর দেব।';
     return 'ঠিক আছে, মনে রাখলাম ✓\n"' + b.text + '"\nএখন থেকে প্রতিটা উত্তরে এভাবেই বলব। বদলাতে আবার "নির্দেশনা: …" লেখো।';
@@ -1213,7 +1213,7 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
       save(); renderMsgs(); mood('happy', 1200);
       return;
     }
-    /* Agent phase 1 (owner 2026-10-17): in-app tools (sky-tools-client.js) —
+    /* Agent phase 1 (owner 2026-10-17): in-app tools (sky-tools-client.js) -
        question bank search, quiz, quiz grading, knowledge lookup, open a page.
        Instant, no server call, no AI limit. The proc panel lists the tools. */
     if (window.SkyTools) {
@@ -1318,7 +1318,7 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
      recent mistakes / their weak topic by itself, in place of the time-based
      greeting. Signed-in, empty chat, Bangla UI only. 2.5 s timeout; any
      failure or "nothing to say" (null) keeps the normal greeting. The bubble
-     and the button use textContent only — never HTML/Markdown. */
+     and the button use textContent only, never HTML/Markdown. */
   function fetchRecall() {
     if (lang === 'en' || !accountScope || !sessions[cur] || sessions[cur].msgs.length) return Promise.resolve(null);
     const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
@@ -1352,7 +1352,7 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
     { const ob = document.getElementById('skyRecallBtn'); if (ob) ob.remove(); const sy = document.getElementById('say'); if (sy) sy.classList.remove('long'); }
     const app = document.getElementById('app');
     if (app) app.classList.remove('chatting');
-    say('নতুন কথা শুরু করি — কী জানতে চাও?', 3200);
+    say('নতুন কথা শুরু করি, কী জানতে চাও?', 3200);
   }
 
   /* ───────── avatar animation engine (owner's Sky) ───────── */
@@ -1377,7 +1377,7 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
   let stopT;
   /* activities: [name, prop, ms, fn, time-tags(m a e n | *), messages] */
   const ACT=[
-['typing','lap',7000,()=>{A('.hl2',...tap());A('.hr2',...tap(130));A('.all',k('','rotate(0)','rotate(1.5deg)','rotate(0)'),2400);lookSeq([[0,6],[-2,6],[2,6],[0,6],[0,-2]],700)},'aen',['প্রশ্ন সাজাচ্ছি — চাইলে MCQ বানিয়ে দিই?']],
+['typing','lap',7000,()=>{A('.hl2',...tap());A('.hr2',...tap(130));A('.all',k('','rotate(0)','rotate(1.5deg)','rotate(0)'),2400);lookSeq([[0,6],[-2,6],[2,6],[0,6],[0,-2]],700)},'aen',['প্রশ্ন সাজাচ্ছি, চাইলে MCQ বানিয়ে দিই?']],
 ['reading','book',8000,()=>{A('.pgf',[{transform:'scaleX(1)'},{transform:'scaleX(1)',offset:.75},{transform:'scaleX(-1)'}],3600,{easing:'ease-in'});A('.all',k('','rotate(0)','rotate(-1.5deg)','rotate(0)'),3000);lookSeq([[-6,6],[-2,6],[2,6],[6,6],[-6,7]],650)},'amen',['তুমি আজ কোন টপিক পড়ছো?','পড়ার সময় মোবাইল দূরে রাখো']],
 ['writing','note',6500,()=>{const f=k('','translate(0,0)','translate(-8px,2px)','translate(-2px,5px)','translate(-10px,7px)','translate(0,0)');A('.pen',f,1600);A('.hr2',f,1600);lookSeq([[-3,6],[0,6],[3,6]],900)},'am',['ছোট নোট লিখে রাখলে মনে থাকে বেশি']],
 ['sipping','cup',4400,()=>{const f=[{transform:'translate(0,0) rotate(0)'},{transform:'translate(0,0) rotate(0)',offset:.25},{transform:'translate(-18px,-24px) rotate(-18deg)',offset:.45},{transform:'translate(-18px,-24px) rotate(-18deg)',offset:.65},{transform:'translate(0,0) rotate(0)'}];A('.cup',f,4200,{iterations:1});A('.hr2',f,4200,{iterations:1});A('.eyes',[{transform:'scaleY(1)'},{transform:'scaleY(1)',offset:.4},{transform:'scaleY(.15)',offset:.5},{transform:'scaleY(.15)',offset:.65},{transform:'scaleY(1)',offset:.75},{transform:'scaleY(1)'}],4200,{iterations:1})},'man',['পড়ার ফাঁকে পানি খেয়ে নাও','এক কাপ চা-কফির সময় কি হলো?']],
@@ -1386,9 +1386,9 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
 ['music','ph',7000,()=>{A('.all',k('','translateY(0) rotate(0)','translateY(-5px) rotate(-3deg)','translateY(0) rotate(0)','translateY(-5px) rotate(3deg)'),1400);A('.wl',k('','rotate(10deg)','rotate(32deg)','rotate(10deg)'),700);A('.wr',k('','rotate(-10deg)','rotate(-32deg)','rotate(-10deg)'),700,{delay:350})},'ea',['মনোযোগ দরকার? বিনা কথার মিউজিক শুনে দেখো']],
 ['dance','ph',5000,()=>{A('.all',k('','translateX(0) rotate(0)','translateX(-9px) rotate(-6deg)','translateX(9px) rotate(6deg)','translateX(0) rotate(0)'),900);A('.wl',k('','rotate(10deg)','rotate(60deg)','rotate(10deg)'),450);A('.wr',k('','rotate(-10deg)','rotate(-60deg)','rotate(-10deg)'),450,{delay:225})},'e',[]],
 ['think','',3800,()=>{mood('think');lookSeq([[5,-5]],1e9)},'*',[]],
-['idea','',2800,()=>{A('.bulb',[{transform:'scale(.2)',opacity:0},{transform:'scale(1.15)',opacity:1,offset:.25},{transform:'scale(1)',opacity:1,offset:.85},{transform:'scale(.2)',opacity:0}],2600,{iterations:1,transformOrigin:'100px 20px'});A('.all',k('','translateY(0)','translateY(-14px)','translateY(0)'),900,{iterations:1,delay:500})},'*',['একটা ভালো আইডিয়া — ছোট একটা কুইজ দিই?']],
+['idea','',2800,()=>{A('.bulb',[{transform:'scale(.2)',opacity:0},{transform:'scale(1.15)',opacity:1,offset:.25},{transform:'scale(1)',opacity:1,offset:.85},{transform:'scale(.2)',opacity:0}],2600,{iterations:1,transformOrigin:'100px 20px'});A('.all',k('','translateY(0)','translateY(-14px)','translateY(0)'),900,{iterations:1,delay:500})},'*',['একটা ভালো আইডিয়া, ছোট একটা কুইজ দিই?']],
 ['stretch','',2400,()=>{A('.all',k('','scaleY(1)','scaleY(1.14) translateY(-4px)','scaleY(1)'),2200,{iterations:1});A('.wl',k('','rotate(10deg)','rotate(120deg)','rotate(10deg)'),2200,{iterations:1});A('.wr',k('','rotate(-10deg)','rotate(-120deg)','rotate(-10deg)'),2200,{iterations:1})},'ma',['৪৫ মিনিট পড়ে ৫ মিনিট বিরতি নাও']],
-['yawn','',2800,()=>{A('.eyes',k('100px 104px','scaleY(1)','scaleY(.1)','scaleY(.1)','scaleY(1)'),2600,{iterations:1});A('.jaw',k('','translateY(0)','translateY(8px)','translateY(8px)','translateY(0)'),2600,{iterations:1});A('.all',k('','scaleY(1)','scaleY(1.06)','scaleY(1)'),2600,{iterations:1})},'n',['ঘুম কম হলে মনেও থাকে কম — আজ ঠিকমতো ঘুমিও']],
+['yawn','',2800,()=>{A('.eyes',k('100px 104px','scaleY(1)','scaleY(.1)','scaleY(.1)','scaleY(1)'),2600,{iterations:1});A('.jaw',k('','translateY(0)','translateY(8px)','translateY(8px)','translateY(0)'),2600,{iterations:1});A('.all',k('','scaleY(1)','scaleY(1.06)','scaleY(1)'),2600,{iterations:1})},'n',['ঘুম কম হলে মনেও থাকে কম, আজ ঠিকমতো ঘুমিও']],
 ['look','',3200,()=>lookSeq([[-6,0],[6,0],[0,-5],[-4,3],[0,0]],620),'*',[]],
 ['wave','',1800,()=>{A('.wr',k('','rotate(-10deg)','rotate(-105deg)','rotate(-65deg)','rotate(-105deg)','rotate(-65deg)','rotate(-10deg)'),1700,{iterations:1})},'*',[]],
 ['doze','zz',6500,()=>{A('.all',k('','rotate(0)','rotate(5deg) translateY(4px)','rotate(0)'),2600);A('.eyes',k('100px 104px','scaleY(1)','scaleY(.15)','scaleY(1)'),2600)},'n',[]],
@@ -1506,14 +1506,14 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
     renderMsgs();
     if (sessions[cur].msgs.length) document.getElementById('hero').style.display = 'none';
 
-    /* hero greeting — time based, honest, no fake content */
+    /* hero greeting, time based, honest, no fake content */
     const H = new Date().getHours();
-    const greet = H < 5 ? 'এত রাতে জেগে? আজ একটু কম পড়ে ঘুমিয়ে নাও' : H < 12 ? 'শুভ সকাল! আজ কোন বিষয় দিয়ে শুরু করবে?' : H < 16 ? 'শুভ দুপুর! পড়ার সময় হলো — কী ধরবে?' : H < 19 ? 'শুভ বিকেল! আজকের পড়ার রিভিশন দেবে?' : 'শুভ সন্ধ্যা! আজকের পড়া কতদূর?';
+    const greet = H < 5 ? 'এত রাতে জেগে? আজ একটু কম পড়ে ঘুমিয়ে নাও' : H < 12 ? 'শুভ সকাল! আজ কোন বিষয় দিয়ে শুরু করবে?' : H < 16 ? 'শুভ দুপুর! পড়ার সময় হলো, কী ধরবে?' : H < 19 ? 'শুভ বিকেল! আজকের পড়ার রিভিশন দেবে?' : 'শুভ সন্ধ্যা! আজকের পড়া কতদূর?';
     mood('wave', 2200);
     const recallP = fetchRecall();
     setTimeout(() => { recallP.then((rc) => showRecall(rc, greet)); }, 900);
     loop(); wake();
-    const askMsg = ['বাংলা, ইংরেজি, GK — কোনটা দিয়ে শুরু?', 'শেষ কবে রিভিশন দিয়েছিলে?', 'Mistake Bank-এ নতুন ভুল জমেছে কি?', 'পরীক্ষার আগে একটা Mock Test দিয়েছো?', 'ছবি তুলে প্রশ্ন পাঠালেও আমি বুঝে নেব', 'Smart Revision করলে বেশি দিন মনে থাকে', 'আজকের পড়ার লক্ষ্য কত?'];
+    const askMsg = ['বাংলা, ইংরেজি, GK, কোনটা দিয়ে শুরু?', 'শেষ কবে রিভিশন দিয়েছিলে?', 'Mistake Bank-এ নতুন ভুল জমেছে কি?', 'পরীক্ষার আগে একটা Mock Test দিয়েছো?', 'ছবি তুলে প্রশ্ন পাঠালেও আমি বুঝে নেব', 'Smart Revision করলে বেশি দিন মনে থাকে', 'আজকের পড়ার লক্ষ্য কত?'];
     clearInterval(window.__skyNudge);
     window.__skyNudge = setInterval(() => {
       const a = document.getElementById('app');
@@ -1539,7 +1539,7 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
     let rec = null, recOn = false;
     function voiceIn() {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SR) { say('এই ব্রাউজারে ভয়েস শোনা যায় না — লিখে পাঠাও।', 3200); return; }
+      if (!SR) { say('এই ব্রাউজারে ভয়েস শোনা যায় না, লিখে পাঠাও।', 3200); return; }
       if (recOn) { try { rec.stop(); } catch (_) {} return; }
       try {
         rec = new SR();
@@ -1547,7 +1547,7 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
         rec.interimResults = true;
         rec.continuous = false;
         rec.onstart = () => { recOn = true; actEl.innerHTML = ic('stop'); say('শুনছি…', 6000); mood('type'); };
-        rec.onerror = () => { recOn = false; setBusy(false); say('শুনতে পারিনি — আবার চেষ্টা করো।', 2600); };
+        rec.onerror = () => { recOn = false; setBusy(false); say('শুনতে পারিনি, আবার চেষ্টা করো।', 2600); };
         rec.onend = () => { recOn = false; setBusy(false); inpEl.focus(); };
         rec.onresult = (e) => {
           let t = '';
@@ -1655,7 +1655,7 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
       };
     });
 
-    /* attachments — open the app's own pickers where it has them */
+    /* attachments, open the app's own pickers where it has them */
     const pick_ = (accept) => { const f = document.getElementById('filePick'); f.accept = accept; f.value = ''; f.click(); };
     document.getElementById('camB').onclick = () => pick_('image/*');
     document.getElementById('imgB').onclick = () => pick_('image/*');
@@ -1665,7 +1665,7 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
       const f = e.target.files && e.target.files[0];
       layer(false);
       if (!f) return;
-      say('ফাইলটা দেখা হচ্ছে — এই ফিচারটা অ্যাপের নিজের পাঠানোর জায়গা থেকে কাজ করে।', 4200);
+      say('ফাইলটা দেখা হচ্ছে, এই ফিচারটা অ্যাপের নিজের পাঠানোর জায়গা থেকে কাজ করে।', 4200);
     };
 
     /* pet the avatar */

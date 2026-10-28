@@ -1,9 +1,9 @@
-/* AdmissionSky — anonymous daily AI report (owner 2026-10-17).
+/* AdmissionSky, anonymous daily AI report (owner 2026-10-17).
  *
  * Every AI chat request adds a few COUNTS to one Durable Object (AI_STATE,
  * instance '__sky-daily-stats__'): how many requests, how they were answered
  * (tools / cache / model / failed / daily limit), which provider, and speed
- * buckets. No uid, no text, no question, no IP — only numbers, so the report
+ * buckets. No uid, no text, no question, no IP, only numbers, so the report
  * cannot identify anyone. Durable Object requests are used instead of KV
  * because the free plan allows 1,000 KV writes a day and 100,000 DO requests.
  *

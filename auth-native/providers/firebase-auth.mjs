@@ -397,7 +397,7 @@ export class FirebaseEmailPasswordProvider {
     }
     const providerRows = Array.isArray(user.providerUserInfo) ? user.providerUserInfo : [];
     // displayName/photoUrl come from the VERIFIED Firebase user record (server
-    // side, idToken-bound) — used only to seed a brand-new profile's empty
+    // side, idToken-bound), used only to seed a brand-new profile's empty
     // fields. They never overwrite student-owned data.
     return Object.freeze({
       subject: user.localId,

@@ -20,7 +20,7 @@ test('nothing known → null (the normal greeting stays)', () => {
 
 test('owner example: no exam yet + stated সমাসে → exact line and a quiz button', () => {
   const r = buildRecall({ records: [weak('সমাসে')], stats: { exams: 0 }, now: NOW });
-  assert.equal(r.line, 'তুমি এখনো পরীক্ষা দাওনি, তবে আগে বলেছিলে সমাসে দুর্বল — আজ সমাস দিয়ে শুরু করি?');
+  assert.equal(r.line, 'তুমি এখনো পরীক্ষা দাওনি, তবে আগে বলেছিলে সমাসে দুর্বল, আজ সমাস দিয়ে শুরু করি?');
   assert.equal(r.button.prompt, 'সমাস থেকে ৫টা প্রশ্নে কুইজ দাও');
   assert.deepEqual(r.kinds, ['weak-stated']);
   assert.doesNotMatch(r.line, /[*_#`<>]/, 'plain text, no Markdown/HTML');

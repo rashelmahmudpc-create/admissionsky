@@ -1,5 +1,5 @@
 /*
- * Mock + Result Experience — Admission Hub
+ * Mock + Result Experience, Admission Hub
  * Design reminder: preserve Question Review markup and all existing result actions.
  * This layer only locks Mock choices and replaces the result-summary area above review.
  */
@@ -220,7 +220,7 @@
     const attemptRate = total ? Math.round((correct + wrong) / total * 100) : 0;
     const comparisonValues = [...history].reverse().map(currentAccuracy).concat(accuracy);
     const priorAverage = average(history.map(currentAccuracy));
-    const overallChange = priorAverage === null ? 'এটি তোমার প্রথম saved result — পরের পরীক্ষাগুলোতে তুলনা দেখা যাবে।' : `আগের ${history.length}টি পরীক্ষার গড় ${priorAverage}% থেকে ${accuracy}% (${safe(deltaText(accuracy, priorAverage))})।`;
+    const overallChange = priorAverage === null ? 'এটি তোমার প্রথম saved result, পরের পরীক্ষাগুলোতে তুলনা দেখা যাবে।' : `আগের ${history.length}টি পরীক্ষার গড় ${priorAverage}% থেকে ${accuracy}% (${safe(deltaText(accuracy, priorAverage))})।`;
     const strengths = distinctStrengths(currentSubjects);
     const topicStrengths = distinctStrengths(currentTopics);
     const priorityTopics = [...currentTopics].filter((row) => Number(row.total || 0) > 0).sort((a, b) => {

@@ -1,4 +1,4 @@
-/* Phase G — personalized smart notifications.
+/* Phase G, personalized smart notifications.
  *
  * The global broadcaster (fcm-notification.mjs) sends one message to everyone.
  * This engine sends the RIGHT message to ONE student, using the learning state
@@ -77,24 +77,24 @@ const dayDiff = (a, b) => Math.round((Date.parse(a + 'T00:00:00Z') - Date.parse(
 
 const MSG = {
   'revision-due': {
-    bn: n => ({ title: '📚 রিভিশনের সময় হয়েছে', body: `${n}টি ভুল প্রশ্ন রিভিশনের অপেক্ষায় আছে — আজই ঝালাই করে ফেলো` }),
-    en: n => ({ title: '📚 Time to revise', body: `${n} missed questions are waiting for revision — clear them today` })
+    bn: n => ({ title: '📚 রিভিশনের সময় হয়েছে', body: `${n}টি ভুল প্রশ্ন রিভিশনের অপেক্ষায় আছে, আজই ঝালাই করে ফেলো` }),
+    en: n => ({ title: '📚 Time to revise', body: `${n} missed questions are waiting for revision, clear them today` })
   },
   'streak-risk': {
-    bn: () => ({ title: '🔥 স্ট্রিক বাঁচাও', body: 'আজ এখনো পড়া শুরু হয়নি — কয়েকটা প্রশ্ন হলেও স্ট্রিক ধরে রাখো' }),
-    en: () => ({ title: '🔥 Keep your streak', body: 'You have not studied yet today — a few questions keeps your streak alive' })
+    bn: () => ({ title: '🔥 স্ট্রিক বাঁচাও', body: 'আজ এখনো পড়া শুরু হয়নি, কয়েকটা প্রশ্ন হলেও স্ট্রিক ধরে রাখো' }),
+    en: () => ({ title: '🔥 Keep your streak', body: 'You have not studied yet today, a few questions keeps your streak alive' })
   },
   'exam-weak': {
-    bn: n => ({ title: '🎯 দুর্বল topic', body: `সর্বশেষ পরীক্ষায় ${n}% এসেছে — দুর্বল topicগুলো রিভিশন করলে লাভ হবে` }),
-    en: n => ({ title: '🎯 Weak topics', body: `Your last exam was ${n}% — revising the weak topics will pay off` })
+    bn: n => ({ title: '🎯 দুর্বল topic', body: `সর্বশেষ পরীক্ষায় ${n}% এসেছে, দুর্বল topicগুলো রিভিশন করলে লাভ হবে` }),
+    en: n => ({ title: '🎯 Weak topics', body: `Your last exam was ${n}%, revising the weak topics will pay off` })
   },
   'inactive-3d': {
-    bn: n => ({ title: '👋 ফিরে এসো', body: `${n} দিন পড়া হয়নি — আজ ছোট একটা সেশন দিয়ে আবার শুরু করো` }),
-    en: n => ({ title: '👋 Come back', body: `${n} days without study — a short session today restarts the habit` })
+    bn: n => ({ title: '👋 ফিরে এসো', body: `${n} দিন পড়া হয়নি, আজ ছোট একটা সেশন দিয়ে আবার শুরু করো` }),
+    en: n => ({ title: '👋 Come back', body: `${n} days without study, a short session today restarts the habit` })
   },
   'daily-glow': {
-    bn: n => ({ title: '⭐ চালিয়ে যাও', body: `আজ ${n}টি প্রশ্ন solved — এই ছন্দ ধরে রাখো` }),
-    en: n => ({ title: '⭐ Keep going', body: `${n} questions solved today — keep the rhythm` })
+    bn: n => ({ title: '⭐ চালিয়ে যাও', body: `আজ ${n}টি প্রশ্ন solved, এই ছন্দ ধরে রাখো` }),
+    en: n => ({ title: '⭐ Keep going', body: `${n} questions solved today, keep the rhythm` })
   }
 };
 

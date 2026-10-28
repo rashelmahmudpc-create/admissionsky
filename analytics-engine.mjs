@@ -1,7 +1,7 @@
-/* Phase 4 — Unified Analytics Engine & Smart Insights.
+/* Phase 4, Unified Analytics Engine & Smart Insights.
  *
  * One layer that turns the data Phase 1–3 already collected into metrics,
- * comparisons, trends and plain-language insights — for the student about
+ * comparisons, trends and plain-language insights, for the student about
  * themselves, and for the admin about the platform.
  *
  * Data ownership is unchanged. This module reads what already exists and writes
@@ -198,7 +198,7 @@ export function computeLearningMetrics(input = {}, options = {}) {
     };
   });
 
-  /* A student is "returning" when they were away for a while and came back —
+  /* A student is "returning" when they were away for a while and came back -
    * derived from their own day history rather than from a caller's hint, so the
    * admin segmentation (which has no such hint) can still produce the segment. */
   const hadGap = (() => {
@@ -333,7 +333,7 @@ export function detectTrends(series = [], options = {}) {
 
 /* Behaviour segments. A student lands in exactly one, checked from the most
  * urgent state to the least, because "at risk" must win over "active" for a
- * student who was busy a month ago. Thresholds are deliberately blunt — a
+ * student who was busy a month ago. Thresholds are deliberately blunt, a
  * segment is a routing hint for the Phase 3 engine, not a verdict.
  *
  * There is no separate "dormant" state: a student who is quiet but still inside
@@ -365,7 +365,7 @@ export function classifyBehaviourSegment(metrics = {}, options = {}) {
   return { segment: 'active', reason: `active-${activeDays}d` };
 }
 
-/* Learning stage — how far through the content a student actually is. Separate
+/* Learning stage, how far through the content a student actually is. Separate
  * from the behaviour segment on purpose: a pro can be at risk, a beginner can be
  * highly active, and the Phase 3 engine wants both facts. */
 export function classifyLearningStage(metrics = {}) {
@@ -418,7 +418,7 @@ export function buildFunnel(counts = {}) {
 
 /* The steepest step that keeps far fewer students than the one before it, and
  * only once enough students reached it to make a percentage meaningful. Ties
- * break toward the earliest step — that is the one worth fixing first. */
+ * break toward the earliest step, that is the one worth fixing first. */
 export function detectFunnelDropOff(funnel = [], options = {}) {
   const alertRate = options.alertRate ?? DROPOFF_ALERT_RATE;
   const minSample = options.minSample ?? DROPOFF_MIN_SAMPLE;
@@ -444,7 +444,7 @@ export function dropOffMessage(key, rate) {
     quiz_start: 'পাঠ শেষ করে কুইজ শুরু করেনি',
     quiz_complete: 'কুইজ শুরু করে শেষ করেনি'
   };
-  return `${labels[key] || key} — ${Math.round(asNum(rate) * 100)}% এখানেই থেমে গেছে।`;
+  return `${labels[key] || key}, ${Math.round(asNum(rate) * 100)}% এখানেই থেমে গেছে।`;
 }
 
 /* ── course / lesson / quiz analytics ────────────────────────────────────── */
@@ -612,7 +612,7 @@ export function buildQuizAnalytics(events = []) {
 
 /* DAU/WAU/MAU from per-student active days. `students` is one entry per student:
  * { userId, activeDays: ['YYYY-MM-DD', ...] }. Engagement is counted in active
- * students, never app opens — opening the app is not learning. */
+ * students, never app opens, opening the app is not learning. */
 export function computeEngagement(students = [], options = {}) {
   const today = options.today || dayKey(options.nowMs ?? Date.now(), options.tzOffsetMin);
   const rows = (Array.isArray(students) ? students : []).filter(s => s && s.userId);
@@ -719,7 +719,7 @@ export function computeRetention(students = [], options = {}) {
 
 /* The Phase 3 outcome rows already carry the whole funnel: sent → opened →
  * clicked → learning. Nothing is recollected; this only aggregates. The metric
- * that matters most is conversion — a notification that is opened but never
+ * that matters most is conversion, a notification that is opened but never
  * leads to study has not worked, however good the open rate looks. */
 export function computeNotificationAnalytics(outcomes = [], options = {}) {
   const rows = (Array.isArray(outcomes) ? outcomes : []).filter(o => o && o.notification_key);
@@ -734,7 +734,7 @@ export function computeNotificationAnalytics(outcomes = [], options = {}) {
       openRate: pct(opened, sent, 1),
       clickRate: pct(clicked, sent, 1),
       learningConversion: pct(learning, sent, 1),
-      /* Of the students who engaged, how many actually studied — separates a
+      /* Of the students who engaged, how many actually studied, separates a
        * good subject line from a good nudge. */
       clickToLearning: pct(learning, clicked, 1),
       openToLearning: pct(learning, opened, 1)
@@ -890,7 +890,7 @@ export function computeMilestones(metrics = {}, options = {}) {
 /* Turns metrics into sentences a student can act on, and signals an admin can
  * investigate. An insight is only emitted when the data supports it: a claim
  * needs a sample and a direction, otherwise it is noise dressed as advice. The
- * output is deliberately plain objects — the same structure the Phase 5 AI layer
+ * output is deliberately plain objects, the same structure the Phase 5 AI layer
  * will consume, so nothing has to be re-derived later. */
 
 export const INSIGHT_KINDS = Object.freeze(['positive', 'attention', 'neutral']);
@@ -924,11 +924,11 @@ export function buildStudentInsights(metrics = {}, context = {}) {
   }
   if (streak >= 3) {
     out.push(insight('positive', 'streak',
-      `🔥 টানা ${streak} দিন পড়ছ — এই ছন্দটা ধরে রাখো।`, { streak }));
+      `🔥 টানা ${streak} দিন পড়ছ, এই ছন্দটা ধরে রাখো।`, { streak }));
   }
   if (practice >= 20 && accuracy >= 80) {
     out.push(insight('positive', 'accuracy',
-      `🎯 তোমার নির্ভুলতা ${accuracy}% — বেশ ভালো। এখন একটু কঠিন প্রশ্নে যাওয়ার সময়।`, { accuracy }));
+      `🎯 তোমার নির্ভুলতা ${accuracy}%, বেশ ভালো। এখন একটু কঠিন প্রশ্নে যাওয়ার সময়।`, { accuracy }));
   }
 
   /* Course progress gets a named call-out, because "which section" is the part
@@ -946,11 +946,11 @@ export function buildStudentInsights(metrics = {}, context = {}) {
   /* Attention signals. */
   if (trend?.practiceActivity?.direction === 'down' && trend.practiceActivity.strength >= 0.15) {
     out.push(insight('attention', 'practice-down',
-      `📉 অভ্যাস কমে আসছে — আজ অল্প করে হলেও কিছু প্রশ্ন solve করো।`, { strength: trend.practiceActivity.strength }));
+      `📉 অভ্যাস কমে আসছে, আজ অল্প করে হলেও কিছু প্রশ্ন solve করো।`, { strength: trend.practiceActivity.strength }));
   }
   if (practice > 0 && accuracy > 0 && accuracy < 50) {
     out.push(insight('attention', 'accuracy-low',
-      `⚠️ নির্ভুলতা ${accuracy}% — ভুলগুলো একবার revise করলে দ্রুত বাড়বে।`, { accuracy }));
+      `⚠️ নির্ভুলতা ${accuracy}%, ভুলগুলো একবার revise করলে দ্রুত বাড়বে।`, { accuracy }));
   }
   const pending = asInt(metrics.mistakes?.pending);
   if (pending >= 5) {
@@ -959,11 +959,11 @@ export function buildStudentInsights(metrics = {}, context = {}) {
   }
   if (metrics.daysSinceActive !== null && metrics.daysSinceActive >= 4) {
     out.push(insight('attention', 'inactive',
-      `⏰ ${metrics.daysSinceActive} দিন ধরে পড়া হয়নি — আজ ছোট করে শুরু করো।`, { days: metrics.daysSinceActive }));
+      `⏰ ${metrics.daysSinceActive} দিন ধরে পড়া হয়নি, আজ ছোট করে শুরু করো।`, { days: metrics.daysSinceActive }));
   }
   if (lessons > 0 && practice === 0) {
     out.push(insight('attention', 'no-practice',
-      `📖 পাঠ শেষ করেছ কিন্তু এখনো প্রশ্ন solve করনি — অভ্যাস ছাড়া মনে থাকবে না।`, {}));
+      `📖 পাঠ শেষ করেছ কিন্তু এখনো প্রশ্ন solve করনি, অভ্যাস ছাড়া মনে থাকবে না।`, {}));
   }
 
   return out;
@@ -1029,7 +1029,7 @@ export function buildAdminInsights(input = {}) {
   }
   if (notifications.overall?.sent >= 20 && notifications.overall.learningConversion < 5) {
     out.push(insight('attention', 'notification-conversion-low',
-      `⚠️ Notification → learning conversion মাত্র ${notifications.overall.learningConversion}% — পাঠানো কমিয়ে relevance বাড়ানো দরকার।`, { conversion: notifications.overall.learningConversion }));
+      `⚠️ Notification → learning conversion মাত্র ${notifications.overall.learningConversion}%, পাঠানো কমিয়ে relevance বাড়ানো দরকার।`, { conversion: notifications.overall.learningConversion }));
   }
 
   if (campaigns.best) {
@@ -1042,7 +1042,7 @@ export function buildAdminInsights(input = {}) {
     const d1 = asNum(retention.byWindow.d1);
     if (d1 > 0 && d7 < d1 * 0.5) {
       out.push(insight('attention', 'retention-gap',
-        `⚠️ D1 ${d1}% থেকে D7-এ নেমে এসেছে ${d7}% — প্রথম সপ্তাহেই অনেকেই হারিয়ে যাচ্ছে।`, { d1, d7 }));
+        `⚠️ D1 ${d1}% থেকে D7-এ নেমে এসেছে ${d7}%, প্রথম সপ্তাহেই অনেকেই হারিয়ে যাচ্ছে।`, { d1, d7 }));
     } else if (d1 > 0) {
       out.push(insight('positive', 'retention-ok',
         `✅ D1 retention ${d1}%।`, { d1 }));
@@ -1051,7 +1051,7 @@ export function buildAdminInsights(input = {}) {
 
   if (engagement.totalStudents >= DROPOFF_MIN_SAMPLE) {
     out.push(insight('neutral', 'stickiness',
-      `👥 Stickiness (DAU/MAU) ${engagement.stickiness}% — ${engagement.dau} active আজ, ${engagement.mau} এই মাসে।`, { stickiness: engagement.stickiness }));
+      `👥 Stickiness (DAU/MAU) ${engagement.stickiness}%, ${engagement.dau} active আজ, ${engagement.mau} এই মাসে।`, { stickiness: engagement.stickiness }));
   }
 
   return out;
@@ -1073,7 +1073,7 @@ export function summarizeTrends(trends = {}) {
     if (t?.direction === 'up') up.push(label);
     else if (t?.direction === 'down') down.push(label);
   }
-  if (!up.length && !down.length) return { text: 'এই সময়ে বড় কোনো পরিবর্তন নেই — ধারা স্থির।', up, down };
+  if (!up.length && !down.length) return { text: 'এই সময়ে বড় কোনো পরিবর্তন নেই, ধারা স্থির।', up, down };
   const parts = [];
   if (up.length) parts.push(`${up.join(', ')} বাড়ছে`);
   if (down.length) parts.push(`${down.join(', ')} কমছে`);
@@ -1083,8 +1083,8 @@ export function summarizeTrends(trends = {}) {
 /* ── storage ─────────────────────────────────────────────────────────────── */
 
 /* Reads only. Phase 4 adds no tables: every figure below is derived from the
- * Phase 1–3 schema, and the one thing that could not be derived — a per-student
- * event trail — is ingested into `analytics_events` by the client, which is the
+ * Phase 1–3 schema, and the one thing that could not be derived, a per-student
+ * event trail, is ingested into `analytics_events` by the client, which is the
  * only new storage and the only new write path. */
 
 const MAX_EVENT_ROWS = 5000;
@@ -1111,7 +1111,7 @@ export class AnalyticsStore {
   }
 
   /* A read that touches a table another module owns must not fail just because
-   * that module has not created its schema yet — a fresh database, or a first
+   * that module has not created its schema yet, a fresh database, or a first
    * request that lands on analytics before the feature it reads. "No such
    * table" means "no data yet", which every metric here already renders as
    * zero; it does not mean the request is broken. Real SQL errors still throw,
@@ -1210,7 +1210,7 @@ export class AnalyticsStore {
   }
 
   /* Every student's learning picture, one row per student, for the platform
-   * metrics. `activeDays` is a comma-joined day list — D1 has no array type and
+   * metrics. `activeDays` is a comma-joined day list, D1 has no array type and
    * the only consumer is the segmentation/engagement code above. */
   async studentSnapshots(sinceMs) {
     await this.init();
@@ -1235,7 +1235,7 @@ export class AnalyticsStore {
     }));
   }
 
-  /* Per-student daily series for one student — the student dashboard's read. */
+  /* Per-student daily series for one student, the student dashboard's read. */
   async dailyStats(userId, limitDays = 60) {
     await this.init();
     const query = this.#d1.prepare(
@@ -1283,7 +1283,7 @@ export class AnalyticsStore {
   }
 
   /* Course progress lives in the student's own settings blob (same read Phase 3
-   * uses). A malformed or absent blob means "no course data" — never a guess. */
+   * uses). A malformed or absent blob means "no course data", never a guess. */
   async courses(userId) {
     await this.init();
     const query = this.#d1.prepare(
@@ -1392,7 +1392,7 @@ export class AnalyticsStore {
     return out;
   }
 
-  /* How many students have a device registered — the honest denominator for a
+  /* How many students have a device registered, the honest denominator for a
    * "reached" percentage. */
   async deviceCount() {
     await this.init();
@@ -1478,7 +1478,7 @@ export function parseFilters(url, now = Date.now()) {
 const inWindow = (at, f) => asInt(at) >= f.sinceMs && asInt(at) <= f.untilMs;
 
 /* Every filter is applied in one place so a view can never accidentally ignore
- * one — the bug that makes two admin screens disagree. */
+ * one, the bug that makes two admin screens disagree. */
 export function applyFilters({ events = [], courses = [], lessons = [], quizzes = [], campaigns = [], outcomes = [], segments = [] }, f) {
   let ev = events.filter(e => inWindow(e.at, f));
   let co = courses;
@@ -1581,7 +1581,7 @@ export async function buildAdminDashboard(store, filters, options = {}) {
   const campaigns = computeCampaignAnalytics(globals, readCounts);
   const segments = students.map(s => {
     const last = s.activeDays[s.activeDays.length - 1] || null;
-    /* hadGap is derived from the student's own day list — the same rule the
+    /* hadGap is derived from the student's own day list, the same rule the
      * student dashboard uses, so both surfaces segment a student identically. */
     let hadGap = false;
     for (let i = 1; i < s.activeDays.length; i += 1) {

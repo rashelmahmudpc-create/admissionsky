@@ -34,7 +34,7 @@ const HEADERS = {
   'x-sky-ai-route': 'prefs'
 };
 
-function sameKey(a, b) {
+export function sameKey(a, b) {
   a = String(a || ''); b = String(b || '');
   if (!a || a.length !== b.length) return false;
   let diff = 0;

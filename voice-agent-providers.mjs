@@ -1,5 +1,5 @@
 /**
- * 🎙️ P23 — LIVE VOICE AGENT · PROVIDER ADAPTERS
+ * 🎙️ P23, LIVE VOICE AGENT · PROVIDER ADAPTERS
  *
  * One function per provider, each returning a normalised result. Every adapter
  * takes an injectable `fetch` so the pool can be tested without a network.
@@ -32,8 +32,8 @@ async function statusError(res, fallback) {
 
 /**
  * Whisper conditions strongly on this. Without it, Bengali came back mangled in
- * testing on even a clean synthetic clip — "আসসালামু আলাইকুম" was heard as
- * "আশ্যারমো আলাইকুম" — which is the owner's "আমার কথা অস্পষ্ট" complaint. The
+ * testing on even a clean synthetic clip, "আসসালামু আলাইকুম" was heard as
+ * "আশ্যারমো আলাইকুম", which is the owner's "আমার কথা অস্পষ্ট" complaint. The
  * word "বাংলা" plus a couple of everyday phrases pins the script and accent, so
  * the same clip transcribes correctly. Capped so it cannot dominate a long turn.
  */
@@ -116,7 +116,7 @@ function fromBase64(b64) {
 
 /* ── Text → text ────────────────────────────────────────────────────────── */
 
-/** OpenAI-compatible chat completion — shared by Groq, OpenRouter and the gateway. */
+/** OpenAI-compatible chat completion, shared by Groq, OpenRouter and the gateway. */
 async function openAiChat(url, provider, messages, opts, fallbackName) {
   const f = opts.fetch || fetch;
   const system = opts.system ? String(opts.system) : '';
@@ -127,7 +127,7 @@ async function openAiChat(url, provider, messages, opts, fallbackName) {
     model: provider.model || opts.defaultModel,
     // The persona and the relevance rules ride in the system turn. Without
     // this the OpenAI-compatible providers answered with no instructions at
-    // all — the reason replies drifted off-topic.
+    // all, the reason replies drifted off-topic.
     messages: system ? [{ role: 'system', content: system }, ...messages] : messages,
     temperature: opts.temperature == null ? 0.6 : opts.temperature,
     max_tokens: opts.maxTokens || 400,
@@ -163,8 +163,8 @@ export function openrouterLlm(provider, messages, opts = {}) {
 }
 
 /**
- * Any OpenAI-compatible chat endpoint — OpenAI, OpenRouter, or Cloudflare AI
- * Gateway — with the URL carried on the provider entry so the owner can point
+ * Any OpenAI-compatible chat endpoint, OpenAI, OpenRouter, or Cloudflare AI
+ * Gateway, with the URL carried on the provider entry so the owner can point
  * it at a stronger model (Claude, GPT, Gemini) without a code change.
  *
  *   [{"id":"openai-compat","key":"...","model":"anthropic/claude-sonnet-4-5",
@@ -211,7 +211,7 @@ export async function geminiLlm(provider, messages, opts = {}) {
 const CARTESIA_URL = 'https://api.cartesia.ai/tts/bytes';
 const CARTESIA_VERSION = '2026-08-14';
 /**
- * "Rubel – City Guide" — the Bengali MASCULINE voice the owner asked for by
+ * "Rubel – City Guide", the Bengali MASCULINE voice the owner asked for by
  * name. The previous default was a feminine voice, which he rejected.
  */
 const CARTESIA_VOICE_BN = '2ba861ea-7cdc-43d1-8608-4045b5a41de5';
@@ -274,8 +274,8 @@ export function pcmToWav(pcm, sampleRate = 24000, channels = 1, bits = 16) {
 /**
  * Gemini voice (the TTS preview models). Returns WAV bytes.
  *
- * This is the only TTS path that needs no new credential — it rides the same
- * Gemini keys already bound for the LLM — so the agent can speak on a
+ * This is the only TTS path that needs no new credential, it rides the same
+ * Gemini keys already bound for the LLM, so the agent can speak on a
  * deployment where Cartesia is not configured.
  */
 export async function geminiTts(provider, text, opts = {}) {

@@ -2,6 +2,14 @@ name: visual-guard
 # Screenshot safety net. Runs on every PR. Never pushes to main.
 on:
   pull_request:
+    paths:
+      - '*.html'
+      - '*.css'
+      - '*.js'
+      - '*.mjs'
+      - 'slug/**'
+      - 'tests/visual/**'
+      - '.github/workflows/visual-guard.yml'
   push:
     branches: ['safety/**']
   workflow_dispatch:

@@ -44,3 +44,19 @@ test('client sends a fresh Turnstile token on every guarded call', () => {
     assert.ok(seen > 0, `client calls ${path}`);
   }
 });
+
+// Owner report 2026-10-24: signup stopped right after the confirm-password
+// field with "তথ্যটি ভুল". The server was answering INVALID_INPUT for a failed
+// human check, which the client had no mapping for, so it showed the generic
+// "write the information correctly" banner and the student re-typed a form that
+// was never the problem. These two guards keep that dead end from returning.
+test('a failed human check carries its own error code end to end', () => {
+  assert.ok(CLIENT.includes('HUMAN_CHECK_FAILED:'), 'friendlyError maps the human-check code');
+  assert.ok(!/INVALID_INPUT:\s*'[^']*মানব যাচাই/.test(CLIENT), 'the human-check message is not attached to INVALID_INPUT');
+});
+
+test('the human check can actually be completed when Cloudflare asks for a tap', () => {
+  assert.ok(CLIENT.includes("'before-interactive-callback'"), 'the widget enlarges itself before a challenge');
+  assert.ok(CLIENT.includes("'after-interactive-callback'"), 'the widget shrinks again afterwards');
+  assert.ok(!/size: 'invisible'/.test(CLIENT), 'an invisible widget cannot show an interaction challenge');
+});

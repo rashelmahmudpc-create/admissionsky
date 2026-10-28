@@ -6,7 +6,7 @@ This Worker is a server-side proxy for the Result Analysis button. It keeps the 
 
 1. Create a Cloudflare Worker named `admission-hub-ai-proxy`.
 2. Upload `worker.js` and use `wrangler.toml.example` as the configuration template.
-3. Create a KV namespace and set its production ID in the configuration. The KV binding is required for the three-requests-per-day guard.
+3. Create a KV namespace and set its production ID in the configuration. The KV binding is required for the one-request-per-day guard.
 4. Set the secret without committing it:
 
 ```bash
@@ -28,7 +28,7 @@ The endpoint URL is not the secret; the Browser Use key remains only in the Work
 
 First call `GET /health`. Then run one small analysis from a real Result page. The Worker creates a Browser Use V4 run, returns a `runId`, polls `/runs/{id}/status` until terminal, then fetches `/runs/{id}` once for the final result. The frontend caches the completed response per result.
 
-The Worker rejects oversized payloads, rejects requests from origins other than the configured GitHub Pages origin, requires the KV quota binding, and limits each client IP to three analysis requests per UTC day. Keep the first test to one request so the Browser Use balance can be checked.
+The Worker rejects oversized payloads, rejects requests from origins other than the configured GitHub Pages origin, requires the KV quota binding, and limits each client IP to one analysis request per UTC day. Keep the first test to one request so the Browser Use balance can be checked.
 
 ## Important limitation
 

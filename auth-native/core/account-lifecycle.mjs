@@ -1,17 +1,17 @@
-// Phase 3 — Account Lifecycle (state machine)
+// Phase 3, Account Lifecycle (state machine)
 //
 // Centralized account state authority. Frontend components and feature
 // modules must never mutate account state directly; every state change
 // flows through this module and is validated against the transition table.
 //
 // States (blueprint §10 / EXTRA 04):
-//   provisioning          — account record exists, identity not fully settled
-//   verification_required — identity settled, ownership verification pending
-//   active                — fully usable; the ONLY state that may hold sessions
-//   restricted            — authenticated actions limited (security hold)
-//   suspended             — disabled by authority (admin/Firebase disabled)
-//   recovery              — explicit recovery/reactivation in progress
-//   deactivated           — deactivated; identity retained, never reused
+//   provisioning         , account record exists, identity not fully settled
+//   verification_required, identity settled, ownership verification pending
+//   active               , fully usable; the ONLY state that may hold sessions
+//   restricted           , authenticated actions limited (security hold)
+//   suspended            , disabled by authority (admin/Firebase disabled)
+//   recovery             , explicit recovery/reactivation in progress
+//   deactivated          , deactivated; identity retained, never reused
 //
 // Legacy storage values (pre-Phase 3 rows) normalize into the canonical set:
 //   'disabled' -> 'suspended'

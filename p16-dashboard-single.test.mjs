@@ -17,7 +17,7 @@ t('২. dv2Cleanup বিদ্যমান (একাধিক .page-সরা�
 t('৩. পুরনো-ড্যাশ-মার্কার-শূন্যকরণ-তালিকা (phase5/phase34/comparison/quicklinks/gk/old-dash)', V2.includes('[data-phase5-dashboard],[data-phase34-dashboard],[data-dashboard-comparison],[data-phase5-quicklinks],.daily-gk-teaser,.p3-dashboard-v3,.dashboard-v2,.p3-dashboard'));
 t('৪. cleanup রেন্ডার-শেষে-ও-ফলব্যাক-পথে-উভয়ই (dv2Cleanup ২-কল)', (V2.match(/dv2Cleanup\(\);/g) || []).length >= 2);
 
-t('৫. ভার্সন: dashboard-v2.js ?v=dash2f10-main-ai (index+sw) + current BUILD_ID', H.includes('dashboard-v2.js?v=dash2f18-chrome') && SW.includes("'./dashboard-v2.js?v=dash2f18-chrome'") && SW.includes("const BUILD_ID = 'v350-notes-screen-v2'") && H.includes("const expectedSwVersion = 'v350-notes-screen-v2'"));
+t('৫. ভার্সন: dashboard-v2.js ?v=dash2f10-main-ai (index+sw) + current BUILD_ID', H.includes('dashboard-v2.js?v=dash2f18-chrome') && SW.includes("'./dashboard-v2.js?v=dash2f18-chrome'") && SW.includes("const BUILD_ID = 'v364-sky-goal'") && H.includes("const expectedSwVersion = 'v364-sky-goal'"));
 
 /* ── ২. রানটাইম: পুরনো-রেন্ডার-চেইন-হুবহু + append-mode-renderShell → এক-পেজ ── */
 t('৬. রানটাইম: previous-চেইন-দ্বৈত-বানালেও dv2-র-পর #app-এ ঠিক-একটি .page + শুধু dv2', (async () => {

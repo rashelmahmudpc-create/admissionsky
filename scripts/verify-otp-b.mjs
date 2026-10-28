@@ -3,8 +3,8 @@
 //
 //   node scripts/verify-otp-b.mjs <exec-url> <shared-secret> [sendTo]
 //
-// Drives the REAL AppsScriptOtpVerificationProvider — the same class the Worker
-// constructs — so a pass here means production behaves identically. Without
+// Drives the REAL AppsScriptOtpVerificationProvider, the same class the Worker
+// constructs, so a pass here means production behaves identically. Without
 // sendTo it stays non-mutating (health + quota only).
 
 import { AppsScriptOtpVerificationProvider } from '../auth-native/verification/providers.mjs';
@@ -22,14 +22,14 @@ const provider = new AppsScriptOtpVerificationProvider({
   declaredDailyQuota: Number(process.env.OTP_B_DAILY_QUOTA || 100)
 });
 
-console.log('webAppUrl accepted :', provider.webAppUrl || '(REJECTED — url failed validation)');
+console.log('webAppUrl accepted :', provider.webAppUrl || '(REJECTED, url failed validation)');
 console.log('configured         :', provider.configured);
 if (!provider.configured) process.exit(1);
 
 const results = [];
 const record = (name, ok, detail) => {
   results.push(ok);
-  console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  — ${detail}` : ''}`);
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? ` , ${detail}` : ''}`);
 };
 
 const attempt = async (name, run) => {

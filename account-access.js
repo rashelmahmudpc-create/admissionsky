@@ -117,7 +117,7 @@
         <form class="ah-account-view ah-login-view" data-view="login" data-login-contract="reference-login-v1" novalidate>
           <div class="ah-login-hero" aria-hidden="true"><span class="ah-login-orb"><svg viewBox="0 0 24 24" fill="none"><path d="m6.5 12.4 4 4L17.6 8.6"/></svg></span><i class="ah-login-spark one">✦</i><i class="ah-login-spark two">✦</i><i class="ah-login-spark three">✦</i></div>
           <h3 class="ah-login-title">আবার দেখা হলো <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 10.5a11 11 0 0 1 16 0"/><path d="M7 13.8a6.5 6.5 0 0 1 10 0"/><circle cx="12" cy="17.2" r="1.6"/></svg></h3>
-          <p class="ah-login-sub">তোমার preparation যেখানে থেমেছিল, সেখান থেকেই শুরু করো।</p><button class="ah-account-link ah-calm-back" type="button" data-role="login-back">← পেছনে</button>
+          <p class="ah-login-sub">তোমার preparation যেখানে থেমেছিল, সেখান থেকেই শুরু করো।</p><button class="ah-account-link ah-calm-back" type="button" data-role="login-back" data-bn="← পেছনে" data-en="← Back">← পেছনে</button>
           <div class="ah-account-field ah-login-field"><label class="ah-account-label" for="ah-login-email"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.2" y="5.6" width="17.6" height="12.8" rx="3.2"/><path d="m4.6 8.2 7.4 5 7.4-5"/></svg><span>EMAIL</span></label><input class="ah-account-input" id="ah-login-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="254" placeholder="student@gmail.com" required></div>
           <div class="ah-account-field ah-login-field"><label class="ah-account-label" for="ah-login-password"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="10" width="14" height="10.5" rx="3.2"/><path d="M8.2 10V7.6a3.8 3.8 0 0 1 7.6 0V10"/></svg><span>PASSWORD</span></label><div class="ah-password-wrap"><input class="ah-account-input" id="ah-login-password" name="password" type="password" autocomplete="current-password" minlength="8" maxlength="128" placeholder="••••••••" required><button class="ah-password-toggle" type="button" data-password-target="ah-login-password" aria-label="Password দেখুন"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 12S6 6.8 12 6.8 20.5 12 20.5 12 18 17.2 12 17.2 3.5 12 3.5 12Z"/><circle cx="12" cy="12" r="2.6"/></svg></button></div></div>
           <div class="ah-login-row"><label class="ah-login-remember"><input type="checkbox" id="ah-login-remember" checked><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m6.5 12.4 4 4L17.6 8.6"/></svg></span><b>Remember me</b></label><button class="ah-account-link ah-forgot-link" type="button" data-role="show-forgot">Forgot password?</button></div>
@@ -166,7 +166,7 @@
                 <p class="ah-personal-kicker"><i aria-hidden="true"></i>STEP 01 · PERSONAL</p>
                 <h1 id="ah-personal-title">Set up your profile</h1>
               </div>
-              <p class="ah-personal-subcopy">Just your name and date of birth — we'll handle the rest.</p>
+              <p class="ah-personal-subcopy">Just your name and date of birth, we'll handle the rest.</p>
             </div>
 
             <div class="ah-personal-card">
@@ -213,7 +213,7 @@
             </div>
           </section>
           <section class="ah-signup-panel ah-institution-panel ah-education-panel ah-education-school-panel" data-signup-panel="school" data-institution-kind="school" hidden>
-            <div class="ah-standalone-heading ah-education-heading"><h3>তোমার বিদ্যালয়ের নাম লিখো</h3><p>নাম লিখতে শুরু করো—আমরা কাছাকাছি school খুঁজে দেব।</p></div>
+            <div class="ah-standalone-heading ah-education-heading"><h3>তোমার বিদ্যালয়ের নাম লিখো</h3><p>নাম লিখতে শুরু করো, আমরা কাছাকাছি school খুঁজে দেব।</p></div>
             <div class="ah-campus-strip ah-education-ornament" aria-hidden="true"><span>♧</span><i>▥</i><b>⌂</b><i>▥</i><span>♧</span></div>
             <div class="ah-account-field ah-search-field">
               <label class="sr-only" for="ah-signup-school">তোমার School কোনটি?</label>
@@ -264,7 +264,7 @@
             <div class="ah-panel-actions ah-bottom-actions"><button class="ah-account-secondary" type="button" data-role="signup-back-education">← Back</button><button class="ah-account-primary" type="submit">Create Account →</button></div>
           </section>
           <p class="ah-account-switch">আগে থেকেই account আছে? <button class="ah-account-link" type="button" data-role="show-login">Log In</button></p>
-          <p class="ah-account-note" data-role="signup-verification-note">Account তৈরির পরে Email অথবা Telegram—একটি বাস্তব verification method বেছে নেবে। তার আগে কিছু পাঠানো হবে না।</p>
+          <p class="ah-account-note" data-role="signup-verification-note">Account তৈরির পরে Email অথবা Telegram-একটি বাস্তব verification method বেছে নেবে। তার আগে কিছু পাঠানো হবে না।</p>
         </form>
 
         <div class="ah-account-view ah-created-view" data-view="created" hidden>
@@ -277,7 +277,7 @@
               <i class="ah-created-spark three">✦</i>
             </span>
             <h3 class="ah-account-view-title">Account Created!</h3>
-            <p class="ah-account-mask">তোমার account তৈরি হয়েছে — প্রোফাইলের তথ্যও সংরক্ষিত।</p>
+            <p class="ah-account-mask">তোমার account তৈরি হয়েছে, প্রোফাইলের তথ্যও সংরক্ষিত।</p>
           </header>
 
           <section class="ah-created-card" aria-labelledby="ah-created-profile-title">
@@ -286,11 +286,11 @@
               <span class="ah-created-card-titles"><strong id="ah-created-profile-title">তোমার প্রোফাইল</strong><small>এই তথ্যই তোমার admission profile</small></span>
             </header>
             <dl class="ah-created-rows">
-              <div><dt>নাম</dt><dd data-role="created-name">—</dd></div>
-              <div><dt>জন্ম তারিখ</dt><dd data-role="created-dob">—</dd></div>
-              <div><dt>বিদ্যালয়</dt><dd data-role="created-school">—</dd></div>
-              <div><dt>কলেজ / বিশ্ববিদ্যালয়</dt><dd data-role="created-college">—</dd></div>
-              <div><dt>Account</dt><dd data-role="created-email">—</dd></div>
+              <div><dt>নাম</dt><dd data-role="created-name">-</dd></div>
+              <div><dt>জন্ম তারিখ</dt><dd data-role="created-dob">-</dd></div>
+              <div><dt>বিদ্যালয়</dt><dd data-role="created-school">-</dd></div>
+              <div><dt>কলেজ / বিশ্ববিদ্যালয়</dt><dd data-role="created-college">-</dd></div>
+              <div><dt>Account</dt><dd data-role="created-email">-</dd></div>
             </dl>
             <p class="ah-created-card-foot">পরে profile থেকে যেকোনো তথ্য বদলাতে পারবে।</p>
           </section>
@@ -307,7 +307,7 @@
             </header>
             <p class="ah-created-next-copy">Continue চাপলেই একটি verification message যাবে। আগে কোনো message যাবে না।</p>
             <ul class="ah-created-next-list">
-              <li><span class="ah-created-next-icon email" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3.2" y="5.6" width="17.6" height="12.8" rx="3.2"/><path d="m4.6 8.2 7.4 5 7.4-5"/></svg></span><span><strong>Email verification</strong><small>৬ সংখ্যার code — না পেলে নিরাপদ link</small></span></li>
+              <li><span class="ah-created-next-icon email" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3.2" y="5.6" width="17.6" height="12.8" rx="3.2"/><path d="m4.6 8.2 7.4 5 7.4-5"/></svg></span><span><strong>Email verification</strong><small>৬ সংখ্যার code, না পেলে নিরাপদ link</small></span></li>
               <li><span class="ah-created-next-icon telegram" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M20.4 4.6 3.9 11.1l4.9 1.7 1.6 5.1 2.7-3.4 4.3 2.9 3-12.8Z"/><path d="m8.8 12.8 7.6-5.3-5.4 6.7"/></svg></span><span><strong>Telegram</strong><small>চাইলে পরে বেছে নিতে পারবে</small></span></li>
             </ul>
           </section>
@@ -321,16 +321,16 @@
             <p class="ah-account-mask">তোমার account নিরাপদ রাখতে নিচের যেকোনো একটি পদ্ধতি ব্যবহার করো।</p>
             <div class="ah-method-stack">
               <button class="ah-method-card recommended is-selected" type="button" data-role="email-ownership-start"><span class="ah-method-icon email" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3.2" y="5.6" width="17.6" height="12.8" rx="3.2"/><path d="m4.6 8.2 7.4 5 7.4-5"/></svg></span><span><strong>Email OTP</strong><small>Email-এ আসা ৬ সংখ্যার code · Email মালিকানার প্রমাণ</small><em>✦ Recommended</em></span><span class="ah-method-trail"><span class="ah-method-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m6.5 12.4 4 4L17.6 8.6"/></svg></span><b aria-hidden="true">›</b></span></button>
-              <button class="ah-method-card" type="button" data-role="email-magiclink-start"><span class="ah-method-icon email" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3.2" y="5.6" width="17.6" height="12.8" rx="3.2"/><path d="m4.6 8.2 7.4 5 7.4-5"/></svg></span><span><strong>Email-এ login link পাঠাও</strong><small>Email-এ আসা link চাপলেই যাচাই · code লাগবে না</small></span><span class="ah-method-trail"><b aria-hidden="true">›</b></span></button>
+              <button class="ah-method-card" type="button" data-role="email-magiclink-start"><span class="ah-method-icon email" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3.2" y="5.6" width="17.6" height="12.8" rx="3.2"/><path d="m4.6 8.2 7.4 5 7.4-5"/></svg></span><span><strong data-bn="Email-এ login link পাঠাও" data-en="Send a login link by email">Email-এ login link পাঠাও</strong><small data-bn="Email-এ আসা link চাপলেই যাচাই · code লাগবে না" data-en="Verify with the link in your email · no code needed">Email-এ আসা link চাপলেই যাচাই · code লাগবে না</small></span><span class="ah-method-trail"><b aria-hidden="true">›</b></span></button>
               <button class="ah-method-card telegram" type="button" data-role="telegram-verification-start"><span class="ah-method-icon telegram" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M20.4 4.6 3.9 11.1l4.9 1.7 1.6 5.1 2.7-3.4 4.3 2.9 3-12.8Z"/><path d="m8.8 12.8 7.6-5.3-5.4 6.7"/></svg></span><span><strong>Telegram</strong><small>Telegram দিয়ে verify · Official bot-এর real ৬ সংখ্যার code</small></span><span class="ah-method-trail"><b aria-hidden="true">›</b></span></button>
               <button class="ah-method-card unavailable" type="button" disabled aria-disabled="true"><span class="ah-method-icon passkey" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="14.5" r="4.5"/><path d="m12.5 11 8-8"/><path d="M16 6.5h4.5V11"/></svg></span><span><strong>Passkey</strong><small>দ্রুত ও নিরাপদ · Verification শেষে optional</small></span><span class="ah-method-trail"><b class="ah-method-lock" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="10" width="14" height="10.5" rx="3.2"/><path d="M8.2 10V7.6a3.8 3.8 0 0 1 7.6 0V10"/></svg></b></span></button>
               <button class="ah-method-card whatsapp unavailable" type="button" data-role="whatsapp-info" aria-describedby="ah-whatsapp-unavailable"><span class="ah-method-icon whatsapp" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3.8c-4.5 0-8.2 3.6-8.2 8 0 1.5.4 2.9 1.2 4.2L3.8 20l4.1-1.1a8 8 0 0 0 4.1 1.1c4.5 0 8.2-3.6 8.2-8s-3.7-8.2-8.2-8.2Z"/><path d="M9 9.2c.5 2.3 2.5 4.3 4.8 4.8l1-1.2 1.9 1c-.3 1-.9 1.5-1.9 1.4-3.1-.4-5.8-3.1-6.2-6.2-.1-1 .4-1.6 1.4-1.9l1 1.9-1 1.2Z"/></svg></span><span><strong>WhatsApp</strong><small>WhatsApp দিয়ে verify</small><small class="ah-method-status" id="ah-whatsapp-unavailable">এখন verification পাওয়া যাচ্ছে না</small></span><span class="ah-method-trail"><b aria-hidden="true">›</b></span></button>
               <button class="ah-method-card" type="button" data-role="email-verification-start"><span class="ah-method-icon email" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3.2" y="5.6" width="17.6" height="12.8" rx="3.2"/><path d="m4.6 8.2 7.4 5 7.4-5"/></svg></span><span><strong>Email link (Firebase)</strong><small>Firebase link · শেষ বিকল্প, backup হিসেবে</small></span><span class="ah-method-trail"><b aria-hidden="true">›</b></span></button>
             </div>
-            <p class="ah-account-note">শুধু available method-ই কাজ করবে। Telegram Telegram account-এর নিয়ন্ত্রণ নিশ্চিত করে—Email মালিকানা নয়।</p>
+            <p class="ah-account-note">শুধু available method-ই কাজ করবে। Telegram Telegram account-এর নিয়ন্ত্রণ নিশ্চিত করে-Email মালিকানা নয়।</p>
             <div class="ah-help ah-verify-help">
               <button class="ah-help-fab" type="button" data-help-toggle="ah-verify-help-card" aria-expanded="false" aria-controls="ah-verify-help-card" aria-label="Verification নিয়ে সাহায্য"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4.2" y="8.2" width="15.6" height="11" rx="5"/><path d="M12 8.2V5.6"/><circle cx="12" cy="4.4" r="1.4"/><circle cx="9.4" cy="13.2" r="1.1"/><circle cx="14.6" cy="13.2" r="1.1"/><path d="M9.7 16.4c1.5 1 3.1 1 4.6 0"/></svg></button>
-              <div class="ah-help-card" id="ah-verify-help-card" hidden><strong>কোনটি বেছে নেবে?</strong><ul><li>Email link সবচেয়ে সহজ — Spam folder-ও দেখো।</li><li>Telegram code শুধু secure box-এ লিখবে।</li><li>Passkey verification-এর পরে যোগ করা যাবে।</li></ul></div>
+              <div class="ah-help-card" id="ah-verify-help-card" hidden><strong>কোনটি বেছে নেবে?</strong><ul><li>Email link সবচেয়ে সহজ, Spam folder-ও দেখো।</li><li>Telegram code শুধু secure box-এ লিখবে।</li><li>Passkey verification-এর পরে যোগ করা যাবে।</li></ul></div>
               <p class="ah-help-line">অন্য কোনো সমস্যা? <button class="ah-account-link" type="button" data-help-toggle="ah-verify-help-card" aria-expanded="false" aria-controls="ah-verify-help-card">Help নাও</button></p>
             </div>
           </div>
@@ -340,7 +340,7 @@
             <p class="ah-account-mask" data-role="verification-email-copy">Verification link পাঠানো হয়েছে <strong data-role="mask">তোমার email-এ</strong>। Email app-এ link-এ tap করে এখানে ফিরে আসো।</p>
             <div class="ah-status-card ah-waiting-status ah-mail-card"><span class="ah-mail-chip" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3.2" y="5.6" width="17.6" height="12.8" rx="3.2"/><path d="m4.6 8.2 7.4 5 7.4-5"/></svg></span><div><strong data-role="email-status-address">Verification pending…</strong><small>Email link খোলার অপেক্ষায়</small></div><span class="ah-mail-shield" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 5 6v5c0 4.8 2.5 8 7 10 4.5-2 7-5.2 7-10V6l-7-3Z"/><path d="m9.4 12.1 1.7 1.7 3.7-4"/></svg></span></div>
             <button class="ah-account-primary ah-mail-primary" type="button" data-role="open-email"><span>Open Email</span><b aria-hidden="true">→</b></button>
-            <button class="ah-account-secondary ah-mail-secondary" type="button" data-role="verified-login">✓ আমি Verify করেছি — Check করুন</button>
+            <button class="ah-account-secondary ah-mail-secondary" type="button" data-role="verified-login">✓ আমি Verify করেছি, Check করুন</button>
             <button class="ah-account-telegram" type="button" data-role="telegram-alternative" hidden><span class="ah-account-telegram-icon" aria-hidden="true">➤</span><span><strong>Telegram দিয়ে যাচাই</strong><small>অন্য যাচাই পদ্ধতি</small></span></button>
             <details class="ah-account-resend ah-mail-resend"><summary>Verification email আবার পাঠান</summary><form data-role="resend-form" novalidate><div class="ah-account-field"><label class="ah-account-label" for="ah-resend-email">Email</label><input class="ah-account-input" id="ah-resend-email" type="email" autocomplete="email" maxlength="254" required></div><div class="ah-account-field"><label class="ah-account-label" for="ah-resend-password">Password</label><input class="ah-account-input" id="ah-resend-password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required></div><p class="ah-account-resend-status" data-role="resend-status" aria-live="polite"></p><button class="ah-account-secondary" type="submit" data-role="resend-submit">Verification আবার পাঠান</button></form></details>
           </div>
@@ -393,7 +393,7 @@
             <div class="ah-help-card" id="ah-telegram-help-card" hidden><strong>Telegram ধাপগুলো</strong><ul><li>Official bot খুলে START চাপো।</li><li>Bot-এর ৬ সংখ্যার code শুধু secure box-এ লিখবে।</li><li>এটি Email মালিকানার প্রমাণ নয়।</li></ul></div>
           </div>
           <button class="ah-account-primary ah-tg-primary ah-view-bottom-cta" type="button" data-role="telegram-intro-continue"><span class="ah-tg-btn-plane" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M20.4 4.6 3.9 11.1l4.9 1.7 1.6 5.1 2.7-3.4 4.3 2.9 3-12.8Z"/></svg></span><span>Continue with Telegram</span><b aria-hidden="true">→</b></button>
-          <p class="ah-tg-truth">Official bot-এ START চাপলে real ৬ সংখ্যার code পাবে — Email মালিকানা নয়, Telegram account control নিশ্চিত করে।</p>
+          <p class="ah-tg-truth">Official bot-এ START চাপলে real ৬ সংখ্যার code পাবে, Email মালিকানা নয়, Telegram account control নিশ্চিত করে।</p>
           <button class="ah-account-secondary ah-tg-back" type="button" data-role="telegram-intro-back">অন্য পদ্ধতি ব্যবহার করো</button>
         </div>
 
@@ -402,7 +402,7 @@
           <ol class="ah-account-telegram-steps" aria-label="Telegram verification steps"><li><span>১</span> Official Telegram bot খোলো</li><li><span>২</span> START চাপো ও code নাও</li><li><span>৩</span> Admission Hub-এ code লিখো</li></ol>
           <a class="ah-account-primary ah-account-external ah-account-telegram-open" data-role="telegram-link" target="_blank" rel="noopener noreferrer">Continue with Telegram →</a><div class="ah-account-telegram-status" data-role="telegram-status" aria-live="polite">START চাপার অপেক্ষায়…</div>
           <div class="ah-account-field ah-otp-field"><label class="ah-account-label" for="ah-telegram-code">Telegram-এর ৬ সংখ্যার code</label><div class="ah-six-code" aria-hidden="true"><span data-otp-digit="0"></span><span data-otp-digit="1"></span><span data-otp-digit="2"></span><span data-otp-digit="3"></span><span data-otp-digit="4"></span><span data-otp-digit="5"></span></div><input class="ah-account-input ah-account-otp" id="ah-telegram-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" aria-describedby="ah-telegram-code-help" required></div><p class="ah-field-feedback ah-otp-help" id="ah-telegram-code-help">Code পাওয়া যায়নি? Official bot-এ START চাপো।</p>
-          <button class="ah-account-primary" type="submit" data-role="telegram-verify">Verify →</button><button class="ah-account-secondary" type="button" data-role="telegram-resend">নতুন code নিন</button><p class="ah-account-note">Telegram verification শুধু Telegram account-এর নিয়ন্ত্রণ নিশ্চিত করে—Email মালিকানা নয়। Code বা Password কখনো অন্য কোনো chat-এ লিখবে না; শুধু secure form ব্যবহার করবে। START বা animation একা success নয়—নিশ্চিত ফল Admission Hub দেখাবে।</p><p class="ah-account-switch"><button class="ah-account-link" type="button" data-role="telegram-email-back">অন্য method বেছে নিন</button></p>
+          <button class="ah-account-primary" type="submit" data-role="telegram-verify">Verify →</button><button class="ah-account-secondary" type="button" data-role="telegram-resend" data-bn="নতুন code নিন" data-en="Get a new code">নতুন code নিন</button><p class="ah-account-note" data-bn="Telegram verification শুধু Telegram account-এর নিয়ন্ত্রণ নিশ্চিত করে-Email মালিকানা নয়। Code বা Password কখনো অন্য কোনো chat-এ লিখবে না; শুধু secure form ব্যবহার করবে। START বা animation একা success নয়, নিশ্চিত ফল Admission Hub দেখাবে।" data-en="Telegram verification proves control of your Telegram account only, not ownership of the email. Never type the code or password into any other chat; use the secure form only. START or an animation alone is not success, only the confirmed result from Admission Hub is.">Telegram verification শুধু Telegram account-এর নিয়ন্ত্রণ নিশ্চিত করে-Email মালিকানা নয়। Code বা Password কখনো অন্য কোনো chat-এ লিখবে না; শুধু secure form ব্যবহার করবে। START বা animation একা success নয়, নিশ্চিত ফল Admission Hub দেখাবে।</p><p class="ah-account-switch"><button class="ah-account-link" type="button" data-role="telegram-email-back">অন্য method বেছে নিন</button></p>
         </form>
 
         <form class="ah-account-view" data-view="google-link" hidden novalidate><div class="ah-account-verify-badge" aria-hidden="true">G</div><h3 class="ah-account-view-title">আগের account-এ Google যুক্ত করো</h3><p class="ah-account-mask">একই Email-এ account আছে। একবার আগের Email ও Password দিলে Google নতুন account না বানিয়ে সেটিতেই যুক্ত হবে।</p><div class="ah-account-field"><label class="ah-account-label" for="ah-link-email">Email</label><input class="ah-account-input" id="ah-link-email" type="email" autocomplete="email" maxlength="254" required></div><div class="ah-account-field"><label class="ah-account-label" for="ah-link-password">Password</label><input class="ah-account-input" id="ah-link-password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required></div><button class="ah-account-primary" type="submit">Google যুক্ত করে প্রবেশ করুন</button><p class="ah-account-switch"><button class="ah-account-link" type="button" data-role="link-cancel">Login-এ ফিরুন</button></p></form>
@@ -437,7 +437,7 @@
 
         <div class="ah-account-view ah-success-view" data-view="success" hidden><div class="ah-success-check" aria-hidden="true"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="46"/><path d="m38 61 14 14 31-34"/></svg></div><p class="ah-view-kicker">ALL SET</p><h3 class="ah-account-view-title">সব ঠিক আছে! 🎉</h3><p class="ah-account-mask">তোমার account এখন প্রস্তুত।</p><div class="ah-ready-list"><span data-role="ready-profile">… Profile details দেখা হচ্ছে</span><span>✓ Verification Complete</span><span>✓ Admission Hub Ready</span></div><button class="ah-account-primary" type="button" data-role="enter-app">Admission Hub-এ প্রবেশ করো →</button></div>
 
-        <div class="ah-account-view" data-view="signed" hidden><div class="ah-account-secure"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 10V8a5 5 0 0 1 10 0v2m-11 0h12v10H6V10Zm6 4v2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><div><h3>Account নিরাপদ ও সক্রিয়</h3><p data-role="account-verification-summary">তোমার account সত্যিকারের যাচাইয়ের মাধ্যমে সক্রিয় আছে।</p></div></div><div class="ah-account-identity"><p class="ah-account-identity-label" data-role="identity-label">Admission Hub account</p><p class="ah-account-identity-value" data-role="identity">—</p></div><section class="ah-account-security-tools" data-role="passkey-tools" hidden><div class="ah-account-tool-head"><div><h3>Passkey</h3><p data-role="passkey-status">এই device-এ দ্রুত প্রবেশ চালু করতে পারো।</p></div><span aria-hidden="true">◉</span></div><div data-role="passkey-list"></div><button class="ah-account-secondary" type="button" data-role="passkey-add">নতুন Passkey যোগ করুন</button></section><section class="ah-account-security-tools" data-role="trust-prompt" hidden><div class="ah-account-tool-head"><div><h3>এই device-কে trust করবে?</h3><p>পরবর্তী ৩০ দিন এই device থেকে লগইন করলে extra verification লাগবে না।</p></div></div><button class="ah-account-secondary" type="button" data-role="trust-accept">Trust করি (৩০ দিন)</button><button class="ah-account-link" type="button" data-role="trust-decline">না, ধন্যবাদ</button></section><button class="ah-account-secondary" type="button" data-role="backup-start" hidden>বিকল্প যাচাই</button><button class="ah-account-secondary" type="button" data-role="logout">Log Out</button><button class="ah-account-secondary ah-account-danger" type="button" data-role="logout-all">সব device থেকে Log Out</button><p class="ah-account-fine">Password ও প্রবেশের গোপন তথ্য এই পেজে দেখানো বা জমা রাখা হয় না।</p></div>
+        <div class="ah-account-view" data-view="signed" hidden><div class="ah-account-secure"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 10V8a5 5 0 0 1 10 0v2m-11 0h12v10H6V10Zm6 4v2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><div><h3>Account নিরাপদ ও সক্রিয়</h3><p data-role="account-verification-summary">তোমার account সত্যিকারের যাচাইয়ের মাধ্যমে সক্রিয় আছে।</p></div></div><div class="ah-account-identity"><p class="ah-account-identity-label" data-role="identity-label">Admission Hub account</p><p class="ah-account-identity-value" data-role="identity">-</p></div><section class="ah-account-security-tools" data-role="passkey-tools" hidden><div class="ah-account-tool-head"><div><h3>Passkey</h3><p data-role="passkey-status">এই device-এ দ্রুত প্রবেশ চালু করতে পারো।</p></div><span aria-hidden="true">◉</span></div><div data-role="passkey-list"></div><button class="ah-account-secondary" type="button" data-role="passkey-add">নতুন Passkey যোগ করুন</button></section><section class="ah-account-security-tools" data-role="trust-prompt" hidden><div class="ah-account-tool-head"><div><h3>এই device-কে trust করবে?</h3><p>পরবর্তী ৩০ দিন এই device থেকে লগইন করলে extra verification লাগবে না।</p></div></div><button class="ah-account-secondary" type="button" data-role="trust-accept">Trust করি (৩০ দিন)</button><button class="ah-account-link" type="button" data-role="trust-decline">না, ধন্যবাদ</button></section><button class="ah-account-secondary" type="button" data-role="backup-start" hidden>বিকল্প যাচাই</button><button class="ah-account-secondary" type="button" data-role="logout">Log Out</button><button class="ah-account-secondary ah-account-danger" type="button" data-role="logout-all">সব device থেকে Log Out</button><p class="ah-account-fine">Password ও প্রবেশের গোপন তথ্য এই পেজে দেখানো বা জমা রাখা হয় না।</p></div>
       </div>
 
     </main>
@@ -453,7 +453,7 @@
      Keep this module free of web-storage access: native-auth-protection scans
      it for the browser storage globals and fails if any appear, because these
      auth flows must never place credentials in client storage. Persisting the
-     choice is the engines' job, not ours — do not name those globals here
+     choice is the engines' job, not ours, do not name those globals here
      either, since the guard is a plain text scan that reads comments too. */
   const setWelcomeLanguage = (language, { persist = true } = {}) => {
     const selected = language === 'en' ? 'en' : 'bn';
@@ -487,6 +487,10 @@
     document.documentElement.lang = selected;
   };
   const message = (text = '', kind = 'info') => {
+    /* A queued timer can fire after the page is torn down (closed tab,
+       bfcache restore, test teardown); there is nothing left to paint
+       into, so leave quietly instead of throwing out of a timer. */
+    if (typeof document === 'undefined') return;
     if (text && (state.currentView === 'sky' || document.getElementById('ah-account-page')?.dataset.skyFlow === 'on')) {
       state.skyPendingNotice = { text, kind };
       try { window.AdmissionSkyFlow?.notice?.(text, kind); } catch (_) {}
@@ -560,7 +564,7 @@
         ? 'Telegram-এ কোড পাঠানো হয়েছে। সর্বশেষ ৬ সংখ্যার কোডটি লিখুন।'
         : 'Bot-এ START চাপুন, তারপর পাওয়া কোডটি এখানে লিখুন।',
       checking: 'কোডটি নিরাপদভাবে যাচাই হচ্ছে…',
-      wrong: 'কোডটি সঠিক নয়—Telegram-এর সর্বশেষ ৬ সংখ্যার কোড লিখুন।',
+      wrong: 'কোডটি সঠিক নয়-Telegram-এর সর্বশেষ ৬ সংখ্যার কোড লিখুন।',
       expired: 'এই কোডের সময় শেষ। নিচে “নতুন কোড নিন” চাপুন।',
       locked: 'অনেকবার ভুল কোড দেওয়া হয়েছে। নিরাপত্তার জন্য সাময়িকভাবে বন্ধ আছে।',
       conflict: 'এই Telegram accountটি অন্য Admission Hub account-এর সঙ্গে আগে থেকেই যুক্ত।',
@@ -679,41 +683,42 @@
     if (typeof error?.userMessage === 'string' && error.userMessage.trim()) return error.userMessage.trim();
     if (!error?.code && typeof error?.message === 'string' && /[\u0980-\u09FF]/.test(error.message)) return error.message;
     const known = {
-      ACCOUNT_LINK_REQUIRED: 'এই ইমেইলে আগে ইমেইল-পাসওয়ার্ড দিয়ে অ্যাকাউন্ট খোলা হয়েছে—ইমেইল ও পাসওয়ার্ড দিয়ে সাইন ইন করো।',
-      CLIENT_UPDATE_REQUIRED: 'Admission Hub-এর নতুন সংস্করণ এসেছে—পেজটি একবার refresh করে আবার চেষ্টা করো।',
+      ACCOUNT_LINK_REQUIRED: 'এই ইমেইলে আগে ইমেইল-পাসওয়ার্ড দিয়ে অ্যাকাউন্ট খোলা হয়েছে, ইমেইল ও পাসওয়ার্ড দিয়ে সাইন ইন করো।',
+      CLIENT_UPDATE_REQUIRED: 'Admission Hub-এর নতুন সংস্করণ এসেছে, পেজটি একবার refresh করে আবার চেষ্টা করো।',
       INVALID_CREDENTIALS: 'Email বা Password সঠিক নয়। আবার দেখে লিখো।',
-      EMAIL_ALREADY_IN_USE: 'এই Email-এ account আছে—Log In করো।',
+      HUMAN_CHECK_FAILED: 'মানব যাচাই সম্পন্ন হয়নি। পেজটি একবার রিফ্রেশ করে আবার চেষ্টা করো; তারপরেও না হলে ব্রাউজারের বিজ্ঞাপন ব্লকার বন্ধ করো।',
+      EMAIL_ALREADY_IN_USE: 'এই Email-এ account আছে-Log In করো।',
       DISPOSABLE_EMAIL: 'এই ইমেইলে কোড পাঠানো সম্ভব না। শুধু Gmail, Yahoo, iCloud, Hotmail বা Outlook ইমেইল ব্যবহার করো।',
       EMAIL_NOT_VERIFIED: 'Account verification এখনো শেষ হয়নি।',
       WEAK_PASSWORD: 'কমপক্ষে ৮ অক্ষরের একটু শক্তিশালী Password দাও।',
-      RATE_LIMITED: 'অনেকবার চেষ্টা হয়েছে—একটু অপেক্ষা করে আবার চেষ্টা করো।',
-      VERIFICATION_UNAVAILABLE: 'Verification এখন শুরু করা যাচ্ছে না। কিছু পাঠানো হয়নি—একটু পরে আবার চেষ্টা করো।',
-      TELEGRAM_VERIFICATION_UNAVAILABLE: 'Telegram verification এখন পাওয়া যাচ্ছে না—Email ব্যবহার করো।',
-      SESSION_INVALID: 'নিরাপদ প্রবেশের সময় শেষ হয়েছে—আবার Log In করো।',
-      PASSKEY_UNAVAILABLE: 'এই device-এ Passkey এখন পাওয়া যাচ্ছে না—অন্য পথ ব্যবহার করো।',
+      RATE_LIMITED: 'অনেকবার চেষ্টা হয়েছে, একটু অপেক্ষা করে আবার চেষ্টা করো।',
+      VERIFICATION_UNAVAILABLE: 'Verification এখন শুরু করা যাচ্ছে না। কিছু পাঠানো হয়নি, একটু পরে আবার চেষ্টা করো।',
+      TELEGRAM_VERIFICATION_UNAVAILABLE: 'Telegram verification এখন পাওয়া যাচ্ছে না-Email ব্যবহার করো।',
+      SESSION_INVALID: 'নিরাপদ প্রবেশের সময় শেষ হয়েছে, আবার Log In করো।',
+      PASSKEY_UNAVAILABLE: 'এই device-এ Passkey এখন পাওয়া যাচ্ছে না, অন্য পথ ব্যবহার করো।',
       ACCOUNT_CONFLICT: 'এই পরিচয়টি অন্য account-এর সঙ্গে যুক্ত। নিরাপত্তার জন্য প্রবেশ বন্ধ রাখা হয়েছে।',
-      OTP_INVALID: 'কোডটি সঠিক নয়—আবার লিখে দেখো।',
-      CHALLENGE_INVALID: 'Verificationটি সঠিক নয় বা সময় শেষ—আবার চেষ্টা করো।',
-      RESEND_COOLDOWN: 'নতুন code পাঠাতে একটু অপেক্ষা করতে হবে—কিছুক্ষণ পরে আবার চেষ্টা করো।',
-      OTP_EXPIRED: 'কোডের সময় শেষ হয়ে গেছে—নতুন code নাও।',
-      OTP_LOCKED: 'অনেকবার ভুল কোড দেওয়া হয়েছে—একটু অপেক্ষা করে নতুন code নাও।',
-      OTP_USED: 'এই কোডটি আগেই ব্যবহার হয়েছে—নতুন code নাও।',
-      DELIVERY_UNAVAILABLE: 'এখন Email পাঠানো যাচ্ছে না—একটু পরে আবার চেষ্টা করো।',
-      BACKUP_UNAVAILABLE: 'এই যাচাইয়ের পথটি এখন বন্ধ আছে—একটু পরে আবার চেষ্টা করো।',
-      AUTH_PROVIDER_UNAVAILABLE: 'Account সেবাটি সাময়িকভাবে ব্যস্ত—একটু পরে আবার চেষ্টা করো।',
-      STORAGE_UNAVAILABLE: 'Account সেবাটি সাময়িকভাবে ব্যস্ত—একটু পরে আবার চেষ্টা করো।',
-      TELEGRAM_VERIFICATION_INVALID: 'Verification session-এর সময় শেষ—আবার Sign Up বা Log In করো।',
-      PROFILE_VERSION_CONFLICT: 'Profile একই সময়ে অন্য জায়গা থেকে বদলেছে—আবার দেখে সংরক্ষণ করো।',
-      ENDPOINT_UNAVAILABLE: 'এই লিংকে account সেবা নেই—অ্যাপের মূল ঠিকানা খুলে আবার চেষ্টা করো।',
-      ORIGIN_FORBIDDEN: 'এই ঠিকানা থেকে account কাজ করছে না—অ্যাপের মূল লিংক থেকে আবার চেষ্টা করো।',
-      NOT_CONFIGURED: 'Account সেবাটি এখনো প্রস্তুত নয়—একটু পরে আবার চেষ্টা করো।',
+      OTP_INVALID: 'কোডটি সঠিক নয়-আবার লিখে দেখো।',
+      CHALLENGE_INVALID: 'Verificationটি সঠিক নয় বা সময় শেষ, আবার চেষ্টা করো।',
+      RESEND_COOLDOWN: 'নতুন code পাঠাতে একটু অপেক্ষা করতে হবে, কিছুক্ষণ পরে আবার চেষ্টা করো।',
+      OTP_EXPIRED: 'কোডের সময় শেষ হয়ে গেছে, নতুন code নাও।',
+      OTP_LOCKED: 'অনেকবার ভুল কোড দেওয়া হয়েছে, একটু অপেক্ষা করে নতুন code নাও।',
+      OTP_USED: 'এই কোডটি আগেই ব্যবহার হয়েছে, নতুন code নাও।',
+      DELIVERY_UNAVAILABLE: 'এখন Email পাঠানো যাচ্ছে না, একটু পরে আবার চেষ্টা করো।',
+      BACKUP_UNAVAILABLE: 'এই যাচাইয়ের পথটি এখন বন্ধ আছে, একটু পরে আবার চেষ্টা করো।',
+      AUTH_PROVIDER_UNAVAILABLE: 'Account সেবাটি সাময়িকভাবে ব্যস্ত, একটু পরে আবার চেষ্টা করো।',
+      STORAGE_UNAVAILABLE: 'Account সেবাটি সাময়িকভাবে ব্যস্ত, একটু পরে আবার চেষ্টা করো।',
+      TELEGRAM_VERIFICATION_INVALID: 'Verification session-এর সময় শেষ, আবার Sign Up বা Log In করো।',
+      PROFILE_VERSION_CONFLICT: 'Profile একই সময়ে অন্য জায়গা থেকে বদলেছে, আবার দেখে সংরক্ষণ করো।',
+      ENDPOINT_UNAVAILABLE: 'এই লিংকে account সেবা নেই, অ্যাপের মূল ঠিকানা খুলে আবার চেষ্টা করো।',
+      ORIGIN_FORBIDDEN: 'এই ঠিকানা থেকে account কাজ করছে না, অ্যাপের মূল লিংক থেকে আবার চেষ্টা করো।',
+      NOT_CONFIGURED: 'Account সেবাটি এখনো প্রস্তুত নয়-একটু পরে আবার চেষ্টা করো।',
     };
     if (known[error?.code]) return known[error.code];
-    if (error?.status === 0) return 'ইন্টারনেট সংযোগ পাওয়া যাচ্ছে না—সংযোগ ঠিক হলে আবার চেষ্টা করো।';
+    if (error?.status === 0) return 'ইন্টারনেট সংযোগ পাওয়া যাচ্ছে না, সংযোগ ঠিক হলে আবার চেষ্টা করো।';
     // A named reason from the API beats the generic banner: the server already
     // says in Bengali which step failed, so the user is not left guessing.
     if (typeof error?.serverMessage === 'string' && error.serverMessage.trim()) return error.serverMessage.trim();
-    return 'সাময়িক সমস্যা হয়েছে—একটু পরে আবার চেষ্টা করো।';
+    return 'সাময়িক সমস্যা হয়েছে, একটু পরে আবার চেষ্টা করো।';
   };
 
   const navigateDashboard = () => {
@@ -751,9 +756,9 @@
     const month = $('#ah-dob-month');
     const year = $('#ah-dob-year');
     if (!day || day.options.length > 1) return;
-    day.add(new Option('—', ''));
-    month.add(new Option('—', ''));
-    year.add(new Option('—', ''));
+    day.add(new Option('-', ''));
+    month.add(new Option('-', ''));
+    year.add(new Option('-', ''));
     for (let value = 1; value <= 31; value += 1) day.add(new Option(String(value), String(value)));
     EN_MONTHS.forEach((label, index) => month.add(new Option(label, String(index + 1))));
     const current = new Date().getFullYear();
@@ -769,7 +774,7 @@
     const maximum = month && year ? new Date(Date.UTC(year, month, 0)).getUTCDate() : 31;
     if (day.options.length !== maximum + 1) {
       day.textContent = '';
-      day.add(new Option('—', ''));
+      day.add(new Option('-', ''));
       for (let value = 1; value <= maximum; value += 1) day.add(new Option(String(value), String(value)));
       day.value = previous > 0 && previous <= maximum ? String(previous) : '';
     }
@@ -851,7 +856,7 @@
     if (input) input.setAttribute('aria-expanded', 'false');
   };
 
-  // Education step (school / college) — code-native option rows: an icon chip, the
+  // Education step (school / college), code-native option rows: an icon chip, the
   // institution name, a "type · district" line and a selection circle on the right.
   const INSTITUTION_ICONS = Object.freeze({
     school: '<svg viewBox="0 0 24 24" fill="none"><path d="m4 10.5 8-6 8 6"/><path d="M6 10v10h12V10"/><path d="M12 4.5V6"/><path d="M10 20v-5h4v5"/></svg>',
@@ -1048,7 +1053,7 @@
   const validatePersonal = () => {
     const name = normalizedName();
     if (!validName(name)) { showFieldFeedback('name-feedback', 'Please enter at least 2 characters.', 'error'); $('#ah-signup-name')?.focus(); return false; }
-    showFieldFeedback('name-feedback', '✓ Looks good — your name is set', 'valid');
+    showFieldFeedback('name-feedback', '✓ Looks good, your name is set', 'valid');
     const mobileVal = normalizedMobile();
     const mobileOk = !mobileVal || /^\+?[0-9]{8,15}$/.test(mobileVal);
     showFieldFeedback('mobile-feedback', mobileOk ? (mobileVal ? '✓ Mobile saved to profile' : '') : 'Mobile number not valid.', mobileOk ? (mobileVal ? 'valid' : '') : 'error');
@@ -1090,7 +1095,7 @@
     // Worker refuses POST /signup too, so this is only the earlier, friendlier
     // message; the list ships in email-policy-client.js.
     if (window.ADMISSION_HUB_isDisposableEmail?.(email.value.trim())) {
-      message(window.ADMISSION_HUB_DISPOSABLE_EMAIL_MESSAGE || 'এই ইমেইল সেবাটি দিয়ে অ্যাকাউন্ট খোলা যায় না—একটি স্থায়ী ইমেইল ব্যবহার করুন।', 'error');
+      message(window.ADMISSION_HUB_DISPOSABLE_EMAIL_MESSAGE || 'এই ইমেইল সেবাটি দিয়ে অ্যাকাউন্ট খোলা যায় না, একটি স্থায়ী ইমেইল ব্যবহার করুন।', 'error');
       email.focus(); return false;
     }
     if (password.length < 8) { message('কমপক্ষে ৮ অক্ষরের Password দাও।', 'error'); $('#ah-signup-password')?.focus(); return false; }
@@ -1207,7 +1212,7 @@
     const profile = state.pendingProfile || {};
     const set = (role, value) => {
       const node = pageHost.querySelector(`[data-role="${role}"]`);
-      if (node) node.textContent = value && String(value).trim() ? String(value).trim() : '—';
+      if (node) node.textContent = value && String(value).trim() ? String(value).trim() : '-';
     };
     const dobLabel = profile.dob
       ? new Intl.DateTimeFormat('bn-BD', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${profile.dob}T00:00:00Z`))
@@ -1385,8 +1390,8 @@
 
   // Owner 2026-10-16: an ownership OTP is only sent after a human check. The
   // Worker verifies the token; this just mints it. With no site key configured
-  // (or the script unavailable) it resolves empty, and the server guard — which
-  // only arms once its secret exists — stays the single source of truth.
+  // (or the script unavailable) it resolves empty, and the server guard, which
+  // only arms once its secret exists, stays the single source of truth.
   let tsApiPromise = null;
   const humanToken = () => {
     const siteKey = String(window.ADMISSION_HUB_TURNSTILE_SITEKEY || '').trim();
@@ -1404,7 +1409,23 @@
     return tsApiPromise.then(api => new Promise((resolve, reject) => {
       const host = document.createElement('div');
       host.setAttribute('aria-hidden', 'true');
-      host.style.cssText = 'position:fixed;right:0;bottom:0;width:1px;height:1px;overflow:hidden;opacity:.01';
+      // Owner report 2026-10-24: signup stopped at "তথ্যটি ভুল" right after the
+      // confirm-password field. A 1px, near-transparent host is fine while the
+      // check passes silently, but when Cloudflare decides a human must tap, the
+      // challenge has nowhere to render — the widget times out, the token comes
+      // back empty, and the server refuses the send. So the host starts collapsed
+      // and expands into a real, clickable box for the duration of a challenge.
+      const collapsed = 'position:fixed;right:0;bottom:0;width:1px;height:1px;overflow:hidden;opacity:.01;z-index:2147483647;';
+      const expanded = 'position:fixed;right:12px;bottom:12px;min-width:300px;min-height:70px;padding:10px;overflow:visible;opacity:1;z-index:2147483647;background:#ffffff;border:1px solid #d7dce3;border-radius:12px;box-shadow:0 10px 30px rgba(15,23,42,.18);';
+      host.style.cssText = collapsed;
+      const label = document.createElement('p');
+      label.textContent = 'মানব যাচাই সম্পন্ন করো।';
+      label.style.cssText = 'margin:0 0 8px;font:600 13px/1.4 system-ui,sans-serif;color:#0f172a;';
+      label.hidden = true;
+      host.appendChild(label);
+      const mount = document.createElement('div');
+      mount.style.cssText = 'width:300px;height:65px;';
+      host.appendChild(mount);
       document.body.appendChild(host);
       let done = false, widgetId = null;
       const finish = (fn, value) => {
@@ -1415,10 +1436,25 @@
         try { host.remove(); } catch (_) {}
         fn(value);
       };
-      const timer = setTimeout(() => finish(resolve, ''), 15000);
+      // A challenge needs a human: it gets 60s, not the 15s a silent pass needs.
+      let timer = setTimeout(() => finish(resolve, ''), 15000);
+      const expand = () => {
+        host.setAttribute('aria-hidden', 'false');
+        host.style.cssText = expanded;
+        label.hidden = false;
+        clearTimeout(timer);
+        timer = setTimeout(() => finish(resolve, ''), 60000);
+      };
+      const collapse = () => {
+        host.setAttribute('aria-hidden', 'true');
+        host.style.cssText = collapsed;
+        label.hidden = true;
+      };
       try {
-        widgetId = api.render(host, {
-          sitekey: siteKey, action: 'email_ownership', size: 'invisible', appearance: 'interaction-only',
+        widgetId = api.render(mount, {
+          sitekey: siteKey, action: 'email_ownership', size: 'normal', appearance: 'interaction-only',
+          'before-interactive-callback': expand,
+          'after-interactive-callback': collapse,
           callback: token => finish(resolve, String(token || '')),
           'error-callback': () => finish(resolve, ''),
           'expired-callback': () => finish(resolve, '')
@@ -1463,7 +1499,7 @@
         ...(options.body ? { body: JSON.stringify(options.body) } : {})  
       });  
     } catch (error) {  
-      const text = error?.name === 'AbortError' ? 'সেবাটি সময়মতো সাড়া দেয়নি—আবার চেষ্টা করুন।' : 'ইন্টারনেট সংযোগ পাওয়া যাচ্ছে না।';  
+      const text = error?.name === 'AbortError' ? 'সেবাটি সময়মতো সাড়া দেয়নি, আবার চেষ্টা করুন।' : 'ইন্টারনেট সংযোগ পাওয়া যাচ্ছে না।';  
       throw Object.assign(new Error(text), { status: 0 });  
     } finally { clearTimeout(timeout); }  
     let data = {};
@@ -1498,7 +1534,7 @@
       // uses noRecovery, and this branch runs at most once per call.
       if (!options.noRecovery && error.status === 401 && error.code === 'SESSION_INVALID' && ['AUTHENTICATED', 'LOGGING_OUT'].includes(sessionState)) {
         setSessionState('RECOVERING');
-        if (!pageHost.hidden) message('Session যাচাই চলছে—একটু অপেক্ষা করো…', 'info');
+        if (!pageHost.hidden) message('Session যাচাই চলছে, একটু অপেক্ষা করো…', 'info');
         const recovered = await coordinatedRefresh();
         if (recovered && accountVerified(state.session)) {
           try { return await attempt(); } catch (retryError) { throw retryError; }
@@ -1557,7 +1593,7 @@
     ...(credential.response.userHandle ? { userHandle: encodeBase64Url(credential.response.userHandle) } : {})
   });
   const passkeyErrorMessage = error => {
-    if (error?.name === 'NotAllowedError') return 'Passkey অনুরোধটি বাতিল বা সময় শেষ হয়েছে—চাইলে আবার চেষ্টা করো।';
+    if (error?.name === 'NotAllowedError') return 'Passkey অনুরোধটি বাতিল বা সময় শেষ হয়েছে, চাইলে আবার চেষ্টা করো।';
     if (error?.name === 'SecurityError') return 'এই browser বা ঠিকানায় Passkey নিরাপদভাবে ব্যবহার করা যাচ্ছে না।';
     if (error?.name === 'InvalidStateError') return 'এই Passkeyটি আগে থেকেই যুক্ত আছে।';
     return friendlyError(error);
@@ -1582,7 +1618,7 @@
     broadcastAuthEvent('login');
     rememberEntry('account');
     updateLauncher();
-    // The account's own credential list decides the prompt — the global
+    // The account's own credential list decides the prompt, the global
     // "enrollment available" capability cannot. This await is what makes the
     // decision reliable: the view is chosen only after the list is known.
     if (mayOfferPasskey) await refreshPasskeyStatus();
@@ -1841,13 +1877,13 @@
 
   const googleMessage = error => {
     const code = String(error?.code || '');
-    let text = 'Google লগইন এই মুহূর্তে খুলছে না—আবার চেষ্টা করো বা ইমেইল দিয়ে ঢুকো।';
-    if (code === 'in-app-browser') text = 'এই app-এর ভেতরের browser-এ Google লগইন হয় না—Chrome-এ খুলে চেষ্টা করো।';
-    else if (code === 'auth/network-request-failed') text = 'ইন্টারনেট সংযোগ পাওয়া যায়নি—নেট চালু করে আবার চেষ্টা করো।';
-    else if (code === 'auth/web-storage-unsupported' || code === 'auth/operation-not-supported-in-this-environment') text = 'এই browser-এ Google লগইন হয় না—Chrome বা Safari-এ সাইটটি খুলে চেষ্টা করো।';
-    else if (code === 'auth/unauthorized-domain') text = 'এই ঠিকানা থেকে Google লগইন চালু নেই—admissionsky.pages.dev থেকে চেষ্টা করো।';
-    else if (code === 'auth/user-disabled') text = 'এই Google account বন্ধ করা আছে—অন্য পদ্ধতিতে ঢুকো।';
-    else if (code === 'auth/account-exists-with-different-credential') text = 'এই Email অন্য পদ্ধতিতে খোলা আছে—আগের পদ্ধতি দিয়ে ঢুকো।';
+    let text = 'Google লগইন এই মুহূর্তে খুলছে না, আবার চেষ্টা করো বা ইমেইল দিয়ে ঢুকো।';
+    if (code === 'in-app-browser') text = 'এই app-এর ভেতরের browser-এ Google লগইন হয় না-Chrome-এ খুলে চেষ্টা করো।';
+    else if (code === 'auth/network-request-failed') text = 'ইন্টারনেট সংযোগ পাওয়া যায়নি, নেট চালু করে আবার চেষ্টা করো।';
+    else if (code === 'auth/web-storage-unsupported' || code === 'auth/operation-not-supported-in-this-environment') text = 'এই browser-এ Google লগইন হয় না-Chrome বা Safari-এ সাইটটি খুলে চেষ্টা করো।';
+    else if (code === 'auth/unauthorized-domain') text = 'এই ঠিকানা থেকে Google লগইন চালু নেই-admissionsky.pages.dev থেকে চেষ্টা করো।';
+    else if (code === 'auth/user-disabled') text = 'এই Google account বন্ধ করা আছে, অন্য পদ্ধতিতে ঢুকো।';
+    else if (code === 'auth/account-exists-with-different-credential') text = 'এই Email অন্য পদ্ধতিতে খোলা আছে, আগের পদ্ধতি দিয়ে ঢুকো।';
     return code ? `${text} [${code}]` : text;
   };
   const GOOGLE_LOCAL_CODES = new Set(['in-app-browser', 'firebase-sdk-unavailable']);
@@ -1992,8 +2028,8 @@
       showView('login');
       const code = String(redirectError?.code || (recovered ? 'storage-lost' : ''));
       const text = code === 'auth/account-exists-with-different-credential'
-        ? 'এই Email অন্য পদ্ধতিতে খোলা আছে—আগের পদ্ধতি দিয়ে ঢুকো।'
-        : 'লগইন সম্পন্ন হয়নি—আবার চেষ্টা করো। বারবার হলে Chrome/Safari-এ সাইটটি খুলে চেষ্টা করো বা Email দিয়ে ঢুকো।';
+        ? 'এই Email অন্য পদ্ধতিতে খোলা আছে, আগের পদ্ধতি দিয়ে ঢুকো।'
+        : 'লগইন সম্পন্ন হয়নি, আবার চেষ্টা করো। বারবার হলে Chrome/Safari-এ সাইটটি খুলে চেষ্টা করো বা Email দিয়ে ঢুকো।';
       message(code ? `${text} [${code}]` : text, 'error');
       return;
     }
@@ -2226,7 +2262,7 @@
         ? 'Google দিয়ে দ্রুত প্রবেশ করো। চাইলে Email ও Password-ও ব্যবহার করতে পারো।'
         : 'Email ও Password দিয়ে নিরাপদে প্রবেশ করো।';
     $('[data-role="signup-verification-note"]').textContent = state.capabilities.telegram.available
-      ? 'Sign Up-এর পর Email অথবা Telegram—একটি method বেছে নেবে। বেছে নেওয়ার আগে কিছু পাঠানো হবে না।'
+      ? 'Sign Up-এর পর Email অথবা Telegram-একটি method বেছে নেবে। বেছে নেওয়ার আগে কিছু পাঠানো হবে না।'
       : 'Sign Up-এর পর Email verification link পাঠানো হবে। Link-এ click করলেই verification সম্পন্ন হবে।';
     if (state.capabilities.google.available) loadGoogle(state.capabilities.google.clientId);
     else {
@@ -2247,10 +2283,10 @@
     }
   };
 
-  /* ===== Session Engine (Phase 5, v256) — state machine + refresh coordinator =====
+  /* ===== Session Engine (Phase 5, v256), state machine + refresh coordinator =====
      - Centralized state transitions (blueprint §3); UI reads data-session-state.
      - Single-flight refresh: concurrent callers share ONE /session call (§21-22).
-     - Refresh retries network failures with backoff, max budget — no infinite
+     - Refresh retries network failures with backoff, max budget, no infinite
        loops (§8); 401/403 are terminal auth states (§24).
      - Network failure never logs the user out (§17).
      - Session failure never touches identity: clearing local session state is
@@ -2350,7 +2386,7 @@
           return Boolean(state.session);
         }
         // Terminal auth failure (401/403): the session is gone. Only redirect
-        // to the login view when this tab actually held a session — during a
+        // to the login view when this tab actually held a session, during a
         // cold bootstrap the view choice belongs to the bootstrap flow.
         const hadSession = Boolean(state.session);
         clearAuthLocalState();
@@ -2377,7 +2413,7 @@
 
   /* ===== Multi-tab session sync (Phase 5 §25) =====
      Login in one tab updates the others; logout in one tab signs them out.
-     BroadcastChannel only — no browser storage is ever used for auth sync,
+     BroadcastChannel only, no browser storage is ever used for auth sync,
      keeping the zero-storage invariant (owner rule + protection tests). */
   const AUTH_SYNC_CHANNEL = 'admission-hub-auth-v1';
   const TAB_ID = `tab-${Math.random().toString(36).slice(2, 10)}`;
@@ -2433,7 +2469,7 @@
     } catch (_) {}
   };
 
-  /* ===== Phase 6 — Step-up security challenge (§12) =====
+  /* ===== Phase 6, Step-up security challenge (§12) =====
      Sensitive actions (e.g. "log out on every device") can require a fresh
      verification. The server answers STEP_UP_REQUIRED while the session is
      still valid; the user completes the purpose-bound challenge and the
@@ -2448,7 +2484,7 @@
     const remaining = state.stepUp.expiresAt - Date.now();
     line.hidden = false;
     if (remaining <= 0) {
-      line.textContent = 'code-এর সময় শেষ হয়ে গেছে—বাতিল করে আবার চেষ্টা করুন।';
+      line.textContent = 'code-এর সময় শেষ হয়ে গেছে, বাতিল করে আবার চেষ্টা করুন।';
       clearStepUpTimer();
       return;
     }
@@ -2485,7 +2521,7 @@
       const instruction = $('[data-role="step-up-instruction"]');
       if (instruction) instruction.textContent = telegram
         ? 'Official Telegram bot-এ START চাপুন, তারপর পাওয়া ৬ সংখ্যার code নিচে লিখুন।'
-        : 'তোমার verification-এ ৬ সংখ্যার code পাঠানো হয়েছে—কোডটি নিচে লিখুন।';
+        : 'তোমার verification-এ ৬ সংখ্যার code পাঠানো হয়েছে, কোডটি নিচে লিখুন।';
       updateStepUpExpiry();
       state.stepUp.timer = setInterval(updateStepUpExpiry, 1000);
       focusWhenUnclaimed(() => $('#ah-stepup-code'), 80);
@@ -2539,7 +2575,7 @@
       return true;
     } catch (error) {
       if (error.status === 409 && error.code === 'STEP_UP_REQUIRED') {
-        // The session is still valid — the server asked for a fresh
+        // The session is still valid, the server asked for a fresh
         // verification. Run the challenge, then retry with the token.
         setSessionState('AUTHENTICATED');
         void startStepUpChallenge(async stepUpToken => {
@@ -2578,7 +2614,7 @@
     } finally { setBusy(false); }
   };
 
-  /* Phase 6 — "trust this device 30 days" consent (chunk-2 Q1). Offered
+  /* Phase 6, "trust this device 30 days" consent (chunk-2 Q1). Offered
      once after a login the policy flagged with trustOffer; accepting posts
      to /security/device/trust, declining just hides the prompt. */
   const updateTrustPrompt = () => {
@@ -2596,7 +2632,7 @@
         state.session.session.security = { ...(state.session.session.security || {}), trusted: true, trustOffer: false };
       }
       updateTrustPrompt();
-      message('এই device trusted হয়েছে—৩০ দিনের মধ্যে extra verification লাগবে না।', 'success');
+      message('এই device trusted হয়েছে-৩০ দিনের মধ্যে extra verification লাগবে না।', 'success');
     } catch (error) {
       updateTrustPrompt();
       message(friendlyError(error), 'error');
@@ -2654,7 +2690,7 @@
   const showLegacyEntry = mode => {
     if (skyScriptLinked()) {
       showWelcome();
-      message('নতুন সাইন-ইন পেজটি লোড হয়নি—পেজটি একবার refresh করো।', 'error');
+      message('নতুন সাইন-ইন পেজটি লোড হয়নি, পেজটি একবার refresh করো।', 'error');
       return;
     }
     const welcome = pageHost.querySelector('.ah-welcome-view');
@@ -2739,7 +2775,7 @@
     else if (state.verification) showView('verify');
     else if (forceWelcome || !entryMode()) showWelcome();
     else showView('login');
-    if (state.available === false && state.currentView !== 'welcome') message('Account service এখন প্রস্তুত নয়—Guest হিসেবে Dashboard ব্যবহার করতে পারো।' + unavailableHint(), 'info');
+    if (state.available === false && state.currentView !== 'welcome') message('Account service এখন প্রস্তুত নয়-Guest হিসেবে Dashboard ব্যবহার করতে পারো।' + unavailableHint(), 'info');
   };
   const close = () => {
     if (state.stepUp) finishStepUp(false);
@@ -2790,7 +2826,7 @@
   };
   const ensureAvailable = () => {
     if (state.available !== false) return true;
-    message('Account service এখন প্রস্তুত নয়—Guest হিসেবে Dashboard ব্যবহার করতে পারো।' + unavailableHint(), 'info');
+    message('Account service এখন প্রস্তুত নয়-Guest হিসেবে Dashboard ব্যবহার করতে পারো।' + unavailableHint(), 'info');
     return false;
   };
 
@@ -2915,7 +2951,7 @@
         : /(^|\.)yahoo\./.test(domain) ? 'https://mail.yahoo.com/'
           : 'https://mail.google.com/';
     const opened = window.open(target, '_blank', 'noopener,noreferrer');
-    if (!opened) message('Inbox নতুন tab-এ খোলা যায়নি—তোমার Email app খুলে verification link দেখো।', 'info');
+    if (!opened) message('Inbox নতুন tab-এ খোলা যায়নি, তোমার Email app খুলে verification link দেখো।', 'info');
   };
 
   const beginTelegramVerification = async () => {
@@ -2966,7 +3002,7 @@
   };
 
   // Descope magic link (otp-m). Only the attemptId is kept locally (10 min);
-  // the link token itself is never stored — it is read once from the URL.
+  // the link token itself is never stored, it is read once from the URL.
   // The attemptId rides in a 10-minute first-party cookie (no Web Storage); it is
   // useless without the HttpOnly verification ticket the Worker already holds.
   const MAGIC_COOKIE = 'ah_magic_v1';
@@ -3075,10 +3111,14 @@
     setupAuthSync();
     // Phase 7 hotfix (owner directive): the floating account launcher pill is
     // removed from every page. The Profile tab (my-profile) is the single
-    // account entry point — guests see Sign In, signed-in users see the
+    // account entry point, guests see Sign In, signed-in users see the
     // Account card. The element is still created so state tracking
     // (dataset.authenticated) and focus fallbacks keep working.
     document.body.append(pageHost);
+    /* This shell renders after index.html's AhI18n boot pass, so any
+       [data-bn]/[data-en] copy inside it would keep the markup language. Apply
+       once here; AhI18n.set() re-applies on every later language change. */
+    if (window.AhI18n && typeof window.AhI18n.apply === 'function') window.AhI18n.apply();
     launcher.addEventListener('click', open);
     $('.ah-account-close').addEventListener('click', dismiss);
     const welcomeLanguage = $('[data-role="welcome-language"]');
@@ -3124,7 +3164,7 @@
     $('#ah-telegram-code').addEventListener('input', renderTelegramDigits);
     $('#ah-signup-name').addEventListener('input', () => {
       const name = normalizedName();
-      showFieldFeedback('name-feedback', !name ? '' : validName(name) ? '✓ Looks good — your name is set' : 'Please enter at least 2 characters.', validName(name) ? 'valid' : name ? 'error' : '');
+      showFieldFeedback('name-feedback', !name ? '' : validName(name) ? '✓ Looks good, your name is set' : 'Please enter at least 2 characters.', validName(name) ? 'valid' : name ? 'error' : '');
     });
     $('#ah-signup-password').addEventListener('input', updatePasswordFeedback);
     $('#ah-signup-confirm').addEventListener('input', updatePasswordFeedback);
@@ -3244,7 +3284,7 @@
       if (state.signupJourney || pendingSignup()) showReadyTransition();
       else {
         showView('signed');
-        message('Passkey এখন যোগ করা হয়নি—অন্য Log In পথগুলো চালু আছে।', 'info');
+        message('Passkey এখন যোগ করা হয়নি, অন্য Log In পথগুলো চালু আছে।', 'info');
       }
     });
 
@@ -3348,7 +3388,7 @@
           };
           state.telegram = null;
           showView('verify');
-          message('এই অ্যাকাউন্টটি এখনো যাচাইকৃত নয়। Gmail/ইমেইল অথবা Telegram—একটি পদ্ধতি বেছে নিন।', 'info');
+          message('এই অ্যাকাউন্টটি এখনো যাচাইকৃত নয়। Gmail/ইমেইল অথবা Telegram-একটি পদ্ধতি বেছে নিন।', 'info');
         } else if (setTelegramChallenge(result.verification?.telegram)) {
           state.verification = { email, emailMasked: result.verification?.emailMasked || email, emailSent: false, mode: 'select', resendUntil: 0 };
           showView('telegram');
@@ -3360,7 +3400,7 @@
           clearResendCooldown();
           state.verification = { email, emailMasked: email, emailSent: false, mode: 'email', resendUntil: 0 };
           showView('verify');
-          message('Account verification বাকি। এই মুহূর্তে নতুন Email পাঠানো হয়নি—resend option ব্যবহার করতে পারো।', 'info');
+          message('Account verification বাকি। এই মুহূর্তে নতুন Email পাঠানো হয়নি-resend option ব্যবহার করতে পারো।', 'info');
         } else message(friendlyError(error), 'error');
       } finally { $('#ah-login-password').value = ''; setBusy(false); }
     });
@@ -3518,7 +3558,7 @@
         const result = await api('/verification/resend', { method: 'POST', body: { email, password, turnstileToken: await humanToken() } });
         if (result.alreadyVerified) {
           clearResendCooldown(); state.verification = null; prefillLogin(email); showView('login');
-          message('ইমেইল ইতিমধ্যে যাচাইকৃত—এখন লগইন করুন।', 'success');
+          message('ইমেইল ইতিমধ্যে যাচাইকৃত, এখন লগইন করুন।', 'success');
         } else {
           if (result.verification?.sent !== true) throw Object.assign(new Error('delivery-not-confirmed'), { code: 'VERIFICATION_UNAVAILABLE' });
           state.verification = { email, emailMasked: result.verification?.emailMasked || email, emailSent: true, mode: 'email', resendUntil: 0 };
@@ -3614,7 +3654,7 @@
     $('[data-role="logout-all"]').addEventListener('click', async () => {
       if (state.busy) return;
       const button = $('[data-role="logout-all"]');
-      const ARMED_LABEL = 'নিশ্চিত করো—সব device বন্ধ হবে';
+      const ARMED_LABEL = 'নিশ্চিত করো, সব device বন্ধ হবে';
       if (!button.dataset.armed) {
         button.dataset.armed = '1';
         button.dataset.label = button.textContent;
@@ -3724,7 +3764,7 @@
   const rememberTicket = result => {
     // /signup and the login path hand back the pre-verification ticket. The
     // start endpoints read it from the cookie jar, so the flow's steps must run
-    // inside this page — which they do.
+    // inside this page, which they do.
     const selection = result && result.verification;
     if (!selection || selection.selectionRequired !== true) return false;
     state.signupJourney = state.signupJourney || pendingSignup() || true;
@@ -3908,7 +3948,7 @@
       try {
         result = await skyApi('/facebook', { method: 'POST', body: { accessToken } });
       } catch (error) {
-        if (error?.code === 'EMAIL_NOT_VERIFIED') error.userMessage = 'তোমার Facebook অ্যাকাউন্টে নিশ্চিত করা কোনো ইমেইল নেই—ইমেইল দিয়ে সাইন আপ করো।';
+        if (error?.code === 'EMAIL_NOT_VERIFIED') error.userMessage = 'তোমার Facebook অ্যাকাউন্টে নিশ্চিত করা কোনো ইমেইল নেই, ইমেইল দিয়ে সাইন আপ করো।';
         throw error;
       }
       await establishSession(result, 'Facebook \u09a6\u09bf\u09af\u09bc\u09c7 \u09a4\u09cb\u09ae\u09be\u09b0 \u098f\u0995\u0987 account-\u098f \u09aa\u09cd\u09b0\u09ac\u09c7\u09b6 \u09b9\u09af\u09bc\u09c7\u099b\u09c7\u0964');

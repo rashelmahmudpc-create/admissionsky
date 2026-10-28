@@ -1,4 +1,4 @@
-/* Admission Hub — Mistakes Bank
+/* Admission Hub, Mistakes Bank
  * One record per question. Uses the shared mistakes store and question cache.
  */
 (() => {

@@ -1,22 +1,22 @@
-/* FCM Notification Foundation — Phase 1 (FCM-NOTIFICATION-BLUEPRINT.md).
+/* FCM Notification Foundation, Phase 1 (FCM-NOTIFICATION-BLUEPRINT.md).
  *
  * Runs inside the admission-gk worker (same origin as the app through the
  * Pages proxy, so the `__Host-ah_session` cookie authenticates natively).
  *
  * Routes:
- *   GET  /api/notifications/config           — public Firebase WEB app config (public by design)
- *   GET  /api/notifications/status           — auth: fcm readiness + own device count
- *   POST /api/notifications/register-token   — auth: upsert a device token
- *   POST /api/notifications/unregister-token — auth: deactivate a device token
- *   GET  /api/notifications/devices          — auth: list own active devices
- *   GET  /api/notifications/preferences      — auth: notification_settings row
- *   POST /api/notifications/preferences      — auth: update notification_settings
- *   POST /api/notifications/test             — ADMIN_TOKEN: send a test push
- *   GET  /internal/notifications/health      — operator health (Pages blocks /internal/*)
+ *   GET  /api/notifications/config          , public Firebase WEB app config (public by design)
+ *   GET  /api/notifications/status          , auth: fcm readiness + own device count
+ *   POST /api/notifications/register-token  , auth: upsert a device token
+ *   POST /api/notifications/unregister-token, auth: deactivate a device token
+ *   GET  /api/notifications/devices         , auth: list own active devices
+ *   GET  /api/notifications/preferences     , auth: notification_settings row
+ *   POST /api/notifications/preferences     , auth: update notification_settings
+ *   POST /api/notifications/test            , ADMIN_TOKEN: send a test push
+ *   GET  /internal/notifications/health     , operator health (Pages blocks /internal/*)
  *
  * Secrets (Cloudflare worker secrets, never in the browser):
  *   FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY
- * Public web config (safe to expose — Firebase web config is public):
+ * Public web config (safe to expose, Firebase web config is public):
  *   FIREBASE_API_KEY, FIREBASE_MESSAGING_SENDER_ID, FIREBASE_APP_ID, FIREBASE_VAPID_KEY
  *
  * Storage: D1 binding PROFILE_DB (fcm_devices + notification_settings tables).
@@ -119,7 +119,7 @@ export class FcmStore {
     if (this.#ready) return;
     /* batch() takes D1PreparedStatements, NOT raw SQL strings. Passing strings
      * threw "D1_ERROR: Malformed input" and aborted the whole sequence, so
-     * fcm_devices was never created and every register-token write failed —
+     * fcm_devices was never created and every register-token write failed -
      * which is why no device could ever receive a push. */
     await this.#d1.batch([
       this.#d1.prepare(`CREATE TABLE IF NOT EXISTS fcm_devices (
@@ -379,7 +379,7 @@ export class FcmStore {
     return out;
   }
 
-  /* Inbox v7: "mark all as read" must also clear server-side globals —
+  /* Inbox v7: "mark all as read" must also clear server-side globals -
    * before this only the local hub log was cleared, so globals came back unread. */
   async markAllRead(userId, ids, now) {
     if (!ids.length) return 0;
@@ -622,27 +622,27 @@ const rejectNotify = (request, why, detail) => {
   return jsonResponse(request, { error: why }, 400);
 };
 
-/* ── Phase 2 — Global Notification Engine (owner-approved 2026-09-17) ──────
+/* ── Phase 2, Global Notification Engine (owner-approved 2026-09-17) ──────
  * Topic-first sends (spec "$0-first"): ONE FCM topic call reaches every
- * subscribed device — no per-user loop. Devices that could not subscribe to
+ * subscribed device, no per-user loop. Devices that could not subscribe to
  * the topic get a multi-token fallback (chunks of 500), so API calls stay
  * O(1), never O(users). Scheduled globals run from the worker cron
- * (Cloudflare Cron Triggers — the owner's no-Vercel rule replaces the
+ * (Cloudflare Cron Triggers, the owner's no-Vercel rule replaces the
  * spec's "Vercel Cron").
  *
  * Routes (admin = session + Bearer ADMIN_TOKEN; user = session cookie):
- *   POST /api/notifications/global/send        — admin: create + send now
- *   POST /api/notifications/global/schedule    — admin: create + schedule
- *   POST /api/notifications/global/cancel      — admin: cancel a scheduled
- *   GET  /api/notifications/history            — admin: recent globals
- *   GET  /api/notifications/templates          — admin: preset templates
- *   POST /api/notifications/topics/subscribe   — user: mark device topics
- *   POST /api/notifications/topics/unsubscribe — user: unmark device topics
- *   GET  /api/notifications/inbox              — user: global feed + read state
- *   POST /api/notifications/read               — user: mark a global read
- *   POST /api/notifications/read-all           — user: mark every global read (inbox v7)
- *   POST /api/notifications/save               — user: save/unsave a notice (inbox v7)
- *   POST /api/notifications/click              — user: log a deep-link click
+ *   POST /api/notifications/global/send       , admin: create + send now
+ *   POST /api/notifications/global/schedule   , admin: create + schedule
+ *   POST /api/notifications/global/cancel     , admin: cancel a scheduled
+ *   GET  /api/notifications/history           , admin: recent globals
+ *   GET  /api/notifications/templates         , admin: preset templates
+ *   POST /api/notifications/topics/subscribe  , user: mark device topics
+ *   POST /api/notifications/topics/unsubscribe, user: unmark device topics
+ *   GET  /api/notifications/inbox             , user: global feed + read state
+ *   POST /api/notifications/read              , user: mark a global read
+ *   POST /api/notifications/read-all          , user: mark every global read (inbox v7)
+ *   POST /api/notifications/save              , user: save/unsave a notice (inbox v7)
+ *   POST /api/notifications/click             , user: log a deep-link click
  */
 const GLOBAL_TYPES = Object.freeze(['new-content', 'announcement', 'new-feature', 'challenge', 'course', 'important']);
 const GLOBAL_AUDIENCES = Object.freeze({
@@ -667,7 +667,7 @@ const APP_ICON_PATH = '/icons/icon-192.png';
 /* Absolute, publicly reachable app origin for notification assets.
  * `request.url` cannot be trusted for this: every /api/* call is proxied from
  * Pages to the worker, so inside the worker it is the worker's own origin
- * (admission-gk...workers.dev) — which does NOT serve /icons/* and returns 403.
+ * (admission-gk...workers.dev), which does NOT serve /icons/* and returns 403.
  * Android then drew the OS default "A" avatar. The Pages origin is the one that
  * serves the real logo and the R2 image read path. Overridable for staging. */
 const publicOrigin = request => {
@@ -692,17 +692,17 @@ const randKey = len => {
 };
 
 /* Dual-language preset templates (spec §13). Variables: {{title}} {{lesson}}
- * {{course}} {{feature}} {{date}} — the admin replaces them in the composer. */
+ * {{course}} {{feature}} {{date}}, the admin replaces them in the composer. */
 const GLOBAL_TEMPLATES = Object.freeze([
   { key: 'new-content', type: 'new-content',
-    bn: { title: '{{title}} এখন available', body: 'নতুন content এখন available — দেখে নিন।' },
-    en: { title: '{{title}} is now available', body: 'New content is live — take a look.' } },
+    bn: { title: '{{title}} এখন available', body: 'নতুন content এখন available, দেখে নিন।' },
+    en: { title: '{{title}} is now available', body: 'New content is live, take a look.' } },
   { key: 'announcement', type: 'announcement',
     bn: { title: 'গুরুত্বপূর্ণ আপডেট', body: '{{title}}' },
     en: { title: 'Important update', body: '{{title}}' } },
   { key: 'new-feature', type: 'new-feature',
-    bn: { title: 'নতুন feature live হয়েছে', body: '{{feature}} এখন available — ব্যবহার করে দেখুন।' },
-    en: { title: 'New feature is live', body: '{{feature}} is available — give it a try.' } },
+    bn: { title: 'নতুন feature live হয়েছে', body: '{{feature}} এখন available, ব্যবহার করে দেখুন।' },
+    en: { title: 'New feature is live', body: '{{feature}} is available, give it a try.' } },
   { key: 'challenge', type: 'challenge',
     bn: { title: 'সাপ্তাহিক challenge শুরু!', body: 'নতুন challenge ready। শেষ: {{date}}' },
     en: { title: 'Weekly challenge is on!', body: 'Your new challenge is ready. Ends: {{date}}' } },
@@ -754,7 +754,7 @@ async function fcmSendToTopic(env, topic, { title, body, imageUrl, iconUrl, badg
 /* Server-side topic subscription. The client's subscribeToTopic is best-effort
  * and silently no-ops without a custom VAPID key, so the topic path never
  * reached anyone. IID returns 200 with a per-token error entry, so a 200 alone
- * is not success — the result body has to be inspected. */
+ * is not success, the result body has to be inspected. */
 async function iidBatch(env, url, token, topic) {
   if (!TOPIC_RE.test(topic)) return { ok: false, reason: 'invalid-topic' };
   let accessToken;
@@ -779,7 +779,7 @@ const subscribeDeviceToTopic = (env, token, topic) => iidBatch(env, IID_BATCH_AD
 const unsubscribeDeviceFromTopic = (env, token, topic) => iidBatch(env, IID_BATCH_REMOVE_URL, token, topic);
 
 /* Per-device send, bounded concurrency. The FCM HTTP v1 single-send body takes
- * ONE `token`, never a `tokens` array — the array form belongs to the batch
+ * ONE `token`, never a `tokens` array, the array form belongs to the batch
  * endpoint, which lives at a different URL. Sending `tokens` here got a 400 for
  * every fallback batch and silently delivered nothing while the row still read
  * "sent", so the whole non-topic path was dead. */
@@ -788,7 +788,7 @@ const FCM_SEND_CONCURRENCY = 10;
 /* One global send fans out to every active device, so the only bound that
  * matters is memory, not cost (a token send is one HTTP request either way).
  * A fixed small cap silently stopped delivering to users beyond it while the
- * row still read "sent" — the exact class of bug this path exists to avoid. */
+ * row still read "sent", the exact class of bug this path exists to avoid. */
 const FCM_FANOUT_MAX = 20_000;
 
 async function fcmSendOne(env, accessToken, target, { title, body, imageUrl, iconUrl, badgeUrl, data: messageData }) {
@@ -901,7 +901,7 @@ async function sendGlobal(env, store, row, request) {
   const prior = store.available() && ledger.available() ? await ledger.getState(row.id) : null;
   /* A row still 'scheduled' with progress means an earlier tick sliced it and
    * owes more. The topic send already reached every subscriber on that first
-   * tick, so resuming must NOT re-fire it — it continues the per-device tail. */
+   * tick, so resuming must NOT re-fire it, it continues the per-device tail. */
   const resuming = Boolean(prior && prior.cursor > 0 && prior.status !== 'complete');
   let topicRes = { ok: resuming, name: null, detail: resuming ? 'resumed' : null };
   let fallbackSent = 0;
@@ -1015,7 +1015,7 @@ export async function runScheduledGlobalNotifications(env) {
 /* Key for the daily global-send cap. The cap resets at 00:00 UTC: the KV entry
  * lives under one UTC date with a 24h TTL, so counting a UTC day is what the
  * limiter actually enforces. (This used to be called dhakaDayKey while also
- * using the UTC date — the admin panel then labelled the window "Asia/Dhaka",
+ * using the UTC date, the admin panel then labelled the window "Asia/Dhaka",
  * which was wrong by 6 hours.) */
 const utcDayKey = () => new Date().toISOString().slice(0, 10);
 
@@ -1055,7 +1055,7 @@ export async function handleFcmNotificationRequest(request, env) {
   }
 
   /* ── Phase 2: global notification ADMIN routes ─────────────────────────────
-   * The Bearer ADMIN_TOKEN is the credential — a valid token is enough, with
+   * The Bearer ADMIN_TOKEN is the credential, a valid token is enough, with
    * or without a logged-in session (the session, when present, is only used
    * to record who the admin is). Keeps the Admin Center usable from any
    * device/browser. User routes below still require a session. */
@@ -1096,7 +1096,7 @@ export async function handleFcmNotificationRequest(request, env) {
       const audience = GLOBAL_AUDIENCES[body.audience] ? body.audience : 'all_students';
       const topic = GLOBAL_AUDIENCES[audience].topic;
       if (!TOPIC_RE.test(topic)) return jsonResponse(request, { error: 'invalid-topic' }, 500);
-      /* Rule (spec §17): duplicate protection — the same *send* within 10 days.
+      /* Rule (spec §17): duplicate protection, the same *send* within 10 days.
        * The mode is part of the key: scheduling a message is a different intent
        * from sending it, so an earlier test-send of identical text must not
        * make the real scheduled message impossible to create (that 409 was why
@@ -1117,7 +1117,7 @@ export async function handleFcmNotificationRequest(request, env) {
       await store.insertGlobal(row);
       /* Subscribe the creator's own device(s) to the audience topic so the
        * admin who just sent is reachable, and record the topic only if FCM
-       * accepted it — same rule as register-token, or the fallback would skip
+       * accepted it, same rule as register-token, or the fallback would skip
        * the device while the topic send never reached it. */
       if (body.deviceToken) {
         const adminDeviceToken = String(body.deviceToken);
@@ -1236,7 +1236,7 @@ export async function handleFcmNotificationRequest(request, env) {
       const day = new Date().toISOString().slice(0, 10);
       /* The key must match files-storage KEY_RE
        * (`folder/<segment>/<date>/<rand>.<ext>`), or the public GET rejects it
-       * as 404 and the notification image renders as a broken "?" — a
+       * as 404 and the notification image renders as a broken "?", a
        * tell-tale that upload succeeded but read-back did not. */
       const owner = String(adminUserId).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64) || 'admin';
       const key = `notify/${owner}/${day}/${randKey(12)}.${ext}`;
@@ -1291,7 +1291,7 @@ export async function handleFcmNotificationRequest(request, env) {
       topicOk = sub.ok;
       if (sub.ok) await store.setDeviceTopics(userId, token, GLOBAL_TOPIC);
     } catch (_) { /* fallback covers this device */ }
-    /* Round 8 (owner directive 2026-09-17): no welcome push — enabling is
+    /* Round 8 (owner directive 2026-09-17): no welcome push, enabling is
      * silent; the user sees nothing after tapping Allow. The bell opening
      * the inbox is the confirmation. */
     return jsonResponse(request, { ok: true, registered: true, topicSubscribed: topicOk, devices: (await store.activeDevices(userId)).length }, 201);
@@ -1370,7 +1370,7 @@ export async function handleFcmNotificationRequest(request, env) {
   }
 
   /* Self-service test push: an authenticated user sends a test notification
-   * to their OWN registered devices — no admin token needed (owner directive
+   * to their OWN registered devices, no admin token needed (owner directive
    * 2026-09-17: "টোকেনের ঝামেলা না"). Strictly rate-limited (3/hour). */
   if (path === '/api/notifications/self-test' && request.method === 'POST') {
     if (!fcmConfigured(env)) return jsonResponse(request, { error: 'fcm-not-configured' }, 503);
@@ -1385,7 +1385,7 @@ export async function handleFcmNotificationRequest(request, env) {
       const outcome = await fcmSendToDevice(env, {
         token: device.token,
         title: '📡 Test notification',
-        body: 'এটি Admission Hub-এর test push — সিস্টেম ঠিকঠাক চলছে ✅',
+        body: 'এটি Admission Hub-এর test push, সিস্টেম ঠিকঠাক চলছে ✅',
         data: { link: 'notifications', src: 'fcm-self-test' }
       });
       if (!outcome.ok && (outcome.reason === 'unregistered' || outcome.reason === 'invalid')) {
@@ -1405,7 +1405,7 @@ export async function handleFcmNotificationRequest(request, env) {
     const topics = Array.isArray(body.topics) ? body.topics.map(t => String(t)).filter(t => TOPIC_RE.test(t)).slice(0, 10) : [];
     if (token.length < TOKEN_MIN_LEN || topics.length < 1) return jsonResponse(request, { error: 'invalid-payload' }, 400);
     /* Subscribe through IID and record only what FCM actually accepted, so
-     * `topics` never claims a subscription the device does not have — the
+     * `topics` never claims a subscription the device does not have, the
      * fallback decides from this column whether a device still needs a send. */
     const accepted = [];
     for (const topic of topics) {

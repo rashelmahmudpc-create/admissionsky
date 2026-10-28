@@ -1,4 +1,4 @@
-/* Notification Command Center — route shim for the Admin app shell.
+/* Notification Command Center, route shim for the Admin app shell.
  *
  * The v2 Command Center is a self-contained page (notification-command-center.html)
  * with its own sidebar, top bar, mobile tabs and 4 themes. It must NOT be injected

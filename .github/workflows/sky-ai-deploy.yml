@@ -30,7 +30,7 @@ jobs:
         with:
           node-version: '22'
       - name: Unit tests
-        run: node --test sky-ai/worker.test.mjs
+        run: node --test sky-ai/*.test.mjs sky-ai-route-identity.test.mjs
       - name: Deploy sky-ai
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -40,15 +40,15 @@ jobs:
           npm i -g wrangler@4.35.0 >/dev/null 2>&1
           cd sky-ai
           wrangler deploy --config wrangler.toml
-      - name: Verify health
+      - name: Verify health (through admission-gk, the only way in)
         run: |
           set -eu
           sleep 5
           for i in 1 2 3 4 5; do
-            body="$(curl -s --max-time 20 "https://sky-ai.admissionhub.workers.dev/health?cb=$RANDOM" || true)"
+            body="$(curl -s --max-time 20 "https://admission-gk.admissionhub.workers.dev/api/ai/sky-health?cb=$RANDOM" || true)"
             echo "health: $body"
-            echo "$body" | grep -q '"service":"sky-ai"' && exit 0
+            echo "$body" | grep -q '"via":"service-binding"' && exit 0
             sleep 6
           done
-          echo "::error::sky-ai health check failed"
+          echo "::error::sky-ai health check via admission-gk failed"
           exit 1

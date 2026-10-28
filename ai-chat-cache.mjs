@@ -1,13 +1,13 @@
 /**
- * P25 — chat response cache (owner order 2026-10-15, step 1 of the AI cost plan).
+ * P25, chat response cache (owner order 2026-10-15, step 1 of the AI cost plan).
  *
  * WHY THIS EXISTS
  * ---------------
  * `agentChat` is the main student path and it called the model on every single
  * request. Measured from the code: `getCache`/`putCache` were used in exactly one
  * place, the admin analytics copilot. So a thousand students asking the same
- * common question caused a thousand model calls, and the free provider quota —
- * which is the real cost here, not money — was spent on answers we already had.
+ * common question caused a thousand model calls, and the free provider quota -
+ * which is the real cost here, not money, was spent on answers we already had.
  *
  * WHY IT IS NARROW ON PURPOSE
  * ---------------------------
@@ -48,7 +48,7 @@ export const CHAT_CACHE_TTL_MS = Object.freeze({
 /**
  * Enabled by default, and disabled only by an explicit value. The Worker sits on
  * the Workers Free ceiling of 64 variables, so this deliberately does NOT add a
- * `[vars]` entry — same pattern as the write/execute layer, which is live in code
+ * `[vars]` entry, same pattern as the write/execute layer, which is live in code
  * and turned off by binding `USE_WRITE_ACTIONS = "disabled"` from the dashboard.
  * To turn this cache off without a deploy, bind `AI_CHAT_CACHE = "off"`.
  */
@@ -89,7 +89,7 @@ export function isCacheableRequest(input = {}) {
 }
 
 /**
- * P30 (owner order 2026-10-16) — the shared academic path.
+ * P30 (owner order 2026-10-16), the shared academic path.
  *
  * `isCacheableRequest` refuses any prompt that carries personalisation, and a
  * signed-in student's prompt always does (last-topic memory, stats), so the

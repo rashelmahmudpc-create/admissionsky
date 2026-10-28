@@ -46,8 +46,8 @@ export function renderGoalContext(goal, opts = {}) {
     ? ' Measured weak topics: ' + weak.map((w) => w.name + ' ' + (w.accuracy | 0) + '%').join(', ') + '.'
     : stated.length ? ' The student said they are weak in: ' + stated.join(', ') + '.' : '';
   if (!goal || !goal.label) {
-    if (opts.askedBefore) return 'ADMISSION GOAL (' + GOAL_VERSION + '): unknown (already asked once — do not ask again in this chat).' + weakLine;
-    return 'ADMISSION GOAL (' + GOAL_VERSION + '): unknown — the student has not set a target university/unit.' + weakLine +
+    if (opts.askedBefore) return 'ADMISSION GOAL (' + GOAL_VERSION + '): unknown (already asked once, do not ask again in this chat).' + weakLine;
+    return 'ADMISSION GOAL (' + GOAL_VERSION + '): unknown, the student has not set a target university/unit.' + weakLine +
       ' Give useful general advice first, then ask ONE short question at the end: "তুমি কোন বিশ্ববিদ্যালয়/ইউনিটে ভর্তি হতে চাও? বললে সেই অনুযায়ী সাজিয়ে দেব (প্রোফাইলেও লক্ষ্য দিয়ে রাখতে পারো)।" Do not guess a target.';
   }
   const where = goal.source === 'chat' ? 'said earlier in chat' : 'from their profile';

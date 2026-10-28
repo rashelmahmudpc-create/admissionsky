@@ -235,10 +235,22 @@ test('Firebase activation preflight validates project identity and authorized Pa
       return response({ projectId: 'admission-hub-test', authorizedDomains: ['localhost', 'admissionhub.pages.dev'] });
     }
   });
-  assert.deepEqual(result, { projectIdentified: true, authorizedDomainReady: true });
+  assert.equal(result.projectIdentified, true);
+  assert.equal(result.authorizedDomainReady, true);
+  assert.deepEqual(result.authorizedLiveDomains, ['admissionhub.pages.dev']);
+  assert.deepEqual(result.missingLiveDomains, ['admissionsky.pages.dev']);
   assert.match(request.url, /^https:\/\/identitytoolkit\.googleapis\.com\/v1\/projects\?key=/);
   assert.equal(request.options.method, 'GET');
   assert.equal(request.options.body, undefined);
+});
+
+test('Firebase activation preflight passes when only the short live origin is authorized', () => {
+  // The owner's public address is admissionsky.pages.dev. A project that lists
+  // only that one is not broken for students, and this gate used to fail on it.
+  const result = validateFirebaseProjectConfig({ projectId: 'admissionsky-997d2', authorizedDomains: ['localhost', 'admissionsky.pages.dev'] });
+  assert.equal(result.projectIdentified, true);
+  assert.deepEqual(result.authorizedLiveDomains, ['admissionsky.pages.dev']);
+  assert.deepEqual(result.missingLiveDomains, ['admissionhub.pages.dev']);
 });
 
 test('Firebase activation preflight rejects a project without the Pages authorized domain', async () => {

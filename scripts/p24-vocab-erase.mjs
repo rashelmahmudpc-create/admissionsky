@@ -1,4 +1,4 @@
-/* P24 — Vocabulary erase. Owner-ordered (2026-10-11): remove every vocabulary
+/* P24, Vocabulary erase. Owner-ordered (2026-10-11): remove every vocabulary
  * row from the published product so the bank can be rebuilt one category at a
  * time.
  *

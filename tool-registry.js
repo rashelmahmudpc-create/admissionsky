@@ -1,4 +1,4 @@
-// 🧩 PHASE 9 — M6: TOOL REGISTRY
+// 🧩 PHASE 9, M6: TOOL REGISTRY
 // Typed, permission-classified tool declarations with cross-user isolation
 // enforced at the tool boundary.
 //
@@ -6,7 +6,7 @@
 // declaration carrying name / description / permission / inputSchema /
 // outputSchema / riskLevel / enabled, and the permission classes READ, WRITE and
 // EXECUTE are separated with READ-only as the default. Cross-user isolation must
-// be designed in here, not retrofitted later — so the owner of any tool call is
+// be designed in here, not retrofitted later, so the owner of any tool call is
 // always the server-validated request identity, never a value the model or the
 // client can supply.
 //
@@ -60,13 +60,13 @@ const REGISTRY = Object.freeze({
     riskLevel: RISK.LOW,
     // Isolation marker: this tool may only ever run against the caller's own data.
     ownerScoped: true,
-    // Enabled because it is READ-only and owner-scoped — the one class of tool
+    // Enabled because it is READ-only and owner-scoped, the one class of tool
     // Phase 9 permits. Enabled ≠ wired: the chat path does not call it yet, so
     // this grants no runtime capability. WRITE/EXECUTE stay disabled until M9.
     enabled: true
   }),
   /* owner 2026-10-18: live web search (Tavily). READ-only; it reads no user data
-     at all — only the cleaned question text leaves the server — so it is
+     at all, only the cleaned question text leaves the server, so it is
      owner-scoped by construction. Daily cap + kill switch live in sky-tools.mjs. */
   'web.search': Object.freeze({
     name: 'web.search',
@@ -149,7 +149,7 @@ export function resolveToolOwner(uid) {
  * Authorize a tool call. Denies, with a reason, unless every condition holds:
  * the tool exists, is enabled, is READ-only, has a resolvable owner, and its
  * arguments carry no attempt to name another owner. `owner` in the result is the
- * uid the caller must use — callers must never build it themselves.
+ * uid the caller must use, callers must never build it themselves.
  */
 export function authorizeToolCall(name, { uid, args } = {}) {
   const tool = getTool(name);

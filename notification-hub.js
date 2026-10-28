@@ -1,10 +1,10 @@
-/* v119 — Admission Hub Smart Notification engine (client).
+/* v119, Admission Hub Smart Notification engine (client).
    Phase 2 (owner-approved 2026-09-17): global feed unread in the bell badge,
    notification click logging for the global engine analytics.
    Round 8 (owner directive 2026-09-17): auto engine OFF, premium centered
    allow dialog (one tap, silent success), bell = inbox-or-allow only.
    Golden rule: "Notification পাঠানোর মতো কারণ না থাকলে পাঠাবে না।"
-   সব claim আসল ডেটা থেকে (activityLogs/examResults/mistakes/streak) — fake praise নিষিদ্ধ।
+   সব claim আসল ডেটা থেকে (activityLogs/examResults/mistakes/streak), fake praise নিষিদ্ধ।
    Delivery: Telegram + iPhone/PWA web-push (নিজের Cloudflare worker); user active থাকলে শুধু in-app toast। */
 (() => {
   'use strict';
@@ -13,7 +13,7 @@
   const LS_ENDPOINT = 'ahNotifyUrl';
   const VAPID_PUBLIC = 'BJtpFY7isSDAQy7ck7zNQjNfmhAu4w-bcQ3_eFUTQbITSHBJO5f6n5ayYm_-TE7vNcnZ_1Ib45DVmxQkyLIFDsY';
   const APP_HEADER = 'admission-hub';
-  /* Inline SVG line icons — the student chrome is emoji-led too; premium look
+  /* Inline SVG line icons, the student chrome is emoji-led too; premium look
    * comes from one consistent stroke set, not pictographs. */
   const ICON = {
     bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
@@ -27,7 +27,7 @@
   const icon = (name, size = 18) =>
     `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:0 0 auto">${ICON[name] || ''}</svg>`;
   /* Owner directive 2026-09-17 (round 8): auto-generated notifications are
-   * OFF ("সেকেন্ডের পর সেকেন্ড অটোমেটিক নোটিফিকেশন আসছে — বন্ধ করতে হবে").
+   * OFF ("সেকেন্ডের পর সেকেন্ড অটোমেটিক নোটিফিকেশন আসছে, বন্ধ করতে হবে").
    * The candidate/decision engine below stays in place; real announcements
    * (Phase 2+ global push) will use the explicit send path instead. */
   const AUTO_ENGINE_ENABLED = false;
@@ -41,7 +41,7 @@
     cooldownH: 3
   });
   const CAT_LABEL = { study: 'Study Reminder', streak: 'Streak', revision: 'Revision', mistake: 'Mistake Bank', achievement: 'Progress & Achievement', exam: 'Exam Reminder', admission: 'Admission Alert', update: 'Important Update' };
-  const CAT_SOON = { admission: true, update: true, exam: true }; // জেনারেটর আসছে — আসল ডেটা ছাড়া কিছু পাঠানো হবে না
+  const CAT_SOON = { admission: true, update: true, exam: true }; // জেনারেটর আসছে, আসল ডেটা ছাড়া কিছু পাঠানো হবে না
 
   let endpoint = DEFAULT_ENDPOINT;
   try {
@@ -103,7 +103,7 @@
   };
   const inQuietHours = (hour, quiet) => quiet.start > quiet.end ? (hour >= quiet.start || hour < quiet.end) : (hour >= quiet.start && hour < quiet.end);
 
-  // ── Candidate builders (spec §3–§8) — সবই আসল সংখ্যা দিয়ে ────────────────────
+  // ── Candidate builders (spec §3–§8), সবই আসল সংখ্যা দিয়ে ────────────────────
   const buildCandidates = (snapshot, prefs, state) => {
     const list = [];
     const { now, streak, todayQ, target, mistakes, prefHour } = snapshot;
@@ -116,7 +116,7 @@
       list.push({ category: 'study', priority: 3, dedup: `study-${today}`, title: 'পড়ার সময় হয়ে গেছে', body: 'এই সময়টায় তুই সাধারণত পড়া শুরু করিস। চল আজকের practice দিয়ে শুরু করি।' });
     }
     if (prefs.cats.study && todayQ === 0 && hour >= 10 && hour < 12 && state.morningPrompt !== today) {
-      list.push({ category: 'study', priority: 2, dedup: `study-am-${today}`, title: 'দিনটা শুরু করবি?', body: 'সকালের একটা ছোট practice সারাদিনের মুড ঠিক করে দেয় — 10টা MCQ দিয়ে শুরু করি!' });
+      list.push({ category: 'study', priority: 2, dedup: `study-am-${today}`, title: 'দিনটা শুরু করবি?', body: 'সকালের একটা ছোট practice সারাদিনের মুড ঠিক করে দেয়, 10টা MCQ দিয়ে শুরু করি!' });
     }
     if (prefs.cats.study && todayQ > 0 && todayQ < target && hour >= 21 && hour < 23) {
       list.push({ category: 'study', priority: 2, dedup: `study-eve-${today}`, title: 'একটু বাকি রয়ে গেছে', body: `আজ ${todayQ}টা হয়েছে, target ${target}। আর ${target - todayQ}টা দিলেই আজকেরটা complete!` });
@@ -130,7 +130,7 @@
       }
     }
     if (prefs.cats.achievement && todayQ >= target && (state.lastTargetDone || '') !== today && todayQ - 5 < target) {
-      list.push({ category: 'achievement', priority: 3, dedup: `target-${today}`, title: 'আজকের target complete!', body: `${todayQ}/${target} — আজকের প্রস্তুতি নিশ্চিত। শুভকামনা!` });
+      list.push({ category: 'achievement', priority: 3, dedup: `target-${today}`, title: 'আজকের target complete!', body: `${todayQ}/${target}, আজকের প্রস্তুতি নিশ্চিত। শুভকামনা!` });
     }
     return list;
   };
@@ -172,7 +172,7 @@
         if (chosen.dedup?.startsWith('target-')) nextState.lastTargetDone = today;
         if (chosen.dedup?.startsWith('study-am-')) nextState.morningPrompt = today;
         await saveState(nextState);
-        if (active) { try { window.toast?.(chosen.title + ' — ' + chosen.body); } catch (_) {} }
+        if (active) { try { window.toast?.(chosen.title + ', ' + chosen.body); } catch (_) {} }
         else await dispatch(chosen, snapshot);
         result.sent = chosen;
         return result;
@@ -183,24 +183,38 @@
   };
 
   // ── Delivery: worker → Telegram + Web Push (+ state sync for cron fallback) ──
+  /* BUG-001 (2026-10-26): /api/notify/dispatch now requires a real proof of
+     identity, because the static X-AH-App header ships in this bundle and
+     anyone could read it and message every subscriber. A control device sends
+     the owner's admin token, exactly as cloud-content-sync.js does for
+     /api/cloud/publish. */
+  const dispatchHeaders = () => {
+    const base = { 'Content-Type': 'application/json', 'X-AH-App': APP_HEADER };
+    let token = '';
+    try { token = sessionStorage.getItem('ahAdminTok') || ''; } catch (_) {}
+    return token ? { ...base, Authorization: 'Bearer ' + token } : base;
+  };
   const dispatch = async (chosen, snapshot) => {
     if (!endpoint) return 'off';
     try {
-      await fetch(endpoint + '/api/notify/dispatch', {
+      const res = await fetch(endpoint + '/api/notify/dispatch', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-AH-App': APP_HEADER },
+        headers: dispatchHeaders(),
         body: JSON.stringify({
           telegram: { text: `${chosen.title}\n\n${chosen.body}` },
           state: { streak: snapshot.streak, todayQuestions: snapshot.todayQ, lastOpen: todayKey() }
         })
       });
+      // 403 means this device holds no owner token; say so instead of reporting
+      // a delivery that never happened.
+      if (res && res.status === 403) return 'forbidden';
       return 'ok';
     } catch (_) { return 'fail'; } // spec §46: failure কখনো app break করবে না
   };
   const syncState = async () => {
     if (!endpoint) return;
     try {
-      await fetch(endpoint + '/api/notify/dispatch', {
+      await fetch(endpoint + '/api/notify/state', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-AH-App': APP_HEADER },
         body: JSON.stringify({ state: { streak: streakNow(), todayQuestions: todayQuestions(), lastOpen: todayKey() } })
       });
@@ -212,9 +226,9 @@
   const pushReady = () => typeof Notification !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window;
   const standalone = () => window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator.standalone === true;
   const enablePush = async () => {
-    if (!pushReady()) { window.toast?.('এই device-এ web push নেই — Telegram-এ notification আসবে'); return 'unsupported'; }
+    if (!pushReady()) { window.toast?.('এই device-এ web push নেই, Telegram-এ notification আসবে'); return 'unsupported'; }
     const permission = await Notification.requestPermission();
-    if (permission !== 'granted') { window.toast?.('নোটিফিকেশন চালু হয়নি — পরে Settings → Notifications থেকে চালু করতে পারবে।'); return permission; }
+    if (permission !== 'granted') { window.toast?.('নোটিফিকেশন চালু হয়নি, পরে Settings → Notifications থেকে চালু করতে পারবে।'); return permission; }
     try {
       const registration = await navigator.serviceWorker.ready;
       let subscription = await registration.pushManager.getSubscription();
@@ -224,7 +238,7 @@
       window.toast?.('Notification চালু হয়েছে! iPhone push-এর জন্য অ্যাপটা Home Screen থেকে খুললে সবচেয়ে ভালো চলে।');
       return 'granted';
     } catch (_) {
-      window.toast?.('Push subscribe হয়নি — তবু Telegram notification চলবে');
+      window.toast?.('Push subscribe হয়নি, তবু Telegram notification চলবে');
       return 'subscribe-failed';
     }
   };
@@ -243,7 +257,7 @@
   const disablePush = async () => {
     /* This toggle owns the VAPID subscription only. The FCM registration in
      * AhFcm is a separate channel, so leaving it active kept pushes arriving
-     * after the user had turned push off — the confusing part was that the UI
+     * after the user had turned push off, the confusing part was that the UI
      * said "off" while notifications continued. Stop both. */
     try {
       const registration = await navigator.serviceWorker.ready;
@@ -287,7 +301,7 @@
       <button class="iconbtn" style="flex:0 0 auto" title="Notification settings" aria-label="Notification settings" onclick="NotificationHub.openSettings()">${icon('gear', 18)}</button>
     </div>`;
   /* Phase 2: unread global notifications from the server feed (for the bell
-   * badge). Bounded + fail-soft — the badge must never break the dashboard. */
+   * badge). Bounded + fail-soft, the badge must never break the dashboard. */
   const globalUnreadCount = async () => {
     try {
       const controller = new AbortController();
@@ -317,12 +331,12 @@
       }
     } catch (_) {}
   };
-  const dismissPrompt = async () => { await saveState({ ...(await getState()), promptDismissed: todayKey() }); window.toast?.('ঠিক আছে — Settings → Notifications থেকে যখন চাও চালু করতে পারবে।'); const copy = document.getElementById('ahNotifCopy'); if (copy) copy.innerHTML = '<b>Notifications</b><br><button class="btn ghost sm" style="margin-top:6px" onclick="NotificationHub.openCenter()">Notification Center খোলো</button>'; };
+  const dismissPrompt = async () => { await saveState({ ...(await getState()), promptDismissed: todayKey() }); window.toast?.('ঠিক আছে, Settings → Notifications থেকে যখন চাও চালু করতে পারবে।'); const copy = document.getElementById('ahNotifCopy'); if (copy) copy.innerHTML = '<b>Notifications</b><br><button class="btn ghost sm" style="margin-top:6px" onclick="NotificationHub.openCenter()">Notification Center খোলো</button>'; };
   const promptEnable = async () => { const status = await enablePush(); if (status === 'granted') hydrateDashboard(); };
 
   const openCenter = async () => {
     const rows = (await logRows()).sort((a, b) => b.createdAt - a.createdAt).slice(0, 20);
-    openModal(`<h3>Notification Center</h3><p class="muted" style="margin-top:4px;font-size:12px">শুধু আসল কারণ থাকলেই কিছু আসে — নীরবতাও একটা ফিচার।</p>${rows.length ? `<div style="display:grid;gap:9px;margin-top:12px">${rows.map(row => `<div style="padding:11px;border:1px solid var(--line);border-radius:12px;background:${row.readAt ? 'transparent' : 'var(--mint)'}"><div style="display:flex;gap:8px;align-items:center"><b style="font-size:13px;flex:1">${escapeHtml(row.title)}</b>${row.readAt ? '' : '<span style="width:8px;height:8px;border-radius:99px;background:var(--emerald)"></span>'}</div><div style="font-size:12.5px;margin-top:3px;line-height:1.5">${escapeHtml(row.body)}</div><small style="color:var(--sub);font-size:10.5px">${fmtTime(row.createdAt)} · ${CAT_LABEL[row.category] || row.category}</small></div>`).join('')}</div>` : '<p class="muted" style="margin-top:12px">এখনো কোনো notification পাঠানো হয়নি।</p>'}<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><button class="btn ghost sm" onclick="NotificationHub.markAllRead();closeModal()">Mark all as read</button><button class="btn ghost sm" onclick="NotificationHub.openSettings()">Settings</button><button class="btn sm" onclick="closeModal()">Close</button></div>`);
+    openModal(`<h3>Notification Center</h3><p class="muted" style="margin-top:4px;font-size:12px">শুধু আসল কারণ থাকলেই কিছু আসে, নীরবতাও একটা ফিচার।</p>${rows.length ? `<div style="display:grid;gap:9px;margin-top:12px">${rows.map(row => `<div style="padding:11px;border:1px solid var(--line);border-radius:12px;background:${row.readAt ? 'transparent' : 'var(--mint)'}"><div style="display:flex;gap:8px;align-items:center"><b style="font-size:13px;flex:1">${escapeHtml(row.title)}</b>${row.readAt ? '' : '<span style="width:8px;height:8px;border-radius:99px;background:var(--emerald)"></span>'}</div><div style="font-size:12.5px;margin-top:3px;line-height:1.5">${escapeHtml(row.body)}</div><small style="color:var(--sub);font-size:10.5px">${fmtTime(row.createdAt)} · ${CAT_LABEL[row.category] || row.category}</small></div>`).join('')}</div>` : '<p class="muted" style="margin-top:12px">এখনো কোনো notification পাঠানো হয়নি।</p>'}<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><button class="btn ghost sm" onclick="NotificationHub.markAllRead();closeModal()">Mark all as read</button><button class="btn ghost sm" onclick="NotificationHub.openSettings()">Settings</button><button class="btn sm" onclick="closeModal()">Close</button></div>`);
     await markAllRead();
   };
   const markAllRead = async () => {
@@ -335,7 +349,7 @@
   // ── Compact notifications sheet (owner directive 2026-09-16) ─────────────
   // Small bottom sheet, minimal options, visible close, official concise FCM
   // copy, DUAL LANGUAGE: bn + en written, only the user's active language is
-  // rendered (AhI18n) — both languages never shown at the same time.
+  // rendered (AhI18n), both languages never shown at the same time.
   const SHEET_I18N = {
     title: { bn: 'নোটিফিকেশন', en: 'Notifications' },
     close: { bn: 'বন্ধ করুন', en: 'Close' },
@@ -348,27 +362,27 @@
     off: { bn: 'বন্ধ', en: 'Off' },
     master: { bn: 'সব নোটিফিকেশন', en: 'All notifications' },
     settingUp: { bn: 'নোটিফিকেশন সেটআপ চলছে', en: 'Notification setup in progress' },
-    blocked: { bn: 'ব্রাউজারে নোটিফিকেশন বন্ধ আছে — সাইট সেটিংস থেকে চালু করুন', en: 'Notifications are blocked in your browser — enable them in site settings' },
+    blocked: { bn: 'ব্রাউজারে নোটিফিকেশন বন্ধ আছে, সাইট সেটিংস থেকে চালু করুন', en: 'Notifications are blocked in your browser, enable them in site settings' },
     onDone: { bn: 'Push চালু হয়েছে ✓', en: 'Push turned on ✓' },
     offDone: { bn: 'Push বন্ধ হয়েছে', en: 'Push turned off' },
     needPermission: { bn: 'ব্রাউজারে অনুমতি দিতে হবে', en: 'Browser permission is needed' },
-    retry: { bn: 'এবার চলেছে না — আবার চেষ্টা করুন', en: 'Could not enable — please try again' },
+    retry: { bn: 'এবার চলেছে না, আবার চেষ্টা করুন', en: 'Could not enable, please try again' },
     working: { bn: 'চালু হচ্ছে…', en: 'Turning on…' },
-    iosInstallBody: { bn: 'iPhone-এ ওয়েব পুশ শুধু Home Screen-এ অ্যাপ যোগ করলেই চলে। করবেন: (১) Safari-র Share (⬆) বাটন → "Add to Home Screen" — (২) Home Screen থেকে অ্যাপটি খুলুন — (৩) আবার এখানে এসে Turn on চাপুন।', en: 'On iPhone, web push works only when the app is on your Home Screen. Do this: (1) Safari Share (⬆) → "Add to Home Screen" — (2) open the app from your Home Screen — (3) come back and tap Turn on.' },
+    iosInstallBody: { bn: 'iPhone-এ ওয়েব পুশ শুধু Home Screen-এ অ্যাপ যোগ করলেই চলে। করবেন: (১) Safari-র Share (⬆) বাটন → "Add to Home Screen", (২) Home Screen থেকে অ্যাপটি খুলুন, (৩) আবার এখানে এসে Turn on চাপুন।', en: 'On iPhone, web push works only when the app is on your Home Screen. Do this: (1) Safari Share (⬆) → "Add to Home Screen", (2) open the app from your Home Screen, (3) come back and tap Turn on.' },
     iosToast: { bn: 'iPhone: আগে Home Screen-এ যোগ করুন', en: 'iPhone: add to Home Screen first' },
     notSupported: { bn: 'এই ডিভাইসে push supported নয়', en: 'Push is not supported on this device' },
-    errConfig: { bn: 'সার্ভার সেটিংস আসছে না — ইন্টারনেট চেক করে আবার চেষ্টা করুন', en: 'Server settings not loading — check internet and retry' },
-    errSdk: { bn: 'Push SDK লোড হয়নি — ইন্টারনেট চেক করে আবার চেষ্টা করুন', en: 'Push SDK failed to load — check internet and retry' },
-    errToken: { bn: 'Device token তৈরি হয়নি — Home Screen থেকে খোলা থাকলেও আবার চেষ্টা করুন', en: 'Device token failed — open from Home Screen and retry' },
-    errRegister: { bn: 'সার্ভারে register ব্যর্থ — আবার চেষ্টা করুন', en: 'Server registration failed — try again' },
-    errRate: { bn: 'বেশিবার চেষ্টা হয়েছে — ১ ঘণ্টা পর আবার চেষ্টা করুন', en: 'Too many attempts — please try again in an hour' },
-    errLogin: { bn: 'Login session সমস্যা — আবার login করে চেষ্টা করুন', en: 'Login session issue — log in again, then retry' },
+    errConfig: { bn: 'সার্ভার সেটিংস আসছে না, ইন্টারনেট চেক করে আবার চেষ্টা করুন', en: 'Server settings not loading, check internet and retry' },
+    errSdk: { bn: 'Push SDK লোড হয়নি, ইন্টারনেট চেক করে আবার চেষ্টা করুন', en: 'Push SDK failed to load, check internet and retry' },
+    errToken: { bn: 'Device token তৈরি হয়নি, Home Screen থেকে খোলা থাকলেও আবার চেষ্টা করুন', en: 'Device token failed, open from Home Screen and retry' },
+    errRegister: { bn: 'সার্ভারে register ব্যর্থ, আবার চেষ্টা করুন', en: 'Server registration failed, try again' },
+    errRate: { bn: 'বেশিবার চেষ্টা হয়েছে, ১ ঘণ্টা পর আবার চেষ্টা করুন', en: 'Too many attempts, please try again in an hour' },
+    errLogin: { bn: 'Login session সমস্যা, আবার login করে চেষ্টা করুন', en: 'Login session issue, log in again, then retry' },
     lastErrLabel: { bn: 'সর্বশেষ সমস্যা', en: 'Last error' },
     testPush: { bn: 'টেস্ট push', en: 'Test push' },
     testSent: { bn: 'টেস্ট push পাঠানো হয়েছে ✓', en: 'Test push sent ✓' },
-    testRate: { bn: 'বেশিবার পাঠানো হয়েছে — ১ ঘণ্টা পর আবার চেষ্টা করুন', en: 'Too many tests — try again in an hour' },
-    testNoDevice: { bn: 'কোনো device নেই — আগে Turn on করুন', en: 'No device registered — turn on push first' },
-    testFailed: { bn: 'টেস্ট পাঠানো যায়নি — আবার চেষ্টা করুন', en: 'Test could not be sent — try again' }
+    testRate: { bn: 'বেশিবার পাঠানো হয়েছে, ১ ঘণ্টা পর আবার চেষ্টা করুন', en: 'Too many tests, try again in an hour' },
+    testNoDevice: { bn: 'কোনো device নেই, আগে Turn on করুন', en: 'No device registered, turn on push first' },
+    testFailed: { bn: 'টেস্ট পাঠানো যায়নি, আবার চেষ্টা করুন', en: 'Test could not be sent, try again' }
   };
   const sheetT = key => {
     let lang = 'bn';
@@ -377,8 +391,8 @@
     return (entry && entry[lang]) || (entry && entry.bn) || key;
   };
   /* Apple's rule (2026): the Push API exists ONLY in a Home-Screen-installed
-   * web app on iOS — never in a Safari tab. So 'unsupported' on iOS means
-   * "not installed yet", which is fixable — guide the user instead of
+   * web app on iOS, never in a Safari tab. So 'unsupported' on iOS means
+   * "not installed yet", which is fixable, guide the user instead of
    * showing "blocked in settings" (owner confusion 2026-09-17). */
   const isIOS = () => { try { return /iPhone|iPad|iPod/i.test(navigator.userAgent || ''); } catch (_) { return false; } };
   const isStandalone = () => { try { return navigator.standalone === true || matchMedia('(display-mode: standalone)').matches; } catch (_) { return false; } };
@@ -437,7 +451,7 @@
   /* Shared push toggle. Owner bug 2026-09-17: on iOS the prompt never
    * appeared because the permission ask ran AFTER a network await (the
    * tap's transient activation was already spent). Fix: when permission is
-   * still 'default', ask FIRST — synchronously at the top of the tap —
+   * still 'default', ask FIRST, synchronously at the top of the tap -
    * before any status/config fetch. AhFcm.enable() was fixed the same way. */
   const doPushToggle = async (rerender) => {
     try {
@@ -474,7 +488,7 @@
   };
   const fcmSheetToggle = async () => {
     // Button feedback so the tap visibly does something (owner complaint).
-    // NOTE: sync-only checks here — any network await before the permission
+    // NOTE: sync-only checks here, any network await before the permission
     // ask would spend the iOS tap's transient activation again.
     let busy = sheetT('working');
     try {
@@ -486,7 +500,7 @@
     } catch (_) {}
     await doPushToggle(openSheet);
   };
-  /* Self-service test push — no admin token, only the user's own devices
+  /* Self-service test push, no admin token, only the user's own devices
    * (server-side, rate-limited 3/hour). */
   const sendSelfTest = async () => {
     try {
@@ -498,7 +512,7 @@
       else toastShort(sheetT('testFailed'));
     } catch (_) { toastShort(sheetT('testFailed')); }
   };
-  /* Inbox push banner toggle — same gesture-safe core, re-renders the inbox. */
+  /* Inbox push banner toggle, same gesture-safe core, re-renders the inbox. */
   const inboxPushToggle = async () => {
     const reInbox = () => { try { if (typeof window.render === 'function') window.render(); } catch (_) {} };
     await doPushToggle(reInbox);
@@ -510,7 +524,7 @@
   /* ── Premium centered allow dialog (owner directive 2026-09-17, round 8) ──
    * Like the other apps: one centered card, one tap → system prompt →
    * silently done. No test buttons, no device/token/FCM jargon, and no
-   * "চালু হয়েছে" celebration — after the user taps Allow they see
+   * "চালু হয়েছে" celebration, after the user taps Allow they see
    * nothing: the work is simply finished.
    * DUAL LANGUAGE: bn + en written, only the active language is rendered. */
   const ALLOW_I18N = {
@@ -518,9 +532,9 @@
     sub: { bn: 'খবর এলে যেন মিস না হয়', en: 'So you never miss an update' },
     allow: { bn: 'অনুমতি দিই', en: 'Allow' },
     later: { bn: 'এখন না', en: 'Not now' },
-    denied: { bn: 'ব্রাউজারে নোটিফিকেশন বন্ধ আছে — Settings → Notifications থেকে চালু করুন', en: 'Notifications are blocked in your browser — enable them in Settings → Notifications' },
+    denied: { bn: 'ব্রাউজারে নোটিফিকেশন বন্ধ আছে, Settings → Notifications থেকে চালু করুন', en: 'Notifications are blocked in your browser, enable them in Settings → Notifications' },
     gotIt: { bn: 'বুঝেছি', en: 'Got it' },
-    retry: { bn: 'এবার চলেছে না — আবার চেষ্টা করুন', en: 'Could not turn on — please try again' },
+    retry: { bn: 'এবার চলেছে না, আবার চেষ্টা করুন', en: 'Could not turn on, please try again' },
     working: { bn: 'চালু হচ্ছে…', en: 'Turning on…' },
     iosHome: { bn: 'iPhone-এ push পেতে: Safari-র Share (⬆) → "Add to Home Screen", তারপর Home Screen থেকে অ্যাপটি খুলুন', en: 'On iPhone, push needs the app on your Home Screen: Safari Share (⬆) → "Add to Home Screen", then open it from there' }
   };
@@ -539,15 +553,15 @@
       };
       try {
         if (typeof Notification === 'undefined') { line(allowT('denied'), 'var(--red)'); return; }
-        /* Gesture-safe: the permission ask runs FIRST — before any network
-         * await — so the iOS tap's transient activation is never spent. */
+        /* Gesture-safe: the permission ask runs FIRST, before any network
+         * await, so the iOS tap's transient activation is never spent. */
         if (Notification.permission === 'default') {
           const ask = await Notification.requestPermission();
           if (ask !== 'granted') { line(ask === 'denied' ? allowT('denied') : allowT('retry'), 'var(--red)'); return; }
         } else if (Notification.permission === 'denied') {
           line(allowT('denied'), 'var(--red)'); return;
         } else {
-          /* 'unsupported' — on iOS that means the app is not on the Home
+          /* 'unsupported', on iOS that means the app is not on the Home
            * Screen (Apple's Push API rule); on other browsers push is
            * unavailable. Guide, don't mislead. */
           line(isIOS() ? allowT('iosHome') : allowT('retry'), 'var(--red)'); return;
@@ -556,7 +570,7 @@
         if (btn) { btn.disabled = true; btn.textContent = allowT('working'); }
         const r = await window.AhFcm.enable();
         if (r === 'granted') {
-          /* Silent success — nothing is shown to the user. The bell now
+          /* Silent success, nothing is shown to the user. The bell now
            * opens the inbox; that is the confirmation. */
           try { closeModal(); } catch (_) {}
           try { hydrateDashboard(); } catch (_) {}
@@ -618,10 +632,10 @@
     const prefs = await getPrefs();
     const soon = Object.entries(CAT_SOON).filter(([, v]) => v).map(([k]) => CAT_LABEL[k]).join(' · ');
     const perm = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
-    const fcmRow = '<div id="ahFcmRow" style="padding:10px 0;border-bottom:1px solid var(--line);font-size:12px;color:var(--sub)">FCM Push — checking…</div><div id="ahPersonalRow"></div><div id="ahIntelRow"></div>';
-    const pushRow = !pushReady() ? '<div style="padding:9px 0;border-bottom:1px solid var(--line);font-size:12px;color:var(--sub)">এই device-এ web push নেই — Telegram-এ notification যাবে</div>'
+    const fcmRow = '<div id="ahFcmRow" style="padding:10px 0;border-bottom:1px solid var(--line);font-size:12px;color:var(--sub)">FCM Push, checking…</div><div id="ahPersonalRow"></div><div id="ahIntelRow"></div>';
+    const pushRow = !pushReady() ? '<div style="padding:9px 0;border-bottom:1px solid var(--line);font-size:12px;color:var(--sub)">এই device-এ web push নেই, Telegram-এ notification যাবে</div>'
       : perm === 'granted' ? `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)"><span style="flex:1;font-size:13px">iPhone push</span><span class="chip active" style="pointer-events:none">চালু</span></div>`
-      : perm === 'denied' ? '<div style="padding:9px 0;border-bottom:1px solid var(--line);font-size:12px;color:var(--red)">Push অনুমতি ব্লকড — iOS Settings → Safari/Home-অ্যাপ → Notifications থেকে চালু করো</div>'
+      : perm === 'denied' ? '<div style="padding:9px 0;border-bottom:1px solid var(--line);font-size:12px;color:var(--red)">Push অনুমতি ব্লকড, iOS Settings → Safari/Home-অ্যাপ → Notifications থেকে চালু করো</div>'
       : `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)"><span style="flex:1;font-size:13px">iPhone push</span><button class="btn sm" onclick="NotificationHub.enablePush().then(() => NotificationHub.openSettings())">চালু করি</button></div>`;
     openModal(`<h3>Notifications</h3>${fcmRow}${pushRow}
       <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)"><span style="flex:1;font-weight:700">Master Notification</span><button class="chip ${prefs.master ? 'active' : ''}" onclick="NotificationHub.toggleMaster()">${prefs.master ? 'ON' : 'OFF'}</button></div>
@@ -630,13 +644,13 @@
       <div style="display:flex;gap:8px;align-items:center"><select onchange="NotificationHub.setQuiet('start',this.value)">${[...Array(24)].map((_, h) => `<option value="${h}" ${prefs.quiet.start === h ? 'selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}</select><span>→</span><select onchange="NotificationHub.setQuiet('end',this.value)">${[...Array(24)].map((_, h) => `<option value="${h}" ${prefs.quiet.end === h ? 'selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}</select></div>
       <label class="flabel" style="margin-top:10px">দিনে সর্বোচ্চ notification</label>
       <select onchange="NotificationHub.setCap(this.value)">${[1, 2, 3, 4, 5].map(n => `<option value="${n}" ${prefs.dailyCap === n ? 'selected' : ''}>${n}টি</option>`).join('')}</select>
-      ${soon ? `<p class="muted" style="font-size:11px;margin-top:10px">${soon} — verified আসল তথ্য পেলেই চালু হবে; অনুমান-নির্ভর কিছু পাঠানো হবে না।</p>` : ''}
+      ${soon ? `<p class="muted" style="font-size:11px;margin-top:10px">${soon}, verified আসল তথ্য পেলেই চালু হবে; অনুমান-নির্ভর কিছু পাঠানো হবে না।</p>` : ''}
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
         ${pushReady() && Notification.permission === 'granted' ? '<button class="btn ghost sm" onclick="NotificationHub.disablePush();closeModal()">Push বন্ধ করো</button>' : ''}
         <button class="btn ghost sm" onclick="closeModal()">Close</button>
       </div>
-      <small style="display:block;margin-top:10px;color:var(--sub);font-size:11px;line-height:1.5">Telegram (@myadmihubbot) + iPhone push দুটোতেই যায়। Active থাকলে অ্যাপের ভেতরেই দেখায় — push বিরক্ত করে না।</small>`);
-    // FCM row hydrates async (config fetch) — replace the placeholder when ready.
+      <small style="display:block;margin-top:10px;color:var(--sub);font-size:11px;line-height:1.5">Telegram (@myadmihubbot) + iPhone push দুটোতেই যায়। Active থাকলে অ্যাপের ভেতরেই দেখায়, push বিরক্ত করে না।</small>`);
+    // FCM row hydrates async (config fetch), replace the placeholder when ready.
     try {
       window.AhFcm?.settingsRow?.().then(html => {
         const el = document.getElementById('ahFcmRow');
@@ -659,18 +673,24 @@
   const testNow = async () => {
     closeModal();
     window.toast?.('টেস্ট পাঠানো হচ্ছে…');
-    const okSend = await dispatch({ title: 'Admission Hub টেস্ট', body: 'বাহ! Notification চ্যানেল কাজ করছে — এখন থেকে ঠিক সময়ে আমি মনে করিয়ে দেব', category: 'update' }, { streak: streakNow(), todayQ: todayQuestions() });
-    if (okSend !== 'off') await logRow({ id: uid(), category: 'update', title: 'টেস্ট notification', body: 'চ্যানেল যাচাই সম্পন্ন ✓', priority: 1, dedup: 'test-' + Date.now(), status: 'sent', readAt: null, createdAt: Date.now() });
-    window.toast?.(okSend === 'off' ? 'Endpoint বন্ধ আছে' : 'টেস্ট পাঠানো হয়েছে — Telegram/push দেখো!');
+    const okSend = await dispatch({ title: 'Admission Hub টেস্ট', body: 'বাহ! Notification চ্যানেল কাজ করছে, এখন থেকে ঠিক সময়ে আমি মনে করিয়ে দেব', category: 'update' }, { streak: streakNow(), todayQ: todayQuestions() });
+    if (okSend === 'ok') await logRow({ id: uid(), category: 'update', title: 'টেস্ট notification', body: 'চ্যানেল যাচাই সম্পন্ন ✓', priority: 1, dedup: 'test-' + Date.now(), status: 'sent', readAt: null, createdAt: Date.now() });
+    // BUG-001: the Worker now requires a real proof of identity, so a device
+    // without the owner's admin token is refused. Say that plainly instead of
+    // reporting a delivery that never happened.
+    const msg = okSend === 'off' ? 'Endpoint বন্ধ আছে'
+      : okSend === 'forbidden' ? 'এই ব্রাউজারে অ্যাডমিন টোকেন নেই, তাই টেস্ট পাঠানো হয়নি।'
+      : 'টেস্ট পাঠানো হয়েছে, Telegram/push দেখো!';
+    window.toast?.(msg);
   };
   const toastShort = text => { try { window.toast?.(text); } catch (_) {} };
 
   // ── boot: dashboard hydration + periodic engine ─────────────────────────────
   const boot = () => {
     /* Phase 2: a background notification click stores {id, link} in Cache
-     * Storage (set by firebase-messaging-sw.js — a service worker has no
+     * Storage (set by firebase-messaging-sw.js, a service worker has no
      * localStorage). Log the click once, then clear it.
-     * Phase 3: an intelligence push stores {intelKey} instead — that is the
+     * Phase 3: an intelligence push stores {intelKey} instead, that is the
      * engine's candidate key, and it goes to the outcome route. */
     const logClick = click => {
       if (!click) return;

@@ -1,8 +1,8 @@
-/* v1 — Admission Hub FCM client (Phase 1, FCM-NOTIFICATION-BLUEPRINT.md).
+/* v1, Admission Hub FCM client (Phase 1, FCM-NOTIFICATION-BLUEPRINT.md).
  *
  * Layers FCM web push on top of the existing notification-hub.js (which keeps
  * the legacy Telegram + admission-notify VAPID path). Golden rules:
- *  - The Firebase SDK is NEVER loaded on app boot — only when the user taps
+ *  - The Firebase SDK is NEVER loaded on app boot, only when the user taps
  *    "Enable", or in the background (idle) for already-registered users.
  *  - Every remote request is bounded (timeout + try/catch); failure never
  *    breaks the app (spec §46).
@@ -11,7 +11,7 @@
 (() => {
   'use strict';
 
-  /* Inline SVG line icons — the settings chrome used to be emoji-led (📡⭐🛠️);
+  /* Inline SVG line icons, the settings chrome used to be emoji-led (📡⭐🛠️);
    * one stroke set reads as a product, not a chat. */
   const ICONS = {
     signal: '<path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/><path d="M22 4v16"/>',
@@ -64,7 +64,7 @@
     document.head.appendChild(s);
   });
 
-  /* Lazy Firebase SDK (compat build) — loaded at most once, only on demand.
+  /* Lazy Firebase SDK (compat build), loaded at most once, only on demand.
    * Self-hosted copy on our own domain first (owner's whole-stack-on-Cloudflare
    * rule + faster than gstatic on mobile); gstatic is the fallback. */
   const tryLoadSdk = async (base) => {
@@ -93,7 +93,7 @@
     return null;
   };
 
-  /* Last enable() outcome — surfaced in the UI so the owner can report the
+  /* Last enable() outcome, surfaced in the UI so the owner can report the
    * exact failure code instead of a vague "try again" (2026-09-17).
    * `detail` carries the raw browser/SDK message: without it every distinct
    * failure (SW race, permission, VAPID, network) collapses into one
@@ -113,7 +113,7 @@
   };
 
   /* Firebase registers /firebase-messaging-sw.js itself, but subscribes without
-   * waiting for it to activate — on a cold first enable that loses the race and
+   * waiting for it to activate, on a cold first enable that loses the race and
    * pushManager.subscribe() throws "no active Service Worker" (error 20), so no
    * device ever gets a token. Register here and wait until it is active, then
    * hand the ready registration to getToken().
@@ -148,7 +148,7 @@
     const messaging = fb.messaging(app);
     /* A foreground message is delivered to the page only through this callback.
      * Without it the SDK has nowhere to hand the payload and the toast never
-     * appears, even though the push arrived. Attach once — enable/disable/
+     * appears, even though the push arrived. Attach once, enable/disable/
      * refresh all call this. */
     if (!onMessageAttached) {
       onMessageAttached = true;
@@ -158,9 +158,9 @@
           const d = (payload && payload.data) || {};
           const title = n.title || 'Admission Hub';
           const body = n.body || '';
-          try { window.toast?.(`${title} — ${body}`.slice(0, 240)); } catch (_) {}
+          try { window.toast?.(`${title}, ${body}`.slice(0, 240)); } catch (_) {}
           try { window.AhFcmInbox?.onForeground?.(d); } catch (_) {}
-          /* A foreground push is shown as a toast, so it was seen — credit the
+          /* A foreground push is shown as a toast, so it was seen, credit the
            * open here. Background pushes are credited from the SW click record. */
           if (d.key) reportOutcome('opened', { notification_key: String(d.key) }).catch(() => {});
         });
@@ -197,7 +197,7 @@
     return out;
   };
 
-  /* Self-service test push to the user's OWN devices — no admin token
+  /* Self-service test push to the user's OWN devices, no admin token
    * (owner: টোকেনের ঝামেলা চাই না). Server rate-limits 3/hour. */
   const selfTest = async () => {
     const out = await boundedFetch('/self-test', {
@@ -209,7 +209,7 @@
   };
 
   /* Phase 2: subscribe this device to the global topic (spec §2). Best
-   * effort — a topic failure never breaks enablement; the server's
+   * effort, a topic failure never breaks enablement; the server's
    * multi-token fallback still reaches non-topic devices. The server call is
    * independent of `subscribeToTopic` because the client-side call can throw
    * without a custom VAPID key, and the server-side subscribe is what makes
@@ -232,7 +232,7 @@
    * 'not-configured' | 'sdk-failed' | 'token-failed' | 'register-<http>' | 'error' */
   const enable = async () => {
     /* iOS Safari: requestPermission() must run while the tap's transient
-     * activation is still live — BEFORE any network await (owner bug
+     * activation is still live, BEFORE any network await (owner bug
      * 2026-09-17: prompt silently never appeared). */
     try {
       if (permission() === 'default') {
@@ -289,11 +289,11 @@
           await messaging.deleteToken().catch(() => {});
         }
       }
-    } catch (_) { /* best effort — state already flipped */ }
+    } catch (_) { /* best effort, state already flipped */ }
     return true;
   };
 
-  /* Boot / resume reconciliation — the self-healing heart of push.
+  /* Boot / resume reconciliation, the self-healing heart of push.
    *
    * A user who granted permission once must keep receiving push with no
    * further action, yet several ordinary events silently break that:
@@ -307,7 +307,7 @@
    * Reconcile instead of trusting the flag: if permission is granted and the
    * user has not explicitly opted out, (re)register the current token. The
    * server upsert is idempotent, so repeating it on every resume is safe and
-   * also refreshes last_seen. Never prompts — permission is already granted. */
+   * also refreshes last_seen. Never prompts, permission is already granted. */
   const reconcile = async (force = false) => {
     const st = stateGet();
     if (st.optedOut) return;
@@ -331,7 +331,7 @@
   /* Kept as the public name used by the boot hook and callers. */
   const refreshIfEnabled = () => reconcile();
 
-  /* Foreground FCM delivery — the SW postMessages focused clients.
+  /* Foreground FCM delivery, the SW postMessages focused clients.
    * The push arrives on the push-scope registration (firebase-messaging-sw.js),
    * NOT on navigator.serviceWorker.ready (which resolves to the shell worker),
    * so listening only on `ready` silently dropped every foreground message. */
@@ -341,7 +341,7 @@
       const msg = event.data;
       if (!msg || msg.ah !== 'fcm') return;
       try {
-        window.toast?.(`${msg.title} — ${msg.body}`.slice(0, 240));
+        window.toast?.(`${msg.title}, ${msg.body}`.slice(0, 240));
       } catch (_) {}
     };
     navigator.serviceWorker.addEventListener?.('message', onMsg);
@@ -368,17 +368,17 @@
 
   /* Row injected into the notification-hub settings modal (extends, no fork).
    * Round 8 (owner directive 2026-09-17): no device/token jargon, no success
-   * toasts — enablement routes to the premium centered allow dialog. */
+   * toasts, enablement routes to the premium centered allow dialog. */
   const settingsRow = async () => {
     const s = await status();
     const pad = 'padding:10px 0;border-bottom:1px solid var(--line);';
     const L = (() => { try { return window.AhI18n ? window.AhI18n.get() : 'bn'; } catch (_) { return 'bn'; } })();
     const st = (bn, en) => (L === 'en' ? en : bn);
     if (!s.fcmConfigured) {
-      return `<div style="${pad}font-size:12px;color:var(--sub)"><span>${iconSvg('signal',15)} FCM Push</span> <span style="opacity:.7">${st('সংযোগ হচ্ছে না — configuration আসার অপেক্ষায়', 'Connecting — waiting for server settings')}</span></div>`;
+      return `<div style="${pad}font-size:12px;color:var(--sub)"><span>${iconSvg('signal',15)} FCM Push</span> <span style="opacity:.7">${st('সংযোগ হচ্ছে না, configuration আসার অপেক্ষায়', 'Connecting, waiting for server settings')}</span></div>`;
     }
     if (s.permission === 'denied') {
-      return `<div style="${pad}font-size:12px;color:var(--red)">${iconSvg('signal',15)} FCM Push — ${st('browser-এ অনুমতি বন্ধ আছে (Settings → Site settings → Notifications থেকে খুলতে হবে)', 'permission is blocked (enable in Settings → Site settings → Notifications)')}</div>`;
+      return `<div style="${pad}font-size:12px;color:var(--red)">${iconSvg('signal',15)} FCM Push, ${st('browser-এ অনুমতি বন্ধ আছে (Settings → Site settings → Notifications থেকে খুলতে হবে)', 'permission is blocked (enable in Settings → Site settings → Notifications)')}</div>`;
     }
     if (s.registered) {
       return `<div style="${pad}display:flex;align-items:center;gap:10px"><span style="flex:1;font-size:12px">${iconSvg('signal',15)} FCM Push <b style="color:var(--green)">✓ ${st('চলছে', 'Active')}</b></span><button class="btn ghost sm" onclick="AhFcm.disable().then(()=>NotificationHub.openSettings())">${st('বন্ধ করুন', 'Turn off')}</button></div>`;
@@ -402,7 +402,7 @@
         <b style="flex:1;font-size:13.5px">${st('দৈনিক স্মার্ট রিমাইন্ডার', 'Daily smart reminder')}</b>
         <span class="chip ${on ? 'active' : ''}" style="pointer-events:none">${on ? st('চালু', 'ON') : st('বন্ধ', 'OFF')}</span>
       </div>
-      <p style="margin:7px 0 0;font-size:12px;color:var(--sub,#6b7a72);line-height:1.6">${st('প্রতিদিন একবার, আপনার পড়ার অবস্থা অনুযায়ী — কখনো অনুমান নয়, শুধু আসল তথ্য।', 'Once a day, based on your study — never guessed data, only real.')}</p>
+      <p style="margin:7px 0 0;font-size:12px;color:var(--sub,#6b7a72);line-height:1.6">${st('প্রতিদিন একবার, আপনার পড়ার অবস্থা অনুযায়ী, কখনো অনুমান নয়, শুধু আসল তথ্য।', 'Once a day, based on your study, never guessed data, only real.')}</p>
       <button class="btn ${on ? 'ghost' : ''} sm" style="margin-top:10px" onclick="AhFcm.togglePersonal()">${on ? st('বন্ধ করুন', 'Turn off') : st('চালু করুন', 'Turn on')}</button>
     </div>`;
   };
@@ -422,7 +422,7 @@
     }
   };
 
-  /* ── Phase 3 — notification intelligence bridge ────────────────────────────
+  /* ── Phase 3, notification intelligence bridge ────────────────────────────
    * Three jobs, all small:
    *   1. tell the server this device's real UTC offset, so quiet hours and the
    *      send window follow the student rather than the server's clock;
@@ -475,7 +475,7 @@
         <span style="color:var(--emerald,#0f6b4f)">${iconSvg('dot',15)}</span>
         <b style="flex:1;font-size:13.5px">${st('কোন ধরনের নোটিফিকেশন চাও', 'Which notifications you want')}</b>
       </div>
-      <p style="margin:7px 0 4px;font-size:12px;color:var(--sub,#6b7a72);line-height:1.6">${st('বন্ধ করা ধরন কখনোই পাঠানো হবে না — প্রতিদিন সর্বোচ্চ একটি স্মার্ট রিমাইন্ডার।', 'A type you switch off is never sent — at most one smart reminder a day.')}</p>
+      <p style="margin:7px 0 4px;font-size:12px;color:var(--sub,#6b7a72);line-height:1.6">${st('বন্ধ করা ধরন কখনোই পাঠানো হবে না, প্রতিদিন সর্বোচ্চ একটি স্মার্ট রিমাইন্ডার।', 'A type you switch off is never sent, at most one smart reminder a day.')}</p>
       ${rows}
     </div>`;
   };
@@ -495,14 +495,14 @@
 
   /* Report that the student acted on a notification. `key` is the value the
    * engine put on the push; `learning` credits a real study action. Fire and
-   * forget — a failed report must never interrupt the student. */
+   * forget, a failed report must never interrupt the student. */
   const reportOutcome = async (action, payload = {}) => {
     try {
       return await boundedFetch('/outcome', { method: 'POST', body: JSON.stringify({ action, ...payload }) });
     } catch (_) { return { ok: false }; }
   };
 
-  /* Dev test center (§18) — hidden route #notif-dev. Admin Bearer token is
+  /* Dev test center (§18), hidden route #notif-dev. Admin Bearer token is
    * entered per call and never stored. */
   const devPanel = () => {
     const open = async () => {
@@ -516,10 +516,10 @@
           Web config: ${cfgOut.data.webConfig ? '<b style="color:var(--green)">present</b>' : '<b style="color:var(--red)">missing</b>'}
         </p>
         ${s.fcmConfigured && s.registered ? `
-        <label class="flabel" style="margin-top:10px">Admin token (Bearer — store করা হয় না)</label>
+        <label class="flabel" style="margin-top:10px">Admin token (Bearer, store করা হয় না)</label>
         <input id="ahFcmDevToken" type="password" placeholder="ADMIN_TOKEN" style="width:100%;box-sizing:border-box">
         <label class="flabel" style="margin-top:8px">Test message</label>
-        <input id="ahFcmDevBody" type="text" value="Admission Hub — FCM test successful" style="width:100%;box-sizing:border-box">
+        <input id="ahFcmDevBody" type="text" value="Admission Hub, FCM test successful" style="width:100%;box-sizing:border-box">
         <button class="btn sm" style="margin-top:10px" id="ahFcmDevSend"> Send Test</button>
         <pre id="ahFcmDevOut" style="font-size:11px;white-space:pre-wrap;margin-top:10px;color:var(--sub)"></pre>` : ''}
         <button class="btn ghost sm" style="margin-top:14px" onclick="closeModal()">Close</button>`;
@@ -575,7 +575,7 @@
       const kind = map[type];
       if (kind) reportOutcome('learning', { kind }).catch(() => {});
     });
-    // Background token refresh for registered users — after the app has
+    // Background token refresh for registered users, after the app has
     // settled, never on the critical boot path.
     const later = () => {
       if (document.visibilityState !== 'visible') return;
@@ -591,8 +591,8 @@
   else boot();
 
   /* The device's current FCM token, or '' when push is unsupported/off.
-   * Exposed so callers that need to act on this specific device — the admin
-   * sender recording its own topic — do not have to re-derive it. */
+   * Exposed so callers that need to act on this specific device, the admin
+   * sender recording its own topic, do not have to re-derive it. */
   const currentToken = async () => {
     try {
       const cfg = await getConfig();

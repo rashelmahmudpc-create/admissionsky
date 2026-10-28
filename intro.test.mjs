@@ -29,7 +29,7 @@ t('৯. পুরনো ইনলাইন-3D-splash আর নেই (v178-nosp
 t('১০. app-id + #app রুট exist', !!doc.getElementById('app'));
 t('১১. externl-স্ক্রিপ্ট-না-থাকলেও শেল রেন্ডার (static-first প্রমাণ)', !!doc.getElementById('app').querySelector('#ahSplash'));
 
-t('১২. current account-retired service-worker marker', html.includes("const expectedSwVersion = 'v350-notes-screen-v2'"));
+t('১২. current account-retired service-worker marker', html.includes("const expectedSwVersion = 'v364-sky-goal'"));
 
 // নো-JS ফলব্যাক: বডিতে আগে শুধু লোডিং-স্প্ল্যাশ ছিল, তাই স্ক্রিপ্ট-চালু-না-থাকা
 // ক্রলার মাত্র ৮৪ অক্ষর পড়ত — অথচ প্রতিটি কোর্স-ল্যান্ডিং পেজ সম্পূর্ণ প্রিরেন্ডারড।

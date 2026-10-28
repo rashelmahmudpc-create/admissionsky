@@ -66,11 +66,11 @@ test('unknown goal: Sky asks once, then never again in that chat', () => {
 test('chat-open reminder uses the goal; without a goal the step-2 line is unchanged', () => {
   const g = { label: 'ঢাকা বিশ্ববিদ্যালয় ক ইউনিট' };
   const r = buildRecall({ records: [weakRec('সমাসে')], stats: { exams: 0 }, goal: g, now: NOW });
-  assert.equal(r.line, 'তুমি এখনো পরীক্ষা দাওনি, তবে আগে বলেছিলে সমাসে দুর্বল — ঢাকা বিশ্ববিদ্যালয় ক ইউনিট-এর প্রস্তুতিতে আজ সমাস দিয়ে শুরু করি?');
+  assert.equal(r.line, 'তুমি এখনো পরীক্ষা দাওনি, তবে আগে বলেছিলে সমাসে দুর্বল, ঢাকা বিশ্ববিদ্যালয় ক ইউনিট-এর প্রস্তুতিতে আজ সমাস দিয়ে শুরু করি?');
   const plain = buildRecall({ records: [weakRec('সমাসে')], stats: { exams: 0 }, now: NOW });
-  assert.equal(plain.line, 'তুমি এখনো পরীক্ষা দাওনি, তবে আগে বলেছিলে সমাসে দুর্বল — আজ সমাস দিয়ে শুরু করি?');
+  assert.equal(plain.line, 'তুমি এখনো পরীক্ষা দাওনি, তবে আগে বলেছিলে সমাসে দুর্বল, আজ সমাস দিয়ে শুরু করি?');
   const only = buildRecall({ records: [], stats: { exams: 0 }, goal: g, now: NOW });
-  assert.match(only.line, /^তোমার লক্ষ্য ঢাকা বিশ্ববিদ্যালয় ক ইউনিট — /);
+  assert.match(only.line, /^তোমার লক্ষ্য ঢাকা বিশ্ববিদ্যালয় ক ইউনিট, /);
   assert.equal(only.button.prompt, 'আমার ভর্তির লক্ষ্য অনুযায়ী আজকের পড়ার প্ল্যান দাও');
   assert.equal(buildRecall({ records: [], stats: {}, now: NOW }), null);
 });

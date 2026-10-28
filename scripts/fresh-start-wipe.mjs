@@ -1,4 +1,4 @@
-// Fresh Start phase 4 — list (default) or wipe every user.
+// Fresh Start phase 4, list (default) or wipe every user.
 // MODE=list  : read-only. Prints exact counts + a MASKED list (public repo logs).
 // MODE=wipe  : needs CONFIRM === `WIPE-FB<firebaseUsers>-CF<cloudflareUsers>` for the
 //              counts measured in this same run; otherwise exits before deleting.

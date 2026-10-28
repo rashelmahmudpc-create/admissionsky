@@ -1,9 +1,9 @@
-/* Admission Hub — Phase 4 analytics dashboard (client).
+/* Admission Hub, Phase 4 analytics dashboard (client).
  *
  * Mobile-first surface for the Phase 4 engine in `analytics-engine.mjs`. It
  * shows the student their own learning picture and, for an admin, the platform
  * view. Nothing is computed here: every number arrives from `/api/analytics/*`,
- * so the browser and the worker cannot disagree — which is exactly the failure
+ * so the browser and the worker cannot disagree, which is exactly the failure
  * the old client-side-only funnel had.
  *
  * Two jobs:
@@ -26,7 +26,7 @@
   'use strict';
 
   /* The factory closes over globals, not over the UMD `root`, so the same code
-   * runs in the browser and under `new Function(...)` in node:test — the tested
+   * runs in the browser and under `new Function(...)` in node:test, the tested
    * build is the shipped build. */
   const win = typeof window !== 'undefined' ? window : (typeof self !== 'undefined' ? self : globalThis);
 
@@ -56,7 +56,7 @@
   };
 
   /* Which events are worth the round trip. Only the ones an admin cannot derive
-   * from the daily counters — i.e. anything that carries a course/lesson/quiz
+   * from the daily counters, i.e. anything that carries a course/lesson/quiz
    * id. A `app_open` or `screen_view` would be cost with no answer. */
   const INGESTABLE = new Set([
     'course_view', 'course_start', 'course_complete',
@@ -73,7 +73,7 @@
     try {
       const ids = [...set];
       win.localStorage.setItem(INGEST_KEY, JSON.stringify(ids.slice(-MAX_INGESTED_IDS)));
-    } catch (_) { /* storage full or blocked — the server dedupes anyway */ }
+    } catch (_) { /* storage full or blocked, the server dedupes anyway */ }
   };
 
   /* The ledger row id is a stable hash of the row's own content, so a re-flush
@@ -217,7 +217,7 @@
 
       ${d.trendSummary?.text ? `<div class="ah-trendline">${esc(d.trendSummary.text)}</div>` : ''}
 
-      ${insights.length ? `<div class="ah-insights">${insights.map(insightRow).join('')}</div>` : '<div class="ah-empty">এখনো যথেষ্ট ডেটা নেই — কয়েকটা প্রশ্ন solve করলেই এখানে ছবি দেখা যাবে।</div>'}
+      ${insights.length ? `<div class="ah-insights">${insights.map(insightRow).join('')}</div>` : '<div class="ah-empty">এখনো যথেষ্ট ডেটা নেই, কয়েকটা প্রশ্ন solve করলেই এখানে ছবি দেখা যাবে।</div>'}
     </section>`;
   }
 

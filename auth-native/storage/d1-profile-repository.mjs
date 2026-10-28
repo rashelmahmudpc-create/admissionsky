@@ -1,4 +1,4 @@
-// Phase 7 — Avatar storage on Cloudflare D1 (blueprint §9, §11).
+// Phase 7, Avatar storage on Cloudflare D1 (blueprint §9, §11).
 // Provider-agnostic interface: the engine only sees AvatarStore
 // (save/getMeta/get/delete). Swapping to R2/MinIO later = a new
 // implementation of the same interface + one-time blob copy; no
@@ -8,7 +8,7 @@
 // - Object keys are server-derived (userId + validated extension only).
 //   Client filenames are never trusted or stored (blueprint §11).
 // - No public bucket access; reads flow through the authenticated API.
-// - Max 1 row per user (primary key) — replace = overwrite.
+// - Max 1 row per user (primary key), replace = overwrite.
 
 const TABLE = `CREATE TABLE IF NOT EXISTS avatars (
   user_id TEXT PRIMARY KEY,
@@ -79,7 +79,7 @@ export class D1ProfileStore {
 }
 
 // Deterministic default avatar (blueprint §10, zero-raster owner rule):
-// initials + hue derived from the user id. Pure function — no storage.
+// initials + hue derived from the user id. Pure function, no storage.
 export function defaultAvatarSpec(userId) {
   let hash = 0;
   const value = String(userId || '');

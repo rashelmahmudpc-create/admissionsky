@@ -1,4 +1,4 @@
-/* Phase 3 — Notification & Engagement Intelligence.
+/* Phase 3, Notification & Engagement Intelligence.
  *
  * The three engines that came before this one each answer a narrow question:
  * personalized-notification.mjs ("what is the one daily nudge?"),
@@ -43,7 +43,7 @@ export const DEFAULT_TZ_OFFSET_MIN = 360;
 /* The eight kinds the product asks for, each with the category it belongs to,
  * its rank in the priority engine, and whether it is a "celebration" (good
  * news) or a "nudge" (a request to act). A fatigued student keeps receiving
- * celebrations — only the nudges thin out. */
+ * celebrations, only the nudges thin out. */
 export const KIND_META = Object.freeze({
   'certificate': { category: 'achievement', priority: 88, celebration: true, emoji: '🎓' },
   'achievement': { category: 'achievement', priority: 85, celebration: true, emoji: '🏆' },
@@ -100,48 +100,48 @@ export const DEFAULT_PREFS = Object.freeze({
 });
 
 /* A/B foundation (section 10). Variants differ only in message copy, never in
- * eligibility — a student must not receive a worse-timed notification because
+ * eligibility, a student must not receive a worse-timed notification because
  * they landed in group B. */
 export const AB_VARIANTS = Object.freeze(['A', 'B', 'C']);
 export const AB_COPY = Object.freeze({
   'streak-risk': {
-    A: { bn: '🔥 স্ট্রিক বাঁচাও', body: 'আজ এখনো পড়া শুরু হয়নি — কয়েকটা প্রশ্ন হলেও স্ট্রিক ধরে রাখো' },
-    B: { bn: '🔥 আজকের স্ট্রিক এখনো বাকি', body: 'মাত্র ১০টা MCQ — দুই মিনিটের কাজ, কিন্তু স্ট্রিকটা থেকে যায়' },
+    A: { bn: '🔥 স্ট্রিক বাঁচাও', body: 'আজ এখনো পড়া শুরু হয়নি, কয়েকটা প্রশ্ন হলেও স্ট্রিক ধরে রাখো' },
+    B: { bn: '🔥 আজকের স্ট্রিক এখনো বাকি', body: 'মাত্র ১০টা MCQ, দুই মিনিটের কাজ, কিন্তু স্ট্রিকটা থেকে যায়' },
     C: { bn: '🔥 স্ট্রিক নিয়ে ভাবছ?', body: 'আজ পড়া হয়নি। ছোট একটা সেশনই যথেষ্ট।' }
   },
   'comeback': {
-    A: { bn: '👋 ফিরে এসো', body: 'কয়েকদিন পড়া হয়নি — আজ ছোট একটা সেশন দিয়ে আবার শুরু করো' },
-    B: { bn: '👋 আবার শুরু করি?', body: 'যেখানে ছিলে সেখান থেকেই — একটা lesson হলেও আজ এগিয়ে যাও' },
+    A: { bn: '👋 ফিরে এসো', body: 'কয়েকদিন পড়া হয়নি, আজ ছোট একটা সেশন দিয়ে আবার শুরু করো' },
+    B: { bn: '👋 আবার শুরু করি?', body: 'যেখানে ছিলে সেখান থেকেই, একটা lesson হলেও আজ এগিয়ে যাও' },
     C: { bn: '👋 তোমার জন্য অপেক্ষা করছি', body: 'পড়ার ছন্দ ফেরাতে আজ একটা ছোট step নাও' }
   },
   'pending-learning': {
-    A: { bn: '📚 রিভিশনের সময়', body: 'ভুল প্রশ্নগুলো রিভিশনের অপেক্ষায় — আজ ঝালাই করে ফেলো' },
-    B: { bn: '📚 জমে যাচ্ছে', body: 'রিভিশন backlog বাড়ছে — আজ অর্ধেকটা শেষ করলেও লাভ' },
-    C: { bn: '📚 ১০ মিনিট রিভিশন', body: 'যা ভুল করেছ, সেটাই সবচেয়ে দামি পড়া — আজ হাত দাও' }
+    A: { bn: '📚 রিভিশনের সময়', body: 'ভুল প্রশ্নগুলো রিভিশনের অপেক্ষায়, আজ ঝালাই করে ফেলো' },
+    B: { bn: '📚 জমে যাচ্ছে', body: 'রিভিশন backlog বাড়ছে, আজ অর্ধেকটা শেষ করলেও লাভ' },
+    C: { bn: '📚 ১০ মিনিট রিভিশন', body: 'যা ভুল করেছ, সেটাই সবচেয়ে দামি পড়া, আজ হাত দাও' }
   },
   'progress': {
-    A: { bn: '🎯 এগিয়ে চলছো', body: 'তোমার course এগিয়ে চলেছে — এই গতি ধরে রাখো' },
-    B: { bn: '🎯 অর্ধেক পথ পেরিয়ে', body: 'অর্ধেকের বেশি শেষ — পরের milestone খুব কাছেই' },
-    C: { bn: '🎯 পরের ধাপ', body: 'আর কয়েকটা lesson-ই বাকি — আজ এগিয়ে যাও' }
+    A: { bn: '🎯 এগিয়ে চলছো', body: 'তোমার course এগিয়ে চলেছে, এই গতি ধরে রাখো' },
+    B: { bn: '🎯 অর্ধেক পথ পেরিয়ে', body: 'অর্ধেকের বেশি শেষ, পরের milestone খুব কাছেই' },
+    C: { bn: '🎯 পরের ধাপ', body: 'আর কয়েকটা lesson-ই বাকি, আজ এগিয়ে যাও' }
   },
   'weak-topic': {
-    A: { bn: '🧠 দুর্বল topic', body: 'কয়েকটা topic-এ বারবার ভুল হচ্ছে — আজ ওগুলো ধরে ফেলো' },
+    A: { bn: '🧠 দুর্বল topic', body: 'কয়েকটা topic-এ বারবার ভুল হচ্ছে, আজ ওগুলো ধরে ফেলো' },
     B: { bn: '🧠 একটু নজর দরকার', body: 'যে topic-এ ভুল বেশি, সেটাই সবচেয়ে বেশি নম্বর ফেরায়' },
     C: { bn: '🧠 লক্ষ্য ঠিক করি', body: 'আজ শুধু দুর্বল topic-গুলোর practice করি' }
   },
   'achievement': {
-    A: { bn: '🏆 সাফল্য', body: 'নতুন milestone unlock হয়েছে — দুর্দান্ত!' },
-    B: { bn: '🏆 milestone unlocked', body: 'তোমার পরিশ্রম রঙিন হয়ে উঠল — এভাবেই চালিয়ে যাও' },
-    C: { bn: '🏆 অভিনন্দন', body: 'আরেকটা ধাপ পেরিয়ে গেলে — পরেরটাও তোমার হাতের মুঠোয়' }
+    A: { bn: '🏆 সাফল্য', body: 'নতুন milestone unlock হয়েছে, দুর্দান্ত!' },
+    B: { bn: '🏆 milestone unlocked', body: 'তোমার পরিশ্রম রঙিন হয়ে উঠল, এভাবেই চালিয়ে যাও' },
+    C: { bn: '🏆 অভিনন্দন', body: 'আরেকটা ধাপ পেরিয়ে গেলে, পরেরটাও তোমার হাতের মুঠোয়' }
   },
   'certificate': {
-    A: { bn: '🎓 Certificate unlocked', body: 'তোমার certificate তৈরি — এখনই দেখে নাও' },
-    B: { bn: '🎓 অভিনন্দন!', body: 'course সম্পূর্ণ — certificate তোমার profile-এ যুক্ত হয়েছে' },
-    C: { bn: '🎓 তুমি পারেছ', body: 'পুরো course শেষ — certificate নিতে প্রস্তুত' }
+    A: { bn: '🎓 Certificate unlocked', body: 'তোমার certificate তৈরি, এখনই দেখে নাও' },
+    B: { bn: '🎓 অভিনন্দন!', body: 'course সম্পূর্ণ, certificate তোমার profile-এ যুক্ত হয়েছে' },
+    C: { bn: '🎓 তুমি পারেছ', body: 'পুরো course শেষ, certificate নিতে প্রস্তুত' }
   },
   'challenge': {
-    A: { bn: '🚀 চ্যালেঞ্জ', body: 'আজকের চ্যালেঞ্জ তোমার জন্য তৈরি — নিতে রাজি?' },
-    B: { bn: '🚀 নতুন চ্যালেঞ্জ', body: 'নিজেকে পরখ করার সময় — আজকের চ্যালেঞ্জ নাও' },
+    A: { bn: '🚀 চ্যালেঞ্জ', body: 'আজকের চ্যালেঞ্জ তোমার জন্য তৈরি, নিতে রাজি?' },
+    B: { bn: '🚀 নতুন চ্যালেঞ্জ', body: 'নিজেকে পরখ করার সময়, আজকের চ্যালেঞ্জ নাও' },
     C: { bn: '🚀 একটু কঠিন কিছু?', body: 'আজকের চ্যালেঞ্জে নিজের সেরাটা দেখাও' }
   }
 });
@@ -254,12 +254,12 @@ export function computeSignals(state = {}, nowMs = Date.now(), tzOffsetMin = DEF
 
   const accuracy = questions7 > 0 ? Math.round(rate(correct7, questions7) * 100) : null;
 
-  /* Engagement level from how many of the last 7 days were active — a count,
+  /* Engagement level from how many of the last 7 days were active, a count,
    * not a feeling. 5+ days is high, 2+ is medium, below that is low. */
   const engagementLevel = activeDays7 >= 5 ? 'high' : activeDays7 >= 2 ? 'medium' : 'low';
 
   /* Retention status separates "never really started" from "was active, now
-   * drifting" — the two need different messages. */
+   * drifting", the two need different messages. */
   const retentionStatus = daysSinceActive == null ? 'new'
     : daysSinceActive <= 1 ? 'active'
       : daysSinceActive < DEFAULTS.inactive_days ? 'cooling'
@@ -549,7 +549,7 @@ export function buildMessage(kind, params = {}, lang = 'bn', variant = 'A') {
 
 /* Section 8. A notification is only effective if the student then *learned*.
  * We accept a learning event as attributable when it happens inside the window
- * after the send — and we require it to be after the open, because a lesson
+ * after the send, and we require it to be after the open, because a lesson
  * started before the tap cannot have been caused by it. */
 export const LEARNING_KINDS = Object.freeze(['lesson_start', 'lesson_complete', 'quiz_complete', 'question_attempt', 'course_complete']);
 
@@ -634,7 +634,7 @@ export function computeFeedback(rows = [], opts = {}) {
   return { ...perf, winner, ready: perf.totals.sent >= minSample };
 }
 
-/* Section 20 — the admin control tower, in one pure function over the decision
+/* Section 20, the admin control tower, in one pure function over the decision
  * log. It answers the four questions an operator actually asks: how many were
  * eligible, how many we chose to send, why we skipped the rest, and which kind
  * performs. CTR is clicks/sent, not clicks/eligible, so it cannot be inflated by
@@ -735,7 +735,7 @@ export function decide({ signals = {}, prefs = {}, fatigue = {}, ctx = {}, deps 
 
   /* 5–8. Walk the ranked list; the first candidate that clears duplicate
    *      protection, priority, the frequency controls and the cooldown wins.
-   *      A blocked candidate does not stop the list — the next-best may be
+   *      A blocked candidate does not stop the list, the next-best may be
    *      allowed (e.g. a celebration while a nudge is rate-limited). */
   const seenKeys = new Set(deps.seenKeys instanceof Set ? deps.seenKeys : []);
   /* When everything is blocked, report the most informative stage (the first
@@ -946,7 +946,7 @@ export class IntelligenceStore {
     return true;
   }
 
-  /* Section 17 — why did we send (or not send)? One row per evaluated student
+  /* Section 17, why did we send (or not send)? One row per evaluated student
    * per run, keyed by user+day+rule so a cron tick that fires twice cannot grow
    * the log without bound. `decision` is 'send' or 'skip'; `stage`/`reason` come
    * from the pipeline trace so a skip is answerable after the fact. */
@@ -1010,7 +1010,7 @@ export class IntelligenceStore {
     return asInt(res?.meta?.changes, 0) > 0;
   }
 
-  /* The most recent sends still inside the attribution window — what a learning
+  /* The most recent sends still inside the attribution window, what a learning
    * event can be credited to. */
   async convertibleSends(userId, sinceMs) {
     await this.init();
@@ -1060,7 +1060,7 @@ export class IntelligenceStore {
 
   /* ── behaviour reads (Phase 1–2 tables, read-only) ───────────────────────
    * These are the rows the signals are computed from. They are plain reads of
-   * tables other features already own — this engine never writes them. */
+   * tables other features already own, this engine never writes them. */
   async dailyStats(userId, limitDays = 60) {
     await this.init();
     const rows = await this.#d1.prepare(
@@ -1092,7 +1092,7 @@ export class IntelligenceStore {
     }).filter(e => Number.isFinite(e.score));
   }
 
-  /* Pending revisions plus the topics those misses cluster in — the two numbers
+  /* Pending revisions plus the topics those misses cluster in, the two numbers
    * weak-topic intelligence needs. */
   async mistakeState(userId) {
     await this.init();
@@ -1121,7 +1121,7 @@ export class IntelligenceStore {
   }
 
   /* Course progress lives in the student's own settings blob (the client writes
-   * it there). Missing or malformed means "no course data" — never a guess. */
+   * it there). Missing or malformed means "no course data", never a guess. */
   async courseProgress(userId) {
     await this.init();
     const row = await this.#d1.prepare(
@@ -1256,7 +1256,7 @@ export async function runScheduledIntelligenceNotifications(env, deps = {}) {
 
 /* The production signals read. Each number comes from a Phase 1–2 table; when a
  * table is empty the signal is simply absent, and the pipeline sees a student
- * with nothing to say — which is the correct, silent outcome. */
+ * with nothing to say, which is the correct, silent outcome. */
 async function defaultSignals(store, userId, dayKey, nowMs, tzOffsetMin) {
   const [dailyStats, examScores, mistakes, courses, history, activityAt] = await Promise.all([
     store.dailyStats(userId),
@@ -1298,7 +1298,7 @@ export async function handleIntelligenceRequest(request, env, deps = {}) {
   const path = url.pathname;
   const nowMs = () => (typeof deps?.now === 'function' ? Number(deps.now()) : Date.now());
 
-  /* Claim only our own paths, and claim them before anything else — this handler
+  /* Claim only our own paths, and claim them before anything else, this handler
    * runs ahead of the other /api/* handlers, so an unguarded early return here
    * would answer CORS preflight for the whole app. */
   if (!OWNED_PATHS.has(path) && !path.startsWith(ADMIN_PREFIX)) return null;
@@ -1451,7 +1451,7 @@ export async function handleIntelligenceRequest(request, env, deps = {}) {
     return jsonResponse(request, { ok: true, user: userId, fatigue: detectFatigue(history, nowMs()) });
   }
 
-  /* Section 20 — the admin control tower. Eligible / sent / skipped for a day,
+  /* Section 20, the admin control tower. Eligible / sent / skipped for a day,
    * the top reason we held back, the top rule we sent, and per-kind CTR. */
   if (path === `${ADMIN_PREFIX}dashboard` && request.method === 'GET') {
     const day = String(url.searchParams.get('day') || '').trim();

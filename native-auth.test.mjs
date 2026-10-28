@@ -1172,7 +1172,7 @@ test('A1.5: with the Turnstile secret set, signup/login/reset without a human to
     const res = await app.handler(apiRequest(`${AUTH_API_PREFIX}${path}`, { method: 'POST', body }), app.env, {});
     const json = await res.json();
     assert.equal(res.status, 400, `${path} without a token`);
-    assert.equal(json.error.code, AUTH_ERROR_CODES.INVALID_INPUT, `${path} error code`);
+    assert.equal(json.error.code, AUTH_ERROR_CODES.HUMAN_CHECK_FAILED, `${path} error code`);
   }
 });
 
@@ -1193,7 +1193,7 @@ test('a rejected human check stops the ownership OTP before any mailer is asked 
   }), app.env, {});
   const body = await start.json();
   assert.equal(start.status, 400);
-  assert.equal(body.error.code, AUTH_ERROR_CODES.INVALID_INPUT);
+  assert.equal(body.error.code, AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
   assert.equal(sendAsked, false, 'a failed human check must never reach the OTP send');
 });
 

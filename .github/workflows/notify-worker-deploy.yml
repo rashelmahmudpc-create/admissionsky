@@ -1,0 +1,190 @@
+name: Notification Worker — deploy (manual)
+
+# Manual, deploy-only workflow for the admission-notify Worker.
+#
+# Why this exists: notification-worker.js had no deploy path in this repository
+# (docs/WORKER-INVENTORY.md: "unowned; notification-worker.js exists unbound"),
+# so the 2026-10-26 security fix to /api/notify/dispatch and its CORS allowlist
+# could be committed but never published. The live Worker kept accepting a bare
+# `X-AH-App: admission-hub` header and could be made to message every subscriber.
+#
+# Like the voice worker, this Worker carries its own KV binding and secrets, so
+# the workflow discovers the existing KV namespace and re-uses its id: the
+# subscribers and the streak state must survive the deploy.
+#
+# Required repository secrets: CLOUDFLARE_API_TOKEN (Workers Scripts:Edit,
+# KV:Read, Workers KV Storage:Edit) and CLOUDFLARE_ACCOUNT_ID. ADMIN_TOKEN is
+# bound below when present; without it the dispatch route refuses everybody,
+# which is its safe default.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type DEPLOY to publish notification-worker.js to the admission-notify worker
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: ${{ inputs.confirmation == 'DEPLOY' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Discover the KV namespace and current secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set +e
+          npm i -g wrangler@4.35.0 >/dev/null 2>&1
+          echo "::group::whoami"
+          wrangler whoami 2>&1 | sed -E 's/[0-9a-f]{32,}/<redacted>/g' || true
+          echo "::endgroup::"
+          echo "::group::kv namespace list"
+          wrangler kv namespace list 2>&1 || true
+          echo "::endgroup::"
+          echo "::group::admission-notify secrets (names only)"
+          wrangler secret list --name admission-notify 2>&1 || true
+          echo "::endgroup::"
+      - name: Deploy notification-worker.js with the preserved KV binding
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -eu
+          # Reuse the namespace the Worker is ALREADY bound to: the push
+          # subscriptions and the cron-fallback state live in it. Read the live
+          # binding from the Cloudflare API rather than guessing by title — a
+          # wrong guess would bind a fresh empty store and silently drop every
+          # subscriber. A title match is only the fallback.
+          KV_ID="$(curl -s --max-time 30 \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/admission-notify/settings" \
+            | node -e '
+              let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+                try{
+                  const b=(JSON.parse(s).result||{}).bindings||[];
+                  const kv=b.find(x=>x.type==="kv_namespace"&&x.name==="NOTIFY_KV");
+                  if(kv)process.stdout.write(kv.namespace_id||"");
+                }catch(e){}
+              });' || true)"
+          if [ -z "$KV_ID" ]; then
+            echo "::warning title=Live KV binding unreadable::falling back to a namespace titled *notify*."
+            KV_ID="$(wrangler kv namespace list 2>/dev/null | node -e '
+              let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+                try{const a=JSON.parse(s);
+                  const hit=a.find(n=>/notif/i.test(n.title||""));
+                  if(hit)process.stdout.write(hit.id);}catch(e){}
+              });')"
+          fi
+          if [ -z "$KV_ID" ]; then
+            echo "::error title=No KV namespace found::binding an empty store would drop every push subscription; refusing to deploy."
+            exit 1
+          fi
+          echo "KV namespace id resolved: yes"
+          # The Worker's own daily cron (the 20:30 Dhaka streak-saver) is part
+          # of its live config, not of this file. `wrangler deploy` REPLACES the
+          # trigger list, so a config that omits it would silently delete the
+          # reminder. Read the live schedules and write them back verbatim.
+          SCHEDULES="$(curl -s --max-time 30 \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/admission-notify/schedules" \
+            | node -e '
+              let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+                try{
+                  const r=JSON.parse(s).result||{};
+                  const list=r.schedules||[];
+                  process.stdout.write(list.map(x=>x.cron).filter(Boolean).join("\n"));
+                }catch(e){}
+              });' || true)"
+          if [ -n "$SCHEDULES" ]; then
+            echo "Preserving cron schedule(s):"
+            echo "$SCHEDULES"
+          else
+            echo "::notice title=No live cron found::deploying without a trigger. If the 20:30 streak reminder was configured out of band, re-add it."
+          fi
+          {
+            echo 'name = "admission-notify"'
+            echo 'main = "notification-worker.js"'
+            echo 'compatibility_date = "2024-11-01"'
+            echo 'workers_dev = true'
+            if [ -n "$SCHEDULES" ]; then
+              echo '[triggers]'
+              # A cron string contains `*`, so it must never go through an
+              # unquoted expansion: the shell would glob it into filenames.
+              CRON_LITERAL=""
+              while IFS= read -r c; do
+                [ -n "$c" ] || continue
+                CRON_LITERAL="${CRON_LITERAL}\"${c}\","
+              done <<< "$SCHEDULES"
+              echo "crons = [${CRON_LITERAL}]"
+            fi
+            echo '[[kv_namespaces]]'
+            echo 'binding = "NOTIFY_KV"'
+            echo "id = \"$KV_ID\""
+            # A Durable Object id is scoped to the script that declares the
+            # class, so script_name is what reaches the SAME auth store
+            # admission-gk owns instead of creating a second, empty one.
+            echo '[[durable_objects.bindings]]'
+            echo 'name = "AUTH_AUTHORITY"'
+            echo 'class_name = "AdmissionAuthAuthority"'
+            echo 'script_name = "admission-gk"'
+          } > wrangler.notify.toml
+          echo "--- generated config ---"
+          cat wrangler.notify.toml
+          wrangler deploy --config wrangler.notify.toml
+      - name: Bind the owner admin token
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: |
+          set -eu
+          if [ -z "${ADMIN_TOKEN:-}" ]; then
+            echo "::notice title=Admin token skipped::ADMIN_TOKEN is not set; /api/notify/dispatch refuses everybody, which is its safe default."
+            exit 0
+          fi
+          printf '%s' "$ADMIN_TOKEN" | npx --yes wrangler@4.35.0 secret put ADMIN_TOKEN --name admission-notify
+      - name: Verify the deployed worker
+        run: |
+          set -eu
+          sleep 5
+          base="https://admission-notify.admissionhub.workers.dev"
+          health=""
+          for i in 1 2 3 4 5; do
+            health="$(curl -s --max-time 20 "$base/health?cb=$RANDOM" || true)"
+            echo "health: $health"
+            echo "$health" | grep -q '"ok":true' && break
+            sleep 6
+          done
+          echo "$health" | grep -q '"ok":true' || { echo "::error title=notify worker unhealthy::/health did not report ok"; exit 1; }
+          # The fix itself: the static header alone must no longer dispatch.
+          code="$(curl -s --max-time 20 -o /tmp/n.json -w '%{http_code}' -X POST "$base/api/notify/dispatch" \
+            -H 'Content-Type: application/json' -H 'X-AH-App: admission-hub' --data '{}' || true)"
+          echo "bare dispatch: $code"
+          if [ "$code" != "403" ]; then
+            echo "::error title=BUG-001 still open::$base/api/notify/dispatch answered $code for a bare X-AH-App header; it must be 403."
+            exit 1
+          fi
+          echo "::notice title=BUG-001 closed::dispatch now refuses the static header alone."
+          # CORS: a localhost origin must get no grant, the app origin must.
+          localhost_grant="$(curl -s -D - -o /dev/null --max-time 20 -H 'Origin: http://localhost:3000' "$base/health" | grep -ci 'access-control-allow-origin' || true)"
+          app_grant="$(curl -s -D - -o /dev/null --max-time 20 -H 'Origin: https://admissionhub.pages.dev' "$base/health" | grep -ci 'access-control-allow-origin' || true)"
+          echo "CORS localhost grant lines: $localhost_grant  app grant lines: $app_grant"
+          if [ "$localhost_grant" != "0" ]; then
+            echo "::error title=BUG-002 still open::a localhost Origin still received a CORS grant."
+            exit 1
+          fi
+          if [ "$app_grant" = "0" ]; then
+            echo "::error title=CORS regression::the app origin no longer receives its CORS grant."
+            exit 1
+          fi
+          echo "::notice title=BUG-002 closed::localhost refused, app origin allowed."

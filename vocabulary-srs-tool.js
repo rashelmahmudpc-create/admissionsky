@@ -1,4 +1,4 @@
-/* Admission Hub — P12 Smart Vocabulary (spaced repetition).
+/* Admission Hub, P12 Smart Vocabulary (spaced repetition).
  *
  * A native tool page over the existing Vocabulary Master words. It adds three
  * P12 pieces on top of the words the app already stores:
@@ -154,7 +154,7 @@
         <div class="vsrs-options">
           ${q.options.map((o, i) => `<button type="button" class="vsrs-option ${answered && i === correctIdx ? 'correct' : ''} ${answered && i === session.picked && i !== correctIdx ? 'wrong' : ''}" ${answered ? 'disabled' : ''} onclick="VocabSrsTool.answer(${i})"><i>${i + 1}</i><span>${esc(o.text)}</span></button>`).join('')}
         </div>
-        ${answered ? `<div class="vsrs-feedback"><b>${session.picked === correctIdx ? 'Correct — well done.' : 'Not quite.'}</b><small>${esc(WORDS.find(w => S().keyOf(w.word) === q.word)?.meaning || '')}</small></div>
+        ${answered ? `<div class="vsrs-feedback"><b>${session.picked === correctIdx ? 'Correct, well done.' : 'Not quite.'}</b><small>${esc(WORDS.find(w => S().keyOf(w.word) === q.word)?.meaning || '')}</small></div>
         <button class="btn vsrs-next" onclick="VocabSrsTool.next()">${session.index === session.queue.length - 1 ? 'SEE RESULT' : 'NEXT →'}</button>` : ''}
       </section>
     `);

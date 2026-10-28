@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* P19 — staging isolation guard.
+/* P19, staging isolation guard.
  *
  * A staging config that quietly points at a production resource is worse than no
  * staging config: a test write lands on the owner's live data and nobody sees it
@@ -16,7 +16,8 @@ import { readFileSync } from 'node:fs';
 
 /** The production resources staging must never touch. */
 export const PRODUCTION_IDS = [
-  'b9353515b098427687afcfb8654ed359', // GK_KV / PUB_KV
+  'b9353515b098427687afcfb8654ed359', // GK_KV (private agent state)
+  'fd9a455d1be64c2eade1309186462808', // PUB_KV (public content, split out 2026-10-26)
   '942828aa82e546d4af11796ef92ab134', // OLD_KV
   '8f7cf101-66a3-437d-bc98-a8984698d7f5', // PROFILE_DB (D1)
 ];
@@ -48,7 +49,7 @@ export function hasCronTrigger(text) {
 }
 
 /**
- * The whole verdict for a config's text. Returns `{ ok, problems }` — `ok` is
+ * The whole verdict for a config's text. Returns `{ ok, problems }`, `ok` is
  * true only when the config is safe to deploy.
  */
 export function checkStagingConfig(text) {
@@ -58,7 +59,7 @@ export function checkStagingConfig(text) {
   const names = findProductionNames(text);
   if (names.length) problems.push(`production resource name(s) present: ${names.join(', ')}`);
   const placeholders = findPlaceholders(text);
-  if (placeholders.length) problems.push(`unfilled placeholder(s): ${placeholders.join(', ')} — run tools/setup-staging.sh`);
+  if (placeholders.length) problems.push(`unfilled placeholder(s): ${placeholders.join(', ')}, run tools/setup-staging.sh`);
   if (hasCronTrigger(text)) problems.push('a cron trigger is present: staging must not run the notification scheduler');
   return { ok: problems.length === 0, problems };
 }
@@ -71,7 +72,7 @@ if (isMain) {
   catch (e) { console.error(`staging-isolation: cannot read ${file}: ${e.message}`); process.exit(2); }
   const { ok, problems } = checkStagingConfig(text);
   if (!ok) {
-    console.error(`staging-isolation: REFUSED — ${file} is not safe to deploy:`);
+    console.error(`staging-isolation: REFUSED, ${file} is not safe to deploy:`);
     for (const p of problems) console.error(`  - ${p}`);
     process.exit(1);
   }

@@ -1,4 +1,4 @@
-/* Admission Hub — P14 public-API abuse guard.
+/* Admission Hub, P14 public-API abuse guard.
  *
  * The public surface (AI chat/actions, content writes) is reachable without a
  * login, so it needs a ceiling that does not depend on the caller being honest.
@@ -10,7 +10,7 @@
  *   - per NETWORK here, so opening a new device/browser does not reset the
  *     ceiling. A shared IP (campus/café) is served generously, not starved.
  *
- * Pure logic only — no KV binding is touched unless one is passed in, so the
+ * Pure logic only, no KV binding is touched unless one is passed in, so the
  * whole thing is unit-testable with a Map-backed fake.
  */
 export const RATE_DEFAULTS = Object.freeze({ limit: 120, windowMs: 60000 });
@@ -66,7 +66,7 @@ async function consumeViaDo(env, hash, limit, windowMs, now) {
   } catch (_) { return null; }
 }
 
-/* Returns { allowed, remaining, limit, retryAfter } — never throws. A KV failure
+/* Returns { allowed, remaining, limit, retryAfter }, never throws. A KV failure
    fails OPEN (allowed) so a lookup hiccup never bricks the public site; the
    per-device cap inside agentChat still backs the AI path. */
 export async function checkAbuse(request, env, opts = {}) {

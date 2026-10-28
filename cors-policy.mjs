@@ -10,22 +10,30 @@
  * already used for its own routes; it lives here so every handler shares a
  * single definition instead of six copies drifting apart.
  *
+ * A1.5 ② / AU-SEC-05 / owner decision D-5 (22 Oct 2026): production no longer
+ * accepts localhost / 127.0.0.1 or *.admissionhub.pages.dev preview builds.
+ * Only the two live sites (and the Worker's own origin) are allowed.
+ * Rollback: revert this commit.
+ *
  * Contract: return the CORS headers only for an allowed Origin. For anything
  * else return an empty object, so no Access-Control-Allow-Origin is emitted at
  * all -- a wildcard is not a fallback, because with credentials enabled it
  * would be the vulnerability this module exists to close.
  */
 
+const PRODUCTION_HOSTS = new Set([
+  'admissionhub.pages.dev',
+  'admissionsky.pages.dev',
+  'admission-gk.admissionhub.workers.dev'
+]);
+
 export const allowedOrigin = origin => {
   if (!origin) return false;
   try {
     const url = new URL(origin);
-    if (url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname)) return true;
     if (url.protocol !== 'https:') return false;
-    return url.hostname === 'admissionhub.pages.dev'
-      || url.hostname === 'admissionsky.pages.dev'
-      || /^[a-z0-9-]+\.admissionhub\.pages\.dev$/i.test(url.hostname)
-      || url.hostname === 'admission-gk.admissionhub.workers.dev';
+    if (url.port) return false;
+    return PRODUCTION_HOSTS.has(url.hostname.toLowerCase());
   } catch { return false; }
 };
 

@@ -598,7 +598,7 @@ function drawSegs(){var g=$('#segs');if(!g.firstChild){var h='';for(var i=0;i<10
 /* ===== render ===== */
 function render(){
   var c=calc();
-  $('#nm').textContent=P.name||'—';$('#ahid').textContent=P.ahid;
+  $('#nm').textContent=P.name||'-';$('#ahid').textContent=P.ahid;
   $('#avMain').innerHTML=shapeHtml();$('#avEdit').innerHTML=shapeHtml();
   drawSegs();
   var bb=$('#idBio'),bt=(P.bio||'').trim();if(bt){if(bb.dataset.t!==bt){bb.hidden=false;bb.style.animation='none';void bb.offsetWidth;bb.style.animation=''}bb.textContent=bt}else bb.hidden=true;bb.dataset.t=bt;

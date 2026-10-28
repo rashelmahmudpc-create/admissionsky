@@ -1,0 +1,54 @@
+# F-04: the auth Worker. See AGENT_RESUME/2026-10-24-f04-admission-auth-worker-design.md
+#
+# Phase 1 has no traffic. Nothing routes here until admission-gk gets the
+# AUTH_WORKER service binding and AUTH_ROUTE is flipped to "service".
+name = "admission-auth"
+main = "auth-worker-bundle.mjs"
+compatibility_date = "2024-11-01"
+# Reachable on its own workers.dev address so phase 1 can be smoke-tested
+# before any user traffic is pointed at it.
+workers_dev = true
+
+[observability]
+enabled = true
+
+# The authority stays in admission-gk. `script_name` is what keeps its storage:
+# a Durable Object id is scoped to the declaring script, so declaring the class
+# here instead would have created a second, empty authority and invalidated every
+# session and pending OTP.
+[[durable_objects.bindings]]
+name = "AUTH_AUTHORITY"
+class_name = "AdmissionAuthAuthority"
+script_name = "admission-gk"
+
+# The human-check store the front writes to (shadow guard). Same namespace as
+# admission-gk on purpose: it is a bucket both scripts read, not a copy of state.
+[[kv_namespaces]]
+binding = "GK_KV"
+id = "b9353515b098427687afcfb8654ed359"
+
+[[kv_namespaces]]
+binding = "PUB_KV"
+id = "fd9a455d1be64c2eade1309186462808"
+
+[vars]
+# F-04 phase 3: this Worker now holds the non-secret configuration the front
+# reads. These four are the difference between "login works" and "the UI says
+# every method is unavailable", because /config reports a provider as available
+# only when it is configured and activated here.
+AUTH_WORKER_ROLE = "auth-http-front"
+FIREBASE_CONTINUE_URL = "https://admissionsky.pages.dev/?firebaseVerified=1"
+GOOGLE_AUTH_ACTIVATION = "enabled"
+PASSKEY_AUTH_ACTIVATION = "enabled"
+VERIFICATION_AUTH_ACTIVATION = "enabled"
+
+# The mailer and OTP-provider secrets deliberately stay absent: delivery runs
+# inside AdmissionAuthAuthority, which is still declared by admission-gk, so it
+# reads that script's environment. Duplicating provider keys here would be a
+# second copy of a secret for no gain.
+#
+# Still to move (phase 3b, values are write-only in Cloudflare so they have to be
+# re-issued rather than copied): AUTH_HMAC_SECRET, TELEGRAM_AUTH_BOT_TOKEN,
+# TG_BOT_TOKEN, TELEGRAM_AUTH_WEBHOOK_SECRET. Until they exist here, the inbound
+# Telegram webhook keeps being answered by admission-gk — see
+# AUTH_ROUTE_LOCAL_PATHS in auth-native/worker/auth-route.mjs.

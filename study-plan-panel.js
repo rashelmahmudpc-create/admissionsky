@@ -1,4 +1,4 @@
-/* Admission Hub — P17 student action agent: the "prepare me" plan panel.
+/* Admission Hub, P17 student action agent: the "prepare me" plan panel.
  *
  * The visible half of the study-plan engine. The student taps "আমাকে প্রস্তুত করো"
  * on the Progress page and gets an ordered plan built from their own history:
@@ -49,7 +49,7 @@
   const mistakes = () => (typeof CACHE !== 'undefined' && Array.isArray(CACHE.mistakes) ? CACHE.mistakes : []);
   const topicName = (id) => {
     const t = typeof CACHE !== 'undefined' && Array.isArray(CACHE.topics) ? CACHE.topics.find((x) => x.id === id) : null;
-    return (t && t.name) || id || '—';
+    return (t && t.name) || id || '-';
   };
 
   const KIND_LABEL = { weak: 'দুর্বল', steady: 'মাঝারি', strong: 'শক্ত', new: 'নতুন' };
@@ -69,7 +69,7 @@
         <div class="sp-top"><span class="sp-tag ${KIND_TONE[b.kind] || ''}">${esc(KIND_LABEL[b.kind] || b.kind)}</span>
           <span class="sp-name">${esc(topicName(b.topicId))}</span></div>
         <p class="sp-why">${esc(b.reason)}</p>
-        <p class="sp-mix">${b.count}টি প্রশ্ন — ${esc(mixText(b.mix))}</p>
+        <p class="sp-mix">${b.count}টি প্রশ্ন, ${esc(mixText(b.mix))}</p>
       </div>`).join('');
     return `<section class="sp-day"><h4>${esc(day.label)}</h4>${blocks}</section>`;
   }

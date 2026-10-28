@@ -1,7 +1,7 @@
-/* Admission Hub — P09 Advanced Analytics: insight panel.
+/* Admission Hub, P09 Advanced Analytics: insight panel.
  *
- * The visible half of P09. It feeds the student's own history — exam results,
- * questions and mistakes — to window.AhAnalyticsInsights (see
+ * The visible half of P09. It feeds the student's own history, exam results,
+ * questions and mistakes, to window.AhAnalyticsInsights (see
  * analytics-insight-engine.js) and shows the picture it returns: per-topic
  * strength, difficulty and time breakdowns, repeated wrong answers, the
  * improvement rate, and plain-language insight cards.
@@ -52,7 +52,7 @@
   const mistakes = () => (typeof CACHE !== 'undefined' && Array.isArray(CACHE.mistakes) ? CACHE.mistakes : []);
   const topicName = (id) => {
     const t = typeof CACHE !== 'undefined' && Array.isArray(CACHE.topics) ? CACHE.topics.find(x => x.id === id) : null;
-    return (t && t.name) || id || '—';
+    return (t && t.name) || id || '-';
   };
 
   const STATUS_LABEL = {
@@ -64,11 +64,11 @@
   function identityOf(q) {
     const raw = q || '';
     const m = String(raw).match(/\d+/);
-    return m ? m[0] : String(raw).slice(0, 6) || '—';
+    return m ? m[0] : String(raw).slice(0, 6) || '-';
   }
 
   function insightsHtml(cards) {
-    if (!cards.length) return '<div class="ai-empty">এখনো যথেষ্ট ডেটা নেই — পরীক্ষা দিলে এখানে পরামর্শ আসবে ✓</div>';
+    if (!cards.length) return '<div class="ai-empty">এখনো যথেষ্ট ডেটা নেই, পরীক্ষা দিলে এখানে পরামর্শ আসবে ✓</div>';
     return cards.map(c => `<div class="ai-card ${esc(c.kind)}"><b>${esc(c.title)}</b><span>${esc(c.text)}</span></div>`).join('');
   }
 
@@ -85,7 +85,7 @@
   function diffBars(diff) {
     return ['easy', 'medium', 'hard'].map(d => {
       const x = diff[d] || { attempted: 0, accuracy: 0 };
-      return `<div class="ai-bar"><span>${esc(diffLabel[d])}</span><span class="ai-bar-t"><i style="width:${x.accuracy}%"></i></span><b>${x.attempted ? x.accuracy + '%' : '—'}</b></div>`;
+      return `<div class="ai-bar"><span>${esc(diffLabel[d])}</span><span class="ai-bar-t"><i style="width:${x.accuracy}%"></i></span><b>${x.attempted ? x.accuracy + '%' : '-'}</b></div>`;
     }).join('');
   }
 
@@ -105,7 +105,7 @@
     const impText = imp.samples < 2 ? 'যথেষ্ট ডেটা নেই' : (imp.overall > 0 ? `+${imp.overall}` : String(imp.overall)) + ' পয়েন্ট';
     return `
       <section class="ai-sec"><h4>মূল কথা</h4><div class="ai-cards">${insightsHtml(model.insights || [])}</div></section>
-      <section class="ai-sec"><h4>টপিক — শক্তি ও দুর্বলতা</h4>${topicRowsHtml(model.topics || [])}</section>
+      <section class="ai-sec"><h4>টপিক, শক্তি ও দুর্বলতা</h4>${topicRowsHtml(model.topics || [])}</section>
       <section class="ai-sec"><h4>কঠিনতা অনুযায়ী নির্ভুলতা</h4>${diffBars(model.difficulty || {})}</section>
       <section class="ai-sec"><h4>সময়</h4>${timeHtml(model.time || {})}</section>
       <section class="ai-sec"><h4>উন্নতির হার</h4><div class="ai-row"><span class="ai-name">শেষ অর্ধেক বনাম আগের অর্ধেক</span><b>${esc(impText)}</b></div></section>

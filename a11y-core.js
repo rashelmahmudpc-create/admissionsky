@@ -1,5 +1,5 @@
 /*
- * Accessibility core — Admission Hub
+ * Accessibility core, Admission Hub
  *
  * Small, app-wide accessibility foundations that must exist everywhere:
  *  · a skip link so a keyboard user can jump straight to the content,

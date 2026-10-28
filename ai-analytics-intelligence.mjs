@@ -1,4 +1,4 @@
-/* Phase 5 — AI Analytics Intelligence Core.
+/* Phase 5, AI Analytics Intelligence Core.
  *
  * Phase 4 produced metrics, comparisons and trends. This module turns those into
  * the four things the product actually needs to act on: what is happening, why,
@@ -21,7 +21,7 @@
  *    output. That is what makes it testable, cheap, and safe: the LLM in
  *    `ai-analytics-copilot.mjs` is only allowed to rephrase these figures, never
  *    to produce them. It is also why Phase 5 can run on every dashboard load
- *    without an API bill — the model is called for wording, not for arithmetic.
+ *    without an API bill, the model is called for wording, not for arithmetic.
  *
  * `analytics-engine.mjs` stays the source of truth for metrics. This module
  * imports nothing from it and re-derives nothing it already published: callers
@@ -77,7 +77,7 @@ export const CONFIDENCE_TARGETS = Object.freeze({
 
 export const CONFIDENCE_BANDS = Object.freeze(['insufficient', 'low', 'moderate', 'high']);
 
-/* Confidence is a function of sample size only — never of how interesting the
+/* Confidence is a function of sample size only, never of how interesting the
  * result looks. A dramatic pattern in three events is still three events. */
 export function confidenceFromSample(samples, target = CONFIDENCE_TARGETS.profile) {
   const t = asNum(target) > 0 ? asNum(target) : 1;
@@ -169,7 +169,7 @@ export const DAY_PART_LABEL_BN = Object.freeze({
 
 /* The student's local hour, not the server's. A Dhaka student studying at 21:00
  * is at UTC 15:00, and a "best time" computed in UTC would tell them to study at
- * 3pm — the same timezone bug the Phase 1 day-key work exists to prevent. */
+ * 3pm, the same timezone bug the Phase 1 day-key work exists to prevent. */
 export function localHour(atMs, tzOffsetMin = DEFAULT_TZ_OFFSET_MIN) {
   const shifted = asNum(atMs) + asNum(tzOffsetMin) * 60 * 1000;
   return Math.floor((((shifted % 86400000) + 86400000) % 86400000) / 3600000);
@@ -239,7 +239,7 @@ export function buildStudentProfile(input = {}, options = {}) {
   const peakHour = activityHours.length ? activityHours.indexOf(Math.max(...activityHours.map(asNum))) : -1;
   const timeSamples = asInt(input.activitySamples, hoursTotal);
   const timeConfidence = confidenceFromSample(timeSamples, CONFIDENCE_TARGETS.bestTime);
-  /* Shaped like every other dimension — `value`, `band`, `confidence` — so the UI
+  /* Shaped like every other dimension, `value`, `band`, `confidence`, so the UI
    * can treat the ten dimensions uniformly instead of special-casing this one. */
   const preferredTime = hoursTotal > 0 && peakHour >= 0
     ? {
@@ -404,7 +404,7 @@ const directionOf = (slope, mean, tolerance = 0.05) => {
 const DIRECTION_BN = Object.freeze({ rising: 'বাড়ছে', declining: 'কমছে', steady: 'স্থির' });
 
 /* Probabilistic, and labelled as such. Each probability is a bounded function of
- * observed rate and direction — never a promise. `confidence` says how much the
+ * observed rate and direction, never a promise. `confidence` says how much the
  * probability should be trusted. */
 export function predictBehaviour(profile = {}, input = {}, options = {}) {
   const series = Array.isArray(input.series) ? input.series : [];
@@ -471,7 +471,7 @@ export function predictBehaviour(profile = {}, input = {}, options = {}) {
     /* These are estimates from past behaviour, not forecasts the product may
      * state as fact. The disclaimer travels with the payload so no caller has to
      * remember to add it. */
-    disclaimerBn: 'এগুলো সম্ভাব্য অনুমান, নিশ্চিত ভবিষ্যদ্বাণী নয় — student-এর behavior বদলালে অনুমানও বদলাবে।',
+    disclaimerBn: 'এগুলো সম্ভাব্য অনুমান, নিশ্চিত ভবিষ্যদ্বাণী নয়, student-এর behavior বদলালে অনুমানও বদলাবে।',
     notes: predictionNotes(predictions, profile),
     confidence: round(overallConfidence, 2),
     band: confidenceBand(overallConfidence)
@@ -484,7 +484,7 @@ function predictionNotes(predictions, profile) {
   if (e.confidence >= 0.4) {
     out.push({
       id: 'engagement-direction',
-      textBn: `গত সময়ের সক্রিয়তা ${DIRECTION_BN[e.direction] || 'স্থির'} — সামনের ${e.horizonDays} দিনে প্রায় ${e.expectedActiveDays} দিন সক্রিয় থাকার সম্ভাবনা।`,
+      textBn: `গত সময়ের সক্রিয়তা ${DIRECTION_BN[e.direction] || 'স্থির'}, সামনের ${e.horizonDays} দিনে প্রায় ${e.expectedActiveDays} দিন সক্রিয় থাকার সম্ভাবনা।`,
       confidence: e.confidence
     });
   }
@@ -492,7 +492,7 @@ function predictionNotes(predictions, profile) {
   if (i.confidence >= 0.4 && i.probability >= 0.5) {
     out.push({
       id: 'inactivity-risk',
-      textBn: `নিষ্ক্রিয় থাকার সম্ভাবনা বেশি (${Math.round(i.probability * 100)}%) — শেষ সক্রিয়তা ${i.daysSinceActive} দিন আগে।`,
+      textBn: `নিষ্ক্রিয় থাকার সম্ভাবনা বেশি (${Math.round(i.probability * 100)}%), শেষ সক্রিয়তা ${i.daysSinceActive} দিন আগে।`,
       confidence: i.confidence
     });
   }
@@ -606,8 +606,8 @@ export function predictRisk(input = {}, options = {}) {
     'course_abandonment',
     abandonment,
     activeDays, CONFIDENCE_TARGETS.risk,
-    started > 0 ? `${started}টি কোর্স শুরু হয়েছে, ${completed}টি শেষ — বাকিগুলো অসমাপ্ত।` : 'এখনো কোনো কোর্স শুরু হয়নি।',
-    started > 0 ? `${started} courses started, ${completed} completed — the rest are unfinished.` : 'No course started yet.'
+    started > 0 ? `${started}টি কোর্স শুরু হয়েছে, ${completed}টি শেষ, বাকিগুলো অসমাপ্ত।` : 'এখনো কোনো কোর্স শুরু হয়নি।',
+    started > 0 ? `${started} courses started, ${completed} completed, the rest are unfinished.` : 'No course started yet.'
   ));
 
   items.push(riskItem(
@@ -709,8 +709,8 @@ const ACTION_LABEL_EN = Object.freeze({
   complete_milestone: 'Complete the next milestone'
 });
 
-/* Ranked on the five inputs the spec names — current progress, weakness, recent
- * activity, learning goal, past behaviour — with a floor so a student with no
+/* Ranked on the five inputs the spec names, current progress, weakness, recent
+ * activity, learning goal, past behaviour, with a floor so a student with no
  * data gets an explicit empty list rather than a confident recommendation. */
 export function rankNextBestActions(input = {}, options = {}) {
   const profile = input.profile || {};
@@ -736,7 +736,7 @@ export function rankNextBestActions(input = {}, options = {}) {
 
   /* The same floor the risk layer uses. Below it there is no behaviour to reason
    * from, so the engine returns nothing rather than dressing "less than a target"
-   * up as a recommendation — a brand-new student's first step belongs to
+   * up as a recommendation, a brand-new student's first step belongs to
    * onboarding, not to a prediction engine. */
   if (activeDays < CONFIDENCE_TARGETS.risk) {
     return {
@@ -763,8 +763,8 @@ export function rankNextBestActions(input = {}, options = {}) {
     candidates.push({
       kind: 'return_after_inactivity',
       score: clamp01(0.75 + clamp01(daysSinceActive / 14) * 0.25),
-      reasonBn: `${daysSinceActive} দিন ধরে পড়াশোনা হয়নি — ছোট একটি session দিয়ে ফেরাটাই সবচেয়ে সহজ।`,
-      reasonEn: `No activity for ${daysSinceActive} days — a short session is the easiest way back.`,
+      reasonBn: `${daysSinceActive} দিন ধরে পড়াশোনা হয়নি, ছোট একটি session দিয়ে ফেরাটাই সবচেয়ে সহজ।`,
+      reasonEn: `No activity for ${daysSinceActive} days, a short session is the easiest way back.`,
       confidence: confidenceFromSample(activeDays, CONFIDENCE_TARGETS.risk)
     });
   }
@@ -773,8 +773,8 @@ export function rankNextBestActions(input = {}, options = {}) {
     candidates.push({
       kind: 'continue_lesson',
       score: clamp01(0.55 + (1 - progressPercent / 100) * 0.25 + riskScore('lesson_completion_decline') * 0.2),
-      reasonBn: `${lessonsDone}/${lessonsTotal} lesson শেষ — অসমাপ্ত lesson আগে শেষ করলে অগ্রগতি এগোবে।`,
-      reasonEn: `${lessonsDone}/${lessonsTotal} lessons done — finishing the unfinished one moves progress.`,
+      reasonBn: `${lessonsDone}/${lessonsTotal} lesson শেষ, অসমাপ্ত lesson আগে শেষ করলে অগ্রগতি এগোবে।`,
+      reasonEn: `${lessonsDone}/${lessonsTotal} lessons done, finishing the unfinished one moves progress.`,
       confidence: confidenceFromSample(activeDays, CONFIDENCE_TARGETS.profile)
     });
   }
@@ -783,7 +783,7 @@ export function rankNextBestActions(input = {}, options = {}) {
     candidates.push({
       kind: 'review_previous_lesson',
       score: clamp01(0.4 + riskScore('lesson_completion_decline') * 0.4),
-      reasonBn: 'আগের lesson-এ ফিরে গেলে ভিত্তি মজবুত হবে — নতুন lesson-এর চাপ কমবে।',
+      reasonBn: 'আগের lesson-এ ফিরে গেলে ভিত্তি মজবুত হবে, নতুন lesson-এর চাপ কমবে।',
       reasonEn: 'Going back to the previous lesson strengthens the base before adding new load.',
       confidence: confidenceFromSample(activeDays, CONFIDENCE_TARGETS.profile)
     });
@@ -794,8 +794,8 @@ export function rankNextBestActions(input = {}, options = {}) {
     candidates.push({
       kind: 'revise_weak_topic',
       score: clamp01(0.5 + clamp01(asInt(top.misses) / 10) * 0.3 + (accuracy < 60 ? 0.15 : 0)),
-      reasonBn: `"${top.topic}" topic-এ ${asInt(top.misses)} বার ভুল হয়েছে — এটাই এখন সবচেয়ে বড় ফাঁক।`,
-      reasonEn: `"${top.topic}" has ${asInt(top.misses)} misses — the biggest current gap.`,
+      reasonBn: `"${top.topic}" topic-এ ${asInt(top.misses)} বার ভুল হয়েছে, এটাই এখন সবচেয়ে বড় ফাঁক।`,
+      reasonEn: `"${top.topic}" has ${asInt(top.misses)} misses, the biggest current gap.`,
       params: { topic: top.topic },
       confidence: confidenceFromSample(practice, CONFIDENCE_TARGETS.profile)
     });
@@ -806,11 +806,11 @@ export function rankNextBestActions(input = {}, options = {}) {
       kind: 'practice',
       score: clamp01(0.45 + goalWeight * 0.25 + riskScore('practice_decline') * 0.2),
       reasonBn: goal.target
-        ? `সাপ্তাহিক লক্ষ্যের ${Math.round(goalProgress * 100)}% হয়েছে — practice বাড়ালে লক্ষ্যের কাছাকাছি পৌঁছাবে।`
-        : `এখন পর্যন্ত ${practice}টি প্রশ্ন — practice বাড়ালে নির্ভুলতাও বাড়বে।`,
+        ? `সাপ্তাহিক লক্ষ্যের ${Math.round(goalProgress * 100)}% হয়েছে, practice বাড়ালে লক্ষ্যের কাছাকাছি পৌঁছাবে।`
+        : `এখন পর্যন্ত ${practice}টি প্রশ্ন, practice বাড়ালে নির্ভুলতাও বাড়বে।`,
       reasonEn: goal.target
-        ? `${Math.round(goalProgress * 100)}% of the weekly target is done — more practice closes the gap.`
-        : `${practice} questions so far — more practice also lifts accuracy.`,
+        ? `${Math.round(goalProgress * 100)}% of the weekly target is done, more practice closes the gap.`
+        : `${practice} questions so far, more practice also lifts accuracy.`,
       confidence: confidenceFromSample(activeDays, CONFIDENCE_TARGETS.profile)
     });
   }
@@ -819,8 +819,8 @@ export function rankNextBestActions(input = {}, options = {}) {
     candidates.push({
       kind: 'take_quiz',
       score: clamp01(0.35 + goalWeight * 0.2),
-      reasonBn: 'যথেষ্ট practice হয়েছে — একটি quiz দিলে আসল প্রস্তুতিটা বোঝা যাবে।',
-      reasonEn: 'Enough practice has accumulated — a quiz shows where the real readiness is.',
+      reasonBn: 'যথেষ্ট practice হয়েছে, একটি quiz দিলে আসল প্রস্তুতিটা বোঝা যাবে।',
+      reasonEn: 'Enough practice has accumulated, a quiz shows where the real readiness is.',
       confidence: confidenceFromSample(practice, CONFIDENCE_TARGETS.profile)
     });
   }
@@ -830,7 +830,7 @@ export function rankNextBestActions(input = {}, options = {}) {
     candidates.push({
       kind: 'complete_milestone',
       score: clamp01(0.5 + (1 - asNum(next.remaining) / asNum(next.target)) * 0.3),
-      reasonBn: `পরের milestone (${asInt(next.target)}) থেকে মাত্র ${asInt(next.remaining)} বাকি — অল্প পরিশ্রমেই পূরণ হবে।`,
+      reasonBn: `পরের milestone (${asInt(next.target)}) থেকে মাত্র ${asInt(next.remaining)} বাকি, অল্প পরিশ্রমেই পূরণ হবে।`,
       reasonEn: `Only ${asInt(next.remaining)} short of the next milestone (${asInt(next.target)}).`,
       params: { target: asInt(next.target), remaining: asInt(next.remaining) },
       confidence: confidenceFromSample(activeDays, CONFIDENCE_TARGETS.profile)
@@ -1039,8 +1039,8 @@ export function forecastTrend(values = [], options = {}) {
     samples: v.length,
     confidence,
     band: confidenceBand(confidence),
-    reasonBn: `প্রবণতা ${DIRECTION_BN[direction] || 'অজানা'} — পরের ${horizon} দিনে গড় প্রায় ${projected} হতে পারে।`,
-    reasonEn: `Trend is ${direction} — the average may reach about ${projected} over the next ${horizon} days.`
+    reasonBn: `প্রবণতা ${DIRECTION_BN[direction] || 'অজানা'}, পরের ${horizon} দিনে গড় প্রায় ${projected} হতে পারে।`,
+    reasonEn: `Trend is ${direction}, the average may reach about ${projected} over the next ${horizon} days.`
   };
 }
 
@@ -1072,8 +1072,8 @@ export function buildContentIntelligence(input = {}, options = {}) {
         confidence,
         band: confidenceBand(confidence),
         evidence: { learners, completionRate: completion, quizAccuracy, exitRate: round(exitRate, 3) },
-        reasonBn: `এই lesson-এর completion rate ${completion}% — অনেক student শেষ করছে না। Content difficulty বা explanation review করা যেতে পারে।`,
-        reasonEn: `Completion rate is ${completion}% — many students stop before the end. Review difficulty or explanation quality.`,
+        reasonBn: `এই lesson-এর completion rate ${completion}%, অনেক student শেষ করছে না। Content difficulty বা explanation review করা যেতে পারে।`,
+        reasonEn: `Completion rate is ${completion}%, many students stop before the end. Review difficulty or explanation quality.`,
         suggestionBn: 'লেসনটি ছোট ভাগে ভাগ করা বা explanation স্পষ্ট করার পরামর্শ।',
         suggestionEn: 'Consider splitting the lesson or clarifying the explanation.'
       });
@@ -1089,8 +1089,8 @@ export function buildContentIntelligence(input = {}, options = {}) {
         confidence,
         band: confidenceBand(confidence),
         evidence: { learners, completionRate: completion, quizAccuracy },
-        reasonBn: `completion ${completion}% এবং quiz accuracy ${quizAccuracy}% — দুটোই কম, তাই বিষয়বস্তু কঠিন বা অপরিষ্কার হওয়ার সম্ভাবনা।`,
-        reasonEn: `Completion ${completion}% and quiz accuracy ${quizAccuracy}% are both low — the material is likely too hard or unclear.`,
+        reasonBn: `completion ${completion}% এবং quiz accuracy ${quizAccuracy}%, দুটোই কম, তাই বিষয়বস্তু কঠিন বা অপরিষ্কার হওয়ার সম্ভাবনা।`,
+        reasonEn: `Completion ${completion}% and quiz accuracy ${quizAccuracy}% are both low, the material is likely too hard or unclear.`,
         suggestionBn: 'লেসনের বিষয়বস্তু ও উদাহরণ পুনর্বিবেচনা করুন (admin approval ছাড়া পরিবর্তন নয়)।',
         suggestionEn: 'Revisit the content and examples (no change without admin approval).'
       });
@@ -1106,10 +1106,10 @@ export function buildContentIntelligence(input = {}, options = {}) {
         confidence,
         band: confidenceBand(confidence),
         evidence: { learners, starts: asInt(l.starts), exits: asInt(l.exits), exitRate: round(exitRate, 3) },
-        reasonBn: `শুরু করার পর ${Math.round(exitRate * 100)}% ক্ষেত্রে student বেরিয়ে গেছে — মাঝপথে আটকে যাচ্ছে।`,
-        reasonEn: `${Math.round(exitRate * 100)}% of starts end in an exit — students stall partway.`,
-        suggestionBn: 'লেসনের মাঝের ধাপগুলো যাচাই করুন — সম্ভবত কোনো bug বা অস্পষ্ট ধাপ আছে।',
-        suggestionEn: 'Check the middle steps — possibly a bug or an unclear step.'
+        reasonBn: `শুরু করার পর ${Math.round(exitRate * 100)}% ক্ষেত্রে student বেরিয়ে গেছে, মাঝপথে আটকে যাচ্ছে।`,
+        reasonEn: `${Math.round(exitRate * 100)}% of starts end in an exit, students stall partway.`,
+        suggestionBn: 'লেসনের মাঝের ধাপগুলো যাচাই করুন, সম্ভবত কোনো bug বা অস্পষ্ট ধাপ আছে।',
+        suggestionEn: 'Check the middle steps, possibly a bug or an unclear step.'
       });
     }
   }
@@ -1128,8 +1128,8 @@ export function buildContentIntelligence(input = {}, options = {}) {
         confidence,
         band: confidenceBand(confidence),
         evidence: { attempts, accuracy, retryRate: asNum(q.retryRate) },
-        reasonBn: `এই quiz-এর accuracy ${accuracy}% — খুব challenging। প্রশ্নের কঠিনতা বা ভাষা পুনর্বিবেচনা করা যেতে পারে।`,
-        reasonEn: `Quiz accuracy is ${accuracy}% — unusually challenging. Review difficulty or wording.`,
+        reasonBn: `এই quiz-এর accuracy ${accuracy}%, খুব challenging। প্রশ্নের কঠিনতা বা ভাষা পুনর্বিবেচনা করা যেতে পারে।`,
+        reasonEn: `Quiz accuracy is ${accuracy}%, unusually challenging. Review difficulty or wording.`,
         suggestionBn: 'প্রশ্নগুলোর কঠিনতা যাচাই করুন, প্রয়োজনে ভাগ করুন।',
         suggestionEn: 'Review question difficulty; consider splitting the quiz.'
       });
@@ -1158,8 +1158,8 @@ export function buildContentIntelligence(input = {}, options = {}) {
     /* Content never changes on its own: this flag is the contract the admin UI
      * and the tests both read. */
     requiresAdminApproval: true,
-    noteBn: 'AI শুধু পরামর্শ দেয় — কোনো content পরিবর্তন admin approval ছাড়া হবে না।',
-    noteEn: 'AI only suggests — no content changes without admin approval.'
+    noteBn: 'AI শুধু পরামর্শ দেয়, কোনো content পরিবর্তন admin approval ছাড়া হবে না।',
+    noteEn: 'AI only suggests, no content changes without admin approval.'
   };
 }
 
@@ -1186,8 +1186,8 @@ export function buildCourseIntelligence(input = {}, options = {}) {
         confidence,
         band: confidenceBand(confidence),
         evidence: { learners, completionRate: completion, lessonCompletionRate: lessonCompletion },
-        suggestionBn: 'lesson ordering ও দৈর্ঘ্য পুনর্বিবেচনা করুন — শুরুর দিকের lesson-এ drop-off বেশি হলে সেটাই আগে দেখুন।',
-        suggestionEn: 'Review lesson ordering and length — check early lessons first if drop-off clusters there.'
+        suggestionBn: 'lesson ordering ও দৈর্ঘ্য পুনর্বিবেচনা করুন, শুরুর দিকের lesson-এ drop-off বেশি হলে সেটাই আগে দেখুন।',
+        suggestionEn: 'Review lesson ordering and length, check early lessons first if drop-off clusters there.'
       });
     }
 
@@ -1214,8 +1214,8 @@ export function buildCourseIntelligence(input = {}, options = {}) {
         confidence,
         band: confidenceBand(confidence),
         evidence: { learners, starts: asInt(c.starts), completed: asInt(c.completed) },
-        suggestionBn: 'এখনো কেউ কোর্সটি শেষ করেনি — প্রথম lesson-এর দৈর্ঘ্য ও কঠিনতা যাচাই করুন।',
-        suggestionEn: 'Nobody has finished this course yet — check the first lesson for length and difficulty.'
+        suggestionBn: 'এখনো কেউ কোর্সটি শেষ করেনি, প্রথম lesson-এর দৈর্ঘ্য ও কঠিনতা যাচাই করুন।',
+        suggestionEn: 'Nobody has finished this course yet, check the first lesson for length and difficulty.'
       });
     }
   }
@@ -1224,8 +1224,8 @@ export function buildCourseIntelligence(input = {}, options = {}) {
     version: AI_INTELLIGENCE_VERSION,
     suggestions: suggestions.sort((a, b) => b.confidence - a.confidence),
     requiresAdminApproval: true,
-    noteBn: 'কোর্স কাঠামো AI নিজে বদলাবে না — admin অনুমোদনের পরই পরিবর্তন।',
-    noteEn: 'AI never restructures a course on its own — changes need admin approval.'
+    noteBn: 'কোর্স কাঠামো AI নিজে বদলাবে না, admin অনুমোদনের পরই পরিবর্তন।',
+    noteEn: 'AI never restructures a course on its own, changes need admin approval.'
   };
 }
 
@@ -1294,7 +1294,7 @@ export function buildAdminAiSignals(input = {}, options = {}) {
     forecasts: { engagement: engagementForecast, lessons: lessonForecast },
     content,
     course,
-    /* The Phase 4 insight list is passed through untouched — the AI layer adds
+    /* The Phase 4 insight list is passed through untouched, the AI layer adds
      * to it, it does not rewrite what the rules already established. */
     baseInsights: Array.isArray(dashboard.insights) ? dashboard.insights : [],
     generatedAt: asNum(options.now, Date.now())

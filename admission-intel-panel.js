@@ -1,4 +1,4 @@
-/* Admission Hub — P18 Admission Intelligence: the visible panel.
+/* Admission Hub, P18 Admission Intelligence: the visible panel.
  *
  * The student taps "ভর্তি-বুদ্ধি" on the dashboard and sees what their own
  * practice says about their admission preparation: which official subjects they
@@ -96,12 +96,12 @@
     const any = rows.some((r) => r.attempted);
     if (!any) return '';
     return `<div class="ip-sec"><h4>তোমার অভ্যাসের ধারা</h4>${rows.map((r) =>
-      `<div class="ip-row"><span class="nm">${esc(DIFF_LABEL[r.difficulty])}</span><span class="ip-bar"><i class="${r.accuracy < 50 ? 'low' : ''}" style="width:${r.accuracy}%"></i></span><span class="ip-pc">${r.attempted ? r.accuracy + '%' : '—'}</span></div>`).join('')}</div>`;
+      `<div class="ip-row"><span class="nm">${esc(DIFF_LABEL[r.difficulty])}</span><span class="ip-bar"><i class="${r.accuracy < 50 ? 'low' : ''}" style="width:${r.accuracy}%"></i></span><span class="ip-pc">${r.attempted ? r.accuracy + '%' : '-'}</span></div>`).join('')}</div>`;
   }
 
   function officialHtml(p) {
     if (!p) {
-      return `<div class="ip-sec"><h4>অফিসিয়াল প্রশ্ন-প্যাটার্ন</h4><p class="ip-src">এই ইউনিটের অফিসিয়াল প্যাটার্ন এখনো যোগ করা হয়নি — বানানো তথ্য দেখানো হবে না।</p></div>`;
+      return `<div class="ip-sec"><h4>অফিসিয়াল প্রশ্ন-প্যাটার্ন</h4><p class="ip-src">এই ইউনিটের অফিসিয়াল প্যাটার্ন এখনো যোগ করা হয়নি, বানানো তথ্য দেখানো হবে না।</p></div>`;
     }
     const P2 = patterns();
     const tag = P2 && P2.statusLabel ? P2.statusLabel(p.status) : '';
@@ -124,7 +124,7 @@
     if (!days.length) return '';
     return `<div class="ip-sec"><h4>রিভিশন-প্ল্যান</h4>${days.map((d) =>
       `<div class="ip-day"><b>দিন ${d.day}</b>${d.blocks.map((b) =>
-        `<p>${esc(b.name || b.subject)}${b.questions ? ' · ' + b.questions + ' প্রশ্ন' : ''} — ${esc(safeText(b.why))}</p>`).join('')}</div>`).join('')}</div>`;
+        `<p>${esc(b.name || b.subject)}${b.questions ? ' · ' + b.questions + ' প্রশ্ন' : ''}, ${esc(safeText(b.why))}</p>`).join('')}</div>`).join('')}</div>`;
   }
 
   /* A plain-text weakness report the student can copy or share. Built from the
@@ -133,7 +133,7 @@
   function reportText(plan) {
     const E = engine();
     const L = ['🏆 ভর্তি-বুদ্ধি রিপোর্ট', ''];
-    if (plan.university) L.push('লক্ষ্য: ' + plan.university.name + (plan.unit ? ' — ' + plan.unit.label + ' Unit' : ''), '');
+    if (plan.university) L.push('লক্ষ্য: ' + plan.university.name + (plan.unit ? ', ' + plan.unit.label + ' Unit' : ''), '');
     L.push(safeText(plan.message), '');
     if (plan.coverage.total) {
       L.push('সাবজেক্ট-কভারেজ: ' + plan.coverage.covered + '/' + plan.coverage.total + ' (' + plan.coverage.percent + '%)');
@@ -143,7 +143,7 @@
     const weak = plan.topics.filter((t) => t.confident).slice(0, 5);
     if (weak.length) {
       L.push('দুর্বল টপিক:');
-      for (const t of weak) L.push('• ' + t.name + ' — ' + t.accuracy + '%');
+      for (const t of weak) L.push('• ' + t.name + ', ' + t.accuracy + '%');
       L.push('');
     }
     if (plan.official) {
@@ -160,7 +160,7 @@
       for (const d of plan.plan) L.push('• দিন ' + d.day + ': ' + d.blocks.map((b) => b.name || b.subject).join(', '));
       L.push('');
     }
-    L.push('এটা নিজের অভ্যাসের ডেটা থেকে তৈরি পরামর্শ — কোনো নিশ্চয়তা নয়।');
+    L.push('এটা নিজের অভ্যাসের ডেটা থেকে তৈরি পরামর্শ, কোনো নিশ্চয়তা নয়।');
     const text = L.join('\n');
     return (!E || E.guaranteeSafe(text)) ? text : '';
   }
@@ -211,7 +211,7 @@
       el.className = 'ip-overlay';
       document.body.appendChild(el);
     }
-    const head = plan.university ? `${esc(plan.university.name)} — ${esc(plan.unit ? plan.unit.label + ' Unit' : '')}` : '';
+    const head = plan.university ? `${esc(plan.university.name)}, ${esc(plan.unit ? plan.unit.label + ' Unit' : '')}` : '';
     el.innerHTML = `
       <div class="ip-sheet">
         <div class="ip-head"><b>🏆 ভর্তি-বুদ্ধি</b><button class="ip-x" onclick="window.closeAdmissionIntelPanel()">×</button></div>
@@ -224,7 +224,7 @@
           ${patternHtml(plan.pattern)}
           ${planHtml(plan.plan)}
           <div class="ip-actions"><button onclick="window.shareAdmissionIntelReport()">রিপোর্ট শেয়ার করো</button></div>
-          <div class="ip-note">এটা তোমার নিজের অভ্যাসের ডেটা থেকে তৈরি পরামর্শ — কোনো র‍্যাঙ্ক, পাস বা আসনের নিশ্চয়তা নয়।</div>
+          <div class="ip-note">এটা তোমার নিজের অভ্যাসের ডেটা থেকে তৈরি পরামর্শ, কোনো র‍্যাঙ্ক, পাস বা আসনের নিশ্চয়তা নয়।</div>
         </div>
       </div>`;
     el.__report = reportText(plan);

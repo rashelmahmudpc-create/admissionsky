@@ -1,0 +1,143 @@
+name: Deploy Auth Worker (F-04)
+
+# F-04 phase 1. Publishes the admission-auth script on its own, separately from
+# the app deploy, so a problem here can never hold the student app hostage (and
+# the other way round).
+#
+# Nothing routes to this Worker yet: admission-gk still answers /api/auth/v1/*
+# in-process until AUTH_ROUTE is flipped to "service" in phase 2.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type DEPLOY to publish the admission-auth Worker
+        required: true
+        type: string
+  push:
+    branches: [main]
+    paths:
+      - 'auth-worker.js'
+      - 'auth-worker-bundle.mjs'
+      - 'wrangler.auth.toml'
+      - 'auth-native/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-auth-worker.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admission-auth-deploy
+  cancel-in-progress: false
+
+jobs:
+  auth:
+    if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.confirmation == 'DEPLOY') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Verify the committed auth bundle matches its sources
+        run: npm run check:auth-worker-bundle
+      - name: Deploy admission-auth
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.35.0'
+          command: deploy --config wrangler.auth.toml
+      # F-04 phase 3: the front's own secrets. FIREBASE_WEB_API_KEY is the public
+      # key of admissionsky-997d2 and is inlined for the same reason as in the
+      # app deploy: a missing repository secret must not silently skip login.
+      - name: Bind the Firebase Web API key
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -eu
+          KEY='AIzaSyCMYPy-qANPN1pPPI1B957wwKezmotK_NI'
+          test "${#KEY}" -eq 39
+          printf '%s' "$KEY" | npx --yes wrangler@4.35.0 secret put FIREBASE_WEB_API_KEY --name admission-auth
+      # Absent secrets are reported, never guessed: a secret that is missing in
+      # the app is missing here too, so both scripts stay in the same state.
+      - name: Bind the Turnstile secret key
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+        run: |
+          set -eu
+          if [ -z "${TURNSTILE_SECRET_KEY:-}" ]; then
+            echo "::notice title=Turnstile skipped::TURNSTILE_SECRET_KEY is not set; the human check stays inert."
+            exit 0
+          fi
+          printf '%s' "$TURNSTILE_SECRET_KEY" | npx --yes wrangler@4.35.0 secret put TURNSTILE_SECRET_KEY --name admission-auth
+      - name: Bind the admin token
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: |
+          set -eu
+          if [ -z "${ADMIN_TOKEN:-}" ]; then
+            echo "::notice title=Admin token skipped::ADMIN_TOKEN is not set; the admin routes refuse everybody, which is their safe default."
+            exit 0
+          fi
+          printf '%s' "$ADMIN_TOKEN" | npx --yes wrangler@4.35.0 secret put ADMIN_TOKEN --name admission-auth
+      # Security alerts leave the login path: a failed-login alert is sent to the
+      # owner's Telegram. These are the same repository secrets the deploy
+      # notifier already uses, so the forwarded login keeps raising them.
+      - name: Bind the security-alert bot
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          set -eu
+          if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
+            echo "::notice title=Security alerts skipped::the Telegram bot secret is not set; failed-login alerts stay silent on this script."
+            exit 0
+          fi
+          printf '%s' "$TELEGRAM_BOT_TOKEN" | npx --yes wrangler@4.35.0 secret put TG_BOT_TOKEN --name admission-auth
+          printf '%s' "$TELEGRAM_CHAT_ID" | npx --yes wrangler@4.35.0 secret put TG_CHAT_ID --name admission-auth
+      # CANARY_EMAILS and SHADOW_GUARD_ACTIVATION have no repository secret and
+      # Cloudflare secrets are write-only, so they cannot be copied here. Said out
+      # loud instead of discovered later: the decoy-account path is inactive on
+      # this script until they are re-issued, and the guard stays in its default
+      # OBSERVE mode.
+      - name: Report what could not be moved
+        run: |
+          echo "::notice title=Not moved to admission-auth::CANARY_EMAILS, SHADOW_GUARD_ACTIVATION, AUTH_HMAC_SECRET and the Telegram bot/webhook secrets live only in admission-gk. See AGENT_RESUME/2026-10-24-f04-admission-auth-worker-design.md (phase 3b)."
+      # F-04 gate: prove the new script really answers before anyone points
+      # traffic at it. `ok:true` alone would also be returned by a script with no
+      # working authority, so this checks two things:
+      #   ok:true     — the route exists and no error was thrown;
+      #   "available":true — /config reached the cross-script Durable Object and
+      #                  could identify the Firebase project. That single field is
+      #                  the difference between a login that works and a UI that
+      #                  reports every method unavailable, which is exactly what
+      #                  forwarding before phase 3 would have done.
+      - name: Smoke-test the deployed script
+        run: |
+          set -eu
+          url="https://admission-auth.admissionhub.workers.dev/api/auth/v1/config?cb=$RANDOM"
+          for attempt in 1 2 3; do
+            body="$(curl -sS --max-time 25 -H 'X-AH-Auth-UI: auth-premium-v6' "$url" || true)"
+            printf 'attempt %s: %s\n' "$attempt" "$(printf '%s' "$body" | head -c 600)"
+            if printf '%s' "$body" | grep -q '"ok":true' && printf '%s' "$body" | grep -q '"available":true'; then
+              echo "::notice title=Auth Worker ready::/config is ok and the authority answered (available:true)."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error title=Auth Worker not ready::/config never reported available:true. Do not flip AUTH_ROUTE; the authority binding or the Firebase key is wrong."
+          exit 1

@@ -1,18 +1,18 @@
 /**
- * 🤖 ADMISSION HUB AI — AGENT CORE v1 (Phase 1: AI Agent Foundation)
+ * 🤖 ADMISSION HUB AI, AGENT CORE v1 (Phase 1: AI Agent Foundation)
  * ====================================================================
  * মালিক-স্পেক (২০২৬-০৯-০৮): model-independent central AI brain.
  *   Chat UI → AI Gateway (public-worker: anonymous-device rate+validate) → Agent Core → Model Router
  *   → Provider Adapter (Gemini/Groq) → Response Stream
  *
  * নীতি:
- *  - uid কখনো prompt/body-থেকে নয় — Gateway validated/hashed device identity হিসেবে পাস করে।
+ *  - uid কখনো prompt/body-থেকে নয়, Gateway validated/hashed device identity হিসেবে পাস করে।
  *  - কোনো client-সিক্রেট নেই (key শুধু server-env)।
  *  - Response সবসময় real context-ভিত্তিক; fabricate-সংখ্যা কঠোর-নিষিদ্ধ।
  *  - Mock-exam মোডে উত্তর/হিন্ট/ব্যাখ্যা hard-refuse (safety ↑)।
  *  - KV-রাইট-বাজেট: প্রতি চ্যাটে সর্বোচ্চ ২ রাইট (rate-counter + memory)।
  *
- * Test-যোগ্যতা: module-import-এ কোনো worker-API নেই — pure ফাংশন + handler,
+ * Test-যোগ্যতা: module-import-এ কোনো worker-API নেই, pure ফাংশন + handler,
  * env/fetch পরীক্ষায় mock করা যায় (ai-agent-f1.test.mjs)।
  */
 import { buildContext, renderContext, describeContext, CONTEXT_VERSION } from './context-engine.js';
@@ -32,15 +32,15 @@ import { validateResponse, describeResponseValidation, RESPONSE_VALIDATION_VERSI
 import { describeActions, ACTION_VERSION } from './action-engine.js';
 import { makeTrace, makeRequestId, callerRef, quotaState, renderTrace, estimateTokens, FALLBACK, OBSERVABILITY_VERSION, describeObservability, parseTraces, appendTrace, addUsage, emptyUsage, estimateCost, validateObservability } from './observability.js';
 import { aiStateStore, AI_STATE_VERSION } from './ai-state-do.mjs';
-/* P25 — chat response cache (step 1 of the owner's AI cost plan). The store is
+/* P25, chat response cache (step 1 of the owner's AI cost plan). The store is
  * the existing analytics one, which already owns the `ai_cache` table. */
 import { AiAnalyticsStore } from './ai-analytics-store.mjs';
 import { chatCacheEnabled, isCacheableRequest, isSharedAcademicCandidate, chatCacheKey, chatCacheTtl } from './ai-chat-cache.mjs';
-/* P26 — difficulty-aware tier routing (step 2 of the AI cost plan). */
+/* P26, difficulty-aware tier routing (step 2 of the AI cost plan). */
 import { routeTier, assessDifficulty } from './ai-tier-router.mjs';
-/* P27 — bounded history (step 3 of the AI cost plan). */
+/* P27, bounded history (step 3 of the AI cost plan). */
 import { selectHistory, capRecalledTurns } from './ai-history-trim.mjs';
-/* P28 — provider chain health: a transient 5xx must not disable a model for a day. */
+/* P28, provider chain health: a transient 5xx must not disable a model for a day. */
 import { healthyChain, failureMarker, isEntryHealthy, rankChainByModelHealth } from './ai-provider-health.mjs';
 
 export const AGENT_VERSION = 'agent-f1';
@@ -194,7 +194,7 @@ export function capStats(stats) {
   if (stats.accuracy != null) s.accuracy = num(stats.accuracy, 0, 100);
   if (stats.streak != null) s.streak = num(stats.streak, 0, 3650);
   if (stats.mistakes != null) s.mistakes = num(stats.mistakes, 0, 100000);
-  /* P06 personal learning profile. Academic topic/subject NAMES only — the same
+  /* P06 personal learning profile. Academic topic/subject NAMES only, the same
      class of data the profile already carries, never identity. Each row is
      trimmed, de-duplicated and range-checked so a malformed payload cannot
      smuggle prompt structure or a fabricated figure past the model. */
@@ -218,7 +218,7 @@ export function capStats(stats) {
   if (weak) s.weakTopics = weak;
   const subs = rows(stats.subjects, 6);
   if (subs) s.subjects = subs;
-  /* This week vs last week — bounded to the same shapes as the lifetime stats. */
+  /* This week vs last week, bounded to the same shapes as the lifetime stats. */
   const period = (input) => {
     if (!input || typeof input !== 'object') return null;
     return { exams: num(input.exams, 0, 1000), accuracy: num(input.accuracy, 0, 100) };
@@ -230,7 +230,7 @@ export function capStats(stats) {
   return Object.keys(s).length ? s : null;
 }
 
-/* ── AI Personalization (blueprint §19-20) — per-user, allowlisted, bounded ── */
+/* ── AI Personalization (blueprint §19-20), per-user, allowlisted, bounded ── */
 export const AI_PREFS_DEFAULT = Object.freeze({ langStyle: "bn", tone: "friendly", responseLen: "balanced" });
 export function sanitizeAiPrefs(value) {
   if (!value || typeof value !== "object") return null;
@@ -244,7 +244,7 @@ export function sanitizeAiPrefs(value) {
   };
 }
 
-/* ── Student profile context (academic structure only — never PII) ──────────
+/* ── Student profile context (academic structure only, never PII) ──────────
    Allowlist, not blocklist: any key not named here is dropped, so a hand-built
    request cannot smuggle an identity field into the model. The first name is
    always included for a signed-in student (no setup needed); only a single name
@@ -256,7 +256,7 @@ export function sanitizeProfileContext(value, opts = {}) {
 
   {
     const firstName = PROFILE_TEXT(value.firstName, 40);
-    // A single name token only — never a full name, never any other identity field.
+    // A single name token only, never a full name, never any other identity field.
     if (firstName && !/\s/.test(firstName)) out.firstName = firstName;
   }
   const institutionName = PROFILE_TEXT(value.institutionName, 120);
@@ -286,7 +286,7 @@ const pickInstitutionType = value => {
 };
 
 /* Rich-answer contract. The chat UI renders every construct named here. */
-export const RESPONSE_FORMAT_RULES = `RESPONSE FORMAT (the chat app renders Markdown — always use it):
+export const RESPONSE_FORMAT_RULES = `RESPONSE FORMAT (the chat app renders Markdown, always use it):
 - Answer like a top-tier tutor in a ChatGPT-style layout. Default length is MEDIUM: complete and clear, never padded.
 - Open with a one-line direct answer. Then organise with "## " section headings and "### " sub-headings.
 - Use **bold** for key terms, ==highlight== for the single most important fact, numbered lists for steps, bullets for points, and "- [ ]" checklists for study tasks.
@@ -308,7 +308,7 @@ export function buildSystemPrompt(opts = {}) {
      previous inline literal; only its home changed. */
   let p = getPromptText(BASE_PROMPT_ID) || '';
   const onboarding = sanitizeOnboardingContext(opts.onboarding);
-  if (onboarding) p += `\n\nONBOARDING ASSISTANT — STRICT MODE:
+  if (onboarding) p += `\n\nONBOARDING ASSISTANT, STRICT MODE:
 - Help only with the visible AdmissionSky welcome, signup, login, institution search, and verification journey.
 - The current structured context is ${JSON.stringify(onboarding)}.
 - Never ask for, repeat, infer, transform, store, or validate a password, confirm-password value, OTP, session value, key, secret, or credential.
@@ -318,8 +318,8 @@ export function buildSystemPrompt(opts = {}) {
 - Never submit forms or trigger signup, delivery, verification, login, profile-save, or security actions. Any critical action requires the student's explicit confirmation in the interface and the application's confirmed result.
 - If field is sensitive-field, discuss only general safety and never ask what is typed there.
 - Institution suggestions are advisory and limited to the exact supplied names; if no match, explain the manual-name option.`;
-  if (examMode === 'mock-running') p += `\n\nEXAM INTEGRITY — ACTIVE (mock-running): answers, hints and explanations are REFUSED.`;
-  if (opts.quiz) p += `\n\nQUIZ MODE — reply with ONLY a valid JSON object (no markdown fences, no text outside JSON):\n{"title":"<short topic title>","questions":[{"q":"<question>","options":["<A>","<B>","<C>","<D>"],"answer":0,"explanation":"<1-2 sentence Bangla explanation of the answer>"}]}\nRules: exactly 5 questions (or the count the user asked, 1-10); admission-level quality; answer is the 0-based index of the correct option; question/options/explanation in the user's language (Bangla unless the user wrote English); 4 options each.`;
+  if (examMode === 'mock-running') p += `\n\nEXAM INTEGRITY, ACTIVE (mock-running): answers, hints and explanations are REFUSED.`;
+  if (opts.quiz) p += `\n\nQUIZ MODE, reply with ONLY a valid JSON object (no markdown fences, no text outside JSON):\n{"title":"<short topic title>","questions":[{"q":"<question>","options":["<A>","<B>","<C>","<D>"],"answer":0,"explanation":"<1-2 sentence Bangla explanation of the answer>"}]}\nRules: exactly 5 questions (or the count the user asked, 1-10); admission-level quality; answer is the 0-based index of the correct option; question/options/explanation in the user's language (Bangla unless the user wrote English); 4 options each.`;
   const prefs = sanitizeAiPrefs(opts.prefs);
   if (prefs) {
     const langLine = prefs.langStyle === "en"
@@ -339,7 +339,7 @@ export function buildSystemPrompt(opts = {}) {
       : prefs.responseLen === "detailed"
         ? "Give detailed, well-structured answers with examples when useful."
         : "Keep answers balanced: enough detail, no padding.";
-    p += `\n\nSTUDENT PREFERENCES (এই ব্যবহারকারীর নিজস্ব পছন্দ — অন্য কারাংশে প্রয়োগ করো না): ${langLine} ${toneLine} ${lenLine}`;
+    p += `\n\nSTUDENT PREFERENCES (এই ব্যবহারকারীর নিজস্ব পছন্দ, অন্য কারাংশে প্রয়োগ করো না): ${langLine} ${toneLine} ${lenLine}`;
   }
   if (stats) {
     const bits = [];
@@ -348,13 +348,13 @@ export function buildSystemPrompt(opts = {}) {
     if (stats.accuracy != null) bits.push(`একুরেসি: ${stats.accuracy}%`);
     if (stats.streak != null) bits.push(`স্ট্রিক: ${stats.streak} দিন`);
     if (stats.mistakes != null) bits.push(`ভুল-তালিকা: ${stats.mistakes}টা`);
-    if (bits.length) p += `\n\nUSER STATS (শুধু এই প্রদত্ত সংখ্যা ব্যবহার করো — এগুলোর বাইরে কোনো সংখ্যা বানাবে না): ${bits.join(' · ')}.`;
+    if (bits.length) p += `\n\nUSER STATS (শুধু এই প্রদত্ত সংখ্যা ব্যবহার করো, এগুলোর বাইরে কোনো সংখ্যা বানাবে না): ${bits.join(' · ')}.`;
     /* P06 learning profile: where the student is weak, so the tutor can guide
        revision instead of giving a generic answer. Names/figures come straight
        from the student's own results and are never invented. */
     const fmtRows = (list) => list.filter(Boolean).map(x => `${x.name} (${x.accuracy}%, ${x.attempts}টা)`);
     if (Array.isArray(stats.weakTopics) && stats.weakTopics.length) {
-      p += `\n\nLEARNING PROFILE — দুর্বল টপিক (শিক্ষার্থীর নিজের ফলাফল থেকে): ${fmtRows(stats.weakTopics).join(' · ')}.
+      p += `\n\nLEARNING PROFILE, দুর্বল টপিক (শিক্ষার্থীর নিজের ফলাফল থেকে): ${fmtRows(stats.weakTopics).join(' · ')}.
 - শিক্ষার্থী এসব টপিক নিয়ে জিজ্ঞেস করলে, বা সাধারণভাবে কী পড়বে জানতে চাইলে, এই দুর্বল টপিকগুলো অগ্রাধিকার দাও।
 - সংখ্যা কখনো বানাবে না; শুধু উপরের দেওয়া টপিক ও পার্সেন্ট ব্যবহার করো। শিক্ষার্থীকে বলো কেন দুর্বল এবং কীভাবে ঠিক করবে।`;
     }
@@ -373,7 +373,7 @@ export function buildSystemPrompt(opts = {}) {
 /* ── P06: study recommendation (deterministic, from the student's own data) ──
    Turns the sanitized weak-topic rows into one actionable revision line. Pure
    (no env, no model, no I/O) so it is unit-testable and reusable by the chat UI.
-   Returns null when the student has no measured weak topic yet — the tutor then
+   Returns null when the student has no measured weak topic yet, the tutor then
    gives its normal answer instead of inventing a plan. */
 export function buildStudyRecommendation(stats, opts = {}) {
   const s = capStats(stats);
@@ -407,7 +407,7 @@ export function buildImprovementLine(stats, opts = {}) {
   const delta = cur.accuracy - prev.accuracy;
   if (delta >= 3) {
     return en
-      ? `You improved this week: ${prev.accuracy}% → ${cur.accuracy}% (up ${delta} points). Nice work — keep going.`
+      ? `You improved this week: ${prev.accuracy}% → ${cur.accuracy}% (up ${delta} points). Nice work, keep going.`
       : `এই সপ্তাহে উন্নতি হয়েছে: গত সপ্তাহে ${prev.accuracy}% → এখন ${cur.accuracy}% (${delta} পয়েন্ট বেশি)। ভালো করছো, চালিয়ে যাও।`;
   }
   if (delta <= -3) {
@@ -423,7 +423,7 @@ export function buildImprovementLine(stats, opts = {}) {
 /* ── Conversation Memory: summarize (short/session 2-layer) -------------- */
 export function summarizeTo(messages, maxTurns = 6, maxChars = 900) {
   const msgs = Array.isArray(messages) ? messages.slice(0, -maxTurns) : [];
-  // যারা 'অতিরিক্ত' (লেজ বাদ) — সেগুলোকে সংক্ষেপ
+  // যারা 'অতিরিক্ত' (লেজ বাদ), সেগুলোকে সংক্ষেপ
   if (!msgs.length) return '';
   let out = 'পূর্বের কথোপকথন (সংক্ষেপ):\n';
   for (const m of msgs) {
@@ -439,7 +439,7 @@ export function summarizeTo(messages, maxTurns = 6, maxChars = 900) {
 /* Live-progress labels for the understood intent (shown in the chat card). */
 const STAGE_UNDERSTAND = {
   GENERAL_CHAT: 'তোমার কথাটা বুঝে নিচ্ছি',
-  ACADEMIC_EXPLAIN: 'প্রশ্নটা বুঝছি — ব্যাখ্যা তৈরি করব',
+  ACADEMIC_EXPLAIN: 'প্রশ্নটা বুঝছি, ব্যাখ্যা তৈরি করব',
   PERFORMANCE_REQUEST: 'তোমার পারফরম্যান্সের প্রশ্ন বুঝছি',
   QUIZ_REQUEST: 'কুইজের অনুরোধ বুঝছি',
   SEARCH_REQUEST: 'কী খুঁজছ বুঝে নিচ্ছি',
@@ -590,7 +590,7 @@ export async function* groqStream(key, model, payload, signal) {
    image is attached, and Gemini/Groq need different shapes: native parts vs
    messages), and keeps owning the retry/bad-mark loop. Adapters only own the
    provider-specific call. URLs, headers, status handling and error wording are
-   unchanged from before this step — structure only.
+   unchanged from before this step, structure only.
 ------------------------------------------------------------------------ */
 function geminiEndpoint(model, action, key) {
   return `https://generativelanguage.googleapis.com/v1beta/models/${model}:${action}?key=${encodeURIComponent(key)}`;
@@ -675,7 +675,7 @@ async function* openAiCompatStream({ url, key, model, payload, signal }) {
   }
 }
 
-/* Cloudflare Workers AI — free 10,000 Neurons/day, runs on the same edge as the
+/* Cloudflare Workers AI, free 10,000 Neurons/day, runs on the same edge as the
    worker, so it is the cheapest backup to reach. It authenticates with
    account id + API token (the env.AI binding is not threaded through agentChat,
    so this stays a plain fetch adapter like the others). */
@@ -727,7 +727,7 @@ export function providerChain(env, tier = 'FAST', badSet = new Set(), kv = {}) {
 
 /* ── Model Router (basic): intent-tier → provider-chain ------------------ */
 /* OpenAI-compatible providers the router can reach when a key exists. Each is
-   data only — a URL plus a default model — because they share one stream reader.
+   data only, a URL plus a default model, because they share one stream reader.
    A `<NAME>_MODELS` value (env or KV) overrides the default list. */
 const COMPAT_PROVIDERS = [
   /* openai/gpt-4o-mini is a PAID OpenRouter model ($0.15/M input, checked
@@ -764,9 +764,9 @@ const COMPAT_PROVIDERS = [
    namespace, so a key the voice agent already stored is visible here too.
 
    Two paths, both needing no new variable:
-   - `secret:AI_KEYS` — one JSON object of name→value, read in a single KV get.
+   - `secret:AI_KEYS`, one JSON object of name→value, read in a single KV get.
      This is the path to use for OpenRouter and anything added later.
-   - `secret:<NAME>` — one entry per name, which is what the voice workflow
+   - `secret:<NAME>`, one entry per name, which is what the voice workflow
      writes; GROQ_API_KEY is picked up from there automatically.
    `AI_KV_KEY_NAMES` overrides the name list only if an operator wants to. */
 const AI_KV_JSON_KEY = 'secret:AI_KEYS';
@@ -795,6 +795,69 @@ export async function aiKeyOverlay(env) {
 /* A key from KV wins over the env one only when the env slot is empty, so an
    operator can always override from the dashboard without touching KV. */
 const pickKey = (env, kv, name) => String((env && env[name]) || kv[name] || '').trim();
+
+/* Which providers this Worker can actually reach, by NAME only — never the keys,
+   never a length, never a prefix. F0.1 step 4h needs this because chat can now be
+   answered by two different Workers: admission-gk forwards the list it can reach,
+   and sky-ai REFUSES to answer if it is missing any of them. Without that check a
+   room with fewer keys would answer every request with a weaker free model and
+   nobody would notice anything except slower, worse replies.
+
+   One definition, used by both sides, so the two lists are comparable by
+   construction rather than by careful maintenance. */
+/* Every credential name a provider can come from, in one list. Used by
+   providerReadiness() and by the env→KV sync (ai-key-sync.mjs), so a provider can
+   never be "known to the router" but unknown to the sync. */
+export const PROVIDER_KEY_NAMES = Object.freeze([
+  'GEMINI_KEYS',
+  'GROQ_API_KEY',
+  'CLOUDFLARE_ACCOUNT_ID',
+  'CLOUDFLARE_AI_API_KEY',
+  ...COMPAT_PROVIDERS.map((p) => p.key)
+]);
+
+/* The SHAPE of the credential blob, never its contents: is it there, how many
+   names does it hold, and which of them are providers we know. Added because a
+   parity mismatch alone cannot say whether a room is missing a credential or
+   missing the whole file — and the difference decides the fix.
+   Returns no value, no length, no prefix. */
+export async function aiKeyBlobShape(env) {
+  const kv = env && env.PUB_KV;
+  if (!kv || typeof kv.get !== 'function') return { present: false, reason: 'no-kv' };
+  let raw = null;
+  try { raw = await kv.get(AI_KV_JSON_KEY); } catch (_) { return { present: false, reason: 'read-failed' }; }
+  if (!raw) return { present: false, reason: 'absent' };
+  let parsed = null;
+  try { parsed = JSON.parse(raw); } catch (_) { return { present: true, reason: 'unparseable' }; }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { present: true, reason: 'not-an-object' };
+  const names = Object.keys(parsed).filter((k) => parsed[k] && String(parsed[k]).trim());
+  return {
+    present: true,
+    count: names.length,
+    providers: names.filter((k) => PROVIDER_KEY_NAMES.includes(k)).sort()
+  };
+}
+
+export async function providerReadiness(env) {
+  const kv = await aiKeyOverlay(env);
+  const has = (name) => !!pickKey(env, kv, name);
+  const out = {
+    gemini: has('GEMINI_KEYS'),
+    groq: has('GROQ_API_KEY'),
+    cloudflare: has('CLOUDFLARE_ACCOUNT_ID') && has('CLOUDFLARE_AI_API_KEY')
+  };
+  for (const p of COMPAT_PROVIDERS) {
+    // Name it after the key so a comma-separated list of ready providers stays short.
+    out[p.key.toLowerCase().replace(/_api_keys?$|_key$|_token$/, '')] = has(p.key);
+  }
+  return out;
+}
+
+/* Only the names that are ready, in a stable order, for the header that crosses
+   the service binding. */
+export function readyProviderNames(readiness) {
+  return Object.keys(readiness || {}).filter((k) => readiness[k]).sort();
+}
 
 export function routerChain(env, tier, badSet = new Set(), kv = {}) {
   const geminiModels = String(env && env.AGENT_GEMINI_MODELS || '')
@@ -839,7 +902,7 @@ export function routerChain(env, tier, badSet = new Set(), kv = {}) {
     const list = cfModels.length ? cfModels : ['@cf/meta/llama-3.3-70b-instruct-fp8-fast'];
     for (const m of list) chain.push({ provider: 'cloudflare', key: cfKey, model: m });
   }
-  /* Extra OpenAI-compatible providers — each appears only when its key exists.
+  /* Extra OpenAI-compatible providers, each appears only when its key exists.
      A comma-separated value yields one chain entry per key, the same shape
      GEMINI_KEYS already uses, so a second key for a provider is rotated to
      instead of being sent verbatim as a single invalid credential. */
@@ -862,7 +925,7 @@ export function routerChain(env, tier, badSet = new Set(), kv = {}) {
 /* ── helpers: KV (best-effort) -------------------------------------------- */
 const dayKey = () => new Date().toISOString().slice(0, 10);
 /* Rolling quota window: a student gets `cap` messages, then `cap` more 24h after
-   their first message of the window — not at UTC midnight (which lands mid-morning
+   their first message of the window, not at UTC midnight (which lands mid-morning
    in Dhaka and would hand out a second allowance early). */
 const RL_WINDOW_MS = 24 * 60 * 60 * 1000;
 /* Owner 2026-10-17: official, kind daily-limit wording with the real reset time. */
@@ -901,7 +964,7 @@ const badKeyName = (key, model) => 'aibad:' + String(key).slice(0, 12) + ':' + m
 
 /* P28: record a failed chain entry with the cooldown its status earns. A 5xx is
    transient and clears in minutes; a bad credential keeps the long ban. A status
-   with no cooldown (4xx other than 401/402/403/429) is not remembered at all —
+   with no cooldown (4xx other than 401/402/403/429) is not remembered at all -
    it would otherwise be retried forever against a request-shaped error. */
 const markEntryFailed = async (kv, key, model, status) => {
   const marker = failureMarker(status, Date.now());
@@ -914,7 +977,7 @@ const markEntryFailed = async (kv, key, model, status) => {
 /* ── নিরাপদ-টেক্সট আউটপুট: লজিক-গার্ড (safety) ---------------------------- */
 export function safetyGate(intent, examMode) {
   if (examMode === 'mock-running' && (intent === INTENTS.ACADEMIC_EXPLAIN || intent === INTENTS.QUIZ_REQUEST)) {
-    return { blocked: true, message: 'মক-পরীক্ষা চলছে — এখানে উত্তর বা হিন্ট দেওয়া হয় না। পরীক্ষা শেষ হলে সম্পূর্ণ বিশ্লেষণ পাবে।' };
+    return { blocked: true, message: 'মক-পরীক্ষা চলছে, এখানে উত্তর বা হিন্ট দেওয়া হয় না। পরীক্ষা শেষ হলে সম্পূর্ণ বিশ্লেষণ পাবে।' };
   }
   return { blocked: false };
 }
@@ -924,7 +987,7 @@ export function authVerificationGuidance(text) {
   const verificationTopic = /(telegram|টেলিগ্রাম|\botp\b|ওটিপি|one[ -]?time code|verification code|যাচাই(?:য়ের)? কোড)/i.test(input);
   const possibleBareOtp = /^\D*\d{6}\D*$/.test(input);
   if (!verificationTopic && !possibleBareOtp) return '';
-  return 'Telegram যাচাই করতে AdmissionSky-এ “Telegram দিয়ে যাচাই করুন” চাপুন, official bot খুলে START চাপুন, তারপর bot-এর পাঠানো কোডটি শুধু AdmissionSky-এর verification box-এ লিখুন। আমি OTP তৈরি, অনুমান, দেখা, পুনরাবৃত্তি বা যাচাই করতে পারি না এবং verification সফলও ঘোষণা করতে পারি না—শুধু AdmissionSky-এর নিশ্চিত ফলই চূড়ান্ত। Telegram যাচাই Gmail/ইমেইল মালিকানা প্রমাণ করে না।';
+  return 'Telegram যাচাই করতে AdmissionSky-এ “Telegram দিয়ে যাচাই করুন” চাপুন, official bot খুলে START চাপুন, তারপর bot-এর পাঠানো কোডটি শুধু AdmissionSky-এর verification box-এ লিখুন। আমি OTP তৈরি, অনুমান, দেখা, পুনরাবৃত্তি বা যাচাই করতে পারি না এবং verification সফলও ঘোষণা করতে পারি না, শুধু AdmissionSky-এর নিশ্চিত ফলই চূড়ান্ত। Telegram যাচাই Gmail/ইমেইল মালিকানা প্রমাণ করে না।';
 }
 
 function guidanceResponse(text, stream) {
@@ -948,18 +1011,18 @@ export async function agentChat(request, env, uid, opts = {}) {
   const persistMemory = opts?.persistMemory !== false;
   const startedAt = Date.now();
   /* P30 (owner order 2026-10-16): per-stage timings, ms since startedAt. Only
-     numbers are recorded — never text — and they ride on the existing trace
+     numbers are recorded, never text, and they ride on the existing trace
      line, so this adds no storage write. */
   const timings = {};
   const mark = (name) => { if (timings[name] == null) timings[name] = Date.now() - startedAt; };
   const emitTiming = (extra = {}) => {
     try { console.log(JSON.stringify({ evt: 'ai.timing', agent: AGENT_VERSION, totalMs: Date.now() - startedAt, ...timings, ...extra })); } catch (_) {}
-    /* Anonymous daily report (owner 2026-10-17): counts only — no uid, no text. */
+    /* Anonymous daily report (owner 2026-10-17): counts only, no uid, no text. */
     try { bumpDailyStats(env, statsFromTiming({ totalMs: Date.now() - startedAt, ...timings, ...extra })).catch(() => {}); } catch (_) {}
   };
   const sendCtx = { uid: String(uid || ''), stream };
   /* M7: AI chat is for signed-in students only. A guest has no durable identity,
-     so it can neither personalise nor be remembered — it is refused up front. */
+     so it can neither personalise nor be remembered, it is refused up front. */
   if (!sendCtx.uid.startsWith('account-')) {
     const msg = { error: 'sign_in_required', message: 'AI চ্যাট ব্যবহার করতে লগইন করো।' };
     return stream ? sseError(msg, 401) : jsonResp(msg, 401);
@@ -976,8 +1039,8 @@ export async function agentChat(request, env, uid, opts = {}) {
   const intent = intentCls.intent;
   const baseTier = intentCls.tier;
   /* P26: a provably simple academic question goes to the FAST model even though
-     the classifier called it academic. This can only lower spend — it never
-     upgrades a tier — so the worst case is a correct but cheaper answer. */
+     the classifier called it academic. This can only lower spend, it never
+     upgrades a tier, so the worst case is a correct but cheaper answer. */
   const routing = routeTier(intent, v.messages[v.messages.length - 1].content, baseTier);
   const tier = routing.tier;
   const quizMode = intent === INTENTS.QUIZ_REQUEST;
@@ -995,7 +1058,7 @@ export async function agentChat(request, env, uid, opts = {}) {
      a healthy one rather than treating every past failure as permanent. */
   const badMap = {};
   const badSet = new Set();
-  /* One parallel round instead of one KV read per chain entry in sequence —
+  /* One parallel round instead of one KV read per chain entry in sequence -
      the sequential loop cost seconds before the first token on a long chain. */
   {
     const probe = routerChain(env, tier, new Set(), kvKeys);
@@ -1003,14 +1066,14 @@ export async function agentChat(request, env, uid, opts = {}) {
     probe.forEach((c, i) => {
       const sig = String(c.key).slice(0, 12) + ':' + c.model;
       badMap[sig] = flags[i];
-      /* Only entries still inside their cooldown are excluded — a transient 5xx
+      /* Only entries still inside their cooldown are excluded, a transient 5xx
          earns a short cooldown and is retried automatically afterwards. */
       if (!isEntryHealthy(flags[i], healthNow)) badSet.add(sig);
     });
   }
   /* A model that failed transiently (503 "high demand") must not disable its tier
      for the rest of the day. If every entry is cooling down, the whole list comes
-     back for one attempt, so the student gets an answer instead of a 503 — the
+     back for one attempt, so the student gets an answer instead of a 503, the
      previous behaviour read as "the AI is switched off". */
   const fullChain = routerChain(env, tier, new Set(), kvKeys)
     .map(c => ({ ...c, sig: String(c.key).slice(0, 12) + ':' + c.model }));
@@ -1018,7 +1081,7 @@ export async function agentChat(request, env, uid, opts = {}) {
   if (v.messages.some(m => m.image)) chain = chain.filter(c => c.provider === 'gemini');
   /* P31: a working model is tried before a dead one. `healthyChain` already
      drops individually-cooling entries, so this matters when everything is
-     cooling and the whole list comes back — the least-broken model then leads. */
+     cooling and the whole list comes back, the least-broken model then leads. */
   chain = rankChainByModelHealth(chain, badMap, healthNow);
   return { kvKeys, badMap, badSet, chain };
   })();
@@ -1048,7 +1111,7 @@ export async function agentChat(request, env, uid, opts = {}) {
   let toolPlan = examMode ? [] : planServerTools(toolText, { prevText: prevUser ? String(prevUser.content || '') : '', firstName: (sanitizeProfileContext(body && body.context && body.context.profile) || {}).firstName, quizMode, hasImage: v.messages.some(m => m.image), searchOn: !!(env && env.TAVILY_API_KEY) });
   if (toolPlan.length && !(await toolsEnabled(env && env.PUB_KV))) toolPlan = [];
   /* Sky memory fix 2026-10-18: a weakness question also needs what the student
-     SAID about their weak topics (long-term memory), not only exam stats — or an
+     SAID about their weak topics (long-term memory), not only exam stats, or an
      empty exam record makes Sky answer "no information" on the first try. The
      read happens only for such a question and is reused below (no second read). */
   let earlyLongP = null;
@@ -1069,7 +1132,7 @@ export async function agentChat(request, env, uid, opts = {}) {
   let quota = null;
   if (aiState) {
     try {
-      const q = await aiState.consumeQuota(sendCtx.uid, cap);
+      const q = await aiState.consumeQuota(sendCtx.uid, cap, opts && opts.reqId);
       quota = { exhausted: !q.allowed, remaining: q.remaining, start: Number(q.start) || 0 };
     } catch (_) { quota = null; }
   }
@@ -1088,7 +1151,7 @@ export async function agentChat(request, env, uid, opts = {}) {
     return jsonResp({ error: 'rate_limited', message: limitMessage(cap, resetAt, now), cap, remaining: quota.remaining, resetAt, retryAfterSec: Math.max(60, Math.ceil((resetAt - now) / 1000)) }, 429);
   }
   /* AI audit 2026-10-16: a message the AI never answered (every provider
-     failed) gives its credit back — with a default cap of 10/day a provider
+     failed) gives its credit back, with a default cap of 10/day a provider
      outage used to burn a student's whole allowance. Best effort, never throws. */
   const refundQuota = async () => {
     try {
@@ -1104,7 +1167,7 @@ export async function agentChat(request, env, uid, opts = {}) {
   const { kvKeys, badMap, badSet } = await providersP;
   let { chain } = await providersP;
   if (!chain.length) {
-    const msg = { error: 'no_providers', message: 'AI-সেবা এখন কনফিগার করা নেই — দয়া করে মালিককে জানাও (GEMINI_KEYS)।' };
+    const msg = { error: 'no_providers', message: 'AI-সেবা এখন কনফিগার করা নেই, দয়া করে মালিককে জানাও (GEMINI_KEYS)।' };
     return stream ? sseError(msg, 503) : jsonResp(msg, 503);
   }
   if (safety.blocked) {
@@ -1124,11 +1187,11 @@ export async function agentChat(request, env, uid, opts = {}) {
 
 
   /* AI personalization (blueprint §19-20): per-user KV prefs, allowlisted.
-     Keyed by identity uid — never shared/leaked between users. */
+     Keyed by identity uid, never shared/leaked between users. */
   /* Independent per-user reads start together; each is awaited where it was
      read before, so behaviour is unchanged and only the waiting overlaps. */
   const appFeatureHit = !quizMode && !v.messages.some(m => m.image) && isAppFeatureQuestion((v.messages[v.messages.length - 1] || {}).content);
-  if (appFeatureHit) prepStage('app-features', 'টুল চালাচ্ছি — অ্যাপের ফিচার তালিকা দেখছি');
+  if (appFeatureHit) prepStage('app-features', 'টুল চালাচ্ছি, অ্যাপের ফিচার তালিকা দেখছি');
   const appFeaturesP = appFeatureHit ? Promise.resolve().then(() => loadAppFeatures(env && env.PUB_KV)).catch(() => null) : null;
   const memKeyEarly = 'mem:' + MEMORY_VERSION + ':' + sendCtx.uid;
   const safeRead = (fn) => Promise.resolve().then(fn).catch(() => null);
@@ -1147,7 +1210,7 @@ export async function agentChat(request, env, uid, opts = {}) {
   } catch (_) { aiPrefs = null; }
   let instrText = '';
   try { const ins = await instrP; instrText = ins && ins.text ? ins.text : ''; } catch (_) { instrText = ''; }
-  /* M7: long-term memory is automatic for a signed-in student — no toggle and no
+  /* M7: long-term memory is automatic for a signed-in student, no toggle and no
      prompt. Guests never reach here (refused above), so persistMemory is true. */
   const memoryOn = persistMemory;
 
@@ -1161,7 +1224,7 @@ export async function agentChat(request, env, uid, opts = {}) {
     } catch (_) { mem = []; }
   }
   /* A short thread is normally a continuation, so stored memory gets prepended.
-     But "New Chat" opens an empty thread and its first message is short too —
+     But "New Chat" opens an empty thread and its first message is short too -
      it matched that branch, so a greeting was answered with whatever topic the
      user had discussed days earlier. The client flags the first message of a
      fresh thread and that flag suppresses memory entirely. */
@@ -1208,12 +1271,12 @@ export async function agentChat(request, env, uid, opts = {}) {
     : null;
   const ctxText = ctxBundle ? renderContext(ctxBundle) : '';
   /* The rolling summary carries older topics too, so it is suppressed with
-     memory — otherwise the stale subject leaks back through the system prompt. */
+     memory, otherwise the stale subject leaks back through the system prompt. */
   let summaryText = memoryOn && !freshThread ? (freshSummary != null ? freshSummary : ((await sumP) || '')) : '';
 
   /* M7 long-term memory: read the caller's own records, render only the newest,
      most confident few. Storage is bounded by the engine and the owner is the
-     server-validated account uid — a record for anyone else is dropped on parse. */
+     server-validated account uid, a record for anyone else is dropped on parse. */
   const memKey = 'mem:' + MEMORY_VERSION + ':' + sendCtx.uid;
   let memRecords = [];
   if (memoryOn) {
@@ -1225,7 +1288,7 @@ export async function agentChat(request, env, uid, opts = {}) {
   /* P06 conversation-memory: remember the topic just discussed so a later, new
      session can continue it. Only the student's own question is stored (never a
      model output), it is PII-checked, and it is reserved under keys the chat
-     extractor can never produce — so it never collides with a student-stated
+     extractor can never produce, so it never collides with a student-stated
      memory. Joined to the render below for free: no extra read, no extra KV
      write on the read path. Guests are refused earlier, so this is account-only. */
   let tutorContext = [];
@@ -1299,7 +1362,7 @@ export async function agentChat(request, env, uid, opts = {}) {
     } catch (_) { /* answer without tools */ }
   }
   /* Step 3: a student with their own instruction never gets a cached/shared
-     answer — the cached one was written without their wish. */
+     answer, the cached one was written without their wish. */
   const chatCacheOn = chatCacheEnabled(env) && env && env.PROFILE_DB && !toolCtxUsed && !goalUsed && !appFeatureHit;
   const cacheQuestion = (v.messages[v.messages.length - 1] || {}).content;
   const cacheable = chatCacheOn && !instrText && isCacheableRequest({
@@ -1344,7 +1407,7 @@ export async function agentChat(request, env, uid, opts = {}) {
         }
         return sseCached(cachedText, intent, startedAt, cachedModel);
       }
-    } catch (_) { /* a cache fault never breaks chat — fall through to the live path */ }
+    } catch (_) { /* a cache fault never breaks chat, fall through to the live path */ }
   }
 
   const partsOf = (m) => {
@@ -1365,7 +1428,7 @@ export async function agentChat(request, env, uid, opts = {}) {
 
   const failures = [];
   /* M10: one trace per request, emitted to the Worker log sink. It carries ids,
-     counts and durations only — never message text, prompt text or a raw uid —
+     counts and durations only, never message text, prompt text or a raw uid -
      and it costs no KV write, so the chat path keeps its two-write budget. */
   const rid = makeRequestId(sendCtx.uid + ':' + startedAt);
   const traceCtx = {
@@ -1406,7 +1469,7 @@ export async function agentChat(request, env, uid, opts = {}) {
        only by the server-validated account identity and has no client UID. */
     if (!memoryOn) return text;
     /* M8: a response that failed validation is never written to conversation or
-       long-term memory — an unsafe reply is not a memory. */
+       long-term memory, an unsafe reply is not a memory. */
     if (!validateResponse(text, validationCtx).persistable) return text;
     try {
       /* AI audit 2026-10-16: `msgs` already ends with the current user turn, so
@@ -1419,8 +1482,8 @@ export async function agentChat(request, env, uid, opts = {}) {
       await statePut('chatmem:' + sendCtx.uid, JSON.stringify(next), CHAT_MEMORY_TTL_MS);
     } catch (_) {}
 
-    /* M7: both triggers the owner asked for — an explicit "মনে রাখো" and a
-       study/preference/habit fact stated in passing — are extracted from the
+    /* M7: both triggers the owner asked for, an explicit "মনে রাখো" and a
+       study/preference/habit fact stated in passing, are extracted from the
        latest user turn. Each candidate must still clear makeMemory(), so a weak
        signal never stores, and no PII can enter a record. */
     try {
@@ -1494,7 +1557,7 @@ export async function agentChat(request, env, uid, opts = {}) {
     await refundQuota();
     emitTrace({ fallbackReason: FALLBACK.PROVIDER_ERROR, validated: false });
     emitTiming({ failed: true });
-    return jsonResp({ error: 'provider_failed', message: 'AI একটু ব্যস্ত — কয়েক সেকেন্ড পরে আবার চেষ্টা করো।', retryable: true }, 502);
+    return jsonResp({ error: 'provider_failed', message: 'AI একটু ব্যস্ত, কয়েক সেকেন্ড পরে আবার চেষ্টা করো।', retryable: true }, 502);
   }
 
   /* ── STREAMING (SSE) ── */
@@ -1508,19 +1571,19 @@ export async function agentChat(request, env, uid, opts = {}) {
       const stage = (id, label) => { if (sentStages.has(id)) return; sentStages.add(id); push(`event: stage\ndata: ${JSON.stringify({ stage: id, label })}\n\n`); };
       try {
         stage('understand', STAGE_UNDERSTAND[intent] || STAGE_UNDERSTAND.GENERAL_CHAT);
-        if (appFeatureHit) stage('app-features', 'টুল চালাচ্ছি — অ্যাপের ফিচার তালিকা দেখছি');
+        if (appFeatureHit) stage('app-features', 'টুল চালাচ্ছি, অ্যাপের ফিচার তালিকা দেখছি');
         if (memoryText || summaryText || (msgs.length > v.messages.length)) stage('memory', 'তোমার আগের কথাগুলো মনে করছি');
-        if (stats && intent === INTENTS.PERFORMANCE_REQUEST) stage('tool', 'টুল চালাচ্ছি — তোমার অগ্রগতির তথ্য পড়ছি');
+        if (stats && intent === INTENTS.PERFORMANCE_REQUEST) stage('tool', 'টুল চালাচ্ছি, তোমার অগ্রগতির তথ্য পড়ছি');
         else if (profileCtx && ctxBundle) stage('profile', 'তোমার লক্ষ্য অনুযায়ী উত্তর মিলিয়ে নিচ্ছি');
         if (hasImage) stage('image', 'ছবিটা বিশ্লেষণ করছি');
-        stage('think', 'ভাবছি — উত্তর সাজাচ্ছি');
+        stage('think', 'ভাবছি, উত্তর সাজাচ্ছি');
         let ok = false;
         let lastErr = '';
         /* P31: a model that fails is not retried once per key inside this same
            request. Measured 2026-10-16: a globally busy `gemini-3.1-flash-lite`
            was tried ~17 times at ~0.42 s each, so the student waited ~7.2 s of
            silence before the healthy model was even reached.
-           An explicit 5xx/429 kills the model outright — that status is a
+           An explicit 5xx/429 kills the model outright, that status is a
            property of the model, not the key. Any other failure (including a
            first-chunk stall, which is ambiguous) is tolerated once per model so
            a single bad key can still be routed around, but never more. */
@@ -1536,7 +1599,7 @@ export async function agentChat(request, env, uid, opts = {}) {
           if ((modelFails.get(c.model) || 0) >= MODEL_FAIL_LIMIT) continue;
           /* AI audit 2026-10-16: if this provider already streamed text and then
              fails, the client must drop that partial text before the next
-             provider starts — otherwise the student saw "partial + partial +
+             provider starts, otherwise the student saw "partial + partial +
              full" glued together, and the unvalidated partial stayed on screen. */
           let streamedAny = false;
           try {
@@ -1557,7 +1620,7 @@ export async function agentChat(request, env, uid, opts = {}) {
               mark('modelDone');
               stage('verify', 'উত্তর যাচাই করছি');
               /* M8: text already streamed, so a blocked response is corrected in
-                 place — the client replaces what it rendered with the safe notice.
+                 place, the client replaces what it rendered with the safe notice.
                  Only high-precision classes fire here, so a normal answer is never
                  rewritten mid-stream. */
               const check = validateResponse(full, validationCtx);
@@ -1587,7 +1650,7 @@ export async function agentChat(request, env, uid, opts = {}) {
               /* P31: count the failure against the MODEL. A 5xx/429 is the model
                  being unavailable, so it is retired at once; anything else is
                  tolerated up to the limit so one bad key can still be routed
-                 around. Credentials stay per key — another key may still serve
+                 around. Credentials stay per key, another key may still serve
                  the same model. */
               const st = Number(e.status) || 0;
               modelFails.set(c.model, (st >= 500 || st === 429)
@@ -1602,11 +1665,11 @@ export async function agentChat(request, env, uid, opts = {}) {
           await refundQuota();
           emitTrace({ fallbackReason: FALLBACK.PROVIDER_ERROR, validated: false });
           emitTiming({ failed: true });
-          push(`event: error\ndata: ${JSON.stringify({ error: 'provider_failed', message: 'AI একটু ব্যস্ত — কয়েক সেকেন্ড পরে আবার চেষ্টা করো।', retryable: true })}\n\n`);
+          push(`event: error\ndata: ${JSON.stringify({ error: 'provider_failed', message: 'AI একটু ব্যস্ত, কয়েক সেকেন্ড পরে আবার চেষ্টা করো।', retryable: true })}\n\n`);
         }
       } catch (e) {
         await settleBackground();
-        push(`event: error\ndata: ${JSON.stringify({ error: 'stream_failed', message: 'সংযোগ বিচ্ছিন্ন হয়েছে — আবার চেষ্টা করো।', retryable: true })}\n\n`);
+        push(`event: error\ndata: ${JSON.stringify({ error: 'stream_failed', message: 'সংযোগ বিচ্ছিন্ন হয়েছে, আবার চেষ্টা করো।', retryable: true })}\n\n`);
       } finally {
         try { controller.close(); } catch (_) {}
       }
@@ -1732,7 +1795,7 @@ export async function agentInstructions(env, uid, method, body) {
     if (!c.text) await env.PUB_KV.delete(key);
     else await env.PUB_KV.put(key, storedInstruction(c.text));
   } catch (_) {
-    return jsonResp({ error: 'save_failed', message: 'এখন সেভ করা গেল না — আবার চেষ্টা করো।' }, 500);
+    return jsonResp({ error: 'save_failed', message: 'এখন সেভ করা গেল না, আবার চেষ্টা করো।' }, 500);
   }
   return jsonResp({ ok: true, text: c.text, message: c.message, ...base });
 }
@@ -1741,6 +1804,28 @@ export async function agentInstructions(env, uid, method, body) {
 /* AI audit 2026-10-16: the student's "forget me" for the AI. Removes the
    conversation memory, its summary and the long-term memory from the AI state
    object and from the KV fallback. The quota is deliberately untouched. */
+/* The COMPLETE meaning of "forget my AI memory", in one place.
+
+   It used to be split: clearAiMemory() removed the conversation and the
+   long-term note, and public-worker.js then deleted four more KV keys inline.
+   That is fine while there is one caller, but /api/ai/memory/clear now has two
+   (admission-gk and sky-ai) and a copy of the four key names on the far side
+   would drift. A student who pressed "forget" and still had their saved
+   instructions or their action history behind would be told something untrue.
+
+   Error semantics are deliberately unchanged from the inline version: the four
+   deletes are NOT caught here, so a failure surfaces as 500 on both sides rather
+   than as a cheerful "cleared" over a half-cleared account. clearAiMemory keeps
+   its own internal tolerance, as before. */
+export async function clearAiEverything(env, uid) {
+  const id = String(uid || '');
+  if (!id.startsWith('account-')) return { ok: false, reason: 'no-account' };
+  const r = await clearAiMemory(env, id);
+  const keys = ['aiprefs:' + id, 'aiinstr:' + id, 'actaudit:' + id, 'actprop:' + id];
+  for (const k of keys) await env.PUB_KV.delete(k);
+  return { ok: r.ok !== false, cleared: (r.cleared || 0) + keys.length };
+}
+
 export async function clearAiMemory(env, uid) {
   const id = String(uid || '');
   if (!id.startsWith('account-')) return { ok: false, reason: 'no-account' };
@@ -1755,16 +1840,19 @@ export async function clearAiMemory(env, uid) {
 
 export async function agentStatus(request, env, uid) {
   const kv = await aiKeyOverlay(env);
-  const hasGemini = !!pickKey(env, kv, 'GEMINI_KEYS');
-  const hasGroq = !!pickKey(env, kv, 'GROQ_API_KEY');
-  const hasCloudflare = !!pickKey(env, kv, 'CLOUDFLARE_ACCOUNT_ID') && !!pickKey(env, kv, 'CLOUDFLARE_AI_API_KEY');
+  /* Same three answers the chat route's parity header is built from, read through
+     providerReadiness() so the dashboard and the routing check cannot disagree. */
+  const ready = await providerReadiness(env);
+  const hasGemini = ready.gemini;
+  const hasGroq = ready.groq;
+  const hasCloudflare = ready.cloudflare;
   const ctxOn = contextEngineEnabled(env);
   return jsonResp({
     ok: true, agent: AGENT_VERSION, pv: SYSTEM_PROMPT_V,
     providers: { gemini: hasGemini, groq: hasGroq, cloudflare: hasCloudflare },
     models: { fast: GEMINI_MODELS.FAST, smart: GEMINI_MODELS.SMART },
     /* The provider chain the streaming chat actually walks, in order. A bare
-       `providers.groq: true` only proves a key exists — it said true while both
+       `providers.groq: true` only proves a key exists, it said true while both
        Groq models in the chain were already retired and answering 404. This is
        routerChain, not providerChain: the latter filters to adapters with a
        one-shot path, which is Gemini alone, so it would report a two-entry
@@ -1804,7 +1892,7 @@ function sseError(msg, status) {
 }
 
 /* P25: replay a cached answer on the SSE contract the client already parses.
-   No provider was called, so no stage events are emitted — the text and the
+   No provider was called, so no stage events are emitted, the text and the
    `done` event are the whole exchange, exactly as the client expects. */
 function sseCached(text, intent, startedAt, model) {
   const enc = new TextEncoder();

@@ -1,4 +1,4 @@
-/* Sky AI Worker — F0.1 / DV-01 (blueprint v1.0, 2026-10-19).
+/* Sky AI Worker, F0.1 / DV-01 (blueprint v1.0, 2026-10-19).
  *
  * The new home for every /api/ai/* route. Step 1 (this file) is a skeleton
  * only: it answers a health check and nothing else, so deploying it changes
@@ -13,8 +13,43 @@
 
 import { loadFlags, evaluateAll } from './flags.mjs';
 import { handlePrefsGet } from './prefs.mjs';
+import { handleAuditGet } from './audit.mjs';
+import { handleRecallPost } from './recall.mjs';
+import { handleInstructions } from './instructions.mjs';
+import { handleMemoryClear } from './memory-clear.mjs';
+import { handleActionsPost } from './actions.mjs';
+import { handleChat, chatReadiness } from './chat.mjs';
+import { handleStatus } from './status.mjs';
+import { neededProviders, missingProviders } from './parity.mjs';
+import { aiKeyBlobShape } from '../ai-agent.js';
+import { aiStateStore } from '../ai-state-do.mjs';
 
-export const SKY_AI_VERSION = 'sky-ai-f0.1-4b-prefs';
+export const SKY_AI_VERSION = 'sky-ai-f0.1-4l-key-shape';
+
+/* F0.1 step 4d: what /health reports about this Worker's dependencies.
+ *
+ * The split-out script is only as good as its bindings, and a missing or broken
+ * one fails quietly — recall would fall back to KV and return an empty reminder
+ * that looks like "this student has no memory yet". So the binding is reported
+ * here, and the deploy asserts it.
+ *
+ * `aiState: 'missing'`  — no AI_STATE binding at all (wrangler.toml not deployed)
+ * `aiState: 'error'`    — bound, but the call failed (wrong script_name, or the
+ *                         declaring script does not export the class)
+ * `aiState: 'ok'`       — a read reached the Durable Object and came back
+ *
+ * The probe is a READ of a key that does not exist: it costs one object request
+ * and writes nothing, so calling /health never changes state. */
+async function dependencies(env = {}) {
+  const store = aiStateStore(env);
+  if (!store) return { kv: Boolean(env && env.PUB_KV), aiState: 'missing' };
+  try {
+    await store.get('__health__', 'probe');
+    return { kv: Boolean(env && env.PUB_KV), aiState: 'ok' };
+  } catch (_) {
+    return { kv: Boolean(env && env.PUB_KV), aiState: 'error' };
+  }
+}
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -25,6 +60,19 @@ function json(body, status = 200) {
       'x-sky-ai': SKY_AI_VERSION
     }
   });
+}
+
+/* Whether this room can answer the same requests admission-gk can. Built from the
+ * SAME function the routing gate uses (missingProviders), so the report can never
+ * disagree with what chat would actually do. */
+async function providerParity(request, env) {
+  const needed = neededProviders(request);
+  if (!needed.length) return null;
+  try {
+    return { ok: (await missingProviders(request, env)).length === 0, needed };
+  } catch (_) {
+    return { ok: false, needed, error: 'probe-failed' };
+  }
 }
 
 export async function handle(request, env = {}) {
@@ -38,7 +86,22 @@ export async function handle(request, env = {}) {
       version: SKY_AI_VERSION,
       /* Shows whether the call came through admission-gk's service binding
        * (internal header set by the caller) or straight from the internet. */
-      via: request.headers.get('x-sky-ai-caller') === 'admission-gk' ? 'service-binding' : 'direct'
+      via: request.headers.get('x-sky-ai-caller') === 'admission-gk' ? 'service-binding' : 'direct',
+      deps: await dependencies(env),
+      /* F0.1 step 4h: which AI providers THIS room can reach, by name only. Chat
+       * refuses to answer when it is missing one that admission-gk has, so this is
+       * the number to read when chat has not moved yet. */
+      providers: await chatReadiness(env),
+      /* F0.1 step 4j: the same list compared with admission-gk's. `null` means
+       * nothing was sent to compare against. `ok: true` is the only answer that
+       * proves chat really is answered here — the provider list alone cannot tell
+       * "has a key" from "has every key the other room has". */
+      parity: await providerParity(request, env),
+      /* F0.1 step 4l: the SHAPE of the credential file — present? how many names?
+       * which are providers? A mismatch alone cannot distinguish "missing one
+       * credential" from "the whole file is gone", and those need different fixes.
+       * No value, no length, no prefix ever leaves here. */
+      aiKeys: await aiKeyBlobShape(env)
     });
   }
 
@@ -55,6 +118,63 @@ export async function handle(request, env = {}) {
   /* F0.1 step 4b: GET /api/ai/prefs (internal-key protected, see prefs.mjs). */
   if (request.method === 'GET' && path === '/api/ai/prefs') {
     const res = await handlePrefsGet(request, env);
+    if (res) return res;
+  }
+
+  /* F0.1 step 4c: GET /api/ai/actions/audit (internal-key protected, see audit.mjs). */
+  if (request.method === 'GET' && path === '/api/ai/actions/audit') {
+    const res = await handleAuditGet(request, env);
+    if (res) return res;
+  }
+
+  /* F0.1 step 4e: /api/ai/instructions — GET reads, POST saves, DELETE clears
+   * (internal-key protected, see instructions.mjs). The first moved route that
+   * writes, so the note about idempotence in that file is worth reading before
+   * touching it. */
+  if (['GET', 'POST', 'DELETE'].includes(request.method) && path === '/api/ai/instructions') {
+    const res = await handleInstructions(request, env);
+    if (res) return res;
+  }
+
+  /* F0.1 step 4f: POST /api/ai/memory/clear — the student's own "forget"
+   * (internal-key protected, see memory-clear.mjs). Idempotent, which is what
+   * makes the admission-gk fallback safe for a destructive route. */
+  if (request.method === 'POST' && path === '/api/ai/memory/clear') {
+    const res = await handleMemoryClear(request, env);
+    if (res) return res;
+  }
+
+  /* F0.1 step 4i: GET /api/ai/status — the engine/model report (internal-key
+   * protected, see status.mjs). Returns the COMPLETE body; admission-gk decides
+   * what a student may see, because the owner token lives there. */
+  if (request.method === 'GET' && path === '/api/ai/status') {
+    const res = await handleStatus(request, env);
+    if (res) return res;
+  }
+
+  /* F0.1 step 4h: POST /api/ai/chat (and the non-streaming /api/ai) — the real
+   * model call (internal-key protected, see chat.mjs). Refuses unless this room
+   * can reach every provider admission-gk can, so a partial key set can never
+   * quietly answer with a weaker model. */
+  if (request.method === 'POST' && (path === '/api/ai/chat' || path === '/api/ai')) {
+    const res = await handleChat(request, env);
+    if (res) return res;
+  }
+
+  /* F0.1 step 4g: POST /api/ai/actions/propose and /confirm — the write layer
+   * (internal-key protected, see actions.mjs). Refuses when the layer is off, so
+   * admission-gk keeps answering the kill-switch case. */
+  if (request.method === 'POST' && path.startsWith('/api/ai/actions/') && path !== '/api/ai/actions/audit') {
+    const res = await handleActionsPost(request, env);
+    if (res) return res;
+  }
+
+  /* F0.1 step 4d: POST /api/ai/recall (internal-key protected, see recall.mjs).
+   * The first route that takes a body, so it is also the first that can lose one:
+   * admission-gk clones the request before forwarding, and its fallback re-reads
+   * the original. Both sides are covered by tests. */
+  if (request.method === 'POST' && path === '/api/ai/recall') {
+    const res = await handleRecallPost(request, env);
     if (res) return res;
   }
 

@@ -1,11 +1,11 @@
 /**
- * P28 — provider chain health (owner voice note 2026-10-16: "বর্তমানে এআই উত্তর
+ * P28, provider chain health (owner voice note 2026-10-16: "বর্তমানে এআই উত্তর
  * দিচ্ছে না কেন").
  *
  * TWO DEFECTS FOUND BY MEASURING THE LIVE PATH, NOT BY GUESSING
  * -------------------------------------------------------------
  * Gemini's streaming endpoint (`streamGenerateContent`) was answering **503
- * UNAVAILABLE** — "high demand, try again later" — while its *non-streaming*
+ * UNAVAILABLE**, "high demand, try again later", while its *non-streaming*
  * endpoint answered 200 for the same model seconds apart. That is a transient
  * capacity blip, not a dead key.
  *
@@ -13,11 +13,11 @@
  *    `bad: status >= 500`, and a `bad` entry is remembered under
  *    `aibad:<key>:<model>:<day>` with a 24-hour TTL, then filtered out of every
  *    later request that day. Both Gemini models were split across 17 keys, so
- *    one short outage could mark the entire Gemini tier — the first 34 entries
- *    of a 52-entry chain — as unusable. With every Gemini entry filtered the
+ *    one short outage could mark the entire Gemini tier, the first 34 entries
+ *    of a 52-entry chain, as unusable. With every Gemini entry filtered the
  *    chain held only the fallbacks; if those were bad too (OpenRouter answered
  *    402 here), the chain was empty and the route failed instantly with
- *    "AI-সেবা এখন কনফিগার করা নেই" — which reads as "the AI is switched off",
+ *    "AI-সেবা এখন কনফিগার করা নেই", which reads as "the AI is switched off",
  *    not "a model was briefly busy".
  *
  * 2. Nothing ever brought a model back. The only thing that clears a bad mark is
@@ -83,8 +83,8 @@ export function isEntryHealthy(marker, now) {
 /**
  * Build the chain that will actually be walked.
  *
- * Entries whose cooldown has passed come back first, then — only when nothing at
- * all is healthy — the whole list returns so the request is retried rather than
+ * Entries whose cooldown has passed come back first, then, only when nothing at
+ * all is healthy, the whole list returns so the request is retried rather than
  * refused. That last part is what stops a transient outage from reading to the
  * student as "the AI is turned off".
  */
@@ -104,7 +104,7 @@ export function failureMarker(status, now) {
 
 /**
  * P31 (owner voice order 2026-10-16: "যেগুলা একদম অচল সেগুলা একদম শেষে করে দাও
- * আর যেগুলা সচল সেগুলা একদম ফাস্টে করে দাও") — order the chain so a working
+ * আর যেগুলা সচল সেগুলা একদম ফাস্টে করে দাও"), order the chain so a working
  * model is tried first and a dead one is tried last.
  *
  * WHY ORDERING AND NOT JUST A COOLDOWN
@@ -113,11 +113,11 @@ export function failureMarker(status, now) {
  * unavailable is retried once for every key we hold. Measured 2026-10-16:
  * `gemini-3.1-flash-lite` answered 503 to 6/6 probes at ~0.42 s each, and with
  * ~17 Gemini keys the student waited ~7.2 s of silent retries before the second
- * model was even reached — on a question the healthy model answers in ~1.1 s.
+ * model was even reached, on a question the healthy model answers in ~1.1 s.
  *
  * The 503 is a property of the MODEL, not of the key, so a per-key cooldown
  * cannot express it. This function expresses it directly: an entry is demoted
- * to the end when its model — across every key — is currently failing, and
+ * to the end when its model, across every key, is currently failing, and
  * promoted to the front when it is not.
  *
  * DEMOTED, NEVER DROPPED. A dead model stays in the chain as the last resort,
@@ -126,7 +126,7 @@ export function failureMarker(status, now) {
  *
  * A model counts as failing when EVERY key we hold for it carries a live
  * failure marker. One bad key must not demote a model the other keys still
- * serve — the credential-ban case is per key and already handled per entry.
+ * serve, the credential-ban case is per key and already handled per entry.
  *
  * Order is otherwise stable, so the configured priority within each group is
  * preserved exactly.

@@ -255,3 +255,19 @@ test('security: a tampered course document renders but its scripts never execute
   assert.equal(typesOf(window, 'QUESTION_ATTEMPT').length, 0, 'no quiz behaviour from an unverified document');
 });
 
+test('production: the Cloudflare Pages analytics beacon does not disable a course', async () => {
+  /* Cloudflare Pages appends its beacon to every served HTML document, so the
+   * bytes the browser receives are never the bytes in the repository. Hashing
+   * the response as-is made the integrity pin fail in production only -- every
+   * course kept rendering but silently lost its scripts, while these tests
+   * passed because they read the file from disk. Measured live 2026-10-24:
+   * /courses/sandhi/ differs from the repo file by exactly this one line. */
+  const beacon = `<!-- Cloudflare Pages Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "1cd9675a9c374f478b623367a1470aa4"}'></script><!-- Cloudflare Pages Analytics -->`;
+  const served = COURSE_HTML.replace('</body>', `${beacon}</body>`);
+  assert.notEqual(served, COURSE_HTML, 'the beacon fixture must actually differ');
+  const window = await boot('source-courses/sandhi', { courseHtml: served });
+  const host = await waitFor(() => window.document.querySelector('.source-native-host'), 'course host');
+  assert.ok(host.querySelector('.done-btn[data-lesson="lesson3"]'), 'a beacon-appended course keeps its scripts');
+  assert.equal(typesOf(window, 'COURSE_VIEW').length, 1);
+});
+

@@ -1,9 +1,9 @@
-/* firebase-messaging-sw.js — FCM background message handler.
+/* firebase-messaging-sw.js, FCM background message handler.
  *
  * Firebase's web SDK registers THIS exact path itself (/firebase-messaging-sw.js,
  * scope /firebase-cloud-messaging-push-scope) unless a serviceWorkerRegistration
  * is passed to getToken(). Its absence made getToken() reject with
- * "failed-service-worker-registration" on every device — push never enabled.
+ * "failed-service-worker-registration" on every device, push never enabled.
  *
  * Coexists with sw.js (the precache/shell layer): different scope, no overlap.
  * Config is hardcoded because a static SW cannot read runtime config; these are
@@ -31,7 +31,7 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   /* The SDK shows the notification itself whenever the payload carries a
    * `notification` block (our senders always set one), and it does NOT hand our
-   * fields over at the top level — it wraps the whole FCM payload:
+   * fields over at the top level, it wraps the whole FCM payload:
    *   t.data = { FCM_MSG: <payload> }     (sdk/firebase-messaging-compat.js)
    * Reading nd.gid / nd.link / nd.src directly therefore always found nothing,
    * so every tap fell through to './' and lost the deep link (and global clicks
@@ -48,10 +48,10 @@ self.addEventListener('notificationclick', (event) => {
     return m ? m[1] : '';
   };
   const route = String(nd.link || hashRoute(nd.url) || 'dashboard').replace(/^#?\/?/, '');
-  /* Phase 2: global notifications carry `gid` — store the click for the app
+  /* Phase 2: global notifications carry `gid`, store the click for the app
    * (which logs it to /api/notifications/click on next boot/route).
    * Phase 3: intelligence notifications carry `key` (the engine's candidate
-   * key) — store that too so /api/notifications/outcome can attribute the click
+   * key), store that too so /api/notifications/outcome can attribute the click
    * to the exact send. Service workers have no localStorage, so this uses Cache
    * Storage, which the page reads with the same key. The write is inside
    * event.waitUntil so the entry survives the worker being terminated once this

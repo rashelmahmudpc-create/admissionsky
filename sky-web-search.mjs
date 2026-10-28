@@ -1,4 +1,4 @@
-/* AdmissionSky — web_search tool (Tavily), owner 2026-10-18. Server only.
+/* AdmissionSky, web_search tool (Tavily), owner 2026-10-18. Server only.
  * Kept apart from the READ-only runner (sky-tools.mjs): the only write here is
  * the shared daily call counter in PUB_KV (no user data is stored).
  * - runs only for a news / recent-facts question (isNewsQuestion)
@@ -14,7 +14,7 @@ const RE_NEWS = /(খবর|সংবাদ|সর্বশেষ|সাম্�
 const RE_NOT_WEB = /(সমাস|সন্ধি|কারক|সমীকরণ|সূত্র|অনুবাদ|translate|formula|equation)/i;
 /* "my ..." is personal (own results/stats) unless it is clearly an admission-date question */
 const RE_PERSONAL = /(আমার|\bmy\b)/i;
-/* "when is the exam / form / result" — a date that changes every year (owner 2026-10-18).
+/* "when is the exam / form / result", a date that changes every year (owner 2026-10-18).
    Needs both a when-word and an admission word, and never a past-tense history question. */
 const RE_WHEN = /(কবে|কখন|তারিখ|সময়সূচ[িী]|শিডিউল|ডেডলাইন|শেষ\s*সময়|\b(when|date|dates|schedule|deadline)\b)/i;
 const RE_ADMISSION = /(ভর্তি|পরীক্ষা|আবেদন|ফরম|ফর্ম|ফল\s*প্রকাশ|রেজাল্ট|বিজ্ঞপ্তি|সার্কুলার|প্রবেশপত্র|এডমিট|অ্যাডমিট|ঢাবি|জাবি|রাবি|চবি|বুয়েট|গুচ্ছ|মেডিকেল|বিশ্ববিদ্যালয়|ইউনিট|\b(admission|exam|result|application|admit\s*card|unit)\b)/i;
@@ -100,7 +100,7 @@ export function renderSearchFailure(r) {
     '. Do not state from memory whether a date, notice, circular or result has or has not been published. Say you could not check the latest update right now and give the official website.';
 }
 export function renderSearchContext(r) {
-  const lines = r.results.map((x, i) => (i + 1) + '. ' + x.title + ' — ' + x.snippet + ' (' + x.url + ')');
+  const lines = r.results.map((x, i) => (i + 1) + '. ' + x.title + ', ' + x.snippet + ' (' + x.url + ')');
   return 'TOOL web_search (live web, ' + new Date().toISOString().slice(0, 10) + '): results for "' + r.query + '":\n' + lines.join('\n') +
     '\nUse only these results for recent facts; if they do not answer, say so. End the answer with a short "উৎস:" list of the links you used, as Markdown links [title](url).';
 }

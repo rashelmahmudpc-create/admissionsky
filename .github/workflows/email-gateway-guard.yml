@@ -1,7 +1,22 @@
 name: Email Gateway Guard
+permissions:
+  contents: read
 on:
   push:
     branches: [main]
+    paths:
+      - 'email-gateway/**'
+      - 'email-gateway*.test.mjs'
+      - 'auth/**'
+      - 'gk-agent-worker.js'
+      - 'worker-bundle.mjs'
+      - '_worker.js'
+      - 'wrangler.toml'
+      - 'package.json'
+      - '.github/workflows/email-gateway-*.yml'
+      - '.github/CODEOWNERS'
+      - 'docs/email-gateway/**'
+      - 'docs/EMAIL-GATEWAY-*'
   pull_request:
     paths:
       - 'email-gateway/**'

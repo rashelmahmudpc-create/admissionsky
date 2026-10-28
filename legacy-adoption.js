@@ -2,12 +2,12 @@
  *
  * Before per-account scoping, IndexedDB records were stored with a bare id and
  * no `__ahOwner`. `fromScopedRecord()` hides any row it does not own, so a
- * signing-in account saw an empty app and re-seeded defaults — the "my data is
+ * signing-in account saw an empty app and re-seeded defaults, the "my data is
  * gone" report. Owner approved a one-time adoption.
  *
  * The rules this module enforces (pure logic, dependencies injected):
  *   1. Relabel in place. A legacy row is rewritten to `${scope}::${id}` with
- *      `__ahOwner`/`__ahId` — never copied, never deleted, so nothing is lost
+ *      `__ahOwner`/`__ahId`, never copied, never deleted, so nothing is lost
  *      and the total row count per store is unchanged.
  *   2. Never overwrite account data. If the account already has a row with the
  *      same bare id, the legacy row is left untouched.

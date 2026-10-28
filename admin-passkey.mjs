@@ -9,7 +9,7 @@
  * Verification reuses `auth-native/core/webauthn.mjs`, the same code that
  * guards student passkeys, so there is one WebAuthn implementation to trust.
  *
- * Storage: `GK_KV` (already bound). Keys —
+ * Storage: `GK_KV` (already bound). Keys -
  *   admin:pk:cred:<credentialId>   enrolled credential record
  *   admin:pk:chal:<challengeId>    single-use challenge, TTL 120s
  *   admin:pk:sess:<sessionHash>    minted admin session, TTL 30min
@@ -263,7 +263,7 @@ export async function handleAdminPasskeyRequest(request, env) {
     const body = await readBody(request);
     const purpose = body?.purpose === 'register' ? 'register' : 'assert';
     /* Enrolling a new passkey is a privileged act: require the admin token.
-     * Asserting an existing passkey must work without it — that is the point. */
+     * Asserting an existing passkey must work without it, that is the point. */
     if (purpose === 'register' && !hasAdminToken) return json({ error: 'forbidden' }, 403);
     if (purpose === 'assert' && !hasAdminToken && !(await listCredentials(env)).length) {
       return json({ error: 'no-credential' }, 404);

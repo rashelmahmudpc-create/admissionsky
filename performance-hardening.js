@@ -1,5 +1,5 @@
 /*
- * Admission Hub Part 2 — Performance Hardening Layer
+ * Admission Hub Part 2, Performance Hardening Layer
  *
  * This file is deliberately additive. It does not clear storage, replace the
  * application cache, reset user state, or alter the existing feature files.

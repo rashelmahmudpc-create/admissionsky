@@ -1,4 +1,4 @@
-/* Admission Hub — P12 Smart Vocabulary Engine.
+/* Admission Hub, P12 Smart Vocabulary Engine.
  *
  * Pure, dependency-free spaced-repetition core (like mistake-engine.js /
  * adaptive-engine.js), so it runs in the browser as window.AhVocabSrs and under
@@ -8,7 +8,7 @@
  * Model: a compact SM-2. Each vocab word is a card with an ease factor, an
  * interval in days, a repetition count and a due timestamp. A grade (Again /
  * Hard / Good / Easy) advances or resets it. A word that is failed repeatedly
- * becomes a "leech" — the weak-word signal the dashboard surfaces.
+ * becomes a "leech", the weak-word signal the dashboard surfaces.
  */
 (function (root, factory) {
   const api = factory();
