@@ -22,8 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: email-gateway-production
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
 
@@ -41,7 +41,7 @@ jobs:
           test "$INFISICAL_SECRET_PATH" = "/email-gateway" || { echo "::error title=Infisical connection incomplete::INFISICAL_SECRET_PATH must be /email-gateway."; exit 1; }
 
       - name: Fetch production Email Gateway secrets from Infisical using OIDC
-        uses: Infisical/secrets-action@6cd3f7c0e4cc0d2395ee4ef414eb6eeb5d3e73db # v1.0.17
+        uses: Infisical/secrets-action@d2e351f16c6ca20d17c85e6c992e04bdeb64e87d # v1.0.18
         with:
           method: oidc
           identity-id: ${{ vars.INFISICAL_IDENTITY_ID }}
@@ -59,7 +59,7 @@ jobs:
         run: node email-gateway/operations/prepare-infisical-worker-secrets.mjs
 
       - name: Stage isolated secrets in the Admission Hub Worker
-        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
+        uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
