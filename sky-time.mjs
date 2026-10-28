@@ -85,14 +85,14 @@ export function getDateTime(nowMs = Date.now(), text = '') {
 /** One line added to every chat's system prompt so "this year" / "today" are never guessed. */
 export function nowLine(nowMs = Date.now()) {
   const r = getDateTime(nowMs);
-  return 'NOW (Asia/Dhaka, live clock): ' + r.iso + ' — ' + r.weekday + ', ' + r.date + ' (' + r.bangla + '), ' + r.time + '. Use this for today, this year and countdowns; never guess the date.';
+  return 'NOW (Asia/Dhaka, live clock): ' + r.iso + ', ' + r.weekday + ', ' + r.date + ' (' + r.bangla + '), ' + r.time + '. Use this for today, this year and countdowns; never guess the date.';
 }
 
 export function renderDateTime(r) {
   const lines = ['🕒 **এখন ' + r.time + '** (বাংলাদেশ সময়)', '', '- বার: **' + r.weekday + '**', '- তারিখ: **' + r.date + '**', '- বাংলা তারিখ: **' + r.bangla + '**'];
   if (r.target) {
     const n = r.daysLeft;
-    lines.push('', n > 0 ? '⏳ ' + r.target + ' আসতে আর **' + bn(n) + ' দিন** বাকি।' : n === 0 ? '📌 ' + r.target + ' — আজই!' : '📌 ' + r.target + ' পার হয়ে গেছে ' + bn(-n) + ' দিন আগে।');
+    lines.push('', n > 0 ? '⏳ ' + r.target + ' আসতে আর **' + bn(n) + ' দিন** বাকি।' : n === 0 ? '📌 ' + r.target + ', আজই!' : '📌 ' + r.target + ' পার হয়ে গেছে ' + bn(-n) + ' দিন আগে।');
   }
   return lines.join('\n');
 }

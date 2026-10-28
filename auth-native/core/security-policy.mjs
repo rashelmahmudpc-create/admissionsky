@@ -1,4 +1,4 @@
-// Phase 6 — Security Policy / Risk Evaluation (blueprint §3, §4, §30, §33)
+// Phase 6, Security Policy / Risk Evaluation (blueprint §3, §4, §30, §33)
 //
 // Deterministic, pure risk evaluation. It consumes already-computed signals
 // (never raw PII, never tokens) and returns a risk level plus the actions
@@ -9,11 +9,11 @@
 //    accused on one signal alone.
 //  - Two or more independent behavioural signals combine to at most HIGH.
 //  - CRITICAL comes only from authoritative facts (e.g. account suspended
-//    by the authority) or a fact + behavioural escalation — never from
+//    by the authority) or a fact + behavioural escalation, never from
 //    behaviour alone.
 //
 // Fail-safe (§30-§31): if evaluation itself fails, resolveFailSafe() maps
-// the action class to a bounded fallback — sensitive actions are never
+// the action class to a bounded fallback, sensitive actions are never
 // blind-allowed, and normal actions are never locked out.
 
 import {
@@ -117,7 +117,7 @@ function policyActions(level, config) {
 /**
  * Escalating cooldown after repeated failures (§14). Returns the cooldown
  * duration in ms for the Nth consecutive failure, or 0 when below the
- * threshold. The ceiling is the last step — never permanent.
+ * threshold. The ceiling is the last step, never permanent.
  */
 export function cooldownForFailure(failures, config = resolveSecurityConfig()) {
   const n = Math.max(0, Number(failures) || 0);

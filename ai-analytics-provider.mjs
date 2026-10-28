@@ -1,4 +1,4 @@
-/* Phase 5 — AI provider bridge for the analytics intelligence layer.
+/* Phase 5, AI provider bridge for the analytics intelligence layer.
  *
  * The analytics layer needs exactly one thing from a model: given a prompt and a
  * set of numbers it may not change, return one paragraph of prose. That is a
@@ -10,7 +10,7 @@
  *
  * Why a one-shot and not the chat chain: `providerChain` filters to adapters with
  * `oneShot === true`, which today is Gemini only. Groq and Cloudflare are
- * stream-only in that module, and the copilot has no use for a stream — the
+ * stream-only in that module, and the copilot has no use for a stream, the
  * grounding check runs on the finished text. So the chain here is deliberately
  * the one-shot subset, and when no key is configured the bridge returns `null`
  * and every caller falls back to deterministic wording. A missing key is a
@@ -18,7 +18,7 @@
  *
  * Cost: no price table is invented. Usage is reported only as a token estimate
  * from the shared observability helper, and `costUsd` stays null unless a real
- * rate exists — the same rule the Phase 9 observability layer follows.
+ * rate exists, the same rule the Phase 9 observability layer follows.
  */
 
 import { PROVIDER_ADAPTERS } from './ai-agent.js';
@@ -93,7 +93,7 @@ export function aiGenerate(env = {}) {
 
 /* Picks the first usable one-shot provider from the env. Ordering mirrors the
  * Agent Core chain: the fast Gemini model first, then any configured override.
- * No key, no entry — the bridge stays inert. */
+ * No key, no entry, the bridge stays inert. */
 export function resolveEntry(env = {}) {
   const keys = String(env.GEMINI_KEYS || '').split(',').map((k) => k.trim()).filter(Boolean);
   if (!keys.length) return null;

@@ -1,0 +1,54 @@
+name: Sky AI Worker — deploy (manual)
+
+# F0.1 / DV-01. Manual, deploy-only workflow for the new sky-ai Worker.
+# Publishes sky-ai/worker.mjs with sky-ai/wrangler.toml. Touches nothing else:
+# no admission-gk deploy, no secrets, no KV. Runs only from main with
+# confirmation DEPLOY (and only inside the Study Lock window, which the
+# repository's own timer enforces).
+#
+# Required repository secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type DEPLOY to publish sky-ai/worker.mjs to the sky-ai worker
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: ${{ inputs.confirmation == 'DEPLOY' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Unit tests
+        run: node --test sky-ai/*.test.mjs sky-ai-route-identity.test.mjs
+      - name: Deploy sky-ai
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -eu
+          npm i -g wrangler@4.35.0 >/dev/null 2>&1
+          cd sky-ai
+          wrangler deploy --config wrangler.toml
+      - name: Verify health (through admission-gk, the only way in)
+        run: |
+          set -eu
+          sleep 5
+          for i in 1 2 3 4 5; do
+            body="$(curl -s --max-time 20 "https://admission-gk.admissionhub.workers.dev/api/ai/sky-health?cb=$RANDOM" || true)"
+            echo "health: $body"
+            echo "$body" | grep -q '"via":"service-binding"' && exit 0
+            sleep 6
+          done
+          echo "::error::sky-ai health check via admission-gk failed"
+          exit 1

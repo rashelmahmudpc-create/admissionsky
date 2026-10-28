@@ -1,6 +1,6 @@
-// Phase 6 — Central Security Configuration (blueprint §28, §29)
+// Phase 6, Central Security Configuration (blueprint §28, §29)
 //
-// Every security threshold the engine uses lives in this module — nothing
+// Every security threshold the engine uses lives in this module, nothing
 // security-related is hard-coded across components. Environments may
 // override via the SECURITY_CONFIG_JSON binding at activation; the frozen
 // defaults below are the conservative production baseline.
@@ -22,11 +22,11 @@ export const SECURITY_RISK_RANK = Object.freeze({
 });
 
 // Challenge engine defaults (§11-§12).
-export const SECURITY_CHALLENGE_TTL_MS = 15 * 60 * 1000; // 15 min — short-lived
+export const SECURITY_CHALLENGE_TTL_MS = 15 * 60 * 1000; // 15 min, short-lived
 export const SECURITY_CHALLENGE_MAX_ATTEMPTS = 5; // attempt-limited
 export const SECURITY_CHALLENGE_METHODS_V1 = Object.freeze(['email', 'telegram', 'passkey']);
 
-// Device trust defaults (§5-§7). Opaque server-issued device cookie only —
+// Device trust defaults (§5-§7). Opaque server-issued device cookie only -
 // no fingerprinting, no location.
 export const SECURITY_TRUST_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 export const SECURITY_TRUST_MAX_DEVICES_PER_USER = 10;
@@ -39,7 +39,7 @@ export const SECURITY_COOLDOWN_THRESHOLD_FAILURES = 5;
 export const SECURITY_COOLDOWN_STEPS_MS = Object.freeze([
   5 * 60 * 1000, // 5 min
   15 * 60 * 1000, // 15 min
-  60 * 60 * 1000 // 60 min — ceiling; never permanent
+  60 * 60 * 1000 // 60 min, ceiling; never permanent
 ]);
 
 // Risk signal thresholds (§3-§4). A single behavioural signal can at most
@@ -71,7 +71,7 @@ export const SECURITY_PURPOSES = Object.freeze({
 });
 
 // Fail-safe policy (§30-§31): when risk evaluation itself cannot complete,
-// the fallback is action-sensitive — never blind-allow sensitive actions,
+// the fallback is action-sensitive, never blind-allow sensitive actions,
 // never lock everyone out.
 export const SECURITY_FAILSAFE_POLICY = Object.freeze({
   lowRisk: 'proceed', // normal action under normal auth
@@ -111,7 +111,7 @@ export const SECURITY_CONFIG = Object.freeze({
  * Build the effective security config from an optional environment override
  * (SECURITY_CONFIG_JSON binding). Unknown keys are ignored; known numeric
  * values must be finite and positive. On any validation failure the frozen
- * defaults are returned — a bad override can never weaken the baseline.
+ * defaults are returned, a bad override can never weaken the baseline.
  */
 export function resolveSecurityConfig(overrideRaw = '') {
   if (!overrideRaw) return SECURITY_CONFIG;
@@ -130,7 +130,7 @@ export function resolveSecurityConfig(overrideRaw = '') {
         base[key] = value;
       }
       // Nested structures (thresholds, policy tables) are NOT overrideable in
-      // v1 — they are the conservative core. Only scalar knobs flex.
+      // v1, they are the conservative core. Only scalar knobs flex.
     }
     return Object.freeze(base);
   } catch {

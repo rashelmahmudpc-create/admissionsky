@@ -1,5 +1,5 @@
 /*
- * Vocabulary Master — native Admission Hub tool.
+ * Vocabulary Master, native Admission Hub tool.
  * Design reminder: keep this an intentionally calm, mobile-first academic tool.
  * It owns structured vocabulary only; it delegates tests, history, progress and rewards to Admission Hub.
  */
@@ -157,7 +157,7 @@
     state.records = (rows || []).filter(row => row && (!row.tool || row.tool === 'vocabulary-master')).map(normalizeRecord).sort((a,b) => (Number(a.order) - Number(b.order)) || (Number(a.createdAt) - Number(b.createdAt)) || a.id.localeCompare(b.id));
     /* The starter cards are off by default. On a device whose bank is still the
        30-card seed (a pre-cloud install), they used to be the only rows the bank
-       ever saw — the cloud pull ran first and then the seed was added, so the
+       ever saw, the cloud pull ran first and then the seed was added, so the
        device showed "30 words" for ever and never fetched the real 6,256. The
        bank is cloud-authoritative now: seed only when explicitly enabled. */
     if (window.AH_VOCAB_SEED_ENABLED === true) await seedCategoryA();
@@ -226,7 +226,7 @@
     });
   }
   function backButton(target = ROUTE) { return `<button class="backbtn" onclick="navigate('${target}')" aria-label="Back">←</button>`; }
-  function emptyBank() { return `<div class="vm-empty"><div style="font-size:30px">📚</div><b style="display:block;margin-top:7px;color:var(--text)">Vocabulary Bank is empty.</b><p style="margin:7px 0 14px;font-size:12px;line-height:1.5">শব্দভাণ্ডার এখানে দেখা যাবে — প্র্যাকটিস আর MCQ চালু থাকবে।</p></div>`; }
+  function emptyBank() { return `<div class="vm-empty"><div style="font-size:30px">📚</div><b style="display:block;margin-top:7px;color:var(--text)">Vocabulary Bank is empty.</b><p style="margin:7px 0 14px;font-size:12px;line-height:1.5">শব্দভাণ্ডার এখানে দেখা যাবে, প্র্যাকটিস আর MCQ চালু থাকবে।</p></div>`; }
   function heading(kicker, title, sub) { return `<div class="explorer-head"><div class="vm-kicker">${escape(kicker)}</div><h2 class="vm-title">${escape(title)}</h2>${sub ? `<p class="vm-sub">${escape(sub)}</p>` : ''}</div>`; }
 
   function renderLanding() {
@@ -265,7 +265,7 @@
   function imagePromptFor(record) {
     const synonyms = relations(record, 'synonyms').map(item => `${item.word}${item.meaning ? ` (${item.meaning})` : ''}`).join(', ');
     const acronyms = relations(record, 'acronyms').map(item => `${item.word}${item.meaning ? ` (${item.meaning})` : ''}`).join(', ');
-    return `Create one premium 16:9 visual-memory image for an English-learning vocabulary app.\n\nSemantic reference only — do not render any of this text inside the image:\nVocabulary word: ${record.word}\nBengali meaning: ${record.meaning}\nSynonyms: ${synonyms || 'None provided'}\nAcronym or abbreviation: ${acronyms || 'None provided'}\nContext or explanation: ${record.tips || 'Use the exact word meaning as the main context.'}\n\nCORE MEMORY DIRECTION:\nBuild one instantly recognizable mnemonic scene around the exact meaning. Use a single dominant action or visual metaphor, one distinctive anchor object, clear foreground/background separation, strong contrast, a surprising but natural association, and an emotionally noticeable moment that is easy to recall later. Do not make a collage, dictionary illustration, infographic, diagram, split-screen, or generic decorative scene. The meaning must be understandable from the visual action alone. Keep the composition uncluttered and mobile-friendly.\n\nART DIRECTION:\nUse polished 3D-realistic animation with natural human anatomy, believable materials, realistic light, cinematic depth of field, tactile detail, subtle expressive motion frozen in a single frame, and a premium educational-film look. It should feel like a high-end realistic animated movie frame: visually rich, attractive, natural and believable rather than plastic, childish or surreal. Use a YouTube-thumbnail-like 16:9 composition with a strong focal point, balanced negative space and clear silhouette.\n\nSTRICT OUTPUT RULES:\nThe generated image itself must contain absolutely no visible text of any kind: no English or Bengali letters, no words, captions, labels, subtitles, numbers, symbols, logos, watermarks, signs, UI, book pages, posters, screens, badges, speech bubbles or typographic marks. Do not place the vocabulary word or Bengali meaning in the image. Do not add unrelated objects or multiple competing scenes. Render only the clean visual story; all vocabulary metadata is reference for the scene and must remain outside the image.`;
+    return `Create one premium 16:9 visual-memory image for an English-learning vocabulary app.\n\nSemantic reference only, do not render any of this text inside the image:\nVocabulary word: ${record.word}\nBengali meaning: ${record.meaning}\nSynonyms: ${synonyms || 'None provided'}\nAcronym or abbreviation: ${acronyms || 'None provided'}\nContext or explanation: ${record.tips || 'Use the exact word meaning as the main context.'}\n\nCORE MEMORY DIRECTION:\nBuild one instantly recognizable mnemonic scene around the exact meaning. Use a single dominant action or visual metaphor, one distinctive anchor object, clear foreground/background separation, strong contrast, a surprising but natural association, and an emotionally noticeable moment that is easy to recall later. Do not make a collage, dictionary illustration, infographic, diagram, split-screen, or generic decorative scene. The meaning must be understandable from the visual action alone. Keep the composition uncluttered and mobile-friendly.\n\nART DIRECTION:\nUse polished 3D-realistic animation with natural human anatomy, believable materials, realistic light, cinematic depth of field, tactile detail, subtle expressive motion frozen in a single frame, and a premium educational-film look. It should feel like a high-end realistic animated movie frame: visually rich, attractive, natural and believable rather than plastic, childish or surreal. Use a YouTube-thumbnail-like 16:9 composition with a strong focal point, balanced negative space and clear silhouette.\n\nSTRICT OUTPUT RULES:\nThe generated image itself must contain absolutely no visible text of any kind: no English or Bengali letters, no words, captions, labels, subtitles, numbers, symbols, logos, watermarks, signs, UI, book pages, posters, screens, badges, speech bubbles or typographic marks. Do not place the vocabulary word or Bengali meaning in the image. Do not add unrelated objects or multiple competing scenes. Render only the clean visual story; all vocabulary metadata is reference for the scene and must remain outside the image.`;
   }
   function copyPlainText(text) {
     const value = String(text || '');
@@ -274,7 +274,7 @@
   }
   function fallbackCopy(value) {
     const area = document.createElement('textarea'); area.value = value; area.style.position = 'fixed'; area.style.opacity = '0'; document.body.appendChild(area); area.select();
-    try { document.execCommand('copy'); toast('AI image prompt copy হয়েছে।'); } catch (_) { toast('Prompt copy করা যায়নি—লেখাটি manually copy করো।'); } finally { area.remove(); }
+    try { document.execCommand('copy'); toast('AI image prompt copy হয়েছে।'); } catch (_) { toast('Prompt copy করা যায়নি, লেখাটি manually copy করো।'); } finally { area.remove(); }
   }
   function imageDataUrl(file) {
     return new Promise((resolve, reject) => {
@@ -340,13 +340,13 @@
     const records = categoryRecords(target);
     const label = target || 'ALL';
     const parts = records.map((record, index) => `--- ${index + 1}/${records.length} · ${record.word} ---\n${imagePromptFor(record)}`);
-    return `AI IMAGE PROMPT PACK — Vocabulary category: ${label} (${records.length} words)\nপ্রতিটি প্রম্পট আলাদা একটি 16:9 ছবির জন্য। serial অনুযায়ী generated image গুলো category-র card-এ বসবে।\n\n${parts.join('\n\n')}`;
+    return `AI IMAGE PROMPT PACK, Vocabulary category: ${label} (${records.length} words)\nপ্রতিটি প্রম্পট আলাদা একটি 16:9 ছবির জন্য। serial অনুযায়ী generated image গুলো category-র card-এ বসবে।\n\n${parts.join('\n\n')}`;
   }
   function copyCategoryPrompt(category) {
     const target = !category || String(category).toUpperCase() === 'ALL' ? '' : String(category).toUpperCase();
     const records = categoryRecords(target);
     if (!records.length) return toast('এই category-তে কোনো vocabulary নেই।');
-    const done = () => toast(`${records.length}টি vocabulary-র image prompt কপি হয়েছে — image জেনারেটরে পেস্ট করো।`);
+    const done = () => toast(`${records.length}টি vocabulary-র image prompt কপি হয়েছে, image জেনারেটরে পেস্ট করো।`);
     if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(categoryPromptText(target)).then(done).catch(() => { fallbackCopy(categoryPromptText(target)); done(); });
     fallbackCopy(categoryPromptText(target)); done();
   }
@@ -373,14 +373,14 @@
   function categoryVoicePromptText(category) {
     const { target, entries } = categoryVoiceEntries(category);
     const label = target || 'ALL';
-    const lines = entries.map((entry, index) => `${index + 1}. ${entry.key}.mp3 — ${entry.word}${entry.meaning ? ' — ' + entry.meaning : ''} (${[...new Set(entry.roles)].join(', ')})`);
-    return `VOICE PACK — Vocabulary category: ${label} (${entries.length} unique words)\nভয়েস ফরম্যাট: MP3, পরিষ্কার মোনো রেকর্ডিং, প্রতিটি ফাইলে শুধু ওই একটি শব্দ।\nভয়েস স্টাইল: একদম মানুষের মতো natural, native-like স্পষ্ট উচ্চারণ; প্রতিটি শব্দ প্রথমে ধীরে, তারপর স্বাভাবিক গতিতে — মোট ২ বার; কোনো মিউজিক বা নয়েজ নয়।\nফাইলের নাম হুবহু নিচের তালিকার মতো রাখো — অ্যাপ নাম মিলিয়ে সঠিক শব্দে ভয়েস বসাবে।\n\n${lines.join('\n')}`;
+    const lines = entries.map((entry, index) => `${index + 1}. ${entry.key}.mp3, ${entry.word}${entry.meaning ? ', ' + entry.meaning : ''} (${[...new Set(entry.roles)].join(', ')})`);
+    return `VOICE PACK, Vocabulary category: ${label} (${entries.length} unique words)\nভয়েস ফরম্যাট: MP3, পরিষ্কার মোনো রেকর্ডিং, প্রতিটি ফাইলে শুধু ওই একটি শব্দ।\nভয়েস স্টাইল: একদম মানুষের মতো natural, native-like স্পষ্ট উচ্চারণ; প্রতিটি শব্দ প্রথমে ধীরে, তারপর স্বাভাবিক গতিতে, মোট ২ বার; কোনো মিউজিক বা নয়েজ নয়।\nফাইলের নাম হুবহু নিচের তালিকার মতো রাখো, অ্যাপ নাম মিলিয়ে সঠিক শব্দে ভয়েস বসাবে।\n\n${lines.join('\n')}`;
   }
   async function copyCategoryVoicePrompt(category) {
     const { entries } = categoryVoiceEntries(category);
     if (!entries.length) return toast('এই category-তে কোনো vocabulary নেই।');
     const text = categoryVoicePromptText(category);
-    const done = () => toast(`${entries.length}টি শব্দের voice prompt কপি হয়েছে — AI agent-কে দাও।`);
+    const done = () => toast(`${entries.length}টি শব্দের voice prompt কপি হয়েছে, AI agent-কে দাও।`);
     if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text).then(done).catch(() => { fallbackCopy(text); done(); });
     fallbackCopy(text); done();
   }
@@ -391,7 +391,7 @@
     const lib = voiceLib();
     const have = entries.filter(entry => lib[entry.key]).length;
     const safeCategory = escape(String(target || 'ALL'));
-    openModal(`<h3>🎧 Category voices — ${safeCategory}</h3><p class="muted" style="margin-top:5px">এই category-র <b>${entries.length}</b>টি unique শব্দের মধ্যে <b>${have}</b>টিতে কাস্টম voice আছে।</p><p class="muted" style="margin-top:5px;font-size:12px">🎙 দিয়ে prompt কপি করে AI দিয়ে voice বানাও, তারপর নিচে আপলোড দাও। ফাইলের নাম হুবহু হতে হবে (যেমন <code>apple.mp3</code>, <code>prove-guilty.mp3</code>) — অ্যাপ নাম মিলিয়ে সঠিক শব্দে বসাবে, অফলাইনেও বাজবে।</p><label class="flabel" style="margin-top:12px">Voice ফাইল আপলোড (একসাথে অনেকগুলো দেওয়া যাবে)</label><input id="vmVoiceInput" type="file" accept="audio/mpeg,audio/*,.mp3" multiple onchange="VocabularyMaster.uploadCategoryVoices('${safeCategory}',this)"><button class="btn ghost sm" style="margin-top:12px" onclick="VocabularyMaster.copyCategoryVoicePrompt('${safeCategory}')">🎙 এই category-র voice prompt কপি</button>`);
+    openModal(`<h3>🎧 Category voices, ${safeCategory}</h3><p class="muted" style="margin-top:5px">এই category-র <b>${entries.length}</b>টি unique শব্দের মধ্যে <b>${have}</b>টিতে কাস্টম voice আছে।</p><p class="muted" style="margin-top:5px;font-size:12px">🎙 দিয়ে prompt কপি করে AI দিয়ে voice বানাও, তারপর নিচে আপলোড দাও। ফাইলের নাম হুবহু হতে হবে (যেমন <code>apple.mp3</code>, <code>prove-guilty.mp3</code>), অ্যাপ নাম মিলিয়ে সঠিক শব্দে বসাবে, অফলাইনেও বাজবে।</p><label class="flabel" style="margin-top:12px">Voice ফাইল আপলোড (একসাথে অনেকগুলো দেওয়া যাবে)</label><input id="vmVoiceInput" type="file" accept="audio/mpeg,audio/*,.mp3" multiple onchange="VocabularyMaster.uploadCategoryVoices('${safeCategory}',this)"><button class="btn ghost sm" style="margin-top:12px" onclick="VocabularyMaster.copyCategoryVoicePrompt('${safeCategory}')">🎙 এই category-র voice prompt কপি</button>`);
   }
   async function uploadCategoryVoices(category, input) {
     const files = [...(input?.files || [])];
@@ -409,7 +409,7 @@
     try { window.VocabularyPronunciation?.reloadVoices?.(); } catch (_) {}
     try { input.value = ''; } catch (_) {}
     closeModal();
-    toast(`${saved}টি voice সেভ হয়েছে${unmatched.length ? ` · ${unmatched.length}টি ফাইলের নাম মেলেনি` : ''} — এখন অফলাইনেও কাস্টম voice বাজবে।`);
+    toast(`${saved}টি voice সেভ হয়েছে${unmatched.length ? ` · ${unmatched.length}টি ফাইলের নাম মেলেনি` : ''}, এখন অফলাইনেও কাস্টম voice বাজবে।`);
   }
   let autoImageState = null;
   const autoImageSeed = word => { let hash = 7; const text = String(word || 'x'); for (let i = 0; i < text.length; i += 1) hash = (hash * 31 + text.charCodeAt(i)) >>> 0; return hash % 100000; };
@@ -417,11 +417,11 @@
   function autoCategoryImages(category) {
     const normalized = String(category || '').toUpperCase();
     if (!/^[A-Z]$/.test(normalized)) return toast('একটি নির্দিষ্ট vocabulary category নির্বাচন করুন।');
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) return toast('\ud83d\udcf4 অফলাইনে ছবি বানানো যায় না — internet চালু করে আবার চেষ্টা করো।');
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return toast('\ud83d\udcf4 অফলাইনে ছবি বানানো যায় না, internet চালু করে আবার চেষ্টা করো।');
     const pending = categoryRecords(normalized).filter(record => !record.imageDataUrl);
     if (!pending.length) return toast(`${normalized} category-র সব card-এই image আছে ✓`);
     confirmModal(
-      `${normalized} — Auto AI image`,
+      `${normalized}, Auto AI image`,
       `${normalized} category-র ${pending.length}টি card-এ image নেই। এক ক্লিকে AI দিয়ে এক একটি ছবি বানিয়ে সঠিক card-এ বসে যাবে (প্রতিটায় কয়েক সেকেন্ড লাগে, internet লাগবে; আগে থেকে থাকা ছবি বদলাবে না)।`,
       () => startAutoImages(normalized, pending),
       '\u2702 ছবি বানাও',
@@ -430,7 +430,7 @@
   }
   async function startAutoImages(category, queue) {
     autoImageState = { category, total: queue.length, done: 0, failed: 0, stop: false };
-    openModal(`<h3>\u2702 Auto image — ${escape(category)}</h3><p class="muted" id="vmAutoImgStatus" style="margin-top:6px">শুরু হচ্ছে…</p><div style="margin-top:12px;height:8px;border-radius:99px;background:var(--mint);overflow:hidden"><div id="vmAutoImgBar" style="height:100%;width:0%;background:var(--emerald);transition:width .3s"></div></div><button class="btn ghost sm" style="margin-top:14px" onclick="VocabularyMaster.stopAutoImages()">\u23f9 থামাও</button>`);
+    openModal(`<h3>\u2702 Auto image, ${escape(category)}</h3><p class="muted" id="vmAutoImgStatus" style="margin-top:6px">শুরু হচ্ছে…</p><div style="margin-top:12px;height:8px;border-radius:99px;background:var(--mint);overflow:hidden"><div id="vmAutoImgBar" style="height:100%;width:0%;background:var(--emerald);transition:width .3s"></div></div><button class="btn ghost sm" style="margin-top:14px" onclick="VocabularyMaster.stopAutoImages()">\u23f9 থামাও</button>`);
     for (const record of queue) {
       if (!autoImageState || autoImageState.stop) break;
       autoImageStatus(record.word);
@@ -454,10 +454,10 @@
     closeModal();
     refreshCategoryResults();
     if (summary) toast(summary.stop
-      ? `\u23f8 থামানো হলো — ${summary.done}টি ছবি বসানো হয়েছে${summary.failed ? `, ${summary.failed}টি ব্যর্থ` : ''}`
-      : `\u2705 ${summary.done}টি ছবি বসানো হয়েছে${summary.failed ? ` — \u26a0\ufe0f ${summary.failed}টি ব্যর্থ; আবার ✨ চাপলে শুধু ব্যর্থগুলোর চেষ্টা হবে` : ''}`);
+      ? `\u23f8 থামানো হলো, ${summary.done}টি ছবি বসানো হয়েছে${summary.failed ? `, ${summary.failed}টি ব্যর্থ` : ''}`
+      : `\u2705 ${summary.done}টি ছবি বসানো হয়েছে${summary.failed ? `, \u26a0\ufe0f ${summary.failed}টি ব্যর্থ; আবার ✨ চাপলে শুধু ব্যর্থগুলোর চেষ্টা হবে` : ''}`);
   }
-  function autoImageStatus(word) { const box = document.getElementById('vmAutoImgStatus'); if (box && autoImageState) box.textContent = `ছবি আঁকা হচ্ছে… ${autoImageState.done + 1}/${autoImageState.total} — ${word}`; }
+  function autoImageStatus(word) { const box = document.getElementById('vmAutoImgStatus'); if (box && autoImageState) box.textContent = `ছবি আঁকা হচ্ছে… ${autoImageState.done + 1}/${autoImageState.total}, ${word}`; }
   function autoImageBar() { const bar = document.getElementById('vmAutoImgBar'); if (bar && autoImageState) bar.style.width = `${Math.round((autoImageState.done / autoImageState.total) * 100)}%`; }
   function stopAutoImages() { if (autoImageState) { autoImageState.stop = true; toast('\u23f9 এই ছবির পরে থেমে যাবে…'); } }
   function openCategoryImageImporter(category) {
@@ -586,7 +586,7 @@
       const cloudTotal = LETTERS.reduce((n, letter) => n + counts[letter], 0);
       /* The server knows the whole bank; the device may hold only a slice. When
          the device has fewer rows than the server reports, the counts must come
-         from the server, not from the partial bank — otherwise a bank stuck on
+         from the server, not from the partial bank, otherwise a bank stuck on
          the 30-card starter seed shows "30 words" for ever. */
       const stale = state.records.length < cloudTotal;
       try { localStorage.setItem(COUNTS_KEY, JSON.stringify({ sig: String(meta.sig || ''), at: Date.now(), counts })); } catch (_) {}
@@ -594,7 +594,7 @@
       if (document.querySelector('.vm-az-grid')) renderBank();
       const found = document.getElementById('vmCategoryFound');
       if (found) found.textContent = `${categoryFoundCount().toLocaleString()} words found`;
-    } catch (_) { /* offline or blocked — the cached/zero path still renders */ }
+    } catch (_) { /* offline or blocked, the cached/zero path still renders */ }
   }
   /* Pull the whole bank straight from the content endpoint, bypassing the
      signature short-circuit in cloud-content-sync: a device whose stored meta
@@ -712,7 +712,7 @@
         const parts = stripped.split(/\s*[:ঃ]\s*/);
         const word = String(parts[0] || '').trim().slice(0, 90);
         const meaning = parts.slice(1).join(': ').trim();
-        return { raw:lines.join('\n'), word, meaning, synonyms:[], antonyms:[], acronyms:[], tips:'', valid:false, error: word ? 'Bengali meaning পাওয়া যায়নি — তবু সেভ হবে।' : 'Word এবং Bengali meaning পাওয়া যায়নি — তবু সেভ হবে।' };
+        return { raw:lines.join('\n'), word, meaning, synonyms:[], antonyms:[], acronyms:[], tips:'', valid:false, error: word ? 'Bengali meaning পাওয়া যায়নি, তবু সেভ হবে।' : 'Word এবং Bengali meaning পাওয়া যায়নি, তবু সেভ হবে।' };
       }
       const word = head[1].trim();
       const meaning = head[2].trim();
@@ -744,11 +744,11 @@
   function parserPreviewCard(record, index) {
     const duplicate = state.records.some(existing => existing.normalized === record.normalized);
     const status = !record.valid ? 'invalid' : '';
-        return `<article class="vm-preview-card ${status}"><div class="row between"><div><b>${escape(record.word || 'Incomplete record')}</b><div class="muted" style="margin-top:3px">${escape(record.meaning || record.error || 'Missing Bengali meaning')}</div></div><button class="btn ghost sm" onclick="VocabularyMaster.editParsed(${index})">Edit</button></div><div class="vm-preview-meta"><span>${record.valid ? '✓ Valid' : '⚠ Incomplete · তবু সেভ হবে'}</span><span>Synonyms: ${relations(record, 'synonyms').length}</span><span>Antonyms: ${relations(record, 'antonyms').length}</span><span>Acronyms: ${relations(record, 'acronyms').length}</span><span>${record.tips ? 'Explanation: Available' : 'Explanation: —'}</span>${duplicate ? '<span>Duplicate will be kept</span>' : ''}</div></article>`;
+        return `<article class="vm-preview-card ${status}"><div class="row between"><div><b>${escape(record.word || 'Incomplete record')}</b><div class="muted" style="margin-top:3px">${escape(record.meaning || record.error || 'Missing Bengali meaning')}</div></div><button class="btn ghost sm" onclick="VocabularyMaster.editParsed(${index})">Edit</button></div><div class="vm-preview-meta"><span>${record.valid ? '✓ Valid' : '⚠ Incomplete · তবু সেভ হবে'}</span><span>Synonyms: ${relations(record, 'synonyms').length}</span><span>Antonyms: ${relations(record, 'antonyms').length}</span><span>Acronyms: ${relations(record, 'acronyms').length}</span><span>${record.tips ? 'Explanation: Available' : 'Explanation: -'}</span>${duplicate ? '<span>Duplicate will be kept</span>' : ''}</div></article>`;
   }
   function renderParser() {
     const preview = state.parser.stage === 'preview';
-    const body = `<main class="vm-page">${heading('VOCABULARY PARSER', preview ? 'Review parsed vocabulary' : 'Paste vocabulary text', preview ? 'Save করার আগে প্রতিটি record যাচাই বা edit করুন।' : 'বাংলা বা English serial, word, Bengali meaning, synonyms, antonyms এবং tips detect করা হবে।')} ${preview ? `<section class="vm-parser-preview">${state.parser.records.length ? state.parser.records.map(parserPreviewCard).join('') : '<div class="vm-empty">No parsable vocabulary found.</div>'}</section><div class="vm-parser-footer"><p class="muted" style="margin:0;line-height:1.5">Duplicate vocabulary রাখা হবে—একই word একাধিকবার parse ও save করা যাবে। সব রেকর্ড (${state.parser.records.length}টি) সেভ হবে — কিছু বাদ যাবে না।</p><label class="flabel">সেভ হবে এই category-তে</label><select id="vmTargetCategory" onchange="VocabularyMaster.setParserTarget(this.value)"><option value="">Auto — শব্দের প্রথম অক্ষর অনুযায়ী (A–Z)</option>${'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('').map(letter => `<option value="${letter}" ${state.parser.targetCategory === letter ? 'selected' : ''}>${letter === '#' ? '# (other/অন্য)' : letter}</option>`).join('')}</select><button class="btn" onclick="VocabularyMaster.saveParsed()">Save All (${state.parser.records.length})</button><button class="btn secondary" onclick="VocabularyMaster.backToPaste()">Edit Paste</button></div>` : `<textarea id="vmParserInput" class="vm-parser-area" placeholder="১/ Conjecture : অনুমান করা\n* Synonyms:\n    * Guess : অনুমান\n* Antonyms:\n    * Fact : সত্য / তথ্য\n* Tips & Explanation: মূল শব্দটির সাথে …">${escape(state.parser.text)}</textarea><div class="vm-parser-footer" style="margin-top:14px"><label class="flabel">সেভ করার category</label><select id="vmTargetCategory" onchange="VocabularyMaster.setParserTarget(this.value)"><option value="">Auto — শব্দের প্রথম অক্ষর অনুযায়ী (A–Z)</option>${'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('').map(letter => `<option value="${letter}" ${state.parser.targetCategory === letter ? 'selected' : ''}>${letter === '#' ? '# (other/অন্য)' : letter}</option>`).join('')}</select></div><button class="btn" style="margin-top:14px" onclick="VocabularyMaster.parseInput()">Parse Vocabulary</button><p class="muted" style="margin:10px 2px 0;line-height:1.5">Nothing is saved until you review the parsed records and choose Save All.</p>`}</main>`;
+    const body = `<main class="vm-page">${heading('VOCABULARY PARSER', preview ? 'Review parsed vocabulary' : 'Paste vocabulary text', preview ? 'Save করার আগে প্রতিটি record যাচাই বা edit করুন।' : 'বাংলা বা English serial, word, Bengali meaning, synonyms, antonyms এবং tips detect করা হবে।')} ${preview ? `<section class="vm-parser-preview">${state.parser.records.length ? state.parser.records.map(parserPreviewCard).join('') : '<div class="vm-empty">No parsable vocabulary found.</div>'}</section><div class="vm-parser-footer"><p class="muted" style="margin:0;line-height:1.5">Duplicate vocabulary রাখা হবে, একই word একাধিকবার parse ও save করা যাবে। সব রেকর্ড (${state.parser.records.length}টি) সেভ হবে, কিছু বাদ যাবে না।</p><label class="flabel">সেভ হবে এই category-তে</label><select id="vmTargetCategory" onchange="VocabularyMaster.setParserTarget(this.value)"><option value="">Auto, শব্দের প্রথম অক্ষর অনুযায়ী (A–Z)</option>${'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('').map(letter => `<option value="${letter}" ${state.parser.targetCategory === letter ? 'selected' : ''}>${letter === '#' ? '# (other/অন্য)' : letter}</option>`).join('')}</select><button class="btn" onclick="VocabularyMaster.saveParsed()">Save All (${state.parser.records.length})</button><button class="btn secondary" onclick="VocabularyMaster.backToPaste()">Edit Paste</button></div>` : `<textarea id="vmParserInput" class="vm-parser-area" placeholder="১/ Conjecture : অনুমান করা\n* Synonyms:\n    * Guess : অনুমান\n* Antonyms:\n    * Fact : সত্য / তথ্য\n* Tips & Explanation: মূল শব্দটির সাথে …">${escape(state.parser.text)}</textarea><div class="vm-parser-footer" style="margin-top:14px"><label class="flabel">সেভ করার category</label><select id="vmTargetCategory" onchange="VocabularyMaster.setParserTarget(this.value)"><option value="">Auto, শব্দের প্রথম অক্ষর অনুযায়ী (A–Z)</option>${'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('').map(letter => `<option value="${letter}" ${state.parser.targetCategory === letter ? 'selected' : ''}>${letter === '#' ? '# (other/অন্য)' : letter}</option>`).join('')}</select></div><button class="btn" style="margin-top:14px" onclick="VocabularyMaster.parseInput()">Parse Vocabulary</button><p class="muted" style="margin:10px 2px 0;line-height:1.5">Nothing is saved until you review the parsed records and choose Save All.</p>`}</main>`;
     renderShell(body, { title:'Vocabulary Parser', back:`navigate('${ROUTE}')` });
   }
 
@@ -781,7 +781,7 @@
   function renderPracticeHome() {
     const setup = state.practiceSetup, status = setupAvailability(setup), type = PRACTICE_TYPES[setup.practiceType] || PRACTICE_TYPES.mixed;
     const categoryCounts = Object.fromEntries('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => [letter, state.records.filter(record => record.category === letter).length]));
-    const sourceOptions = `<option value="all" ${setup.sourceType === 'all' ? 'selected' : ''}>All Vocabulary (${state.records.length})</option>${'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(letter => categoryCounts[letter]).map(letter => `<option value="${letter}" ${setup.sourceType === 'category' && setup.category === letter ? 'selected' : ''}>${letter} — ${categoryCounts[letter]} Words</option>`).join('')}<option value="custom" ${setup.sourceType === 'custom' ? 'selected' : ''}>Custom Selection</option>`;
+    const sourceOptions = `<option value="all" ${setup.sourceType === 'all' ? 'selected' : ''}>All Vocabulary (${state.records.length})</option>${'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(letter => categoryCounts[letter]).map(letter => `<option value="${letter}" ${setup.sourceType === 'category' && setup.category === letter ? 'selected' : ''}>${letter}, ${categoryCounts[letter]} Words</option>`).join('')}<option value="custom" ${setup.sourceType === 'custom' ? 'selected' : ''}>Custom Selection</option>`;
     const countOptions = [5,10,15,20,25,30,50].filter(count => count <= status.available).map(count => `<option value="${count}" ${setup.countMode === 'preset' && Number(setup.questionCount) === count ? 'selected' : ''}>${count}</option>`).join('');
     const timeOptions = [[0,'No Time'],[60,'1 Minute'],[120,'2 Minutes'],[300,'5 Minutes'],[600,'10 Minutes'],[900,'15 Minutes'],[1200,'20 Minutes'],[1800,'30 Minutes']].map(([value,label]) => `<option value="${value}" ${setup.timeMode === 'preset' && Number(setup.timeValue) === value ? 'selected' : ''}>${label}</option>`).join('');
     const customFiltered = state.records.filter(record => { const query = lower(setup.customQuery); return !query || [record.word,record.meaning,...relations(record,'synonyms').flatMap(item => [item.word,item.meaning]),...relations(record,'antonyms').flatMap(item => [item.word,item.meaning])].join(' ').toLocaleLowerCase('en-US').includes(query); });
@@ -800,10 +800,10 @@
   function buildQuestion(mode, record, pool = state.records, randomize = state.practiceSetup.randomize) {
     const allMeanings = pool.map(row => row.meaning);
     const allWords = pool.map(row => row.word);
-    if (mode === 'synonym') { const relation = shuffle(relations(record, 'synonyms'))[0]; return { prompt:`${record.word}-এর synonym কোনটি?`, correct:relation.word, options:optionSet(relation.word, pool.flatMap(row => relations(row, 'synonyms').map(item => item.word)).concat(allWords), randomize), explanation:`${relation.word}${relation.meaning ? ` — ${relation.meaning}` : ''}` }; }
-    if (mode === 'antonym') { const relation = shuffle(relations(record, 'antonyms'))[0]; return { prompt:`${record.word}-এর antonym কোনটি?`, correct:relation.word, options:optionSet(relation.word, pool.flatMap(row => relations(row, 'antonyms').map(item => item.word)).concat(allWords), randomize), explanation:`${relation.word}${relation.meaning ? ` — ${relation.meaning}` : ''}` }; }
-    if (mode === 'fill') return { prompt:`“${record.meaning}” অর্থ প্রকাশ করে এমন শব্দটি হলো ____।`, correct:record.word, options:optionSet(record.word, allWords, randomize), explanation:`${record.word} — ${record.meaning}` };
-    return { prompt:`${record.word}-এর বাংলা অর্থ কী?`, correct:record.meaning, options:optionSet(record.meaning, allMeanings, randomize), explanation:`${record.word} — ${record.meaning}` };
+    if (mode === 'synonym') { const relation = shuffle(relations(record, 'synonyms'))[0]; return { prompt:`${record.word}-এর synonym কোনটি?`, correct:relation.word, options:optionSet(relation.word, pool.flatMap(row => relations(row, 'synonyms').map(item => item.word)).concat(allWords), randomize), explanation:`${relation.word}${relation.meaning ? `, ${relation.meaning}` : ''}` }; }
+    if (mode === 'antonym') { const relation = shuffle(relations(record, 'antonyms'))[0]; return { prompt:`${record.word}-এর antonym কোনটি?`, correct:relation.word, options:optionSet(relation.word, pool.flatMap(row => relations(row, 'antonyms').map(item => item.word)).concat(allWords), randomize), explanation:`${relation.word}${relation.meaning ? `, ${relation.meaning}` : ''}` }; }
+    if (mode === 'fill') return { prompt:`“${record.meaning}” অর্থ প্রকাশ করে এমন শব্দটি হলো ____।`, correct:record.word, options:optionSet(record.word, allWords, randomize), explanation:`${record.word}, ${record.meaning}` };
+    return { prompt:`${record.word}-এর বাংলা অর্থ কী?`, correct:record.meaning, options:optionSet(record.meaning, allMeanings, randomize), explanation:`${record.word}, ${record.meaning}` };
   }
   function renderPracticeQuiz() {
     const session = state.practice;
@@ -847,9 +847,9 @@
   function existingQuestion(id) { return (CACHE.questions || []).find(question => question.id === id); }
   function generatedOptions(correct, candidates) { const options = unique([correct, ...shuffle(candidates)]).slice(0, 4); return options.length === 4 ? shuffle(options) : null; }
   function generatedQuestion(record, scope, all) {
-    let kind = 'meaning'; let correct = record.meaning; let prompt = `${record.word}-এর বাংলা অর্থ কী?`; let pool = all.map(row => row.meaning); let explanation = `${record.word} — ${record.meaning}`;
-    if (relations(record, 'synonyms').length) { const item = relations(record, 'synonyms')[0]; kind = 'synonym'; correct = item.word; prompt = `${record.word}-এর synonym কোনটি?`; pool = all.flatMap(row => relations(row, 'synonyms').map(relation => relation.word)).concat(all.map(row => row.word)); explanation = `${item.word}${item.meaning ? ` — ${item.meaning}` : ''}`; }
-    else if (relations(record, 'antonyms').length) { const item = relations(record, 'antonyms')[0]; kind = 'antonym'; correct = item.word; prompt = `${record.word}-এর antonym কোনটি?`; pool = all.flatMap(row => relations(row, 'antonyms').map(relation => relation.word)).concat(all.map(row => row.word)); explanation = `${item.word}${item.meaning ? ` — ${item.meaning}` : ''}`; }
+    let kind = 'meaning'; let correct = record.meaning; let prompt = `${record.word}-এর বাংলা অর্থ কী?`; let pool = all.map(row => row.meaning); let explanation = `${record.word}, ${record.meaning}`;
+    if (relations(record, 'synonyms').length) { const item = relations(record, 'synonyms')[0]; kind = 'synonym'; correct = item.word; prompt = `${record.word}-এর synonym কোনটি?`; pool = all.flatMap(row => relations(row, 'synonyms').map(relation => relation.word)).concat(all.map(row => row.word)); explanation = `${item.word}${item.meaning ? `, ${item.meaning}` : ''}`; }
+    else if (relations(record, 'antonyms').length) { const item = relations(record, 'antonyms')[0]; kind = 'antonym'; correct = item.word; prompt = `${record.word}-এর antonym কোনটি?`; pool = all.flatMap(row => relations(row, 'antonyms').map(relation => relation.word)).concat(all.map(row => row.word)); explanation = `${item.word}${item.meaning ? `, ${item.meaning}` : ''}`; }
     const options = generatedOptions(correct, pool);
     if (!options) return null;
     return { id:`vmq-${record.id}-${kind}`, subjectId:scope.subject.id, topicId:scope.topic.id, source:'vocabulary-master', vocabularyRecordId:record.id, question:prompt, options, answer:options.indexOf(correct), explanation, createdAt:now(), updatedAt:now(), stats:{ attempts:0, correct:0, wrong:0 } };
@@ -880,7 +880,7 @@
     const antonyms = unique(state.records.flatMap(row => relations(row, 'antonyms').map(item => item.word)));
     const acronymWords = unique(state.records.flatMap(row => relations(row, 'acronyms').map(item => item.word)));
     const acronymMeanings = unique(state.records.flatMap(row => relations(row, 'acronyms').map(item => item.meaning)));
-    const pairs = unique(state.records.map(row => `${row.word} — ${row.meaning}`));
+    const pairs = unique(state.records.map(row => `${row.word}, ${row.meaning}`));
     return { words, meanings, synonyms, synonymMeanings, antonyms, acronymWords, acronymMeanings, pairs, record };
   }
   function cardFlashQuestions(record) {
@@ -895,29 +895,29 @@
       candidates.push({ id:`card-flash-${record.id}-${kind}-${candidates.length}`, prompt, options, correct:answer, explanation, type:family, difficulty, sourceWord:record.word, sourceData:sourceData || explanation });
     };
     const word = record.word, meaning = record.meaning, syn = relations(record, 'synonyms'), ant = relations(record, 'antonyms'), acr = relations(record, 'acronyms');
-    const wordPool = bank.words.filter(item => lower(item) !== lower(word)), meaningPool = bank.meanings.filter(item => lower(item) !== lower(meaning)), pairPool = bank.pairs.filter(item => lower(item) !== lower(`${word} — ${meaning}`));
+    const wordPool = bank.words.filter(item => lower(item) !== lower(word)), meaningPool = bank.meanings.filter(item => lower(item) !== lower(meaning)), pairPool = bank.pairs.filter(item => lower(item) !== lower(`${word}, ${meaning}`));
     const synonymPool = [...bank.synonyms, ...wordPool], antonymPool = [...bank.antonyms, ...wordPool], acronymPool = [...bank.acronymWords, ...wordPool];
     const context = String(record.tips || '').trim();
     const usableContext = context && !/^(qa sample only|none|n\/a|not available)$/i.test(context);
 
     // The card's primary Bengali meaning is deliberately asked only once.
-    add('meaning-direct', `“${word}” শব্দটির সঠিক বাংলা meaning কোনটি?`, meaning, meaningPool, `${word} — ${meaning}`, 'main-meaning', 1, 'foundation', `Primary Bengali meaning: ${meaning}`);
+    add('meaning-direct', `“${word}” শব্দটির সঠিক বাংলা meaning কোনটি?`, meaning, meaningPool, `${word}, ${meaning}`, 'main-meaning', 1, 'foundation', `Primary Bengali meaning: ${meaning}`);
 
     // Reverse meaning is a different skill: identify the English entry from a Bengali clue.
     if (meaning) {
-      add('reverse-meaning-1', `“${meaning}” অর্থ প্রকাশ করে এমন English word কোনটি?`, word, wordPool, `${word} — ${meaning}`, 'reverse-meaning', 3, 'standard', `Bengali clue: ${meaning}`);
-      add('reverse-meaning-2', `এই Bengali clue-এর matching vocabulary entry কোনটি: ${meaning}?`, word, wordPool, `${word} — ${meaning}`, 'reverse-meaning', 3, 'standard', `Bengali clue: ${meaning}`);
-      add('reverse-meaning-3', `বাংলা অর্থ দেখে সঠিক English word নির্বাচন করো: “${meaning}”`, word, wordPool, `${word} — ${meaning}`, 'reverse-meaning', 3, 'challenge', `Bengali clue: ${meaning}`);
+      add('reverse-meaning-1', `“${meaning}” অর্থ প্রকাশ করে এমন English word কোনটি?`, word, wordPool, `${word}, ${meaning}`, 'reverse-meaning', 3, 'standard', `Bengali clue: ${meaning}`);
+      add('reverse-meaning-2', `এই Bengali clue-এর matching vocabulary entry কোনটি: ${meaning}?`, word, wordPool, `${word}, ${meaning}`, 'reverse-meaning', 3, 'standard', `Bengali clue: ${meaning}`);
+      add('reverse-meaning-3', `বাংলা অর্থ দেখে সঠিক English word নির্বাচন করো: “${meaning}”`, word, wordPool, `${word}, ${meaning}`, 'reverse-meaning', 3, 'challenge', `Bengali clue: ${meaning}`);
     }
 
     // Synonym questions receive the largest share when synonym data is available.
     syn.forEach((item, index) => {
-      const relationNote = `${word} → synonym: ${item.word}${item.meaning ? ` — ${item.meaning}` : ''}`;
+      const relationNote = `${word} → synonym: ${item.word}${item.meaning ? `, ${item.meaning}` : ''}`;
       add(`synonym-choice-${index}`, `${word}-এর synonym কোনটি?`, item.word, synonymPool, relationNote, 'synonym-identification', 5, 'standard', relationNote);
       add(`synonym-near-${index}`, `নিচের কোন শব্দটি “${word}”-এর কাছাকাছি অর্থ প্রকাশ করে?`, item.word, synonymPool, relationNote, 'synonym-identification', 5, 'standard', relationNote);
       add(`synonym-card-${index}`, `Card data অনুযায়ী “${item.word}” কোন মূল word-এর synonym?`, word, wordPool, relationNote, 'synonym-relation', 4, 'challenge', relationNote);
       if (item.meaning) {
-        const meaningNote = `${item.word} — ${item.meaning}`;
+        const meaningNote = `${item.word}, ${item.meaning}`;
         add(`synonym-bengali-${index}`, `“${item.word}” synonym-এর বাংলা meaning কোনটি?`, item.meaning, [...bank.synonymMeanings, ...meaningPool], meaningNote, 'synonym-bengali', 3, 'standard', meaningNote);
         add(`synonym-gloss-${index}`, `“${item.meaning}” অর্থের সঙ্গে কোন synonym-টি মেলে?`, item.word, synonymPool, meaningNote, 'synonym-gloss', 3, 'challenge', meaningNote);
       }
@@ -925,51 +925,51 @@
 
     // Antonym questions are balanced against synonym availability.
     ant.forEach((item, index) => {
-      const relationNote = `${word} → antonym: ${item.word}${item.meaning ? ` — ${item.meaning}` : ''}`;
+      const relationNote = `${word} → antonym: ${item.word}${item.meaning ? `, ${item.meaning}` : ''}`;
       add(`antonym-choice-${index}`, `${word}-এর antonym কোনটি?`, item.word, antonymPool, relationNote, 'antonym-identification', 5, 'standard', relationNote);
       add(`antonym-opposite-${index}`, `“${item.word}” কোন word-এর বিপরীত অর্থ প্রকাশ করে?`, word, wordPool, relationNote, 'antonym-relation', 4, 'standard', relationNote);
       add(`antonym-card-${index}`, `Card data অনুযায়ী “${item.word}” কোন মূল word-এর antonym?`, word, wordPool, relationNote, 'antonym-relation', 4, 'challenge', relationNote);
       if (item.meaning) {
-        const meaningNote = `${item.word} — ${item.meaning}`;
+        const meaningNote = `${item.word}, ${item.meaning}`;
         add(`antonym-bengali-${index}`, `এই antonym-এর বাংলা meaning কোনটি? “${item.word}”`, item.meaning, [...bank.meanings, ...bank.synonymMeanings], meaningNote, 'antonym-bengali', 3, 'standard', meaningNote);
       }
     });
 
     // Acronym/abbreviation data is used only when the card actually contains it.
     acr.forEach((item, index) => {
-      const relationNote = `${word} → acronym: ${item.word}${item.meaning ? ` — ${item.meaning}` : ''}`;
+      const relationNote = `${word} → acronym: ${item.word}${item.meaning ? `, ${item.meaning}` : ''}`;
       add(`acronym-choice-${index}`, `${word}-এর সঙ্গে যুক্ত acronym / short form কোনটি?`, item.word, acronymPool, relationNote, 'acronym-identification', 4, 'standard', relationNote);
       add(`acronym-card-${index}`, `Card data অনুযায়ী “${item.word}” কোন word-এর abbreviation?`, word, wordPool, relationNote, 'acronym-relation', 3, 'challenge', relationNote);
       if (item.meaning) {
-        const meaningNote = `${item.word} — ${item.meaning}`;
+        const meaningNote = `${item.word}, ${item.meaning}`;
         add(`acronym-expansion-${index}`, `“${item.word}” acronym-এর বাংলা meaning বা expansion কোনটি?`, item.meaning, [...bank.acronymMeanings, ...meaningPool], meaningNote, 'acronym-expansion', 3, 'standard', meaningNote);
       }
     });
 
     // Pair and source explanation questions add variety without inventing facts.
-    add('pair-match', `নিচের কোন pair-টি এই card-এর সঙ্গে সঠিকভাবে মিলে?`, `${word} — ${meaning}`, pairPool, `সঠিক pair: ${word} — ${meaning}`, 'pair-matching', 3, 'standard', `Stored pair: ${word} — ${meaning}`);
-    add('pair-recall', `Word ও বাংলা meaning-এর সম্পূর্ণ সঠিক pair কোনটি?`, `${word} — ${meaning}`, pairPool, `সঠিক pair: ${word} — ${meaning}`, 'pair-matching', 3, 'challenge', `Stored pair: ${word} — ${meaning}`);
-    add('pair-entry', `শব্দ ও অর্থ মিলিয়ে correct entry নির্বাচন করো: “${word}”`, `${word} — ${meaning}`, pairPool, `সঠিক pair: ${word} — ${meaning}`, 'pair-matching', 3, 'standard', `Stored pair: ${word} — ${meaning}`);
+    add('pair-match', `নিচের কোন pair-টি এই card-এর সঙ্গে সঠিকভাবে মিলে?`, `${word}, ${meaning}`, pairPool, `সঠিক pair: ${word}, ${meaning}`, 'pair-matching', 3, 'standard', `Stored pair: ${word}, ${meaning}`);
+    add('pair-recall', `Word ও বাংলা meaning-এর সম্পূর্ণ সঠিক pair কোনটি?`, `${word}, ${meaning}`, pairPool, `সঠিক pair: ${word}, ${meaning}`, 'pair-matching', 3, 'challenge', `Stored pair: ${word}, ${meaning}`);
+    add('pair-entry', `শব্দ ও অর্থ মিলিয়ে correct entry নির্বাচন করো: “${word}”`, `${word}, ${meaning}`, pairPool, `সঠিক pair: ${word}, ${meaning}`, 'pair-matching', 3, 'standard', `Stored pair: ${word}, ${meaning}`);
     if (usableContext) {
-      add('context-identification-1', `এই card-এর explanation অনুযায়ী কোন vocabulary word-টি সঠিক? “${context}”`, word, wordPool, `${word} — ${context}`, 'context-identification', 2, 'challenge', `Card explanation: ${context}`);
-      add('context-identification-2', `“${context}” কোন word-এর সঙ্গে যুক্ত card explanation?`, word, wordPool, `${word} — ${context}`, 'context-identification', 2, 'challenge', `Card explanation: ${context}`);
+      add('context-identification-1', `এই card-এর explanation অনুযায়ী কোন vocabulary word-টি সঠিক? “${context}”`, word, wordPool, `${word}, ${context}`, 'context-identification', 2, 'challenge', `Card explanation: ${context}`);
+      add('context-identification-2', `“${context}” কোন word-এর সঙ্গে যুক্ত card explanation?`, word, wordPool, `${word}, ${context}`, 'context-identification', 2, 'challenge', `Card explanation: ${context}`);
     }
 
     // Dynamic refill: relation-rich cards get more relation variants; no new data is invented.
     const refill = [];
     syn.forEach((item, index) => {
-      refill.push(['synonym-revision-a', `Revision: “${item.word}” কোন word-এর synonym?`, word, wordPool, `${item.word} — synonym of ${word}`, 'synonym-relation']);
+      refill.push(['synonym-revision-a', `Revision: “${item.word}” কোন word-এর synonym?`, word, wordPool, `${item.word}, synonym of ${word}`, 'synonym-relation']);
       refill.push(['synonym-revision-b', `নিচের কোনটি “${word}”-এর recorded synonym?`, item.word, synonymPool, `${word} → synonym: ${item.word}`, 'synonym-identification']);
     });
     ant.forEach((item, index) => {
-      refill.push(['antonym-revision-a', `Revision: “${item.word}” কোন word-এর antonym?`, word, wordPool, `${item.word} — antonym of ${word}`, 'antonym-relation']);
+      refill.push(['antonym-revision-a', `Revision: “${item.word}” কোন word-এর antonym?`, word, wordPool, `${item.word}, antonym of ${word}`, 'antonym-relation']);
       refill.push(['antonym-revision-b', `নিচের কোনটি “${word}”-এর recorded antonym?`, item.word, antonymPool, `${word} → antonym: ${item.word}`, 'antonym-identification']);
     });
     acr.forEach(item => {
-      refill.push(['acronym-revision-a', `“${item.word}” short form-টি কোন card word-এর সঙ্গে যুক্ত?`, word, wordPool, `${item.word} — acronym of ${word}`, 'acronym-relation']);
+      refill.push(['acronym-revision-a', `“${item.word}” short form-টি কোন card word-এর সঙ্গে যুক্ত?`, word, wordPool, `${item.word}, acronym of ${word}`, 'acronym-relation']);
     });
-    refill.push(['reverse-meaning-4', `Vocabulary revision-এ “${meaning}” clue-এর সঠিক entry কোনটি?`, word, wordPool, `${word} — ${meaning}`, 'reverse-meaning']);
-    refill.push(['pair-review', `এই card-এর stored word–meaning pair শনাক্ত করো।`, `${word} — ${meaning}`, pairPool, `${word} — ${meaning}`, 'pair-matching']);
+    refill.push(['reverse-meaning-4', `Vocabulary revision-এ “${meaning}” clue-এর সঠিক entry কোনটি?`, word, wordPool, `${word}, ${meaning}`, 'reverse-meaning']);
+    refill.push(['pair-review', `এই card-এর stored word–meaning pair শনাক্ত করো।`, `${word}, ${meaning}`, pairPool, `${word}, ${meaning}`, 'pair-matching']);
     for (const [kind, prompt, correct, pool, explanation, family] of refill) {
       if (candidates.length >= 180) break;
       add(kind, prompt, correct, pool, explanation, family, family === 'pair-matching' ? 4 : 5, 'challenge', explanation);

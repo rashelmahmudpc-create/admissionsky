@@ -1,0 +1,20 @@
+diff --git a/.github/workflows/deploy-pages-worker.yml b/.github/workflows/deploy-pages-worker.yml
+index ac56931..8f56755 100644
+--- a/.github/workflows/deploy-pages-worker.yml
++++ b/.github/workflows/deploy-pages-worker.yml
+@@ -285,8 +285,13 @@ jobs:
+           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+         run: |
+           set -u
+-          out="$(npx --yes wrangler@4.35.0 pages project create admissionsky --production-branch main 2>&1)"
+-          code=$?
++          # `out="$(cmd)"` takes the command's exit status, and GitHub runs this
++          # block under `bash -e`, so a failing create killed the job right here
++          # before `code=$?` could look at it — the advisory logic never ran and
++          # the deploy below (the step that actually proves the project works)
++          # never got the chance. `|| code=$?` keeps the status out of `-e`'s way.
++          code=0
++          out="$(npx --yes wrangler@4.35.0 pages project create admissionsky --production-branch main 2>&1)" || code=$?
+           printf '%s\n' "$out"
+           if [ "$code" -eq 0 ]; then
+             echo "::notice title=Pages project created::admissionsky did not exist and was created."

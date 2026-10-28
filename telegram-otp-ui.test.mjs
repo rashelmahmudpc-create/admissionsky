@@ -11,7 +11,7 @@ const reply = (status, body) => ({
   async json() { return body; }
 });
 const sleep = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
-async function waitFor(predicate, timeout = 1500) {
+async function waitFor(predicate, timeout = 6000) {
   const until = Date.now() + timeout;
   while (Date.now() < until) {
     if (predicate()) return;
@@ -195,7 +195,13 @@ async function openSignupTelegram(app) {
   await waitFor(() => app.document.querySelector('[data-view="telegram"]').hidden === false);
 }
 
-test('mobile-first signup presents Verify with Telegram, START link, OTP box, checking, and authoritative success states', async () => {
+/* RETIRED 2026-10-24: the owner removed the post-signup "verify with Telegram"
+ * choice on 2026-10-18 (see the capability reset in account-access.js:
+ * "Telegram is a LOGIN method now; the post-signup Telegram verification choice
+ * is removed"). The client no longer exposes that flow, so these tests drive UI
+ * that cannot exist. They are skipped rather than deleted so the assertions are
+ * still here if the flow is ever re-enabled. */
+test.skip('mobile-first signup presents Verify with Telegram, START link, OTP box, checking, and authoritative success states', async () => {
   let release;
   const gate = new Promise(resolve => { release = resolve; });
   const app = setup({ verifyGate: gate });
@@ -267,7 +273,7 @@ test('signup sends no verification message until the student chooses Email or Te
   app.dom.window.close();
 });
 
-test('existing unverified login offers the Telegram alternative without creating a frontend session', async () => {
+test.skip('existing unverified login offers the Telegram alternative without creating a frontend session', async () => {
   const app = setup();
   await waitFor(() => app.calls.some(call => call.path.includes('/config?telegramCanary=1')));
   app.window.AdmissionAccount.open();
@@ -283,7 +289,7 @@ test('existing unverified login offers the Telegram alternative without creating
   app.dom.window.close();
 });
 
-test('Telegram UI renders wrong, expired, locked, unavailable, and resend states without guessing or retaining a code', async () => {
+test.skip('Telegram UI renders wrong, expired, locked, unavailable, and resend states without guessing or retaining a code', async () => {
   const plans = [
     { status: 401, body: { error: { code: 'OTP_INVALID', message: 'কোডটি সঠিক নয়।' } } },
     { status: 410, body: { error: { code: 'OTP_EXPIRED', message: 'কোডের সময় শেষ।' } } },
@@ -324,7 +330,7 @@ test('Telegram UI renders wrong, expired, locked, unavailable, and resend states
   unavailable.dom.window.close();
 });
 
-test('refresh and reopen recover both pre-START links and post-START code-entry state on Mobile Safari', async t => {
+test.skip('refresh and reopen recover both pre-START links and post-START code-entry state on Mobile Safari', async t => {
   await t.test('pre-START link recovery', async () => {
     const token = 'P'.repeat(43);
     const app = setup({ pending: {

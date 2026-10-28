@@ -1,4 +1,4 @@
-/* P13 — D1 backfill: turn the live /api/content document into SQL that fills the
+/* P13, D1 backfill: turn the live /api/content document into SQL that fills the
  * indexed `questions` table the read path queries.
  *
  *   node scripts/p13-d1-backfill.mjs --in content.json --out backfill.sql
@@ -30,7 +30,7 @@ export function difficultyTier(value) {
 }
 
 /* A stable, indexed sort key. topic first so a topic page is one contiguous
-   range, then id — matching idx_q_topic(topic_id, sort_key, id). */
+   range, then id, matching idx_q_topic(topic_id, sort_key, id). */
 export function sortKeyFor(q) {
   return `${q.topicId || ''}|${q.subjectId || ''}|${q.id || ''}`;
 }
@@ -75,7 +75,7 @@ export function buildSql(doc, { now = Date.now(), batch = BATCH, all = false } =
   const questions = Array.isArray(doc && doc.questions) ? doc.questions : [];
   const rows = questions.filter(q => q && q.id).map(q => questionToRow(q, now));
   const out = [];
-  out.push('-- P13 D1 backfill — generated, idempotent.');
+  out.push('-- P13 D1 backfill, generated, idempotent.');
   out.push(SCHEMA.trim());
   // No explicit BEGIN/COMMIT: D1 runs on Durable Objects, which reject SQL
   // transaction statements (wrangler: "use state.storage.transaction()").

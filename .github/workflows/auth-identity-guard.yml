@@ -1,0 +1,78 @@
+name: Auth Identity Guard
+
+# Why this file exists next to `.github/workflows/native-auth-guard.yml`:
+# that workflow is currently `disabled_manually`, so the large identity suite
+# (`npm run test:native-auth`, ~60 files) ran nowhere except inside the manual
+# Email Gateway deploy. The result was quiet and dangerous — the whole F-04
+# split was merged through several pull requests that touched `auth-native/**`
+# and the only checks that ran were the bundle guards.
+#
+# Re-enabling the original is a one-click owner action (Actions → Cloudflare
+# Native Auth Guard → Enable workflow). Until that happens this file is the net.
+# If the original is ever re-enabled, delete this one: two identical runs on
+# every auth change is waste, not safety.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'auth-native/**'
+      - 'auth-worker.js'
+      - 'auth-worker-bundle.mjs'
+      - 'wrangler.auth.toml'
+      - 'native-auth*.test.mjs'
+      - 'telegram-login-split.test.mjs'
+      - 'auth-route.test.mjs'
+      - 'auth-worker-split.test.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/auth-identity-guard.yml'
+  pull_request:
+    paths:
+      - 'auth-native/**'
+      - 'auth-worker.js'
+      - 'auth-worker-bundle.mjs'
+      - 'wrangler.auth.toml'
+      - 'native-auth*.test.mjs'
+      - 'telegram-login-split.test.mjs'
+      - 'auth-route.test.mjs'
+      - 'auth-worker-split.test.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/auth-identity-guard.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auth-identity-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  identity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+      # Plain `npm ci`, like every other workflow here. It runs the install
+      # scripts, which is exactly what downloads better-sqlite3's prebuilt
+      # binary — and the storage suites need it. Skipping scripts looks harmless
+      # and silently turns those suites into failures (measured: 11 of 11).
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Verify the two Workers are byte-for-byte what their sources build
+        run: |
+          npm run check:worker-bundle
+          npm run check:auth-worker-bundle
+      # The one that matters: signup, login, sessions, OTP delivery order,
+      # Telegram, passkeys, security challenges, account state, identity
+      # lifecycle. This is the suite that would catch a split that quietly
+      # invalidates sessions.
+      - name: Verify Firebase Auth security and behaviour
+        run: npm run test:native-auth
+      - name: Verify identity regression suite
+        run: npm run test:identity

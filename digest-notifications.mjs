@@ -1,4 +1,4 @@
-/* Phase 4 (FCM blueprint) — automation digests.
+/* Phase 4 (FCM blueprint), automation digests.
  *
  * The blueprint asks for Daily / Weekly / Monthly automation. Phase G sends a
  * nudge when something needs doing; event notifications celebrate a milestone.
@@ -8,7 +8,7 @@
  * Three rules keep it from becoming noise:
  *   1. A digest is only sent when the period it covers has real study in it.
  *   2. Each period key (day / ISO week / month) is sent at most once, so a cron
- *      tick that repeats — or a worker that was down at the send hour — cannot
+ *      tick that repeats, or a worker that was down at the send hour, cannot
  *      deliver it twice.
  *   3. At most one digest per student per local day, the rarest winning, so the
  *      1st of a Monday does not fire three messages in one breath.
@@ -125,8 +125,8 @@ export function summarize(stats = []) {
 
 const MSG = {
   daily: {
-    bn: s => ({ title: '📊 আজকের হিসাব', body: `আজ ${s.questions}টি প্রশ্ন, শুদ্ধতা ${s.accuracy}% — এই ছন্দ ধরে রাখো` }),
-    en: s => ({ title: '📊 Today in numbers', body: `${s.questions} questions today at ${s.accuracy}% accuracy — keep the rhythm` })
+    bn: s => ({ title: '📊 আজকের হিসাব', body: `আজ ${s.questions}টি প্রশ্ন, শুদ্ধতা ${s.accuracy}%, এই ছন্দ ধরে রাখো` }),
+    en: s => ({ title: '📊 Today in numbers', body: `${s.questions} questions today at ${s.accuracy}% accuracy, keep the rhythm` })
   },
   weekly: {
     bn: s => ({ title: '🗓️ সপ্তাহের রিপোর্ট', body: `গত সপ্তাহে ${s.questions}টি প্রশ্ন, ${s.activeDays} দিন পড়া, শুদ্ধতা ${s.accuracy}%` }),

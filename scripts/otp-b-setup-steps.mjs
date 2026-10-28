@@ -11,7 +11,7 @@ const raw = 'https://raw.githubusercontent.com/rashelmahmudpc-create/admission-h
 
 console.log(`
 ========================================================
- otp-b (ফ্রি Gmail backup) — আপনার ২ ধাপ
+ otp-b (ফ্রি Gmail backup), আপনার ২ ধাপ
 ========================================================
 
 ধাপ ১: script.google.com খুলুন → + New project
@@ -24,7 +24,7 @@ console.log(`
    Ctrl+C দিয়ে কপি, তারপর Apps Script এডিটরে Ctrl+V)
 
 ধাপ ২: বাঁয়ে ⚙️ Project Settings → Script Properties
-        → Add script property — এই ২টা দিন:
+        → Add script property, এই ২টা দিন:
 
     Name             Value
     SHARED_SECRET    ${secret}

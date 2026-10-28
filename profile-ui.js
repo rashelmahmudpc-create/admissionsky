@@ -1,15 +1,15 @@
 /* ============================================================
-   PROFILE & PERSONAL IDENTITY — V2 (Phase 7B, 2026-09-16)
-   Blueprint: owner "Profile System V2" — student identity space.
+   PROFILE & PERSONAL IDENTITY, V2 (Phase 7B, 2026-09-16)
+   Blueprint: owner "Profile System V2", student identity space.
    Rules (unchanged from v1):
    • Code-native, zero-raster: default avatars are generated SVG;
      the only <img> elements are the user's own uploaded avatar.
-   • Every server value renders through esc() — no unsafe HTML.
+   • Every server value renders through esc(), no unsafe HTML.
    • Profile failure never breaks the app or the session.
    • Gentle completion (never pressure); mobile-first, 320px safe.
    • Profile ≠ Progress: the stats strip is a real-data glance,
      charts/progress stay on the Exam & History pages.
-   • Honest states: empty, loading, error — no fake data, no
+   • Honest states: empty, loading, error, no fake data, no
      fake achievements, no blank screens.
    ============================================================ */
 (function () {
@@ -25,13 +25,13 @@
   const $ = (sel, root) => (root || document).querySelector(sel);
   const bnNum = (n) => Number(n || 0).toLocaleString('bn-BD');
   // Years are shown in Bengali digits WITHOUT a thousands separator
-  // ("২০২৬ সাল" — not "২,০২").
-  // Bengali digits generated from Unicode code points (U+09E6..U+09EF) —
+  // ("২০২৬ সাল", not "২,০২").
+  // Bengali digits generated from Unicode code points (U+09E6..U+09EF) -
   // typo-proof mapping, all ten digits guaranteed.
   const BN_DIGITS = Array.from({ length: 10 }, (_, i) => String.fromCharCode(0x09E6 + i));
   const bnYear = (y) => String(y == null ? '' : y).replace(/[0-9]/g, (d) => BN_DIGITS[d]);
   // Server contract: admissionSession is a single 4-digit year (YYYY), max 4
-  // chars. The catalog speaks session ranges ('2025-26') — storing that raw made
+  // chars. The catalog speaks session ranges ('2025-26'), storing that raw made
   // the whole /profile/patch fail validation, so no academic field ever saved.
   // Session ids start in a year, so the leading year is the canonical value.
   const canonicalYear = (v) => {
@@ -50,7 +50,7 @@
     catch (_) { return ''; }
   };
   // DOB renders localized from the canonical ISO date (owner spec: store
-  // canonical, display localized — never the reverse).
+  // canonical, display localized, never the reverse).
   const bnDob = (iso) => {
     if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(String(iso))) return '';
     try { return new Intl.DateTimeFormat('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${iso}T00:00:00`)); }
@@ -64,7 +64,7 @@
 
   // Avatar pipeline bounds.
   // Server stores the encoded image as a D1 BLOB, and Cloudflare caps a D1 row
-  // at 2,000,000 bytes — so the OUTPUT is kept well under that. The 5MB figure
+  // at 2,000,000 bytes, so the OUTPUT is kept well under that. The 5MB figure
   // is the accepted SOURCE photo size: the cropper re-encodes to AVATAR_OUTPUT
   // square JPEG, so a big camera photo is fine as long as it has been cropped.
   const MAX_SOURCE_BYTES = 5 * 1024 * 1024;
@@ -85,7 +85,7 @@
     } catch (_) { return { ...DEFAULT_PREFS }; }
   }
   function savePrefs(next) {
-    try { localStorage.setItem(PREFS_KEY, JSON.stringify({ ...next, v: 1, updatedAt: Date.now() })); } catch (_) { /* private mode — session-only */ }
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify({ ...next, v: 1, updatedAt: Date.now() })); } catch (_) { /* private mode, session-only */ }
   }
 
   const state = {
@@ -109,7 +109,7 @@
     // never runs on the profile route and state.data stays empty. Without this
     // fallback the dashboard could never see the photo (owner report
     // 2026-10-17: "ড্যাশবোর্ডে প্রোফাইলের অনুযায়ী ছবি দেখাবে"). The mount writes
-    // the same cache, so reading it here is both correct and instant — a
+    // the same cache, so reading it here is both correct and instant, a
     // localStorage read, no network, so the header paints with no loading.
     const av = cachedAvatar();
     return av ? `${API}/profile/avatar?v=${av}` : null;
@@ -129,7 +129,7 @@
 
   /* ---------------- API ---------------- */
 
-  // PHASE I — no request may hang forever: controlled timeout, ONE retry,
+  // PHASE I, no request may hang forever: controlled timeout, ONE retry,
   // then a clean error the UI can turn into "Retry".
   const API_TIMEOUT_MS = 8000;
 
@@ -164,7 +164,7 @@
           const err = new Error(body?.error?.message || 'সমস্যা হয়েছে');
           err.status = res.status;
           err.code = body?.error?.code || '';
-          throw err; // deterministic server answer — retrying would not help
+          throw err; // deterministic server answer, retrying would not help
         }
         return body;
       } catch (err) {
@@ -204,7 +204,7 @@
       };
       localStorage.setItem(PROFILE_CACHE_PREFIX + data.publicId, JSON.stringify(entry));
       localStorage.setItem(PROFILE_CACHE_KEY, String(data.publicId));
-    } catch (_) { /* private mode — session-only, still fine */ }
+    } catch (_) { /* private mode, session-only, still fine */ }
   }
   function profileCacheRead() {
     try {
@@ -230,7 +230,7 @@
   function profileQueueWrite(q) {
     try { localStorage.setItem(PROFILE_QUEUE_KEY, JSON.stringify(q)); } catch (_) {}
   }
-  // PENDING_SYNC flush — applied in order, stops at the first failure so
+  // PENDING_SYNC flush, applied in order, stops at the first failure so
   // older writes can't be reordered past a newer one.
   async function flushProfileQueue() {
     const q = profileQueueRead();
@@ -290,8 +290,8 @@
 
   /* ---------------- generated avatars (zero-raster) ---------------- */
 
-  /* ---------------- default avatar system — 20 code-native characters ----------------
-     Owner spec: strong, premium defaults — 10 male + 10 female, zero raster art.
+  /* ---------------- default avatar system, 20 code-native characters ----------------
+     Owner spec: strong, premium defaults, 10 male + 10 female, zero raster art.
      Each entry is a spec; `defaultAvatarSvg` renders it to a 96×96 circular SVG. */
   const AVATAR_SKIN = ['#f3d3b6', '#e8bb92', '#d9a273', '#c68a5c', '#a9713f'];
   const AVATAR_HAIR = ['#241a12', '#3d2a1a', '#573a24', '#15110d', '#6b4527'];
@@ -360,7 +360,7 @@
     const hair = AVATAR_HAIR[spec.hair % AVATAR_HAIR.length];
     const [c1, c2] = spec.outfit;
     const label = String(name || '').trim() || 'Avatar';
-    return `<svg viewBox="0 0 96 96" role="img" aria-label="${esc(label)} — default avatar" data-avatar-id="${esc(gender)}-${idx}">`
+    return `<svg viewBox="0 0 96 96" role="img" aria-label="${esc(label)}, default avatar" data-avatar-id="${esc(gender)}-${idx}">`
       + `<circle cx="48" cy="48" r="48" fill="${spec.bg}"/>`
       + `<circle cx="48" cy="30" r="30" fill="#ffffff" opacity="0.14"/>`
       + avatarHairBack(spec.hairStyle, hair)
@@ -379,7 +379,7 @@
 
   // A stable URL that changes only when the photo does (avatar.updatedAt), so
   // the browser caches it instead of re-downloading on every render. The old
-  // `?ts=${Date.now()}` busted the cache on each paint — that was the repeated
+  // `?ts=${Date.now()}` busted the cache on each paint, that was the repeated
   // loading the owner saw.
   function avatarVersion() {
     const a = state.data && state.data.avatar;
@@ -430,13 +430,13 @@
         out.mcqs = mcqs; out.mocks = mocks; out.mastered = mastered;
         out.earned = ACHIEVEMENTS.filter((a) => achUnlocked(a, { streak: out.streak, mcqs, mocks, mastered })).map((a) => a.id);
       }
-    } catch (_) { /* data unavailable — honest "—" */ }
+    } catch (_) { /* data unavailable, honest "-" */ }
     return out;
   }
 
   // Real-data achievements only (blueprint §15): icon / title / status /
-  // progress / reward. Unlocks are computed from local study data — never faked.
-  // `reward` is a display slot (future-reward compatible; '—' until configured).
+  // progress / reward. Unlocks are computed from local study data, never faked.
+  // `reward` is a display slot (future-reward compatible; '-' until configured).
   const ACHIEVEMENTS = [
     { id: 'first-mock', icon: '📝', name: 'First Mock', desc: 'প্রথম mock test complete করুন', target: 1, progress: (st) => Math.min(1, st.mocks || 0), reward: '—' },
     { id: 'mcq-100', icon: '📚', name: '100 MCQs', desc: 'মোট 100 MCQ complete করুন', target: 100, progress: (st) => Math.min(100, st.mcqs || 0), reward: '—' },
@@ -471,7 +471,7 @@
     const safe = Math.min(100, Math.max(0, Number(pct) || 0));
     const off = c * (1 - safe / 100);
     // The ring sweeps from empty to the real value, and the number counts up in
-    // step — purely presentational, the value itself is always the server figure.
+    // step, purely presentational, the value itself is always the server figure.
     return `<span class="pp-ring${animate ? ' pp-ring-anim' : ''}" aria-hidden="true" style="--pp-ring-c:${c.toFixed(1)};--pp-ring-off:${off.toFixed(1)}">
       <svg viewBox="0 0 64 64">
         <circle cx="32" cy="32" r="${r}" fill="none" stroke="rgba(15,107,79,.12)" stroke-width="6"/>
@@ -516,8 +516,8 @@
             <div class="pp-kicker">PROFILE COMPLETION · ${esc(completionBand(pct))}</div>
             <div class="pp-comp-bar" aria-hidden="true"><i style="--pp-comp-w:${Math.min(100, Math.max(0, pct))}%"></i></div>
             <p class="pp-hint">${pending.length
-              ? `${done}/${COMPLETION_STEPS.length} সম্পূর্ণ — নিচের যেটা বাকি, সেটায় চাপ দিলেই সরাসরি সেই ঘরে চলে যাবে।`
-              : 'Profile সম্পূর্ণ — ধন্যবাদ।'}</p>
+              ? `${done}/${COMPLETION_STEPS.length} সম্পূর্ণ, নিচের যেটা বাকি, সেটায় চাপ দিলেই সরাসরি সেই ঘরে চলে যাবে।`
+              : 'Profile সম্পূর্ণ, ধন্যবাদ।'}</p>
             <button class="pp-comp-cta" data-role="open-edit-page" type="button">Profile সম্পূর্ণ করুন</button>
           </div>
         </div>
@@ -561,7 +561,7 @@
 .pp-ring b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:800;color:#0b5640}
 .pp-ac-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:none;background:none;font:inherit;color:inherit;padding:10px 6px;cursor:pointer;border-radius:12px}`;
 
-  // Reference hero wash — code-native SVG (soft mountains + graduation cap),
+  // Reference hero wash, code-native SVG (soft mountains + graduation cap),
   // never a raster image.
   const HERO_WASH = `
     <svg class="pp-hero-wash" viewBox="0 0 360 190" preserveAspectRatio="xMaxYMax slice" aria-hidden="true" focusable="false">
@@ -592,7 +592,7 @@
           <div class="pp-hero-idblock">
             <div class="pp-hero-name">${esc(p.fullName || 'নাম যোগ করো')}</div>
             <button class="pp-hero-chip" data-role="copy-public-id" type="button" title="ট্যাপ করে কপি করো">
-              <span>AH-ID</span><b>${esc(d.publicId || '—')}</b><i aria-hidden="true">⧉</i>
+              <span>AH-ID</span><b>${esc(d.publicId || '-')}</b><i aria-hidden="true">⧉</i>
             </button>
             <div class="pp-hero-line">🎓 Admission Candidate${year ? ` · ${esc(bnYear(year))}` : ''}</div>
             ${p.bio ? `<div class="pp-hero-bio">${esc(p.bio)}</div>` : ''}
@@ -611,9 +611,9 @@
         <b class="pp-stat-num">${value}</b>
         <small>${label}</small>
       </div>`;
-    const v = (x) => (x == null || !s.ready ? '—' : bnNum(x));
+    const v = (x) => (x == null || !s.ready ? '-' : bnNum(x));
     return `
-      <div class="pp-stats" data-role="go-exam" role="button" tabindex="0" aria-label="Study stats — Exam পেজে যাও">
+      <div class="pp-stats" data-role="go-exam" role="button" tabindex="0" aria-label="Study stats, Exam পেজে যাও">
         ${cell('🔥', v(s.streak), 'Day Streak')}
         ${cell('📚', v(s.mcqs), 'MCQs Done')}
         ${cell('📝', v(s.mocks), 'Mock Tests')}
@@ -637,7 +637,7 @@
         <div class="pp-card-head"><span class="pp-card-title">Academic Identity</span><button class="pp-card-edit" data-role="open-academic" type="button">Edit</button></div>
         ${row('🎯', 'TARGET UNIVERSITIES', targets.map((t) => `${t.name}${t.unit ? ` (${t.unit})` : ''}`).join(', ') || 'Add target universities', 'open-academic', 'Add target universities')}
         ${row('📅', 'ADMISSION SESSION', p.admissionSession ? bnYear(sessionLabel(p.admissionSession)) : 'Not set', 'open-academic', 'Session যোগ করো')}
-        ${row('🚀', 'ACADEMIC GOAL', p.academicGoal || 'Set a goal', 'open-academic', 'Set a goal — specific লক্ষ্য')}
+        ${row('🚀', 'ACADEMIC GOAL', p.academicGoal || 'Set a goal', 'open-academic', 'Set a goal, specific লক্ষ্য')}
         ${row('🧪', 'PREFERRED SUBJECTS', Array.isArray(p.subjects) && p.subjects.length ? p.subjects.join(', ') : 'Add subjects', 'open-academic', 'কোন subject পছন্দ?')}
       </div>`;
   }
@@ -654,11 +654,11 @@
             return `<div class="pp-jm ${done ? 'on' : 'off'}">
               <span class="pp-jm-dot" aria-hidden="true">${done ? '✓' : '○'}</span>
               <small>${esc(m.label)}</small>
-              ${m.ts ? `<small class="pp-jm-date">${esc(bnDate(m.ts))}</small>` : '<small class="pp-jm-date">—</small>'}
+              ${m.ts ? `<small class="pp-jm-date">${esc(bnDate(m.ts))}</small>` : '<small class="pp-jm-date">-</small>'}
             </div>`;
           }).join('')}
         </div>
-        <p class="pp-fine">Real milestones only — কিছু না করলে fake step দেখাবে না।</p>
+        <p class="pp-fine">Real milestones only, কিছু না করলে fake step দেখাবে না।</p>
       </div>`;
   }
 
@@ -686,7 +686,7 @@
           ${ACHIEVEMENTS.slice(0, 3).map((a) => achievementRowMarkup(a, s)).join('')}
         </div>
         ${s.ready && s.earned.length === 0 ? '<p class="pp-ach-empty" data-role="achievements-empty">প্রথম achievement-এর জন্য practice শুরু করুন।</p>' : ''}
-        <p class="pp-fine">Real data থেকে unlock হয় — কোনো fake progress নেই।</p>
+        <p class="pp-fine">Real data থেকে unlock হয়, কোনো fake progress নেই।</p>
       </div>`;
   }
 
@@ -711,7 +711,7 @@
         ${row('🌐', 'Language', pf.language === 'en' ? 'English' : 'বাংলা (Bengali)', 'pref-language')}
         ${row('🎨', 'Appearance', pf.appearance === 'dark' ? 'Dark' : pf.appearance === 'system' ? 'System' : pf.appearance === 'green' ? 'Premium Green' : 'Light Mode', 'pref-appearance')}
         ${row('🤖', 'AI Personalization', state.aiPrefs ? aiPrefsSummary(state.aiPrefs) : 'Set your style', 'open-ai-prefs')}
-        <p class="pp-fine">Explicit settings — তুমি কী চাও সেটা তুমিই ঠিক করো।</p>
+        <p class="pp-fine">Explicit settings, তুমি কী চাও সেটা তুমিই ঠিক করো।</p>
       </div>`;
   }
 
@@ -724,7 +724,7 @@
         <div class="pp-priv-row">
           <div>
             <div class="pp-value">Public Profile</div>
-            <p class="pp-fine">${isPublic ? 'তোমার public তথ্য অন্যরা দেখতে পাবে' : 'Public নয় — কেউ দেখতে পাবে না'}</p>
+            <p class="pp-fine">${isPublic ? 'তোমার public তথ্য অন্যরা দেখতে পাবে' : 'Public নয়, কেউ দেখতে পাবে না'}</p>
           </div>
           <button class="pp-switch ${isPublic ? 'on' : ''}" data-role="toggle-public" type="button" role="switch" aria-checked="${isPublic}" aria-label="Public Profile toggle"><i></i></button>
         </div>
@@ -758,7 +758,7 @@
         ${row('🎨', 'Appearance', pf.appearance === 'dark' ? 'Dark' : pf.appearance === 'system' ? 'System' : pf.appearance === 'green' ? 'Premium Green' : 'Light Mode', 'pref-appearance')}
         ${row('🤖', 'AI Personalization', state.aiPrefs ? aiPrefsSummary(state.aiPrefs) : 'Set your style', 'open-ai-prefs')}
       </div>
-      <p class="pp-fine">Explicit settings — তুমি কী চাও সেটা তুমিই ঠিক করো।</p>
+      <p class="pp-fine">Explicit settings, তুমি কী চাও সেটা তুমিই ঠিক করো।</p>
       <button class="pp-btn-primary pp-page-save" data-role="prefs-save" type="button">Save Changes</button>
       <div data-role="profile-toast" class="pp-toast" aria-live="polite"></div>
       <div data-role="sheet-host"></div>`;
@@ -780,7 +780,7 @@
         <div class="pp-priv-row">
           <div>
             <div class="pp-value">Public Profile</div>
-            <p class="pp-fine">${isPublic ? 'Allow others to view your public information' : 'Public নয় — কেউ দেখতে পাবে না'}</p>
+            <p class="pp-fine">${isPublic ? 'Allow others to view your public information' : 'Public নয়, কেউ দেখতে পাবে না'}</p>
           </div>
           <button class="pp-switch ${isPublic ? 'on' : ''}" data-role="toggle-public" type="button" role="switch" aria-checked="${isPublic}" aria-label="Public Profile toggle"><i></i></button>
         </div>
@@ -794,7 +794,7 @@
         <h3>What will be visible?</h3>
         ${visible.length
           ? `<ul>${visible.map((x) => `<li><span aria-hidden="true">✓</span>${x}</li>`).join('')}</ul>`
-          : '<p class="pp-fine">Private — এখনো কিছুই public নয়।</p>'}
+          : '<p class="pp-fine">Private, এখনো কিছুই public নয়।</p>'}
       </div>
       ${v !== 'private' ? `
       <button class="card pp-card pp-priv-row" data-role="open-visibility" type="button">
@@ -826,7 +826,7 @@
 
   // The floating account launcher pill was removed from the app shell
   // (owner directive). The Profile tab is the single account entry
-  // point — this card keeps Security/Passkey/Devices/Log Out reachable.
+  // point, this card keeps Security/Passkey/Devices/Log Out reachable.
   function accountCard() {
     return `
       <button class="card pp-card pp-tap" data-role="open-account" data-account-card-contract="profile-account-entry-v1" type="button">
@@ -847,7 +847,7 @@
     security: privacyCard
   };
 
-  // PHASE J — error boundary: one broken section must never blank the page.
+  // PHASE J, error boundary: one broken section must never blank the page.
   const safeSection = (key, fn) => {
     try {
       const html = fn();
@@ -855,7 +855,7 @@
       return '';
     } catch (err) {
       // Isolate the failure; the rest of the profile keeps working.
-      return `<div class="card pp-card pp-section-error" data-role="section-error" data-section="${key}"><p class="pp-fine">এই অংশটা দেখা যাচ্ছে না — বাকি সব ঠিক আছে।</p></div>`;
+      return `<div class="card pp-card pp-section-error" data-role="section-error" data-section="${key}"><p class="pp-fine">এই অংশটা দেখা যাচ্ছে না, বাকি সব ঠিক আছে।</p></div>`;
     }
   };
 
@@ -903,7 +903,7 @@
         </label>
         <div class="pp-field pp-field-ro" data-email-row-contract="email-readonly-v1">
           <span>Email <em class="pp-ro-chip">Not editable</em></span>
-          <div class="pp-ro-value">${esc(state.data?.email || p.email || '—')}</div>
+          <div class="pp-ro-value">${esc(state.data?.email || p.email || '-')}</div>
         </div>
         <label class="pp-field"><span>Mobile Number ${p.mobile ? '<em class="pp-saved-chip">✓ Saved</em>' : '<em>(optional)</em>'}</span>
           <input id="pp-edit-mobile" type="tel" inputmode="tel" maxlength="16" autocomplete="tel" value="${esc(p.mobile || '')}" placeholder="+8801XXXXXXXXX">
@@ -925,7 +925,7 @@
           <small class="pp-bio-count" data-role="bio-count">${bioLen}/280</small>
         </label>
         <p class="pp-fine" data-role="sheet-error" hidden></p>
-        <p class="pp-fine pp-edit-dirty" data-role="edit-dirty" hidden>অপরিবর্তিত কিছু নেই — পরিবর্তন করলে Save হবে</p>
+        <p class="pp-fine pp-edit-dirty" data-role="edit-dirty" hidden>অপরিবর্তিত কিছু নেই, পরিবর্তন করলে Save হবে</p>
         <button class="pp-btn-primary pp-edit-save" data-role="edit-save" type="button" data-save-engine-contract="central-save-v1">Save Changes</button>
       </div>`;
   }
@@ -955,7 +955,7 @@
           <div><b>Best photo size</b><small>ছবি সর্বোচ্চ 5MB · JPG, PNG · ক্রপ করে 1:1 করা হবে</small></div>
         </div>
         ${state.avatarError ? `<p class="pp-fine pp-av-err" role="alert">${esc(state.avatarError)}</p>` : ''}
-        <div class="pp-av-sec" data-role="avatar-gender-sec">Default Avatars<small class="pp-av-sec-note">ছেলে / মেয়ে — যেটা তোমার সাথে মেলে</small></div>
+        <div class="pp-av-sec" data-role="avatar-gender-sec">Default Avatars<small class="pp-av-sec-note">ছেলে / মেয়ে, যেটা তোমার সাথে মেলে</small></div>
         <div class="pp-av-gender" role="tablist" aria-label="Avatar set">
           ${['boy', 'girl'].map((g) => `
             <button class="pp-av-tab ${(state.prefs.avatarGender || 'boy') === g ? 'on' : ''}" data-role="pick-avatar-gender" data-gender="${g}" type="button" role="tab" aria-selected="${(state.prefs.avatarGender || 'boy') === g}">
@@ -988,13 +988,13 @@
       </div>`;
   }
 
-  /* ------- Academic Identity — dedicated edit page (reference panel 3) -------
-     Owner spec: units/subjects come from window.AH_AcademicCatalog —
+  /* ------- Academic Identity, dedicated edit page (reference panel 3) -------
+     Owner spec: units/subjects come from window.AH_AcademicCatalog -
      university + session driven, never a generic A/B/C/D assumption.
      The UI selectors below contain NO unit arrays of their own. */
   const acadCat = () => (typeof window.AH_AcademicCatalog === 'object' && window.AH_AcademicCatalog) || null;
   // The draft stores the server-canonical 4-digit year, but the catalog keys its
-  // units/subjects by session id ('2025-26') — bridge the two here so unit and
+  // units/subjects by session id ('2025-26'), bridge the two here so unit and
   // subject lists stay correct for the session the student actually picked.
   const acadSessionId = (cat, year) => {
     const c = canonicalYear(year);
@@ -1013,7 +1013,7 @@
       manual: new Set(Array.isArray(p.subjects) ? p.subjects.map((x) => String(x)).filter(Boolean) : []),
       pendingUni: '',
       // Typed-but-unpicked text. Kept in the draft so a re-render (session or
-      // unit change) never wipes what the student is still typing — the input
+      // unit change) never wipes what the student is still typing, the input
       // used to be re-emitted empty, so the box appeared to "clear itself".
       pendingUniName: '',
       pendingUnit: '',
@@ -1022,7 +1022,7 @@
   }
 
   // Unit change re-validates: subjects outside the new unit's official list
-  // are dropped (manually added ones are kept — owner data is never lost).
+  // are dropped (manually added ones are kept, owner data is never lost).
   function acadInvalidateSubjects() {
     const d = state.acad;
     const cat = acadCat();
@@ -1059,7 +1059,7 @@
     const sessions = cat ? cat.listSessions() : [];
     const sessionOpts = sessions.map((s) => `<option value="${esc(canonicalYear(s.id))}" ${canonicalYear(d.session) === canonicalYear(s.id) ? 'selected' : ''}>${esc(s.label)}${s.status === 'provisional' ? ' (provisional)' : ''}</option>`).join('');
     // extra = attributes for the CHIP SPAN itself (a leaked text arg renders
-    // raw markup — contract: no-attribute-leak-v1).
+    // raw markup, contract: no-attribute-leak-v1).
     const chip = (label, xrole, extra) => `<span class="pp-chip pp-chip-lg"${extra || ''}>${label}<button class="pp-chip-x" data-role="${xrole}" type="button" aria-label="মুছে ফেলো">×</button></span>`;
     const targetsHtml = d.targets.map((t, i) => `
       <span class="pp-chip pp-chip-lg pp-acad-target" data-index="${i}">
@@ -1075,8 +1075,8 @@
           <div id="pp-acad-ulist" class="pp-acad-ulist" role="listbox" hidden></div>
         </div>
         <select id="pp-acad-unit" ${ctx.units.length ? '' : 'disabled'} aria-label="Unit">
-          <option value="">Unit —</option>
-          ${ctx.units.map((u) => `<option value="${esc(u.id)}" ${ctx.unitId === u.id ? 'selected' : ''}>${esc(u.id)} — ${esc(cat.groupLabel(ctx.uniId, acadSessionId(cat, d.session), u.id))}</option>`).join('')}
+          <option value="">Unit -</option>
+          ${ctx.units.map((u) => `<option value="${esc(u.id)}" ${ctx.unitId === u.id ? 'selected' : ''}>${esc(u.id)}, ${esc(cat.groupLabel(ctx.uniId, acadSessionId(cat, d.session), u.id))}</option>`).join('')}
         </select>
         <input id="pp-acad-year" type="text" maxlength="10" placeholder="Year (optional)" aria-label="Year">
         <button class="pp-btn-secondary" data-role="acad-add-target" type="button">+ Add</button>
@@ -1084,7 +1084,7 @@
       <p class="pp-fine" data-acad-catalog-contract="catalog-driven-units-v1">Unit ও subject নির্ভর করে নির্বাচিত university + session-এর official catalog-এর ওপর।</p>` : '<p class="pp-fine">সর্বোচ্চ 5টা target রাখা যায়।</p>';
     const subjChecked = (s) => d.subjects.some((x) => x.toLowerCase() === s.toLowerCase());
     const officialBlock = ctx.subjects.length
-      ? `<p class="pp-fine">Official subjects — <b>${esc(ctx.uniName)} · ${esc(ctx.unitId)} · ${esc(sessionLabel(d.session) || '—')}</b>:</p>
+      ? `<p class="pp-fine">Official subjects, <b>${esc(ctx.uniName)} · ${esc(ctx.unitId)} · ${esc(sessionLabel(d.session) || '-')}</b>:</p>
         <div class="pp-acad-subjgrid" data-role="acad-subjgrid">
           ${ctx.subjects.map((s) => `<label class="pp-acad-subj"><input type="checkbox" class="pp-acad-subjbox" value="${esc(s)}" ${subjChecked(s) ? 'checked' : ''}><span>${esc(s)}</span></label>`).join('')}
         </div>`
@@ -1100,13 +1100,13 @@
       <section class="pp-card pp-acad-sec">
         <h2>📅 Admission Session</h2>
         <label class="pp-field"><span>Session</span>
-          <div class="pp-select-wrap"><select id="pp-acad-session" aria-label="Admission session"><option value="">— Select —</option>${sessionOpts}</select><svg aria-hidden="true" viewBox="0 0 12 8"><path d="M1 1.8 6 6.6 11 1.8"/></svg></div>
+          <div class="pp-select-wrap"><select id="pp-acad-session" aria-label="Admission session"><option value="">- Select -</option>${sessionOpts}</select><svg aria-hidden="true" viewBox="0 0 12 8"><path d="M1 1.8 6 6.6 11 1.8"/></svg></div>
         </label>
       </section>
       <section class="pp-card pp-acad-sec">
         <h2>🎯 Target Universities <em class="pp-fine">(১ম = first choice)</em></h2>
         <div class="pp-acad-chips">
-          ${targetsHtml || '<p class="pp-fine">এখনো কোনো target নেই — নিচে যোগ করো।</p>'}
+          ${targetsHtml || '<p class="pp-fine">এখনো কোনো target নেই, নিচে যোগ করো।</p>'}
         </div>
         ${addRow}
       </section>
@@ -1136,7 +1136,7 @@
       <button class="pp-btn-primary pp-acad-save" data-role="acad-save" type="button">Save Changes</button>`;
   }
 
-  // Catalog search suggestions — swap the list node only (keeps input focus).
+  // Catalog search suggestions, swap the list node only (keeps input focus).
   function updateUniSuggestions(input) {
     const box = $('#pp-acad-ulist');
     if (!box) return;
@@ -1238,11 +1238,11 @@
           return `<div class="pp-jl-row ${done ? 'on' : 'off'}">
             <span class="pp-jm-dot" aria-hidden="true">${done ? '✓' : '○'}</span>
             <span><b>${esc(m.label)}</b><small>${esc(m.hint)}</small></span>
-            ${m.ts ? `<em>${esc(bnDate(m.ts))}</em>` : '<em>—</em>'}
+            ${m.ts ? `<em>${esc(bnDate(m.ts))}</em>` : '<em>-</em>'}
           </div>`;
         }).join('')}
       </div>
-      <p class="pp-fine">সব milestone real data থেকে আসে — skip/fake করা যায় না।</p>
+      <p class="pp-fine">সব milestone real data থেকে আসে, skip/fake করা যায় না।</p>
       <div class="pp-sheet-actions"><button class="pp-btn-ghost" data-role="sheet-close" type="button">বন্ধ করো</button></div>`);
   }
 
@@ -1252,7 +1252,7 @@
       <div class="pp-ach-list pp-ach-list-full">
         ${ACHIEVEMENTS.map((a) => achievementRowMarkup(a, s)).join('')}
       </div>
-      <p class="pp-fine">Real study data থেকে unlock হয় — কোনো fake progress নেই।</p>
+      <p class="pp-fine">Real study data থেকে unlock হয়, কোনো fake progress নেই।</p>
       <div class="pp-sheet-actions"><button class="pp-btn-ghost" data-role="sheet-close" type="button">বন্ধ করো</button></div>`);
   }
 
@@ -1261,20 +1261,20 @@
     const opt = (val, label, desc, disabled = false, note = '') => `
       <button class="pp-vopt ${pf.language === val ? 'on' : ''} ${disabled ? 'disabled' : ''}" data-role="pick-language" data-value="${val}" ${disabled ? 'disabled' : ''} type="button">
         <span class="pp-vradio" aria-hidden="true">${pf.language === val ? '●' : '○'}</span>
-        <span><b>${esc(label)}</b><small>${esc(desc)}${note ? ` — ${esc(note)}` : ''}</small></span>
+        <span><b>${esc(label)}</b><small>${esc(desc)}${note ? `, ${esc(note)}` : ''}</small></span>
       </button>`;
     const appt = (val, label, desc, disabled = false, note = '') => `
       <button class="pp-vopt ${pf.appearance === val ? 'on' : ''} ${disabled ? 'disabled' : ''}" data-role="pick-appearance" data-value="${val}" ${disabled ? 'disabled' : ''} type="button">
         <span class="pp-vradio" aria-hidden="true">${pf.appearance === val ? '●' : '○'}</span>
-        <span><b>${esc(label)}</b><small>${esc(desc)}${note ? ` — ${esc(note)}` : ''}</small></span>
+        <span><b>${esc(label)}</b><small>${esc(desc)}${note ? `, ${esc(note)}` : ''}</small></span>
       </button>`;
     return sheetShell('Preferences', `
-      <div class="pp-kicker">LANGUAGE — whole app</div>
+      <div class="pp-kicker">LANGUAGE, whole app</div>
       <div class="pp-vlist">
-        ${opt('bn', 'বাংলা (Bengali)', 'ডিফল্ট — সব পেজে প্রয়োগ হয়')}
+        ${opt('bn', 'বাংলা (Bengali)', 'ডিফল্ট, সব পেজে প্রয়োগ হয়')}
         ${opt('en', 'English', 'সব পেজে প্রয়োগ হয়')}
       </div>
-      <div class="pp-kicker" style="margin-top:14px">APPEARANCE — all pages, nav, cards</div>
+      <div class="pp-kicker" style="margin-top:14px">APPEARANCE, all pages, nav, cards</div>
       <div class="pp-vlist">
         ${appt('light', 'Light', 'ডিফল্ট থিম')}
         ${appt('dark', 'Dark', 'রাতের মোড')}
@@ -1293,7 +1293,7 @@
   function aiPrefsSheet() {
     const pf = state.aiPrefs || AI_PREFS_DEFAULT;
     return sheetShell('AI Personalization', `
-      <p class="pp-fine" data-ai-prefs-contract="ai-personalization-v1">এই পছন্দ শুধু তোমার AI চ্যাটে প্রয়োগ হয় — অন্য user-এর সাথে কখনো share হয় না।</p>
+      <p class="pp-fine" data-ai-prefs-contract="ai-personalization-v1">এই পছন্দ শুধু তোমার AI চ্যাটে প্রয়োগ হয়, অন্য user-এর সাথে কখনো share হয় না।</p>
       <div class="pp-kicker">LANGUAGE STYLE</div>
       <div class="pp-vlist">
         ${aiOpt('pick-ai-style', 'bn', 'বাংলা', pf.langStyle)}
@@ -1327,7 +1327,7 @@
     'সবসময় সহজ বাংলায়, উদাহরণ দিয়ে বোঝাবে',
     'উত্তর ছোট রাখবে, পয়েন্ট আকারে দেবে',
     'প্রতিটা উত্তরের শেষে একটা ছোট প্র্যাকটিস প্রশ্ন দেবে',
-    'আমি মেডিকেল ভর্তি পরীক্ষার্থী — সেই অনুযায়ী বোঝাবে'
+    'আমি মেডিকেল ভর্তি পরীক্ষার্থী, সেই অনুযায়ী বোঝাবে'
   ];
   function aiInstrSection() {
     const saved = state.aiInstr && typeof state.aiInstr.text === 'string' ? state.aiInstr.text : '';
@@ -1336,7 +1336,7 @@
     const ex = AI_INSTR_EXAMPLES.map((t) => `<button class="pp-vopt" data-role="ai-instr-example" data-value="${esc(t)}" type="button" style="padding:6px 10px;font-size:12.5px;width:auto"><span>${esc(t)}</span></button>`).join('');
     return `
       <div class="pp-kicker" style="margin-top:16px" data-ai-instr-contract="sky-instructions-v1">SKY-কে তোমার নির্দেশনা</div>
-      <p class="pp-fine">এক লাইনে লেখো Sky কীভাবে উত্তর দেবে — Sky সবসময় সেটা মানবে। শুধু পড়াশোনার ধরন; খারাপ কিছু রাখা যাবে না।</p>
+      <p class="pp-fine">এক লাইনে লেখো Sky কীভাবে উত্তর দেবে, Sky সবসময় সেটা মানবে। শুধু পড়াশোনার ধরন; খারাপ কিছু রাখা যাবে না।</p>
       ${off ? '<p class="pp-fine">এই সুবিধা এখন সাময়িক বন্ধ আছে।</p>' : `
       <label class="pp-field" style="margin-top:6px"><span>নির্দেশনা <em data-role="ai-instr-count">${bnNum(val.length)}/${bnNum(AI_INSTR_MAX)}</em></span>
         <textarea id="pp-ai-instr" rows="3" maxlength="${AI_INSTR_MAX}" placeholder="যেমন: সবসময় উদাহরণ দিয়ে বোঝাবে, শেষে একটা MCQ দেবে">${esc(val)}</textarea>
@@ -1381,9 +1381,9 @@
       if (r.ok) {
         state.aiInstr = { text: r.body.text || '' };
         state.aiInstrDraft = undefined;
-        state.aiInstrMsg = r.body.text ? 'সেভ হয়েছে ✓ — এখন থেকে Sky এভাবে উত্তর দেবে।' : 'নির্দেশনা মুছে ফেলা হয়েছে — Sky আগের মতো উত্তর দেবে।';
+        state.aiInstrMsg = r.body.text ? 'সেভ হয়েছে ✓, এখন থেকে Sky এভাবে উত্তর দেবে।' : 'নির্দেশনা মুছে ফেলা হয়েছে, Sky আগের মতো উত্তর দেবে।';
       } else {
-        state.aiInstrMsg = (r.body && r.body.message) || (r.status === 401 ? 'নির্দেশনা সেভ করতে লগইন করো।' : 'সেভ করা গেল না — আবার চেষ্টা করো।');
+        state.aiInstrMsg = (r.body && r.body.message) || (r.status === 401 ? 'নির্দেশনা সেভ করতে লগইন করো।' : 'সেভ করা গেল না, আবার চেষ্টা করো।');
       }
     } catch (_) {
       state.aiInstrMsg = 'ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করো।';
@@ -1412,9 +1412,9 @@
     try {
       const body = await api('/api/ai/prefs', { method: 'POST', body: JSON.stringify(state.aiPrefs) });
       state.aiPrefs = body?.prefs || state.aiPrefs;
-      refreshAiPrefsSheet('Save হয়েছে ✓ — পরের chat-এই প্রয়োগ হবে।');
+      refreshAiPrefsSheet('Save হয়েছে ✓, পরের chat-এই প্রয়োগ হবে।');
     } catch (e) {
-      refreshAiPrefsSheet('Save fail — আবার চেষ্টা করো।');
+      refreshAiPrefsSheet('Save fail, আবার চেষ্টা করো।');
       toast('AI preferences save fail', true);
     } finally { state.aiSaving = false; }
   }
@@ -1434,7 +1434,7 @@
   function visibilitySheet() {
     const v = state.data?.profile?.visibility || 'private';
     const options = [
-      ['private', 'Private', 'কোনো public profile নেই — সব গোপন'],
+      ['private', 'Private', 'কোনো public profile নেই, সব গোপন'],
       ['limited', 'Limited', 'নাম, AH-ID আর ছবি public-এ (leaderboard-style)'],
       ['public', 'Public', 'নাম, ছবি, সব লক্ষ্য, session, goal, bio আর completion public-এ']
     ];
@@ -1446,7 +1446,7 @@
             <span><b>${esc(title)}</b><small>${esc(desc)}</small></span>
           </button>`).join('')}
       </div>
-      <p class="pp-fine">Email, mobile, জন্মের তারিখ আর school-এর বিস্তারিত কখনো public হবে না — কোনো visibility-তেই নয়।</p>
+      <p class="pp-fine">Email, mobile, জন্মের তারিখ আর school-এর বিস্তারিত কখনো public হবে না, কোনো visibility-তেই নয়।</p>
       <p class="pp-fine" data-role="sheet-error" hidden></p>
       <div class="pp-sheet-actions">
         <button class="pp-btn-ghost" data-role="sheet-close" type="button">বাতিল</button>
@@ -1506,7 +1506,7 @@
     };
     im.onerror = () => {
       URL.revokeObjectURL(url);
-      state.avatarError = 'ছবিটা পড়া যায়নি — অন্য ছবি দিয়ে দেখুন।';
+      state.avatarError = 'ছবিটা পড়া যায়নি, অন্য ছবি দিয়ে দেখুন।';
       renderCurrentView();
     };
     im.src = url;
@@ -1548,7 +1548,7 @@
       document.body.appendChild(host);
     }
     host.innerHTML = cropModalMarkup();
-    // The crop dialog is mounted on document.body, OUTSIDE #app — so the
+    // The crop dialog is mounted on document.body, OUTSIDE #app, so the
     // delegated #app click handler never sees its buttons (owner bug: Save and
     // Cancel did nothing). Bind on the host itself, once per host element.
     if (!boundHosts.has(host)) {
@@ -1740,9 +1740,9 @@
       renderCurrentView();
     } catch (e) {
       const msg = String((e && e.message) || '');
-      if (/timeout|aborted/i.test(msg)) state.avatarError = 'টাইম আউট — ইন্টারনেট চেক করে আবার চেষ্টা করুন।';
-      else if (/2MB|size|larger/i.test(msg)) state.avatarError = 'ছবিটা 2MB-এর বেশি — ছোট ছবি ব্যবহার করুন।';
-      else state.avatarError = 'Save fail — আবার চেষ্টা করুন।';
+      if (/timeout|aborted/i.test(msg)) state.avatarError = 'টাইম আউট, ইন্টারনেট চেক করে আবার চেষ্টা করুন।';
+      else if (/2MB|size|larger/i.test(msg)) state.avatarError = 'ছবিটা 2MB-এর বেশি, ছোট ছবি ব্যবহার করুন।';
+      else state.avatarError = 'Save fail, আবার চেষ্টা করুন।';
       renderCurrentView();
     } finally {
       state.avatarBusy = false;
@@ -1756,7 +1756,7 @@
       await api(`${API}/profile/avatar`, { method: 'DELETE' });
       state.data = await loadProfile();
       renderCurrentView();
-      toast('Avatar সরানো হয়েছে — generated avatar ফিরেছে');
+      toast('Avatar সরানো হয়েছে, generated avatar ফিরেছে');
     } catch (err) {
       toast(err.message || 'Avatar সরাতে সমস্যা', true);
     } finally { state.busy = false; }
@@ -1766,12 +1766,12 @@
     const file = input.files && input.files[0];
     input.value = '';
     if (!file) return;
-    if (!/^image\//.test(file.type || '')) { state.avatarError = 'File type support করে না — JPG/PNG দিন।'; renderCurrentView(); return; }
+    if (!/^image\//.test(file.type || '')) { state.avatarError = 'File type support করে না, JPG/PNG দিন।'; renderCurrentView(); return; }
     // No pre-crop byte gate: the crop step re-encodes to a bounded 1:1 JPEG, so
     // a large camera photo must reach the cropper (owner report: >2MB silently
     // refused before cropping). Only guard against absurd inputs.
     if (file.size > MAX_SOURCE_BYTES) {
-      state.avatarError = `ছবিটা অনেক বড় (${Math.round(file.size / 1e6)}MB) — ${Math.round(MAX_SOURCE_BYTES / 1e6)}MB-এর নিচের ছবি দিন।`;
+      state.avatarError = `ছবিটা অনেক বড় (${Math.round(file.size / 1e6)}MB), ${Math.round(MAX_SOURCE_BYTES / 1e6)}MB-এর নিচের ছবি দিন।`;
       renderCurrentView();
       return;
     }
@@ -1802,12 +1802,12 @@
     return copied;
   }
 
-  // Delegated handlers are bound ONCE per host element — re-renders replace
+  // Delegated handlers are bound ONCE per host element, re-renders replace
   // innerHTML (not the host), so a second binding would double-fire every
   // click (duplicate saves, double navigations).
   const boundHosts = new WeakSet();
   // One dispatcher for every [data-role] control. Bound to #app AND to the
-  // avatar crop dialog, which is mounted on document.body (outside #app) — the
+  // avatar crop dialog, which is mounted on document.body (outside #app), the
   // #app-only binding never saw its buttons, so Save/Cancel silently did nothing.
   function handleRole(el, e) {
     if (!el) return;
@@ -1843,7 +1843,7 @@
       if (m) m.remove();
       return;
     }
-    // These set the sheet then return immediately — without the explicit
+    // These set the sheet then return immediately, without the explicit
     // render the click did nothing visible (owner bug: "ক্লিক করলে কিছু আসে না").
     else if (role === 'open-journey-sheet' || role === 'open-achv-sheet' || role === 'open-visibility' || role === 'pref-language' || role === 'pref-appearance') {
       state.sheet = role === 'open-journey-sheet' ? 'journey'
@@ -1947,7 +1947,7 @@
       const link = `${location.origin}/${state.data?.publicId || ''}`;
       copyText(link).then((copied) => {
         if (copied) toast('Public লিংক কপি হয়েছে');
-        else toast('কপি করা যায়নি — লিংকটি নিজে কপি করো: ' + link, true);
+        else toast('কপি করা যায়নি, লিংকটি নিজে কপি করো: ' + link, true);
       });
       return;
     }
@@ -2111,7 +2111,7 @@
         if (event.target.closest?.('[data-role="acad-pick-uni"]')) pickFromPointer(event);
       }, { passive: true });
     }
-  // Per-element listeners run on EVERY render — the nodes are new each time,
+  // Per-element listeners run on EVERY render, the nodes are new each time,
   // so a once-per-root binding would orphan them (counter/UX regression).
   const bio = $('#pp-edit-bio');
   if (bio) bio.addEventListener('input', () => {
@@ -2130,7 +2130,7 @@
       b.classList.toggle('is-on', b.dataset.value === goal.value);
     }
   });
-  // Academic page — the session SELECT must reach the draft on every change
+  // Academic page, the session SELECT must reach the draft on every change
   // (owner bug: stale select => false "কোনো পরিবর্তন নেই" + fake already-saved).
   const sessSel = $('#pp-acad-session');
   if (sessSel) sessSel.addEventListener('change', () => {
@@ -2156,7 +2156,7 @@
     uniInput.addEventListener('input', () => updateUniSuggestions(uniInput));
     // Typing is already mirrored into the draft on every keystroke, so a
     // re-render reproduces the box exactly. Blur/outside-click only hides the
-    // open list — it must never discard the text or the picked university.
+    // open list, it must never discard the text or the picked university.
     uniInput.addEventListener('blur', () => closeUniSuggestions({ grace: true }));
   }
   if (!document.documentElement.dataset.ppUniOutside) {
@@ -2166,7 +2166,7 @@
       if (state?.acad?.suggestOpen) closeUniSuggestions();
     });
   }
-  // Official subject checkboxes — toggle the draft, re-render chip/counter row.
+  // Official subject checkboxes, toggle the draft, re-render chip/counter row.
   const subjBoxes = Array.from(document.querySelectorAll('.pp-acad-subjbox'));
   if (subjBoxes.length) subjBoxes.forEach((box) => box.addEventListener('change', () => {
     const d = state.acad;
@@ -2179,7 +2179,7 @@
     }
     renderCurrentView();
   }));
-  // DOB stored canonical (YYYY-MM-DD) — preview the localized Bangla value.
+  // DOB stored canonical (YYYY-MM-DD), preview the localized Bangla value.
   const dobIn = $('#pp-edit-dob');
   if (dobIn) dobIn.addEventListener('input', () => {
     const pv = $('[data-role="dob-preview"]');
@@ -2266,7 +2266,7 @@
       fields.bio = bio;
     }
     // school / higherInstitution are objects on the server ({ id, name, district }
-    // — id is server-owned). They carry 5 points each, so without an editable
+    //, id is server-owned). They carry 5 points each, so without an editable
     // field here the completion score could never reach 100.
     const inst = (nameId, districtId, current) => {
       const name = String($(`#${nameId}`)?.value || '').trim();
@@ -2289,7 +2289,7 @@
   // SAVE CHANGES → SAVING… → SUCCESS ✓ (server confirmed) → re-render
   //                → FAILED → Try Again (with the real reason)
   function savePatch(fields, onDone) {
-    if (state.busy) return; // double-tap guard — এক tap-এ এক request
+    if (state.busy) return; // double-tap guard, এক tap-এ এক request
     state.busy = true;
     const errEl = $('[data-role="sheet-error"]') || $('[data-role="acad-error"]');
     if (errEl) { errEl.hidden = true; errEl.textContent = ''; }
@@ -2306,7 +2306,7 @@
     if (btn) { btn.classList.remove('pp-save-fail'); btn.classList.add('pp-save-busy'); btn.disabled = true; btn.textContent = 'Saving…'; }
     patch(fields)
       .then(async () => {
-        // Server confirmed — frontend "success" নয়, real persistence এর পর।
+        // Server confirmed, frontend "success" নয়, real persistence এর পর।
         if (btn) { btn.classList.remove('pp-save-busy'); btn.classList.add('pp-save-ok'); btn.textContent = 'SUCCESS ✓'; }
         toast('সংরক্ষিত হয়েছে ✓');
         window.setTimeout(async () => {
@@ -2319,24 +2319,24 @@
       })
       .catch((err) => {
         if (err.status === 409) {
-          failBtn('এই সময়ে অন্য জায়গা থেকে পরিবর্তন হয়েছে — latest version load হচ্ছে…');
+          failBtn('এই সময়ে অন্য জায়গা থেকে পরিবর্তন হয়েছে, latest version load হচ্ছে…');
           return loadProfile().then(renderProfilePage).catch(() => {});
         }
         if (err.status === 429) {
-          failBtn('একটু দ্রুত বেশি — এক-দু সেকেন্ড পরে আবার চেষ্টা করো।');
+          failBtn('একটু দ্রুত বেশি, এক-দু সেকেন্ড পরে আবার চেষ্টা করো।');
           return;
         }
-        // Offline / network loss — never lose the edit: queue it as
+        // Offline / network loss, never lose the edit: queue it as
         // PENDING_SYNC, flush automatically when the network returns.
         const offlineLike = !window.navigator.onLine || err.status === 0 || !err.status || err.name === 'AbortError';
         if (offlineLike) {
           const q = profileQueueRead();
           q.push({ fields, ts: Date.now() });
           profileQueueWrite(q);
-          failBtn('অফলাইন — পরিবর্তনগুলো PENDING_SYNC-এ রাখা হয়েছে; নেট ফিরলে নিজেই save হবে।');
+          failBtn('অফলাইন, পরিবর্তনগুলো PENDING_SYNC-এ রাখা হয়েছে; নেট ফিরলে নিজেই save হবে।');
           return;
         }
-        failBtn(err.message || 'সংরক্ষণ করা যায়নি — আবার চেষ্টা করো।');
+        failBtn(err.message || 'সংরক্ষণ করা যায়নি, আবার চেষ্টা করো।');
       })
       .finally(() => {
         state.busy = false;
@@ -2347,7 +2347,7 @@
 
   /* ---------------- pages ---------------- */
 
-  // Guest art — code-native person + leaves (reference guest card), zero raster.
+  // Guest art, code-native person + leaves (reference guest card), zero raster.
   const GUEST_ART = `
     <svg viewBox="0 0 120 96" aria-hidden="true" focusable="false">
       <g fill="none" stroke="#16a34a" stroke-opacity="0.55" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -2368,7 +2368,7 @@
     const benefits = [
       'সব progress save হবে',
       'Exam history সব device-এ',
-      'Academic profile — target, session, goal',
+      'Academic profile, target, session, goal',
       'Leaderboard ও rewards',
       'AI তোমার জন্য personalized'
     ];
@@ -2376,7 +2376,7 @@
       <div class="card pp-card pp-guest" data-guest-contract="guest-profile-v2">
         <div class="pp-guest-art" aria-hidden="true">${GUEST_ART}</div>
         <h2>Your Profile</h2>
-        <p class="pp-guest-sub">Sign in to create your profile — এক identity, সব device-এ।</p>
+        <p class="pp-guest-sub">Sign in to create your profile, এক identity, সব device-এ।</p>
         <div class="pp-guest-actions">
           <button class="pp-guest-google" data-role="guest-google" type="button" data-guest-google-contract="guest-google-cta-v1"><span class="pp-google-g" aria-hidden="true">G</span>Continue with Google</button>
           <div class="pp-guest-duo">
@@ -2497,7 +2497,7 @@
     });
   }
 
-  // Reference brand row (top of the Profile home) — code-native leaf mark.
+  // Reference brand row (top of the Profile home), code-native leaf mark.
   function brandHeader() {
     return `
       <div class="pp-brand" data-brand-contract="profile-brand-row-v1">
@@ -2511,14 +2511,14 @@
       </div>`;
   }
 
-  /* ---------------- AUTH STABLE (Phase 7B3) — 3-state gate ----------------
+  /* ---------------- AUTH STABLE (Phase 7B3), 3-state gate ----------------
      AUTH_LOADING  → skeleton (never guest, never stale)
      AUTHENTICATED → real profile
      GUEST         → guest card (only after the auth check COMPLETED)          */
   function authGate() {
     const acc = window.AdmissionAccount;
     if (!acc) return 'loading';
-    if (acc.isVerified()) return 'authed'; // verified session — render immediately (no flash during background refresh)
+    if (acc.isVerified()) return 'authed'; // verified session, render immediately (no flash during background refresh)
     const st = typeof acc.getSessionState === 'function' ? String(acc.getSessionState() || '') : '';
     if (st === 'UNAUTHENTICATED') return 'guest'; // check finished, no session
     return 'loading'; // INITIALIZING / CHECKING_SESSION / REFRESHING / RECOVERING / EXPIRING / ERROR
@@ -2545,7 +2545,7 @@
     if (authChangeBound) return;
     authChangeBound = true;
     window.addEventListener('admissionhub:authchange', () => {
-      // Session gone (logout/terminate) — drop the local profile cache and
+      // Session gone (logout/terminate), drop the local profile cache and
       // drafts so the next user on this device never sees this user's data.
       const acc = window.AdmissionAccount;
       const stillAuthed = !!(acc && (
@@ -2558,7 +2558,7 @@
         state.version = null;
         state.acad = null;
       }
-      // Re-render only the profile home — never the edit/avatar pages (input safety).
+      // Re-render only the profile home, never the edit/avatar pages (input safety).
       if (state.view === 'profile') {
         try { window.renderProfilePage(); } catch (_) {}
       }
@@ -2577,12 +2577,12 @@
     bindAuthGate();
     const gate = authGate();
     if (gate === 'loading') {
-      // AUTH_LOADING: skeleton only — never a guest fallback, never stale data.
+      // AUTH_LOADING: skeleton only, never a guest fallback, never stale data.
       shell(profileSkeleton(), { topbar: false });
       bindPageEvents($('#app'));
       /* Round 8 (owner bug 2026-09-17: "প্রোফাইল বাটনে কিল্ক করলে কিছুই
        * আসছে না"): if the session check never settles the skeleton sat
-       * there forever — looked like "nothing opens". After 8s swap to an
+       * there forever, looked like "nothing opens". After 8s swap to an
        * actionable state (retry / sign in) so it can never be a dead end. */
       window.setTimeout(() => {
         if (state.view !== 'profile') return;
@@ -2609,13 +2609,13 @@
           ${guestPrompt()}
         </div>`, { topbar: false });
       bindPageEvents($('#app'));
-      // Continue with Google — account sheet welcome view (Google One Tap first control).
+      // Continue with Google, account sheet welcome view (Google One Tap first control).
       $('[data-role="guest-google"]')?.addEventListener('click', () => account.open());
       $('[data-role="guest-signin"]')?.addEventListener('click', () => {
         account.open();
         window.setTimeout(() => document.querySelector('[data-role="welcome-login"]')?.click(), 120);
       });
-      // Sign up — same honest account flow, deep-linked to the signup step.
+      // Sign up, same honest account flow, deep-linked to the signup step.
       $('[data-role="guest-create"]')?.addEventListener('click', () => {
         account.open();
         window.setTimeout(() => document.querySelector('[data-role="welcome-signup"]')?.click(), 120);
@@ -2625,7 +2625,7 @@
     // AUTHENTICATED. First open (no data yet): skeleton for the profile fetch.
     // Revisit (data cached): render instantly, refresh silently in background.
     // Persistent cache (ah-profile-cache): even on a fresh app start the
-    // profile paints BEFORE the network round-trip — no skeleton, no blank.
+    // profile paints BEFORE the network round-trip, no skeleton, no blank.
     if (!state.data) {
       const cached = profileCacheRead();
       if (cached) {
@@ -2643,7 +2643,7 @@
     Promise.all([loadProfile(), loadAiPrefs()])
       .then(() => flushProfileQueue())
       .then(() => {
-        if (state.view !== 'profile') return; // user navigated away — no clobber
+        if (state.view !== 'profile') return; // user navigated away, no clobber
         renderCurrentView();
       })
       .catch(() => {
@@ -2654,7 +2654,7 @@
           <div class="pp-wrap" data-auth-gate="error">
             ${brandHeader()}
             <div class="card pp-card pp-fallback">
-              <p>Profile লোড করা যায়নি — নিশ্চিন্ত থাকো, তোমার session আর ডেটা ঠিক আছে।</p>
+              <p>Profile লোড করা যায়নি, নিশ্চিন্ত থাকো, তোমার session আর ডেটা ঠিক আছে।</p>
               <button class="pp-btn-primary" data-role="retry-profile" type="button">আবার চেষ্টা করো</button>
             </div>
           </div>`);

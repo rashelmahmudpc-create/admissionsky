@@ -130,14 +130,18 @@ test('upload rate limit: 10/hour per user → 429', async () => {
   assert.equal(env.FILE_BUCKET._objects.size, 10);
 });
 
-test('read: streams the stored object with immutable cache; missing → 404', async () => {
+test('read: streams the stored object without wildcard CORS; missing → 404', async () => {
   const env = makeEnv();
   const up = await call(req('/api/files/upload', { method: 'POST', headers: { 'X-File-Ext': 'png', 'X-File-Folder': 'notif', 'Content-Length': '12' }, body: PNG_BYTES }), env);
   const stored = env.FILE_BUCKET._objects.get(up.data.key);
   const res = await handleFilesStorageRequest(req(up.data.url), env);
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('Content-Type'), 'image/png');
-  assert.match(res.headers.get('Cache-Control'), /max-age=31536000, immutable/);
+  /* BUG-008: the public file read no longer advertises a wildcard origin or a
+     year-long immutable cache -- a leaked key must not stay readable from any
+     site forever. */
+  assert.equal(res.headers.get('Access-Control-Allow-Origin'), null);
+  assert.match(res.headers.get('Cache-Control'), /private, max-age=86400/);
   const buf = new Uint8Array(await res.arrayBuffer());
   assert.deepEqual([...buf], [...stored.bytes]);
   const missing = await handleFilesStorageRequest(req('/api/files/notif/user-files-1/2026-09-18/aaaaaaaaaa.png'), env);

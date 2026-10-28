@@ -135,7 +135,7 @@ async function connect() {
     url = withTicket(resolveEndpoint(location.href, DEFAULT_WORKER), t);
   } catch (e) {
     dot.classList.remove('on');
-    /* No cookie (or an expired one) is not a retryable fault — send the owner
+    /* No cookie (or an expired one) is not a retryable fault, send the owner
      * to the password page instead of looping on the error state. */
     if (e && e.status === 401) { location.replace('/voice-agent-login'); return; }
     setPhase(PHASE.ERROR, e && e.status === 403 ? 'অনুমতি নেই' : 'সংযোগে সমস্যা');
@@ -146,7 +146,7 @@ async function connect() {
   ws.onopen = () => { dot.classList.add('on'); retry = 0; setPhase(PHASE.READY, 'চাপ দিয়ে বলুন'); };
   ws.onclose = () => {
     dot.classList.remove('on');
-    if (phase !== PHASE.ERROR) setPhase(PHASE.OFFLINE, 'সংযোগ গেল — আবার চেষ্টা করছি');
+    if (phase !== PHASE.ERROR) setPhase(PHASE.OFFLINE, 'সংযোগ গেল, আবার চেষ্টা করছি');
     if (retry < 5) { retry++; setTimeout(connect, 800 * retry); }
   };
   ws.onerror = () => { if (phase !== PHASE.RECORDING) setPhase(PHASE.OFFLINE, 'সংযোগে সমস্যা'); };
@@ -197,7 +197,7 @@ function onServer(msg) {
 function friendly(msg) {
   const m = String(msg.message || '');
   if (m === 'no_provider_configured') return 'এখনো কোনো কী দেওয়া হয়নি';
-  if (m === 'empty_audio') return 'শব্দ পাইনি — আবার বলুন';
+  if (m === 'empty_audio') return 'শব্দ পাইনি, আবার বলুন';
   if (m === 'bad_json') return 'বার্তা বুঝতে পারিনি';
   if (/all_providers_exhausted/.test(m)) return 'সব কী-এর লিমিট শেষ';
   if (/tts_failed/.test(m)) return 'কণ্ঠ বানানো যায়নি';
@@ -250,7 +250,7 @@ function stopTalking() {
   }
 }
 
-/* Tap to start, tap again to stop — the owner asked to stop pressing and
+/* Tap to start, tap again to stop, the owner asked to stop pressing and
  * holding. One handler covers mouse, touch, pen and keyboard. */
 function toggleTalk() {
   if (phase === PHASE.READY) startTalking();
@@ -302,7 +302,7 @@ function stopAudio() {
   if (currentAudio) { try { currentAudio.pause(); } catch (_) {} currentAudio = null; }
 }
 
-/* Tapping the agent while it speaks interrupts it — the barge-in path. */
+/* Tapping the agent while it speaks interrupts it, the barge-in path. */
 log.addEventListener('click', () => {
   if (phase === PHASE.SPEAKING && ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type: 'interrupt' }));

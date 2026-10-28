@@ -105,5 +105,45 @@ await test('P29-১৪. the BUNDLE still serves the owner the full cost view', a
   return !!d.providers && Array.isArray(d.chain) && !!d.limits;
 });
 
+/* BUG-002 (2026-10-25 audit): the cost view was gated, but the same response
+   still handed every caller the internal architecture — the state store and its
+   schema version, every declared tool with its permission and owner-scope, the
+   memory mode, and the exact response-filter classes plus which ones block.
+   That is a map for crafting an evasion, and a student has no use for it. */
+await test('P29-১৫. guest gets NO state store / schema version', async () => {
+  const d = await (await publicWorker.fetch(new Request('https://w/api/ai/status', { headers: GUEST }), env())).json();
+  return d.state === undefined;
+});
+
+await test('P29-১৬. guest gets NO declared tool list', async () => {
+  const d = await (await publicWorker.fetch(new Request('https://w/api/ai/status', { headers: GUEST }), env())).json();
+  return d.tools === undefined;
+});
+
+await test('P29-১৭. guest gets NO memory mode/scope', async () => {
+  const d = await (await publicWorker.fetch(new Request('https://w/api/ai/status', { headers: GUEST }), env())).json();
+  return d.memory === undefined;
+});
+
+await test('P29-১৮. guest gets NO response-filter classes', async () => {
+  const d = await (await publicWorker.fetch(new Request('https://w/api/ai/status', { headers: GUEST }), env())).json();
+  return d.response === undefined;
+});
+
+await test('P29-১৯. the BUNDLE that ships also hides the internal blocks from a guest', async () => {
+  const d = await (await bundledWorker.fetch(new Request('https://w/api/ai/status', { headers: GUEST }), env())).json();
+  return d.state === undefined && d.tools === undefined && d.memory === undefined && d.response === undefined;
+});
+
+await test('P29-২০. the OWNER token still sees the internal blocks', async () => {
+  const d = await (await publicWorker.fetch(new Request('https://w/api/ai/status', { headers: { ...GUEST, Authorization: 'Bearer ' + ADMIN } }), env())).json();
+  return !!d.tools && !!d.response && !!d.state && !!d.memory;
+});
+
+await test('P29-২১. the raw engine still reports the internal blocks to its own caller', async () => {
+  const d = await (await agentStatus(new Request('https://w/api/ai/status'), env(), 'account-x')).json();
+  return !!d.tools && !!d.response && !!d.state;
+});
+
 console.log('\n✅ P29 ai-status owner-only: ' + passed + ' passed, ' + failed + ' failed');
 process.exit(failed ? 1 : 0);

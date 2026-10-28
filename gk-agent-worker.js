@@ -1,8 +1,14 @@
 // v133b: public-product module
 import pubHandler, { publishGlobal } from './public-worker.js';
+import { tryRouteToSkyAi } from './sky-ai-route.mjs';
+import { providerReadiness, readyProviderNames } from './ai-agent.js';
+import { syncProviderKeysToKv } from './ai-key-sync.mjs';
 import { runDailyReport } from './sky-daily-report.mjs';
 import { handleInternalEmailRequest } from './email-gateway/worker/handler.mjs';
 import { createNativeAuthHandler } from './auth-native/worker/public-auth-handler.mjs';
+/* F-04 phase 2: AUTH_ROUTE = "service" forwards the auth surface to the
+ * admission-auth Worker; anything else keeps the in-process handler. */
+import { routeAuthRequest } from './auth-native/worker/auth-route.mjs';
 import { handleFcmNotificationRequest, runScheduledGlobalNotifications } from './fcm-notification.mjs';
 import { handleAdminPasskeyRequest } from './admin-passkey.mjs';
 import { handlePersonalizedNotificationRequest, runScheduledPersonalizedNotifications } from './personalized-notification.mjs';
@@ -10,22 +16,22 @@ import { handleIntelligenceRequest, runScheduledIntelligenceNotifications } from
 import { runScheduledEventNotifications } from './event-notifications.mjs';
 import { runScheduledDigests } from './digest-notifications.mjs';
 import { handleUserDataRequest } from './userdata-api.mjs';
-/* Phase 4 — unified analytics & smart insights (owns /api/analytics/*). */
+/* Phase 4, unified analytics & smart insights (owns /api/analytics/*). */
 import { handleAnalyticsRequest } from './analytics-engine.mjs';
-/* Phase 5 — AI analytics intelligence (owns /api/analytics/ai/*; registered
+/* Phase 5, AI analytics intelligence (owns /api/analytics/ai/*; registered
  * before the Phase 4 handler, which claims the wider prefix). */
 import { handleAiAnalyticsRequest } from './ai-analytics-routes.mjs';
 import { aiGenerate } from './ai-analytics-provider.mjs';
 import { handleFilesStorageRequest } from './files-storage.mjs';
 import { handleSkyContactRequest } from './sky-contact.mjs';
-/* P13 — gzip/br for large JSON replies (read path scale). */
+/* P13, gzip/br for large JSON replies (read path scale). */
 import { compressResponse } from './p13-api-compression.mjs';
 import { createSnapshot } from './p19-backup.mjs';
-/* P25 — the daily cache sweep needs the store class here as well. */
+/* P25, the daily cache sweep needs the store class here as well. */
 import { AiAnalyticsStore } from './ai-analytics-store.mjs';
 export { EmailGatewayCoordinator } from './email-gateway/worker/email-coordinator.mjs';
 export { AdmissionAuthAuthority } from './auth-native/worker/auth-authority-do.mjs';
-/* P23 — live voice agent. One Durable Object per owner holds the socket and the
+/* P23, live voice agent. One Durable Object per owner holds the socket and the
  * durable memory, so a provider-key swap never loses context. */
 export { VoiceAgentSession } from './voice-agent.mjs';
 /* Per-user AI state (quota + memory) moved out of Workers KV, whose free plan
@@ -34,17 +40,17 @@ export { AiStateObject } from './ai-state-do.mjs';
 
 const nativeAuthHandler = createNativeAuthHandler();
 /**
- * 🤖 ADMISSION HUB — Daily GK Agent Worker
+ * 🤖 ADMISSION HUB, Daily GK Agent Worker
  * v111 · Browser Use cloud (৩ key failover) → দিনে মাত্র ১ রান → GK MCQ + verified admission news
  *
  * Secrets:
- *   BROWSER_USE_API_KEYS — কমা-দিয়ে আলাদা করা ৩টা Browser Use cloud key (একাউন্ট ১,২,৩)
- *   TG_BOT_TOKEN, TG_CHAT_ID — রান শেষে Telegram খবর
+ *   BROWSER_USE_API_KEYS, কমা-দিয়ে আলাদা করা ৩টা Browser Use cloud key (একাউন্ট ১,২,৩)
+ *   TG_BOT_TOKEN, TG_CHAT_ID, রান শেষে Telegram খবর
  * KV: GK_KV (namespace admission-gk-kv)
- * Cron: 30 18 * * * (UTC) = রাত ০০:৩০ ঢাকা — অ্যাপ না খুললেও দিনে ১ বার
+ * Cron: 30 18 * * * (UTC) = রাত ০০:৩০ ঢাকা, অ্যাপ না খুললেও দিনে ১ বার
  *
  * নীতি: প্রতিদিন ঠিক ১টা run (KV date-guard)। key শেষ/না-চলা (401/402/429) হলে
- * স্বয়ংক্রিয়ভাবে পরের key — সেদিনের জন্য ও key আর চেষ্টা হয় না।
+ * স্বয়ংক্রিয়ভাবে পরের key, সেদিনের জন্য ও key আর চেষ্টা হয় না।
  */
 
 const APP_HEADER = 'admission-hub';
@@ -93,14 +99,64 @@ const NEWS_SCHEMA = {
   required: ['news']
 };
 
+/* BUG-002 (2026-10-26 audit). The allowlist used to accept localhost /
+   127.0.0.1 (and *.e2b.app) as well, which let any page served on a developer
+   machine make credentialed cross-origin calls and read the response with the
+   signed-in student's session. Production stopped accepting those on
+   2026-10-22 in cors-policy.mjs, but this handler kept its own copy. The
+   preview origin is now opt-in via ALLOW_PREVIEW_ORIGINS, unset in production. */
+let previewOriginsAllowed = false;
 const cors = request => {
   const origin = request.headers.get('Origin') || '';
-  const ok = /^https:\/\/([a-z0-9-]+\.)?github\.io$/.test(origin) || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) || /^https:\/\/[a-z0-9-]+\.e2b\.app$/.test(origin); // e2b = workspace-প্রিভিউ
+  const ok = /^https:\/\/([a-z0-9-]+\.)?(admissionsky|admissionhub)\.pages\.dev$/.test(origin)
+    || (previewOriginsAllowed && /^https:\/\/[a-z0-9-]+\.e2b\.app$/.test(origin));
   const headers = { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, X-AH-App', 'Access-Control-Max-Age': '86400' };
   if (ok) headers['Access-Control-Allow-Origin'] = origin;
   return headers;
 };
 const json = (request, obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...cors(request) } });
+
+/* BUG-001 (2026-10-25 audit). X-AH-App is a hardcoded literal that ships in
+   client code (cloud-content-sync.js, vocabulary-elevenlabs.js), so it is a
+   routing hint and never a credential: anyone who reads the bundle can forge
+   it. These helpers give the state-changing routes a real proof of identity. */
+const tokenEquals = (a, b) => {
+  const x = String(a == null ? '' : a); const y = String(b == null ? '' : b);
+  if (!x || x.length !== y.length) return false;
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x.charCodeAt(i) ^ y.charCodeAt(i);
+  return diff === 0;
+};
+const ownerProof = (request, env) => {
+  if (!env || !env.ADMIN_TOKEN) return false;
+  const bearer = String(request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  const header = String(request.headers.get('X-AH-Admin-Token') || '').trim();
+  return tokenEquals(bearer, env.ADMIN_TOKEN) || tokenEquals(header, env.ADMIN_TOKEN);
+};
+const readSessionCookie = request => {
+  const raw = String(request.headers.get('Cookie') || '');
+  for (const part of raw.split(';')) {
+    const i = part.indexOf('=');
+    if (i < 1 || part.slice(0, i).trim() !== '__Host-ah_session') continue;
+    try { return decodeURIComponent(part.slice(i + 1).trim()); } catch (_) { return ''; }
+  }
+  return '';
+};
+const verifiedSession = async (request, env) => {
+  const token = readSessionCookie(request);
+  if (!/^[A-Za-z0-9_-]{32,160}$/.test(token) || !env || !env.AUTH_AUTHORITY) return false;
+  try {
+    const id = env.AUTH_AUTHORITY.idFromName('admission-hub-global-auth-v1');
+    const stub = env.AUTH_AUTHORITY.get(id);
+    const res = await stub.fetch('https://auth.internal/internal/session/get', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionToken: token })
+    });
+    const payload = await res.json().catch(() => null);
+    return res.ok && payload?.ok === true && !!payload?.result?.user?.id;
+  } catch (_) { return false; }
+};
 const dhakaToday = () => new Date(Date.now() + 6 * 3600000).toISOString().slice(0, 10);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -135,12 +191,12 @@ const tryCreate = async (key, body) => {
 const createWithFailover = async (env, date, body, shift = 0, forceKeys = null) => {
   const all = forceKeys || keys(env);
   if (!all.length) return null;
-  const ns = forceKeys ? 'ask' : 'gk'; // forceKeys-এর index আলাদা নেমস্পেসে — GK-পুল অক্ষত
-  const bad = await badKeysToday(env, date, ns); // 401/402 — সেদিনের জন্য মৃত
-  // দৈনিক রোটেশন: প্রতিদিন ভিন্ন key দিয়ে শুরু — কোটা সব key-এ সমান ভাগে খরচ হয়
+  const ns = forceKeys ? 'ask' : 'gk'; // forceKeys-এর index আলাদা নেমস্পেসে, GK-পুল অক্ষত
+  const bad = await badKeysToday(env, date, ns); // 401/402, সেদিনের জন্য মৃত
+  // দৈনিক রোটেশন: প্রতিদিন ভিন্ন key দিয়ে শুরু, কোটা সব key-এ সমান ভাগে খরচ হয়
   const dayIndex = Math.floor(Date.parse(date + 'T00:00:00+06:00') / 86400000);
   const offset = ((((dayIndex % all.length) + all.length) % all.length) + shift) % all.length;
-  const busy = new Set(); // 429/নেটওয়ার্ক — শুধু এই রানে স্কিপ, key বাতিল নয়
+  const busy = new Set(); // 429/নেটওয়ার্ক, শুধু এই রানে স্কিপ, key বাতিল নয়
   for (let i = 0; i < all.length; i++) {
     const idx = (offset + i) % all.length;
     if (bad.includes(idx) || busy.has(idx)) continue;
@@ -153,22 +209,22 @@ const createWithFailover = async (env, date, body, shift = 0, forceKeys = null) 
 };
 
 const GK_PROMPT = date => `Today's date is ${date} (Bangladesh, Asia/Dhaka). You are preparing daily current-affairs GK practice for Bangladeshi university admission candidates.
-Browse credible Bangladeshi and international sources today — e.g. prothomalo.com, bangla.bdnews24.com, jagonews24.com, kalerkantho.com, ittefaq.com.bd, bbc.com/bengali, samakal.com, and any reliable reference pages needed for verification.
-Collect 15-25 multiple-choice current-affairs/GK questions useful for university admission tests. CORRECTNESS IS THE #1 PRIORITY — a single wrong fact is a critical failure. Rules:
+Browse credible Bangladeshi and international sources today, e.g. prothomalo.com, bangla.bdnews24.com, jagonews24.com, kalerkantho.com, ittefaq.com.bd, bbc.com/bengali, samakal.com, and any reliable reference pages needed for verification.
+Collect 15-25 multiple-choice current-affairs/GK questions useful for university admission tests. CORRECTNESS IS THE #1 PRIORITY, a single wrong fact is a critical failure. Rules:
 - Double-source rule: every question's fact MUST be verified during this session by actually OPENING at least 2 independent credible pages (e.g. a news site + a second outlet or an official/reference page). One search-result snippet is NOT enough.
 - If you cannot confirm a fact from 2 sources, DROP that question. Skip anything uncertain, ambiguous or time-sensitive-until-confirmed.
 - Prefer the last ~30 days: national BD news, international, sports, science-tech, awards, economy, and important anniversaries.
 - Write the question in Bangla (short), options in Bangla (exactly 4, one clearly correct), "answer" must exactly match one option, "explain" is one short Bangla line, "source" is the site name or URL you verified from.
 - No duplicates, no opinion-based questions, no placeholder text.
-- STRICT FORBIDDEN: do NOT use your memory/training knowledge alone for any fact — everything must come from pages you opened today. Do not guess dates, numbers, names or award winners.`;
+- STRICT FORBIDDEN: do NOT use your memory/training knowledge alone for any fact, everything must come from pages you opened today. Do not guess dates, numbers, names or award winners.`;
 
 const NEWS_PROMPT = date => `Today's date is ${date} (Bangladesh, Asia/Dhaka). You are a news researcher for Bangladeshi university-admission candidates. Find the LATEST verified admission news (last 2-3 days, today first).
-Categories: application circular openings & deadlines, exam dates, seat plans, admit cards, results, admission requirements/fees — for DU, BUET, CU, JU, RU, RUET, CUET, SUST, GST/GUST cluster, agricultural universities and major private universities.
+Categories: application circular openings & deadlines, exam dates, seat plans, admit cards, results, admission requirements/fees, for DU, BUET, CU, JU, RU, RUET, CUET, SUST, GST/GUST cluster, agricultural universities and major private universities.
 You MUST actually OPEN and read at least 6-8 of these verified sources before concluding (visit several, not just one):
 - National dailies & TV: prothomalo.com, bangla.bdnews24.com, kalerkantho.com, ittefaq.com.bd, samakal.com, jagonews24.com, banglatribune.com, bbc.com/bengali, somoynews.tv, channelsonline.com
 - Discovery: also search Google News (news.google.com) for "admission circular", "admission test date" etc. and follow only credible/official links.
-- University official sites when a circular is mentioned: du.ac.bd, buet.ac.bd, cu.ac.bd, ju.edu.bd? (verify via search), ru.ac.bd, gstadmission.ac.bd, rsu? — official .ac.bd / .edu domains only.
-Rules: ONLY items you verified on a page you actually opened this session. For each: title in Bangla, date (YYYY-MM-DD), 1-2 line Bangla summary, source domain, full URL. If after checking multiple sources nothing verified exists, return an empty news array — do NOT invent or reuse old news.`;
+- University official sites when a circular is mentioned: du.ac.bd, buet.ac.bd, cu.ac.bd, ju.edu.bd? (verify via search), ru.ac.bd, gstadmission.ac.bd, rsu?, official .ac.bd / .edu domains only.
+Rules: ONLY items you verified on a page you actually opened this session. For each: title in Bangla, date (YYYY-MM-DD), 1-2 line Bangla summary, source domain, full URL. If after checking multiple sources nothing verified exists, return an empty news array, do NOT invent or reuse old news.`;
 
 const parseOutput = task => {
   if (!task) return null;
@@ -226,8 +282,8 @@ const finalizeResults = async (env, date, results) => {
       const msg = results.gk
         ? (questions.length
           ? `🤖 আজকের GK এসেছে!\n\n📚 ${questions.length}টি নতুন MCQ${news.length ? `\n📰 ${news.length}টি verified admission news` : '\n📰 আজ কোনো verified news নেই'}\n\nঅ্যাপে Dashboard → 🤖 ডেইলি GK এজেন্ট খোলো!`
-          : '🤖 আজ GK এজেন্ট যথেষ্ট verified প্রশ্ন জোগাড় করতে পারেনি — কাল আবার চেষ্টা হবে।')
-        : (news.length ? `📰 আজকের admission নিউজ এসেছে!\n\n${news.length}টি verified খবর — অ্যাপে Dashboard → 🤖 ডেইলি GK এজেন্ট → নিউজ ট্যাব` : null);
+          : '🤖 আজ GK এজেন্ট যথেষ্ট verified প্রশ্ন জোগাড় করতে পারেনি, কাল আবার চেষ্টা হবে।')
+        : (news.length ? `📰 আজকের admission নিউজ এসেছে!\n\n${news.length}টি verified খবর, অ্যাপে Dashboard → 🤖 ডেইলি GK এজেন্ট → নিউজ ট্যাব` : null);
       if (!msg) return payload;
       await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text: msg }) }).catch(() => {});
     }
@@ -245,10 +301,10 @@ const ASK_SCHEMA = {
   required: ['answer']
 };
 
-const ASK_PROMPT = (question, context, bankBlock, histBlock) => `You are "স্টাডি বন্ধু" — a warm, friendly Bangla study-helper for a Bangladeshi university-admission candidate. Today: ${dhakaToday()} (Asia/Dhaka).
+const ASK_PROMPT = (question, context, bankBlock, histBlock) => `You are "স্টাডি বন্ধু", a warm, friendly Bangla study-helper for a Bangladeshi university-admission candidate. Today: ${dhakaToday()} (Asia/Dhaka).
 User's question: """${question}"""
 ${context ? `User's study context (use silently, never dump raw): ${context}` : ''}${bankBlock || ''}${histBlock || ''}
-Rules: Reply in simple warm Bangla (তুমি-ফর্ম), 2-6 short lines, light emoji ok.${bankBlock ? ' When the bank block is present, base your answer primarily on it (it is the student\'s own verified bank) and mention you answered from their question bank.' : ''} FRESHNESS RULE (critical): for ANY factual, current-affairs, date/number/name, exam-deadline or "এখন/আজ/সর্বশেষ"-type question you MUST browse the live web RIGHT NOW and verify from at least one credible page you actually open before answering — Google-overview-level freshness is the minimum bar. NEVER answer such questions from memory/training data; a stale or outdated fact is a critical failure. If today's verified info cannot be found, say clearly what could not be verified instead of guessing. Always include source domains in sources. Never invent facts. End with a tiny nudge to keep studying.`;
+Rules: Reply in simple warm Bangla (তুমি-ফর্ম), 2-6 short lines, light emoji ok.${bankBlock ? ' When the bank block is present, base your answer primarily on it (it is the student\'s own verified bank) and mention you answered from their question bank.' : ''} FRESHNESS RULE (critical): for ANY factual, current-affairs, date/number/name, exam-deadline or "এখন/আজ/সর্বশেষ"-type question you MUST browse the live web RIGHT NOW and verify from at least one credible page you actually open before answering, Google-overview-level freshness is the minimum bar. NEVER answer such questions from memory/training data; a stale or outdated fact is a critical failure. If today's verified info cannot be found, say clearly what could not be verified instead of guessing. Always include source domains in sources. Never invent facts. End with a tiny nudge to keep studying.`;
 
 // ── ইউজারের প্রশ্নব্যাংক-মেমোরি: অ্যাপ থেকে আসা সব প্রশ্ন+ইতিহাস KV-তে ──
 const normalizeBank = (questions, stats) => {
@@ -286,7 +342,7 @@ const bankInfo = async (request, env) => {
   try {
     const raw = await env.GK_KV.get('userBank');
     if (!raw) return json(request, { saved: false });
-    // v133: full=1 → পুরো ব্যাংক (প্রশ্ন+ভুল+শব্দ+ইতিহাস) — public-প্রোডাক্ট পাইপলাইনের সেতু (admin-only ব্যবহার)
+    // v133: full=1 → পুরো ব্যাংক (প্রশ্ন+ভুল+শব্দ+ইতিহাস), public-প্রোডাক্ট পাইপলাইনের সেতু (admin-only ব্যবহার)
     try { if (new URL(request.url).searchParams.get('full') === '1') return json(request, { saved: true, bank: JSON.parse(raw) }); } catch (_) {}
     const b = JSON.parse(raw);
     return json(request, { saved: true, count: b.qs.length, stats: b.stats, savedAt: b.savedAt, history: Array.isArray(b.history) ? b.history.length : 0, mistakes: Array.isArray(b.mistakes) ? b.mistakes.length : 0, vocabulary: Array.isArray(b.vocabulary) ? b.vocabulary.length : 0, activity: b.activity || {} });
@@ -299,16 +355,16 @@ const histBlock = b => {
     const h = Array.isArray(b && b.history) ? b.history.slice(0, 10) : [];
     const a = (b && b.activity) || {};
     let out = '';
-    if (h.length) out += '\nপরীক্ষার ইতিহাস (নতুন→পুরনো): ' + h.map(x => `${(x && x.d) || ''} — ${((x && x.s) || '?')}${x && x.m ? ' (' + x.m + ')' : ''}`).join(' | ');
+    if (h.length) out += '\nপরীক্ষার ইতিহাস (নতুন→পুরনো): ' + h.map(x => `${(x && x.d) || ''}, ${((x && x.s) || '?')}${x && x.m ? ' (' + x.m + ')' : ''}`).join(' | ');
     if (a && (a.exams || a.mistakes || a.vocab)) out += `\nঅ্যাক্টিভিটি: মোট পরীক্ষা ${a.exams || 0} · ভুল-নোট ${a.mistakes || 0} · শব্দ ${a.vocab || 0}`;
     const lt = (a && a.lifetime) || {};
     if (lt && (lt.answered || lt.daysActive)) out += `\nলাইফটাইম: উত্তর ${lt.answered || 0}টি · সঠিক ${lt.correct || 0}${lt.acc != null ? ' (' + lt.acc + '%)' : ''} · সক্রিয় দিন ${lt.daysActive || 0} · চ্যাট-ওপেন ${lt.opens || 0}`;
-    if (a && a.coach && a.coach.total) out += `\nশেষ চ্যাট-পরীক্ষা (কোচ-নোট): ${a.coach.score || 0}/${a.coach.total}${Array.isArray(a.coach.weak) && a.coach.weak.length ? ' — দুর্বল: ' + a.coach.weak.slice(0, 4).join(', ') : ''}`;
+    if (a && a.coach && a.coach.total) out += `\nশেষ চ্যাট-পরীক্ষা (কোচ-নোট): ${a.coach.score || 0}/${a.coach.total}${Array.isArray(a.coach.weak) && a.coach.weak.length ? ', দুর্বল: ' + a.coach.weak.slice(0, 4).join(', ') : ''}`;
     const ms2 = Array.isArray(b && b.mistakes) ? b.mistakes.slice(0, 8) : [];
-    if (ms2.length) out += '\nসাম্প্রতিক ভুল-প্রশ্ন (সঠিক-উত্তরসহ):\n' + ms2.map(x => `— ${String((x && x.q) || '').slice(0, 90)}${x && x.a ? ' ⇒ সঠিক: ' + String(x.a).slice(0, 40) : ''}`).join('\n');
+    if (ms2.length) out += '\nসাম্প্রতিক ভুল-প্রশ্ন (সঠিক-উত্তরসহ):\n' + ms2.map(x => `- ${String((x && x.q) || '').slice(0, 90)}${x && x.a ? ' ⇒ সঠিক: ' + String(x.a).slice(0, 40) : ''}`).join('\n');
     const vs2 = Array.isArray(b && b.vocabulary) ? b.vocabulary.slice(0, 12) : [];
     if (vs2.length) out += '\nশব্দ-সংগ্রহ: ' + vs2.map(x => `${String((x && x.w) || '').slice(0, 30)}${x && x.m ? '=' + String(x.m).slice(0, 30) : ''}`).join(', ');
-    return out ? `\n(শিক্ষার্থীর পরীক্ষার ইতিহাস ও অ্যাক্টিভিটি — সাইলেন্টলি ব্যবহার করো, raw ডাম্প করো না)${out}` : '';
+    return out ? `\n(শিক্ষার্থীর পরীক্ষার ইতিহাস ও অ্যাক্টিভিটি, সাইলেন্টলি ব্যবহার করো, raw ডাম্প করো না)${out}` : '';
   } catch (_) { return ''; }
 };
 
@@ -348,8 +404,8 @@ const createAsk = async (request, env, ctx) => {
           const subject = source.startsWith('bank:') ? decodeURIComponent(source.slice(5)) : '';
           const picks = bankPick(bank, question, subject);
           bankBlock = picks.length
-            ? `\nশিক্ষার্থীর নিজের প্রশ্নব্যাংক থেকে মিলে-যাওয়া প্রশ্ন-উত্তর (উত্তরের প্রধান ভিত্তি এগুলো):\n${picks.map((q, i) => `${i + 1}) প্র: ${q.q}\n${(q.o || []).map((o, oi) => `   ${'কখগঘঙ'[oi] || oi + 1}) ${o}`).join('\n')}\n   উত্তর: ${q.a}${q.e ? ` — ${q.e}` : ''}`).join('\n')}\n`
-            : `\n(শিক্ষার্থীর প্রশ্নব্যাংকে এই বিষয়ে সরাসরি মিল পাওয়া যায়নি — তার অবস্থা মাথায় রেখে সাবধানে উত্তর দাও।)\n`;
+            ? `\nশিক্ষার্থীর নিজের প্রশ্নব্যাংক থেকে মিলে-যাওয়া প্রশ্ন-উত্তর (উত্তরের প্রধান ভিত্তি এগুলো):\n${picks.map((q, i) => `${i + 1}) প্র: ${q.q}\n${(q.o || []).map((o, oi) => `   ${'কখগঘঙ'[oi] || oi + 1}) ${o}`).join('\n')}\n   উত্তর: ${q.a}${q.e ? `, ${q.e}` : ''}`).join('\n')}\n`
+            : `\n(শিক্ষার্থীর প্রশ্নব্যাংকে এই বিষয়ে সরাসরি মিল পাওয়া যায়নি, তার অবস্থা মাথায় রেখে সাবধানে উত্তর দাও।)\n`;
         }
       }
     }
@@ -437,7 +493,7 @@ const maybeStart = async (request, env, ctx) => {
       return json(request, stored ? { already: true, ready: true } : { already: true, ready: false });
     }
     if (!keys(env).length) return json(request, { error: 'keys-not-configured' }, 503);
-    await env.GK_KV.put('gkDay', date); // দিনে ১ run — এখনই গার্ড বসে
+    await env.GK_KV.put('gkDay', date); // দিনে ১ run, এখনই গার্ড বসে
     const gkJob = await createWithFailover(env, date, { task: GK_PROMPT(date), llm: env.BU_LLM || 'browser-use-2.0', maxSteps: 45, structuredOutput: JSON.stringify(GK_SCHEMA), flashMode: false });
     const newsJob = await createWithFailover(env, date, newsTaskBody(env, date), 1); // shift+1: GK ও news ভিন্ন key-এ; শক্ত মডেল + ধীর ব্রাউজিং
     const jobs = [
@@ -454,7 +510,7 @@ const maybeStart = async (request, env, ctx) => {
   }
 };
 
-/* P27 — the owner's phone alert (owner order 2026-10-17).
+/* P27, the owner's phone alert (owner order 2026-10-17).
  *
  * The client reporter posts here and this Worker forwards to Telegram, so the
  * bot token never reaches the browser. Same-origin only (the Pages proxy adds
@@ -488,9 +544,16 @@ async function sendTelegramAlert(env, text) {
 }
 
 async function handleErrorReport(request, env) {
+  /* BUG-003 (2026-10-25 audit). This endpoint sits before the app gate on
+     purpose — the reporter is an unauthenticated browser beacon — but its only
+     control was an Origin whitelist, and Origin is set by the caller, so any
+     script could inject arbitrary text into the owner's Telegram alert channel.
+     The Pages proxy sets x-ah-pages-proxy on the requests it forwards, and that
+     header cannot survive a cross-origin call (it would need a CORS preflight
+     the Pages deployment does not grant), so it is the one signal a foreign
+     origin cannot fake. Origin alone no longer suffices. */
   const proxied = request.headers.get('x-ah-pages-proxy') === '1';
-  const sameOrigin = request.headers.get('Origin') === 'https://admissionhub.pages.dev';
-  if (!proxied && !sameOrigin) return json(request, { error: 'forbidden' }, 403);
+  if (!proxied) return json(request, { error: 'forbidden' }, 403);
 
   let body = {};
   try { body = await request.json(); } catch (_) {}
@@ -511,7 +574,7 @@ async function handleErrorReport(request, env) {
     const used = Number(await env.GK_KV.get(hourBucket)) || 0;
     if (used >= ALERT_MAX_PER_HOUR) return json(request, { skipped: 'hourly-cap' });
 
-    const lines = ['🚨 AdmissionSky — নতুন সমস্যা', '', message, '', `📄 পেজ: ${path}`];
+    const lines = ['🚨 AdmissionSky, নতুন সমস্যা', '', message, '', `📄 পেজ: ${path}`];
     if (source) lines.push(`📍 সূত্র: ${source}`);
     if (release) lines.push(`🏷️ ভার্সন: ${release}`);
     lines.push(`🕒 ${new Date(now + 6 * 3600000).toISOString().slice(0, 16).replace('T', ' ')} (ঢাকা)`);
@@ -530,10 +593,54 @@ async function handleErrorReport(request, env) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    /* P23 — live voice agent. Routed first because it answers a WebSocket
+    previewOriginsAllowed = String(env.ALLOW_PREVIEW_ORIGINS || '') === '1';
+    /* F0.1 step 4j follow-up: put any credential that exists only in THIS
+     * Worker's environment into KV, where both rooms can read it. Measurement
+     * found exactly that gap — admission-gk could reach `cloudflare`, sky-ai could
+     * not, so chat quietly stayed on the fallback.
+     *
+     * Off the request path (waitUntil), once per isolate, names only in the log,
+     * and it never overwrites what KV already has. A failure changes nothing:
+     * the deployment behaves exactly as it does today. */
+    try {
+      const p = syncProviderKeysToKv(env).then((r) => {
+        if (r && r.added && r.added.length) {
+          // Names, never values. This is the one line that explains, later, why
+          // sky-ai suddenly reported a provider it did not have before.
+          try { console.log(JSON.stringify({ evt: 'ai.keys.synced', names: r.added })); } catch (_) {}
+        }
+      }).catch(() => {});
+      if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(p);
+    } catch (_) { /* never fail a request for this */ }
+    /* F0.1 / DV-01 (Sky AI blueprint), first route through the new sky-ai
+     * Worker via the SKY_AI service binding. Only this new health path is
+     * forwarded; every existing /api/ai/* route is still served here. Without
+     * the binding (e.g. staging) the request falls through unchanged. */
+    if (url.pathname === '/api/ai/sky-health' && request.method === 'GET' && env.SKY_AI) {
+      /* F0.1 step 4j: tell sky-ai which providers THIS Worker can reach, so its
+       * health report can say whether the two rooms match. Without it, "chat is
+       * live" could only be inferred from sky-ai listing *a* provider — which is
+       * not the same claim. Names only; the keys never leave this Worker.
+       * Best-effort: no list simply means "nothing to compare". */
+      const headers = { 'x-sky-ai-caller': 'admission-gk' };
+      try {
+        const needed = readyProviderNames(await providerReadiness(env));
+        if (needed.length) headers['x-sky-need-providers'] = needed.join(',');
+      } catch (_) { /* a health probe must never fail because of the probe */ }
+      return env.SKY_AI.fetch(new Request(request.url, { method: 'GET', headers }));
+    }
+    /* F0.1 step 4a / DV-01: generic, allowlist-gated proxy to sky-ai. The
+     * allowlist in sky-ai-route.mjs is EMPTY, so nothing changes for students.
+     * A route is moved by adding it there (after sky-ai serves it); any sky-ai
+     * 404/5xx/throw falls back to the local handler below. */
+    {
+      const viaSky = await tryRouteToSkyAi(request, env);
+      if (viaSky) return viaSky;
+    }
+    /* P23, live voice agent. Routed first because it answers a WebSocket
      * upgrade, which no downstream handler should try to read. One object per
      * owner keeps the socket and the durable memory together. The ticket path is
-     * matched too — without it the ticket request would 404 here and the socket
+     * matched too, without it the ticket request would 404 here and the socket
      * could never be opened. The login/session paths are the owner's password
      * gate for the page, and must reach the object for the same reason. */
     if (url.pathname === '/api/voice/agent' || url.pathname.startsWith('/api/voice/agent/') ||
@@ -541,12 +648,18 @@ export default {
       const id = env.VOICE_AGENT.idFromName(String(env.VOICE_OWNER_UID || 'owner'));
       return env.VOICE_AGENT.get(id).fetch(request);
     }
-    const authResponse = await nativeAuthHandler(request, env, ctx);
+    const authResponse = await routeAuthRequest({
+      request,
+      env,
+      ctx,
+      local: nativeAuthHandler,
+      forward: forwarded => env.AUTH_WORKER.fetch(forwarded)
+    });
     if (authResponse) return authResponse;
     const emailResponse = await handleInternalEmailRequest(request, env, ctx);
     if (emailResponse) return emailResponse;
-    // Phase 1 — FCM notification foundation (owns /api/notifications/* + /internal/notifications/health).
-    /* Phase 3 — notification intelligence. Registered BEFORE the FCM handler
+    // Phase 1, FCM notification foundation (owns /api/notifications/* + /internal/notifications/health).
+    /* Phase 3, notification intelligence. Registered BEFORE the FCM handler
      * because that one answers 404 for any /api/notifications/* path it does not
      * recognise, which would swallow /intel/* and /intel-pref and /outcome. */
     const intelResponse = await handleIntelligenceRequest(request, env, ctx);
@@ -556,13 +669,13 @@ export default {
     // Admin passkey login (owns /api/admin/webauthn/*).
     const adminPasskeyResponse = await handleAdminPasskeyRequest(request, env);
     if (adminPasskeyResponse) return adminPasskeyResponse;
-    // Phase G — personalized smart notifications (owns /api/notifications/personal/*).
+    // Phase G, personalized smart notifications (owns /api/notifications/personal/*).
     const personalResponse = await handlePersonalizedNotificationRequest(request, env, ctx);
     if (personalResponse) return personalResponse;
-    // Student data sync (server-backed student learning data) — owns /api/userdata/*.
+    // Student data sync (server-backed student learning data), owns /api/userdata/*.
     const userDataResponse = await handleUserDataRequest(request, env, ctx);
     if (userDataResponse) return userDataResponse;
-    /* Phase 5 — AI analytics intelligence. Registered *before* the Phase 4
+    /* Phase 5, AI analytics intelligence. Registered *before* the Phase 4
      * analytics handler, which claims every /api/analytics/* path and would
      * otherwise answer /api/analytics/ai/* with its own admin gate (a 403 that
      * reads like a permissions fault instead of a missing route). Both handlers
@@ -574,22 +687,22 @@ export default {
       generate: aiGenerate(env)
     });
     if (aiAnalyticsResponse) return aiAnalyticsResponse;
-    /* Phase 4 — analytics. Registered after userdata (it reads those tables) and
+    /* Phase 4, analytics. Registered after userdata (it reads those tables) and
      * before the /api/* pubHandler catch-all, which would otherwise treat
      * /api/analytics/* as an unknown public route. */
     const analyticsResponse = await handleAnalyticsRequest(request, env, ctx);
     if (analyticsResponse) return analyticsResponse;
-    // R2 file storage (owner-approved 2026-09-18) — owns /api/files/*.
+    // R2 file storage (owner-approved 2026-09-18), owns /api/files/*.
     // Must run before the /api/* pubHandler catch-all.
     const filesResponse = await handleFilesStorageRequest(request, env, ctx);
     if (filesResponse) return filesResponse;
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(request) });
 
-    /* P27 — must run before the /api/* pub forward and the X-AH-App gate below:
+    /* P27, must run before the /api/* pub forward and the X-AH-App gate below:
      * the reporter is an unauthenticated same-origin browser request, so neither
      * gate would let it through. */
     if (request.method === 'POST' && url.pathname === '/api/report-error') return await handleErrorReport(request, env);
-    /* Owner 2026-10-17 — Sky support buttons: GET /api/go/whatsapp|email redirect to
+    /* Owner 2026-10-17, Sky support buttons: GET /api/go/whatsapp|email redirect to
      * the contact kept in PUB_KV 'sky:contact' (never in the repo). Before the /api/* forward. */
     const contactResponse = await handleSkyContactRequest(request, env);
     if (contactResponse) return contactResponse;
@@ -605,7 +718,7 @@ export default {
           AUTH_AUTHORITY: env.AUTH_AUTHORITY,
           OLD_KV: env.OLD_KV || env.GK_KV,
           ADMIN_TOKEN: env.ADMIN_TOKEN,
-          /* P19 — backup/restore reads GK_KV and writes snapshots to R2. Without
+          /* P19, backup/restore reads GK_KV and writes snapshots to R2. Without
              these two the admin backup routes answer "no-backup-bucket" even
              though the bindings exist on the outer Worker. */
           GK_KV: env.GK_KV,
@@ -635,7 +748,7 @@ export default {
           PUBLIC_RATE_SALT: env.PUBLIC_RATE_SALT,
           PUBLIC_RATE_LIMIT: env.PUBLIC_RATE_LIMIT,
           PUBLIC_RATE_WINDOW_MS: env.PUBLIC_RATE_WINDOW_MS,
-          /* P13 — D1 read path (public question/content lists). Absent binding
+          /* P13, D1 read path (public question/content lists). Absent binding
              leaves the KV path in place, so this is additive. */
           PROFILE_DB: env.PROFILE_DB,
           /* AI chat state. This object is a whitelist: a binding left out here
@@ -654,9 +767,20 @@ export default {
     }
 
     const isApp = request.headers.get('X-AH-App') === APP_HEADER;
-    // sendBeacon-ফলব্যাক: হেডার ছাড়া এলে শুধু অ্যাপের নিজের Origin হলে /api/bank POST গ্রহণযোগ্য
-    const beaconOk = !isApp && request.method === 'POST' && url.pathname === '/api/bank' && (request.headers.get('Origin') === 'https://admissionhub.pages.dev' || request.headers.get('Origin') === 'https://admissionsky.pages.dev' || request.headers.get('Origin') === 'https://sheikhrashel47-stack.github.io');
+    /* BUG-001: the header above is a routing hint only. The routes below change
+       live data — /api/cloud/publish overwrites the global question bank,
+       /api/bank injects questions, /api/ask spends the owner's paid keys — so
+       they now require a real proof: the owner's admin token, or a session the
+       auth authority confirms. The old `beaconOk` exception accepted a bare
+       POST /api/bank on the strength of the Origin header alone, which any
+       non-browser client sets freely; it is gone. */
+    const writeRoute = url.pathname === '/api/cloud/publish' || url.pathname === '/api/bank' || url.pathname === '/api/ask';
+    const stateChanging = writeRoute && request.method === 'POST';
+    const beaconOk = false;
     if (!isApp && !beaconOk) return json(request, { error: 'forbidden' }, 403);
+    if (stateChanging && !ownerProof(request, env) && !(await verifiedSession(request, env))) {
+      return json(request, { error: 'forbidden' }, 403);
+    }
     if (request.method === 'POST' && url.pathname === '/api/ask') return await createAsk(request, env, ctx);
     if (request.method === 'POST' && url.pathname === '/api/bank') return await bankUpload(request, env);
     if (request.method === 'GET' && url.pathname === '/api/bank') return await bankInfo(request, env);
@@ -690,19 +814,19 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    /* Phase 2 (owner-approved 2026-09-17): global notification scheduler —
+    /* Phase 2 (owner-approved 2026-09-17): global notification scheduler -
      * every cron tick sends any due scheduled global (topic-first). Cloudflare
      * Cron Triggers replace the spec's "Vercel Cron" (owner: no Vercel).
      * The GK run below stays date-guarded (once per day). */
     try { await runScheduledGlobalNotifications(env); } catch (_) {}
-    /* Phase G — one personalized nudge per student per day (restraint built in:
+    /* Phase G, one personalized nudge per student per day (restraint built in:
      * daily cap, quiet hours, duplicate guard). Runs after the global send. */
     try { await runScheduledPersonalizedNotifications(env); } catch (_) {}
-    /* Phase 3 — the intelligence layer. Runs after Phase G and shares its daily
+    /* Phase 3, the intelligence layer. Runs after Phase G and shares its daily
      * allowance, so a student still gets at most one nudge a day; this one adds
      * timezone awareness, the priority ranking, fatigue and the A/B variant. */
     try { await runScheduledIntelligenceNotifications(env); } catch (_) {}
-    /* Phase 4 — event notifications (streak/best/mastery/exam achievements) and
+    /* Phase 4, event notifications (streak/best/mastery/exam achievements) and
      * the daily/weekly/monthly digests. Both are dedup-guarded, so a repeated
      * cron tick is harmless. */
     try { await runScheduledEventNotifications(env); } catch (_) {}
@@ -710,7 +834,7 @@ export default {
     /* Anonymous daily AI report (owner 2026-10-17): built once at Bangladesh
        midnight (UTC 18:00) from counts only; read in the Control Center. */
     try { await runDailyReport(env); } catch (_) {}
-    /* P19 — a daily restorable snapshot, taken once per Dhaka day. Guarded by
+    /* P19, a daily restorable snapshot, taken once per Dhaka day. Guarded by
        the same day key the GK run uses, so the per-minute cron does not produce
        a snapshot every minute; best-effort, since a failed backup must not stop
        the notification work above it. */
@@ -721,10 +845,10 @@ export default {
         await env.PUB_KV.put(backupDay, 'done');
       }
     } catch (_) {}
-    /* P25 — drop expired chat-cache rows. Reads already ignore an expired row,
+    /* P25, drop expired chat-cache rows. Reads already ignore an expired row,
        so this is housekeeping, not correctness: it stops the table growing
        without bound on a free-plan database. Guarded to once per Dhaka day for
-       the same reason the snapshot is — the cron ticks every minute. */
+       the same reason the snapshot is, the cron ticks every minute. */
     try {
       const sweepDay = `cacheSweepDay:${dhakaToday()}`;
       if (env.PROFILE_DB && env.PUB_KV && (await env.PUB_KV.get(sweepDay)) !== 'done') {

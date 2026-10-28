@@ -1,4 +1,4 @@
-// 🗄️ PHASE 19 — backup / recovery.
+// 🗄️ PHASE 19, backup / recovery.
 //
 // Until now nothing wrote a restorable copy of the live data. KV held student
 // state, chat memory, published content and the error log; D1 held profiles and
@@ -14,7 +14,7 @@
 //     index means no snapshot was taken, not that backups are off.
 //  3. **A restore is explicit and reversible.** It writes the keys a snapshot
 //     contains and reports exactly which keys it touched. It never deletes a
-//     key that is absent from the snapshot — a restore must not be a wipe.
+//     key that is absent from the snapshot, a restore must not be a wipe.
 
 import { sanitizeErrorText } from './p19-error-monitor.mjs';
 
@@ -61,7 +61,7 @@ export function redactKvValue(raw) {
   return typeof redacted === 'string' ? redacted.slice(0, MAX_VALUE) : redacted;
 }
 
-/** `backups/2026-10-11T19-20-00-000Z.json` — one snapshot, one sortable name. */
+/** `backups/2026-10-11T19-20-00-000Z.json`, one snapshot, one sortable name. */
 export function snapshotName(at) {
   const iso = new Date(Number(at) || Date.now()).toISOString();
   return `${BACKUP_PREFIX}${iso.replace(/[:.]/g, '-')}.json`;
@@ -118,7 +118,7 @@ async function listTables(db) {
 /**
  * Collect a full snapshot of KV and D1, redacted. Every read is guarded so one
  * unreadable namespace degrades that section to empty rather than failing the
- * whole backup — a partial snapshot with a note beats no snapshot.
+ * whole backup, a partial snapshot with a note beats no snapshot.
  */
 export async function collectSnapshot(env, { now } = {}) {
   const at = Number((now || Date.now)()) || Date.now();
@@ -158,7 +158,7 @@ export async function collectSnapshot(env, { now } = {}) {
 
 /**
  * Take a snapshot, store it in R2, and update the KV index. Returns the index
- * entry that was written. Throws only when there is no bucket to write to —
+ * entry that was written. Throws only when there is no bucket to write to -
  * a backup that cannot be stored must be reported, not silently skipped.
  */
 export async function createSnapshot(env, { now } = {}) {

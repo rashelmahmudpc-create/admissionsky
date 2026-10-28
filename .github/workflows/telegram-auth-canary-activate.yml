@@ -153,8 +153,8 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8; do
 
             fetch_public "$verify_dir/index.html" "https://admissionhub.pages.dev/?release=v335-lock-20261016"
-            if grep -Fq 'account-access.js?v=20261015-safearea1' "$verify_dir/index.html" \
-              && grep -Fq 'ai-agent-chat.js?v=agent-f1-ui-p06chat' "$verify_dir/index.html"; then
+            if grep -Fq 'account-access.js?v=20261021-turnstile-v1' "$verify_dir/index.html" \
+              && grep -Fq 'ai-agent-chat.js?v=agent-f1-ui-skyv13' "$verify_dir/index.html"; then
               public_ready=true
               break
             fi
@@ -178,10 +178,10 @@ jobs:
           echo 'verify: auth config contracts READY'
 
           grep -Fq 'institutions-bd.js?v=bd-institutions-v2' "$verify_dir/index.html"
-          grep -Fq 'account-access.css?v=20261015-safearea1' "$verify_dir/index.html"
+          grep -Fq 'account-access.css?v=20261018-allowlist-v1' "$verify_dir/index.html"
           grep -Fq 'dashboard-v2.css?v=dash2f13-theme' "$verify_dir/index.html"
-          grep -Fq 'dashboard-v2.js?v=dash2f17-v3frame' "$verify_dir/index.html"
-          grep -Fq 'ai-agent-chat.js?v=agent-f1-ui-p06chat' "$verify_dir/index.html"
+          grep -Fq 'dashboard-v2.js?v=dash2f18-chrome' "$verify_dir/index.html"
+          grep -Fq 'ai-agent-chat.js?v=agent-f1-ui-skyv13' "$verify_dir/index.html"
           grep -Fq 'phase12-ui.js?v=nav-resume-router-v11-main-ai' "$verify_dir/index.html"
 
           grep -Fq "const expectedSwVersion = 'v335-lock-20261016'" "$verify_dir/index.html"
@@ -197,7 +197,7 @@ jobs:
               200)
                 ! grep -Eiq '^content-type:[[:space:]]*image/' "$verify_dir/${asset}.headers"
                 node -e "const b=require('node:fs').readFileSync(process.argv[1]); if(b.subarray(0,4).toString()==='RIFF'&&b.subarray(8,12).toString()==='WEBP') process.exit(1)" "$verify_dir/${asset}.body"
-                grep -Fq 'account-access.js?v=20261015-safearea1' "$verify_dir/${asset}.body"
+                grep -Fq 'account-access.js?v=20261021-turnstile-v1' "$verify_dir/${asset}.body"
                 ;;
               *) exit 1 ;;
             esac
@@ -205,13 +205,13 @@ jobs:
           verify_retired_media_absent 'onboarding-welcome-hero.webp'
           verify_retired_media_absent 'onboarding-personal-hero.webp'
 
-          fetch_public "$verify_dir/account-access.js" 'https://admissionhub.pages.dev/account-access.js?v=20261015-safearea1'
-          fetch_public "$verify_dir/account-access.css" 'https://admissionhub.pages.dev/account-access.css?v=20261015-safearea1'
-          fetch_public "$verify_dir/dashboard-v2.js" 'https://admissionhub.pages.dev/dashboard-v2.js?v=dash2f17-v3frame'
-          fetch_public "$verify_dir/ai-agent-chat.js" 'https://admissionhub.pages.dev/ai-agent-chat.js?v=agent-f1-ui-p06chat'
+          fetch_public "$verify_dir/account-access.js" 'https://admissionhub.pages.dev/account-access.js?v=20261021-turnstile-v1'
+          fetch_public "$verify_dir/account-access.css" 'https://admissionhub.pages.dev/account-access.css?v=20261018-allowlist-v1'
+          fetch_public "$verify_dir/dashboard-v2.js" 'https://admissionhub.pages.dev/dashboard-v2.js?v=dash2f18-chrome'
+          fetch_public "$verify_dir/ai-agent-chat.js" 'https://admissionhub.pages.dev/ai-agent-chat.js?v=agent-f1-ui-skyv13'
           fetch_public "$verify_dir/phase12-ui.js" 'https://admissionhub.pages.dev/phase12-ui.js?v=nav-resume-router-v11-main-ai'
 
-          fetch_public "$verify_dir/sw.js" 'https://admissionhub.pages.dev/sw.js?v=v335-lock-20261016'
+          fetch_public "$verify_dir/sw.js" 'https://admissionhub.pages.dev/sw.js?v=v364-sky-goal'
 
           grep -Fq "'X-AH-Auth-UI': 'auth-premium-v6'" "$verify_dir/account-access.js"
           grep -Fq 'data-visual-contract="code-native-page-system-v1"' "$verify_dir/account-access.js"
@@ -275,10 +275,10 @@ jobs:
           grep -Fq '<span>AI</span>' "$verify_dir/dashboard-v2.js"
           grep -Fq 'window.renderAiAgentPage = render' "$verify_dir/ai-agent-chat.js"
 
-          grep -Fq "const BUILD_ID = 'v335-lock-20261016'" "$verify_dir/sw.js"
+          grep -Fq "const BUILD_ID = 'v364-sky-goal'" "$verify_dir/sw.js"
           ! grep -Fq 'onboarding-welcome-hero.webp' "$verify_dir/sw.js"
           ! grep -Fq 'onboarding-personal-hero.webp' "$verify_dir/sw.js"
-          grep -Fq './ai-agent-chat.js?v=agent-f1-ui-p06chat' "$verify_dir/sw.js"
+          grep -Fq './ai-agent-chat.js?v=agent-f1-ui-skyv13' "$verify_dir/sw.js"
           rm -rf "$verify_dir"
           echo 'Zero-raster code-native Welcome and input-bound Personal preview, truthful Email/Telegram verification, ordinary Guest route, signup-only Assistant isolation, restored main-app AI, and cache-safe assets are READY; generic backup and pre-verification Passkey remain protected.'
 

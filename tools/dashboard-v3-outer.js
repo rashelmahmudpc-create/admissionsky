@@ -1,12 +1,12 @@
 /* ============================================================
-   DASHBOARD v3 — Scholar Dashboard (owner's design, ২০২৬-১০-১৫)
+   DASHBOARD v3, Scholar Dashboard (owner's design, ২০২৬-১০-১৫)
    The owner supplied the design; it is rendered in an isolated full-screen
    frame so the layout is pixel-for-pixel what he approved. This file is the
    host half: it turns the app's real CACHE data into the frame's data model
    and routes the frame's button taps back into the app.
 
    নিয়ম:
-   • ডেটা-ইঞ্জিন/DB/অন্য-পৃষ্ঠা স্পর্শ করে না — শুধু dashboard-দৃশ্য।
+   • ডেটা-ইঞ্জিন/DB/অন্য-পৃষ্ঠা স্পর্শ করে না, শুধু dashboard-দৃশ্য।
    • সব সংখ্যা CACHE (সত্যিকারের ব্যবহারকারী-ডেটা) থেকে; কোনো ডেমো/বানানো সংখ্যা নেই।
    • ডেটা নেই → সৎ শূন্য-অবস্থা + কর্ম-বাটন (কখনো ভাঙা লেআউট নয়)।
    • থিম অ্যাপেরই (AhAppearance); ফ্রেম কখনো আলাদা থিম রাখে না।
@@ -23,8 +23,8 @@
   const num = (v) => Number(v) || 0;
   const escv = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-  /* CACHE রেজলভার: index.html-এ `const CACHE` (ক্লাসিক-স্ক্রিপ্ট টপ-লেভেল const) window-এ যায় না —
-     তাই প্রথমে window, পরে গ্লোবাল-লেক্সিকাল (typeof-গার্ড), শেষ-ফলব্যাক {} — কোনো অবস্থায় ক্র্যাশ নয়। */
+  /* CACHE রেজলভার: index.html-এ `const CACHE` (ক্লাসিক-স্ক্রিপ্ট টপ-লেভেল const) window-এ যায় না -
+     তাই প্রথমে window, পরে গ্লোবাল-লেক্সিকাল (typeof-গার্ড), শেষ-ফলব্যাক {}, কোনো অবস্থায় ক্র্যাশ নয়। */
   const C = () => {
     try {
       if (window.CACHE) return window.CACHE;
@@ -318,7 +318,7 @@
     return '<iframe class="dv3-frame" title="Dashboard" style="position:fixed;inset:0;width:100%;height:100%;border:0;display:block;z-index:5;background:var(--ah-chrome,#F4F6FD)"></iframe>';
   }
 
-  /* ফ্রেমের srcdoc বসানো — renderShell প্রতিবার নতুন ফ্রেম বানায়, তাই সোর্স এখানেই দেওয়া হয় */
+  /* ফ্রেমের srcdoc বসানো, renderShell প্রতিবার নতুন ফ্রেম বানায়, তাই সোর্স এখানেই দেওয়া হয় */
   function paintFrame() {
     const app = document.getElementById('app');
     const fr = app && app.querySelector('iframe.dv3-frame');

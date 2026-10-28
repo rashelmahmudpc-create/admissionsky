@@ -1,8 +1,8 @@
-/* Phase 5 — AI Analytics routes.
+/* Phase 5, AI Analytics routes.
  *
  * Owns `/api/analytics/ai/*`. This handler is registered **before** the Phase 4
  * `handleAnalyticsRequest`, because Phase 4 claims every path under
- * `/api/analytics/` and would answer these with its admin gate — a 403 that looks
+ * `/api/analytics/` and would answer these with its admin gate, a 403 that looks
  * like a permissions problem instead of a missing route. A test pins the
  * registration order for exactly that reason.
  *
@@ -128,7 +128,7 @@ export async function handleAiAnalyticsRequest(request, env, ctx, deps = {}) {
     }
 
     /* An action the API does not support is refused rather than silently
-     * downgraded to `ignored` — otherwise a typo would be recorded as a real
+     * downgraded to `ignored`, otherwise a typo would be recorded as a real
      * outcome and quietly corrupt the performance figures. `ignored` is only
      * ever the explicit default when no action is supplied. */
     const actionTaken = body?.actionTaken == null ? 'ignored' : String(body.actionTaken);
@@ -241,7 +241,7 @@ export async function handleAiAnalyticsRequest(request, env, ctx, deps = {}) {
         : riskRatio >= 0.5 ? 'high' : riskRatio >= 0.25 ? 'medium' : 'low',
       confidence: Number(confidence.toFixed(2)),
       band: confidenceBand(confidence),
-      /* Aggregate only — the same rule as Phase 4's admin payload. */
+      /* Aggregate only, the same rule as Phase 4's admin payload. */
       segments: dashboard.segments,
       dropOff: dashboard.dropOff
     });
@@ -446,7 +446,7 @@ export async function buildStudentIntelligence(store, analyticsStore, env, userI
       nextBest: actions.best,
       all: actions.actions,
       disclaimerBn: prediction.disclaimerBn,
-      noteBn: 'এটি analysis-ভিত্তিক পরামর্শ — কোনো সিদ্ধান্ত চাপিয়ে দেওয়া হয় না।'
+      noteBn: 'এটি analysis-ভিত্তিক পরামর্শ, কোনো সিদ্ধান্ত চাপিয়ে দেওয়া হয় না।'
     }
   };
 }
@@ -468,8 +468,8 @@ function notificationSuggestion(notifications = {}) {
   return {
     bestVariant: best || null,
     bestHour: hour ? Number(hour.hour) : null,
-    noteBn: 'Best-time ও variant পরামর্শ — পাঠানোর অনুমতি Phase 3-এর নিয়মেই থাকবে।',
-    noteEn: 'Timing and variant suggestions only — Phase 3 keeps the final send decision.'
+    noteBn: 'Best-time ও variant পরামর্শ, পাঠানোর অনুমতি Phase 3-এর নিয়মেই থাকবে।',
+    noteEn: 'Timing and variant suggestions only, Phase 3 keeps the final send decision.'
   };
 }
 
@@ -479,7 +479,7 @@ function examples() {
 
 async function aiCounters(store, trigger) {
   /* Counters come from the decision log, which is already written for every AI
-   * action — so the rate limit needs no separate counter table. */
+   * action, so the rate limit needs no separate counter table. */
   const since = Date.now() - 3600 * 1000;
   const rows = await store.listDecisions({ sinceMs: since, limit: 1000 }).catch(() => []);
   const day = await store.listDecisions({ sinceMs: Date.now() - DAY_MS, limit: 1000 }).catch(() => []);

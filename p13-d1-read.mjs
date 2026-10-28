@@ -1,4 +1,4 @@
-/* Admission Hub — P13 D1 public read path.
+/* Admission Hub, P13 D1 public read path.
  *
  * The public question/content read path, moved off KV blobs onto D1 with real
  * indexes and keyset pagination, so a table of a million questions answers as
@@ -174,7 +174,7 @@ export function createD1Reader(db) {
           const questions = (qres && qres.results ? qres.results : []).map(normalizeRow).filter(Boolean);
           /* Questions gate the read path: no questions means D1 cannot serve a
              document at all, so the caller falls back to KV. An EMPTY bank is a
-             different case — the lists are authoritative and may legitimately
+             different case, the lists are authoritative and may legitimately
              be empty (an owner-ordered vocabulary erase), and returning null
              there would serve the stale KV copy forever. */
           if (!questions.length) return null;

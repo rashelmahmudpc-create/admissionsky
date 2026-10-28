@@ -15,13 +15,14 @@ test('compact configuration keeps Logto identity, quota and all existing mailer 
   assert.equal(p.redirectUri, 'https://admissionsky.pages.dev/logto-callback');
   // Raised 1000 -> 5000 by owner order 2026-10-15: Logto documents no daily
   // sending limit, so this is our own safety ceiling, not a provider cap.
-  assert.equal(p.declaredDailyQuota, 5000);
+  // Lowered 5000 -> 1500 by owner order 2026-10-22 to fit the free plan's 50K MAU/month.
+  assert.equal(p.declaredDailyQuota, 1500);
   assert.equal(p.declaredDailyQuota, slot.dailyQuota);
-  for (const [name, quota] of Object.entries({ A: 300, B: 100, C: 200, D: 100, E: 100, F: 100 })) {
+  for (const [name, quota] of Object.entries({ A: 300, B: 100, C: 200, D: 100, E: 100, F: 16 })) {
     assert.match(text, new RegExp(`^OTP_${name}_DAILY_QUOTA = "${quota}"$`, 'm'));
   }
   // otp-g's cap lives in the orchestrator row since its var was dropped (64-var ceiling).
-  assert.equal(JSON.parse(packed).providers.find(row => row.id === 'otp-g').dailyQuota, 150);
+  assert.equal(JSON.parse(packed).providers.find(row => row.id === 'otp-g').dailyQuota, 165);
   assert.doesNotMatch(text, /^OTP_G_DAILY_QUOTA\s*=/m);
   assert.doesNotMatch(text, /^(?:LOGTO_ENDPOINT|LOGTO_APP_ID|LOGTO_REDIRECT_URI|OTP_H_DAILY_QUOTA)\s*=/m);
 });

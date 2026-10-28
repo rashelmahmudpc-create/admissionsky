@@ -1,5 +1,5 @@
 /**
- * mobile-ux-fix.js — Permanent fixes for mobile UX issues:
+ * mobile-ux-fix.js, Permanent fixes for mobile UX issues:
  * 1. Question Bank search: keyboard/search not working (focus lost on re-render)
  * 2. Scrolling jitter in Exam Setup pages
  * 3. Page jumping to top when clicking dropdowns or interactive elements
@@ -8,7 +8,7 @@
   'use strict';
 
   // =========================================================================
-  // FIX 1: Question Bank search — prevent full re-render while typing
+  // FIX 1: Question Bank search, prevent full re-render while typing
   // The search input calls renderQuestionBankV2() on every keystroke which
   // replaces the entire #app innerHTML, causing the input to lose focus
   // and the keyboard to dismiss on mobile.
@@ -185,7 +185,7 @@
 
         // Only allow scroll-to-top if the page actually changed
         if (prevPage !== null && prevPage === currentPage) {
-          // Same page re-render (e.g., dropdown change) — suppress scroll
+          // Same page re-render (e.g., dropdown change), suppress scroll
           examSetupRendering = 'suppress';
         }
         setTimeout(() => { examSetupRendering = false; }, 50);

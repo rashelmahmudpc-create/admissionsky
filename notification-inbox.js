@@ -1,24 +1,24 @@
-/* v7 — Admission Hub ইনবক্স (owner directive 2026-10-16).
+/* v7, Admission Hub ইনবক্স (owner directive 2026-10-16).
  * The old notification-only list (v6) is retired; this is the new Inbox
- * design from the owner's "Inbox UI প্রোটোটাইপ" — animated sky-blue hero,
+ * design from the owner's "Inbox UI প্রোটোটাইপ", animated sky-blue hero,
  * search, stat pills and four top tabs: চ্যাট · গ্রুপ · নোটিশ · নোটিফিকেশন.
  *
  * Rules carried over / added:
- *  • NO bottom navigation bar inside the Inbox — neither the app's nav
+ *  • NO bottom navigation bar inside the Inbox, neither the app's nav
  *    (#navRoot is emptied + #app.no-nav) nor the prototype's own bottom
  *    nav; the tabs live at the top under the hero.
  *  • Two themes, wired to the app-wide appearance engine (AhAppearance):
- *    dark (default — the prototype's dark palette on the Scholar navy) and
+ *    dark (default, the prototype's dark palette on the Scholar navy) and
  *    light (the prototype's sky-blue design). The hero toggle switches the
  *    app theme; data-theme-keep stops the unified theme guard repainting.
  *  • Real data only, never fake: notifications = local hub log (IDB) +
  *    server global feed; নোটিশ বোর্ড = server globals of notice kind
  *    (announcement / important / course / new-feature). Chat & groups have
- *    no backend yet, so they show an honest "শীঘ্রই আসছে" state — no
+ *    no backend yet, so they show an honest "শীঘ্রই আসছে" state, no
  *    made-up conversations.
  *  • Backend: /api/notifications/inbox (+kind, savedAt), /read, /read-all,
  *    /save. No status bar, no test button, no FCM jargon (round 8).
- *  • Dual language via AhI18n — only the active language is rendered.
+ *  • Dual language via AhI18n, only the active language is rendered.
  */
 (() => {
   'use strict';
@@ -56,7 +56,7 @@
     soonChat: { bn: 'চ্যাট শীঘ্রই আসছে', en: 'Chats are coming soon' },
     soonChatSub: { bn: 'বন্ধুদের সাথে সরাসরি চ্যাট করে একসাথে পড়ার সুবিধা তৈরি হচ্ছে', en: 'Direct chat with friends is being built' },
     soonGroups: { bn: 'গ্রুপ ও চ্যানেল শীঘ্রই আসছে', en: 'Groups & channels are coming soon' },
-    soonGroupsSub: { bn: 'স্টাডি গ্রুপ ও চ্যানেলে যুক্ত হয়ে একসাথে প্রস্তুতি নিন — খুব শিগগির', en: 'Join study groups and channels — very soon' },
+    soonGroupsSub: { bn: 'স্টাডি গ্রুপ ও চ্যানেলে যুক্ত হয়ে একসাথে প্রস্তুতি নিন, খুব শিগগির', en: 'Join study groups and channels, very soon' },
     noticeTag: { bn: 'নোটিশ', en: 'Notice' },
     details: { bn: 'বিস্তারিত দেখুন', en: 'View details' },
     save: { bn: 'সেভ', en: 'Save' },
@@ -261,7 +261,7 @@
         data-nif-id="${esc(row.id)}" data-nif-global="${row.source === 'global' ? '1' : '0'}" data-nif-link="${esc(row.targetUrl || '')}"
         onclick="window.__nifTap(this)">
         <span class="ibx-nic" aria-hidden="true">${icon}</span>
-        <span class="ibx-m"><span class="ibx-top"><b>${esc(row.title || '—')}</b><small>${esc(fmtTime(row.createdAt))}</small></span><span class="ibx-p">${esc(row.body || '')}</span></span>
+        <span class="ibx-m"><span class="ibx-top"><b>${esc(row.title || '-')}</b><small>${esc(fmtTime(row.createdAt))}</small></span><span class="ibx-p">${esc(row.body || '')}</span></span>
         ${unreadRow ? '<span class="ibx-dot" aria-hidden="true"></span>' : ''}
       </button>`;
     };
@@ -286,7 +286,7 @@
     return h + list.map((n, i) => `<button class="ibx-nc ${n.readAt ? '' : 'u'}" style="--d:${Math.min(i, 8)}" data-ibx-id="${esc(n.id)}" onclick="window.__ibxNotice(this)">
       ${cover(n)}
       <span class="ibx-in"><span class="ibx-tag">${esc(noticeLabel(n.type))}</span>${n.savedAt ? `<span class="ibx-pin">${esc(t('saved'))}</span>` : ''}${n.readAt ? '' : '<span class="ibx-new"></span>'}
-      <b class="ibx-h3">${esc(n.title || '—')}</b><span class="ibx-p2">${esc(String(n.body || '').slice(0, 90))}${String(n.body || '').length > 90 ? '…' : ''}</span>
+      <b class="ibx-h3">${esc(n.title || '-')}</b><span class="ibx-p2">${esc(String(n.body || '').slice(0, 90))}${String(n.body || '').length > 90 ? '…' : ''}</span>
       <span class="ibx-ft"><span>${esc(fmtTime(n.createdAt))}</span><span>${esc(t('details'))}</span></span></span>
     </button>`).join('');
   };
@@ -415,7 +415,7 @@
 
   const sheetHtml = (n) => `<div class="ibx-gr"></div>${cover(n, true)}<div class="ibx-spd">
     <span class="ibx-tag">${esc(noticeLabel(n.type))}</span>${n.savedAt ? `<span class="ibx-pin">${esc(t('saved'))}</span>` : ''}
-    <h2>${esc(n.title || '—')}</h2><small>${esc(fmtTime(n.createdAt))}</small>
+    <h2>${esc(n.title || '-')}</h2><small>${esc(fmtTime(n.createdAt))}</small>
     <p>${esc(n.body || '')}</p>
     <div class="ibx-ad">
       <button class="${n.savedAt ? 'a' : ''}" onclick="window.__ibxSave()">${ic('mark')}${esc(n.savedAt ? t('savedBtn') : t('save'))}</button>
@@ -539,7 +539,7 @@
       reRender();
     })();
   };
-  /* Mark all: local hub log AND the server-side global feed (v7 fix —
+  /* Mark all: local hub log AND the server-side global feed (v7 fix -
    * previously globals came straight back as unread). */
   window.__nifMarkAll = () => {
     (async () => {
@@ -549,7 +549,7 @@
       toast(t('toastAllRead'));
     })();
   };
-  /* Clear all (two-tap confirm — first tap arms the button for 3s). */
+  /* Clear all (two-tap confirm, first tap arms the button for 3s). */
   let clearArmedAt = 0;
   window.__nifClearAll = () => {
     const btn = document.getElementById('nifClearBtn');

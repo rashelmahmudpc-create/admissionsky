@@ -9,12 +9,33 @@ import { resolveTelegramWebhookSecret, validTelegramWebhookSecret } from '../ver
 import { isTelegramLoginEmail, reservedTelegramLoginEmail, telegramLoginBotId, telegramLoginCredentials, telegramLoginReady, verifyTelegramLogin } from '../verification/telegram-login.mjs';
 import { isPendingSignupTicket } from './pending-signup.mjs';
 import * as pendingSignup from './pending-signup-public.mjs';
+import { shadowVerdict, shadowDelayMs, sleep, resolveGuardMode, SHADOW_GUARD_MODES } from '../core/shadow-guard.mjs';
+import { parseCanaryEmails, isCanaryEmail, createKvCanaryFlags } from '../core/canary-accounts.mjs';
+import { createKvPasswordGuard, passwordGuardKey, passwordFailuresSoFar } from '../core/password-guard.mjs';
+import { createKvLoginFacts, createKvIpBreadth } from '../core/login-facts.mjs';
+import { sendThrottledSecurityAlert, SECURITY_ALERT_EVENTS } from '../core/security-alerts.mjs';
+/* D-5 / A1.5 ②: one shared CORS policy for every auth surface. This handler
+ * used to keep its own copy that still accepted http://localhost and any
+ * *.admissionhub.pages.dev preview host, so production served credentialed
+ * CORS to preview builds even after the other handlers were tightened. */
+import { allowedOrigin, corsHeaders } from '../../cors-policy.mjs';
 
 export const AUTH_API_PREFIX = '/api/auth/v1';
-// Phase 7 public-safe profile projection — deliberately unauthenticated and
+// Phase 7 public-safe profile projection, deliberately unauthenticated and
 // therefore outside the auth prefix. Shared as the constant the route gate,
 // the CORS check and the route itself all read, so they cannot drift apart.
 export const PUBLIC_PROFILE_PREFIX = '/api/public/profile/';
+
+/**
+ * F-04: the paths this handler claims, in one place. admission-gk asks this
+ * before forwarding a request to the auth Worker, because a second, drifting
+ * copy of the rule is exactly how the public profile route once 404'd for
+ * everybody (see the note below).
+ */
+export function claimsAuthPath(pathname) {
+  const path = String(pathname || '');
+  return path === AUTH_API_PREFIX || path.startsWith(`${AUTH_API_PREFIX}/`) || path.startsWith(PUBLIC_PROFILE_PREFIX);
+}
 export const AUTH_SESSION_COOKIE = '__Host-ah_session';
 export const AUTH_FIREBASE_COOKIE = '__Host-ah_firebase';
 export const AUTH_DEVICE_COOKIE = '__Host-ah_device';
@@ -37,27 +58,6 @@ const JSON_HEADERS = Object.freeze({
   'Cross-Origin-Resource-Policy': 'same-site',
   Vary: 'Origin'
 });
-
-const allowedOrigin = origin => {
-  if (!origin) return false;
-  try {
-    const url = new URL(origin);
-    if (url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname)) return true;
-    if (url.protocol !== 'https:') return false;
-    return url.hostname === 'admissionhub.pages.dev'
-      || url.hostname === 'admissionsky.pages.dev'
-      || /^[a-z0-9-]+\.admissionhub\.pages\.dev$/i.test(url.hostname)
-      || url.hostname === 'admission-gk.admissionhub.workers.dev';
-  } catch { return false; }
-};
-
-const corsHeaders = request => {
-  const origin = request.headers.get('Origin') || '';
-  return origin && allowedOrigin(origin) ? {
-    'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Credentials': 'true'
-  } : {};
-};
 
 const json = (request, status, body, extraHeaders = {}) => {
   const headers = new Headers({ ...JSON_HEADERS, ...corsHeaders(request) });
@@ -111,13 +111,57 @@ async function readJson(request, maxBytes = MAX_BODY_BYTES) {
 
 const clientContext = (request, existingDeviceId = '') => {
   const deviceId = /^[A-Za-z0-9_-]{20,96}$/.test(existingDeviceId) ? existingDeviceId : randomToken(24);
+  // Edge facts. Cloudflare already knows the country, the network and its own
+  // bot score; asking for them costs nothing and inventing them would be a
+  // guess. Every one is optional, so a runtime that does not report them
+  // simply scores less risk rather than accusing anybody.
+  const cf = request.cf || {};
+  const botScore = Number(cf.botManagement?.score);
   return Object.freeze({
     deviceId,
     isNewDevice: deviceId !== existingDeviceId,
     ip: String(request.headers.get('CF-Connecting-IP') || 'unknown').slice(0, 96),
     userAgent: String(request.headers.get('User-Agent') || '').slice(0, 300),
-    origin: String(request.headers.get('Origin') || new URL(request.url).origin).slice(0, 256)
+    origin: String(request.headers.get('Origin') || new URL(request.url).origin).slice(0, 256),
+    country: String(cf.country || '').slice(0, 8),
+    asn: Number.isFinite(Number(cf.asn)) ? Number(cf.asn) : undefined,
+    botScore: Number.isFinite(botScore) ? botScore : undefined
   });
+};
+
+// Shadow Guard (P30) mode. The default - an unset variable, or one nobody
+// recognises - is `observe`: every login is scored and reported, and nobody
+// is refused. A refusal needs the explicit word `enforce`. The deployment
+// carries no variable for this: the Worker sits on Cloudflare's 64-variable
+// free-tier ceiling, so a 65th is rejected at deploy time.
+const shadowGuardMode = env => resolveGuardMode(env?.SHADOW_GUARD_ACTIVATION);
+
+// The KV namespace the guard records into. Absent binding means the guard
+// cannot record, and a guard that cannot record must not silently pretend
+// it did: the caller treats it as unavailable and proceeds on the old path.
+const shadowGuardStore = env => env?.GK_KV || env?.PUB_KV || null;
+
+// A canary hit is a deliberate act, so it is worth a record even though the
+// response says nothing. The flag is raised in the background: an attacker
+// must not be able to measure the extra write.
+const flagCanaryHit = (env, email, context) => {
+  const list = parseCanaryEmails(env?.CANARY_EMAILS);
+  if (!isCanaryEmail(email, list)) return false;
+  const store = shadowGuardStore(env);
+  if (store) {
+    const flags = createKvCanaryFlags(store);
+    Promise.resolve()
+      .then(() => flags.flag(context.ip, context.deviceId))
+      .catch(() => {});
+  }
+  // The owner is told at once: a canary hit is the clearest signal the app
+  // has that someone is probing it on purpose.
+  sendThrottledSecurityAlert(env, store, {
+    event: SECURITY_ALERT_EVENTS.CANARY_HIT,
+    email,
+    at: Date.now()
+  });
+  return true;
 };
 
 const credentials = body => {
@@ -165,7 +209,7 @@ const facebookCredential = body => {
 
 // Google Login → Automatic Profile Sync (owner blueprint):
 // Google data populates ONLY the empty fields of a NEW profile.
-// User-modified data always wins — no silent overwrite, ever.
+// User-modified data always wins, no silent overwrite, ever.
 const GOOGLE_AVATAR_HOSTS = Object.freeze(['.googleusercontent.com']);
 const isGoogleAvatarUrl = raw => {
   try {
@@ -202,13 +246,13 @@ async function seedGoogleProfile(env, context, established, googleUser) {
     current = await callAuthority(env, '/internal/profile/get-v2', { input, context });
   } catch { return; }
   if (!current) return;
-  // 1) Name — only when the profile has none yet.
+  // 1) Name, only when the profile has none yet.
   if (!current.profile?.fullName && looksLikeName(googleUser.displayName)) {
     try {
       await callAuthority(env, '/internal/profile/patch', { input: { ...input, fields: { fullName: String(googleUser.displayName).trim() } }, context });
     } catch { /* seeding is best-effort; login must never fail on it */ }
   }
-  // 2) Avatar — only when the user has none yet, and only from Google's own CDN.
+  // 2) Avatar, only when the user has none yet, and only from Google's own CDN.
   if (!current.avatar?.present && isGoogleAvatarUrl(googleUser.photoUrl)) {
     try {
       const res = await fetch(String(googleUser.photoUrl), {
@@ -354,6 +398,27 @@ const emailOwnershipProven = async ({ env, user, context, allowed }) => {
   } catch { return false; }
 };
 
+/**
+ * F-04: is this address a "Continue with Telegram" account?
+ *
+ * The derivation needs AUTH_HMAC_SECRET, and a Cloudflare secret is write-only:
+ * it cannot be copied into the split-out auth Worker, only re-issued (which
+ * would change every derived address and orphan those accounts). So the answer
+ * is asked from the authority, which still holds the secret — but only for an
+ * address in the reserved Telegram domain, and only after the local derivation,
+ * available in admission-gk, has said no. A normal student address costs one
+ * string compare and never reaches the authority.
+ */
+export const telegramLoginAccountFor = async ({ env, email }) => {
+  const address = String(email || '').trim().toLowerCase();
+  if (!reservedTelegramLoginEmail(address)) return false;
+  if (await isTelegramLoginEmail(address, env)) return true;
+  try {
+    const result = await callAuthority(env, '/internal/telegram/login-email', { email: address });
+    return result?.loginAccount === true;
+  } catch { return false; }
+};
+
 const firebaseReadySession = async ({ provider, jar, env, context, allowTelegram = false, trackRefresh = false }) => {
   const sessionToken = jar[AUTH_SESSION_COOKIE];
   const refreshToken = jar[AUTH_FIREBASE_COOKIE];
@@ -369,7 +434,8 @@ const firebaseReadySession = async ({ provider, jar, env, context, allowTelegram
   const ownershipProven = !user.emailVerified && await emailOwnershipProven({ env, user, context, allowed: true });
   // A "Continue with Telegram" account is proven by Telegram's signature at
   // login; its derived address can never receive mail, so it counts as verified.
-  const telegramLoginAccount = !user.emailVerified && !ownershipProven && await isTelegramLoginEmail(user.email, env);
+  const telegramLoginAccount = !user.emailVerified && !ownershipProven
+    && await telegramLoginAccountFor({ env, email: user.email });
   const telegramVerified = telegramLoginAccount || (!user.emailVerified && !ownershipProven
     && await telegramVerificationStatus({ env, user, context, allowed: allowTelegram }));
   if (!user.emailVerified && !ownershipProven && !telegramVerified) throw new NativeAuthError(AUTH_ERROR_CODES.EMAIL_NOT_VERIFIED);
@@ -402,7 +468,7 @@ const authSuccess = (request, established, refreshToken, context, verification =
     emailOwnershipProven,
     created: Boolean(established.created),
     user: established.user,
-    // Phase 6 — security decision travels with the session: trustOffer drives
+    // Phase 6, security decision travels with the session: trustOffer drives
     // the "trust this device 30 days" prompt (Chunk 3 client); HIGH risk
     // shortens expiresAt server-side.
     session: { expiresAt: established.sessionExpiresAt, security: established.security || null }
@@ -478,9 +544,9 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
     // The public-safe profile projection lives further down in this handler but
     // sits OUTSIDE the /api/auth/v1 prefix. Gating on the auth prefix alone made
     // it unreachable: the request fell through to the product API, which
-    // answered {"error":"not-found"} — every shared public profile 404'd.
+    // answered {"error":"not-found"}, every shared public profile 404'd.
     const isPublicProfileRoute = url.pathname.startsWith(PUBLIC_PROFILE_PREFIX);
-    if (!url.pathname.startsWith(`${AUTH_API_PREFIX}/`) && url.pathname !== AUTH_API_PREFIX && !isPublicProfileRoute) return null;
+    if (!claimsAuthPath(url.pathname)) return null;
     const origin = request.headers.get('Origin') || '';
     const telegramOperation = request.method === 'POST' && [
       `${AUTH_API_PREFIX}/telegram/webhook`,
@@ -729,14 +795,17 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         if (telegramRequested && !currentAuthUi(request)) {
           throw new NativeAuthError(AUTH_ERROR_CODES.CLIENT_UPDATE_REQUIRED);
         }
-        const input = credentials(await readJson(request));
+        const turnstileBody = await readJson(request);
+        // A1.5 / AU-SEC-01 L4: human check before any Firebase or OTP work.
+        await verifyTurnstile({ env, token: turnstileBody?.turnstileToken, ip: context.ip, fetchImpl });
+        const input = credentials(turnstileBody);
         // Owner order 2026-10-16: refuse a throwaway inbox before any account is
         // created or any OTP is sent. Server-side so a patched client cannot skip it.
         if (isDisposableEmail(input.email)) throw new NativeAuthError(AUTH_ERROR_CODES.DISPOSABLE_EMAIL);
         if (reservedTelegramLoginEmail(input.email)) throw new NativeAuthError(AUTH_ERROR_CODES.DISPOSABLE_EMAIL);
         const prepared = await callAuthority(env, '/internal/firebase/rate', { input: { operation: 'signup', email: input.email }, context });
         // AUTH-ROADMAP step 1: an opted-in dual-choice signup holds the credentials; no account until the code is proven.
-        if (telegramRequested && pendingSignup.pendingSignupRequested(request)) return pendingSignup.beginPendingSignup({ request, env, context, prepared, password: input.password, deps: pendingDeps() });
+        if (emailOwnershipRequested(env, url) && pendingSignup.pendingSignupRequested(request)) return pendingSignup.beginPendingSignup({ request, env, context, prepared, password: input.password, deps: pendingDeps() });
         let signed;
         try { signed = await provider.signUp(prepared.email, input.password); } catch (cause) { throw providerError(cause, 'signup'); }
 
@@ -777,7 +846,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
             // Email. Keep the canonical Firebase subject recoverable by password
             // login, but fail closed with an explicit no-delivery message.
             throw new NativeAuthError(AUTH_ERROR_CODES.VERIFICATION_UNAVAILABLE, {
-              message: 'অ্যাকাউন্ট তৈরি হয়েছে, কিন্তু যাচাইয়ের পদ্ধতি এখন প্রস্তুত করা যাচ্ছে না—কিছু পাঠানো হয়নি। একটু পরে এই ইমেইল দিয়ে লগইন করুন।'
+              message: 'অ্যাকাউন্ট তৈরি হয়েছে, কিন্তু যাচাইয়ের পদ্ধতি এখন প্রস্তুত করা যাচ্ছে না, কিছু পাঠানো হয়নি। একটু পরে এই ইমেইল দিয়ে লগইন করুন।'
             });
           }
         }
@@ -807,6 +876,8 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
       if (request.method === 'POST' && url.pathname === `${AUTH_API_PREFIX}/password-reset`) {
         if (!provider.configured) throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
         const body = await readJson(request);
+        // A1.5 / AU-SEC-01 L4: human check before any send.
+        await verifyTurnstile({ env, token: body?.turnstileToken, ip: context.ip, fetchImpl });
         const email = normalizeAuthEmail(body?.email);
         if (isDisposableEmail(email)) throw new NativeAuthError(AUTH_ERROR_CODES.DISPOSABLE_EMAIL);
         const prepared = await callAuthority(env, '/internal/firebase/rate', {
@@ -830,7 +901,10 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
 
       if (request.method === 'POST' && url.pathname === `${AUTH_API_PREFIX}/verification/resend`) {
         if (!provider.configured) throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
-        const input = credentials(await readJson(request));
+        const turnstileBody = await readJson(request);
+        // A1.5 / AU-SEC-01 L4: human check before any Firebase or OTP work.
+        await verifyTurnstile({ env, token: turnstileBody?.turnstileToken, ip: context.ip, fetchImpl });
+        const input = credentials(turnstileBody);
         const prepared = await callAuthority(env, '/internal/firebase/rate', { input: { operation: 'verification-resend', email: input.email }, context });
         let signed;
         let user;
@@ -849,13 +923,105 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
 
       if (request.method === 'POST' && url.pathname === `${AUTH_API_PREFIX}/login`) {
         if (!provider.configured) throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
-        const input = credentials(await readJson(request));
+        const turnstileBody = await readJson(request);
+        // A1.5 / AU-SEC-01 L4: human check before any Firebase or OTP work.
+        await verifyTurnstile({ env, token: turnstileBody?.turnstileToken, ip: context.ip, fetchImpl });
+        const input = credentials(turnstileBody);
         const prepared = await callAuthority(env, '/internal/firebase/rate', { input: { operation: 'login', email: input.email }, context });
-        // Phase 6 — escalating cooldown after repeated failed logins (§14):
+        // Phase 6, escalating cooldown after repeated failed logins (§14):
         // the DO counts recorded failures and asks us to delay this attempt.
         // A delay, never a lockout: the cooldown always expires.
         if (Number(prepared?.retryAfter) > 0) {
-          return json(request, 429, { ok: false, error: { code: 'RATE_LIMITED', message: 'অনেকবার চেষ্টা হয়েছে—একটু পরে আবার চেষ্টা করুন।' } }, { 'Retry-After': String(prepared.retryAfter) });
+          return json(request, 429, { ok: false, error: { code: 'RATE_LIMITED', message: 'অনেকবার চেষ্টা হয়েছে, একটু পরে আবার চেষ্টা করুন।' } }, { 'Retry-After': String(prepared.retryAfter) });
+        }
+        // Shadow Guard (P30). Off unless SHADOW_GUARD_ACTIVATION is set, so
+        // this block is inert by default. A canary address is flagged and
+        // then treated as a high-risk attempt: it must look exactly like a
+        // wrong password, otherwise the decoy teaches the attacker it was a
+        // decoy.
+        const canaryHit = flagCanaryHit(env, prepared.email, context);
+        const mode = shadowGuardMode(env);
+        const guardActive = mode !== SHADOW_GUARD_MODES.OFF || canaryHit;
+        // A canary is a decoy, so it is enforced even while the guard is only
+        // observing: nobody legitimate ever signs in with it, and letting it
+        // through in observe mode would defeat its whole purpose.
+        const enforcing = mode === SHADOW_GUARD_MODES.ENFORCE || canaryHit;
+        const guardStore = shadowGuardStore(env);
+        // The password guard counts the ip+email pair, so an attacker guessing
+        // on a student's address from elsewhere can never spend that student's
+        // attempts. A block is refused before the provider is called at all.
+        const passwordGuard = guardActive && guardStore
+          ? createKvPasswordGuard(guardStore)
+          : null;
+        const guardKey = passwordGuard ? passwordGuardKey(prepared.email, context.ip) : '';
+        // The strike count is read even while the guard is only observing:
+        // without it the guard has almost no facts, the high band is
+        // unreachable, and the shadow-ban it exists to perform never runs.
+        let priorStrikes = 0;
+        if (passwordGuard) {
+          // A guard must never be able to break a login. The KV read is the
+          // one call here that can reject, and if it does the attempt simply
+          // proceeds unguarded - which is exactly the behaviour of the
+          // deployment before the guard existed.
+          let state = null;
+          try {
+            state = await passwordGuard.check(guardKey, 'user');
+          } catch {
+            state = null;
+          }
+          priorStrikes = passwordFailuresSoFar(state, 'user');
+          if (enforcing && state?.blocked) {
+            return json(request, 429, {
+              ok: false,
+              error: { code: 'RATE_LIMITED', message: 'অনেকবার ভুল পাসওয়ার্ড দেওয়া হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।' }
+            }, { 'Retry-After': String(state.retryAfterSeconds) });
+          }
+        }
+        let shadow = null;
+        if (guardActive) {
+          // Where this account was last seen from, and how many accounts this
+          // address is trying. Both are stored hashed and both fail open. The
+          // whole block is wrapped as well: the guard is a passenger on the
+          // login path, and a passenger must never be able to stop the train.
+          let accountFacts = null;
+          let breadth = null;
+          try {
+            accountFacts = guardStore
+              ? await createKvLoginFacts(guardStore).observe(prepared.email, { country: context.country, asn: context.asn })
+              : null;
+            breadth = guardStore
+              ? await createKvIpBreadth(guardStore).observe(context.ip, prepared.email)
+              : null;
+          } catch {
+            accountFacts = null;
+            breadth = null;
+          }
+          shadow = shadowVerdict({
+            deviceKnown: context.isNewDevice !== true,
+            failedLogins: priorStrikes,
+            countryChanged: accountFacts?.countryChanged === true,
+            asnChanged: accountFacts?.asnChanged === true,
+            emailsFromIp: breadth?.emailsFromIp || 0,
+            botScore: context.botScore,
+            accountState: canaryHit ? 'suspended' : undefined
+          });
+          // In observe mode the verdict is reported and then ignored: the
+          // attempt continues exactly as it would with the guard absent.
+          if (shadow.shadowBan) {
+            sendThrottledSecurityAlert(env, guardStore, {
+              event: SECURITY_ALERT_EVENTS.SHADOW_BAN,
+              email: prepared.email,
+              band: shadow.band,
+              reasons: enforcing ? shadow.reasons : [...shadow.reasons, 'observe-only'],
+              at: Date.now()
+            });
+            if (enforcing) {
+              // The delay is spent before the answer, so the response time
+              // carries no signal either.
+              await sleep(shadowDelayMs());
+              throw new NativeAuthError(AUTH_ERROR_CODES.INVALID_CREDENTIALS);
+            }
+          }
         }
         let signed;
         let user;
@@ -868,6 +1034,12 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
               const recorded = await callAuthority(env, '/internal/firebase/login/failure', { input: { email: prepared.email }, context });
               failureRetryAfter = Number(recorded?.retryAfter || 0);
             } catch {}
+            if (passwordGuard) {
+              try {
+                const counted = await passwordGuard.recordFailure(guardKey, 'user');
+                if (counted?.blocked) failureRetryAfter = Math.max(failureRetryAfter, counted.retryAfterSeconds);
+              } catch {}
+            }
           }
           const error = providerError(cause, 'signin');
           if (failureRetryAfter > 0) error.retryAfter = Math.max(Number(error.retryAfter || 0), failureRetryAfter);
@@ -875,6 +1047,26 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         }
         try { user = await provider.lookup(signed.idToken); } catch (cause) { throw providerError(cause, 'lookup'); }
         assertProviderUser(signed, user);
+        // The password was right, so the pair's failures are spent. This can
+        // only run when the pair was not blocked: a block is refused before
+        // the provider is reached, so a correct guess can never lift one.
+        if (passwordGuard) {
+          try { await passwordGuard.recordSuccess(guardKey, 'user'); } catch {}
+        }
+        // A new device that got past the password is exactly the event the
+        // owner asked to hear about: if it was not them, this is the first
+        // they will know. In observe mode it is not worth telling: a new
+        // device is the ordinary shape of a first login, and at launch that
+        // is hundreds of students, not an attack. Only the high band - a
+        // would-be ban - is reported while the guard is watching.
+        if (guardActive && context.isNewDevice && (enforcing || shadow?.band === 'high')) {
+          sendThrottledSecurityAlert(env, guardStore, {
+            event: SECURITY_ALERT_EVENTS.NEW_DEVICE,
+            email: prepared.email,
+            band: shadow ? shadow.band : 'low',
+            at: Date.now()
+          });
+        }
         const telegramRequested = telegramVerificationRequested(env, url);
         const telegramVerified = !user.emailVerified && await telegramVerificationStatus({
           env,
@@ -943,7 +1135,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
           },
           context
         });
-        // Phase 6 — new device (or elevated risk) on a verified account:
+        // Phase 6, new device (or elevated risk) on a verified account:
         // challenge-first-then-proceed, reusing the existing verification
         // selection UI. Completing it issues the session AND earns 30-day
         // device trust (single consent moment, no TOTP in v1).
@@ -963,7 +1155,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
           } catch {
             // Fail closed: a risk decision can never be silently bypassed.
             throw new NativeAuthError(AUTH_ERROR_CODES.VERIFICATION_UNAVAILABLE, {
-              message: 'নিরাপত্তার জন্য এই ডিভাইসটি এখন যাচাই করা যাচ্ছে না—একটু পরে আবার চেষ্টা করুন।'
+              message: 'নিরাপত্তার জন্য এই ডিভাইসটি এখন যাচাই করা যাচ্ছে না, একটু পরে আবার চেষ্টা করুন।'
             });
           }
           return json(request, 202, {
@@ -1395,7 +1587,9 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         }
         const verificationTicket = jar[AUTH_VERIFICATION_COOKIE];
         if (!verificationTicket) throw new NativeAuthError(AUTH_ERROR_CODES.TELEGRAM_VERIFICATION_INVALID);
-        await readJson(request);
+        const turnstileBody = await readJson(request);
+        // A1.5 / AU-SEC-01 L4: human check before a Telegram code is issued.
+        await verifyTurnstile({ env, token: turnstileBody?.turnstileToken, ip: context.ip, fetchImpl });
         const result = await callAuthority(env, '/internal/verification/preauth/request', {
           input: { verificationTicket },
           context
@@ -1530,7 +1724,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         });
       }
 
-      // Phase 7 — profile response is additive: `profile` keeps the legacy
+      // Phase 7, profile response is additive: `profile` keeps the legacy
       // shape; publicId/completion/avatar/context are new read-only fields.
       if (request.method === 'GET' && url.pathname === `${AUTH_API_PREFIX}/profile`) {
         if (!provider.configured) throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
@@ -1584,7 +1778,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         });
       }
 
-      // Phase 7 — avatar upload (base64 JSON; server validates MIME +
+      // Phase 7, avatar upload (base64 JSON; server validates MIME +
       // magic bytes + size; client filename is never trusted).
       if (request.method === 'POST' && url.pathname === `${AUTH_API_PREFIX}/profile/avatar`) {
         if (!provider.configured) throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
@@ -1648,7 +1842,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         const bytes = Uint8Array.from(atob(result.data), char => char.charCodeAt(0));
         // Stable, version-scoped URL: let the browser cache and revalidate it.
         // The old `no-store` (plus a `?ts=Date.now()` in the client) forced a
-        // full re-download on every render — the repeated loading the owner saw.
+        // full re-download on every render, the repeated loading the owner saw.
         const etag = `"av-${result.updatedAt || result.bytes || 0}"`;
         if (request.headers.get('If-None-Match') === etag) {
           return new Response(null, { status: 304, headers: new Headers({ 'ETag': etag, 'Cache-Control': 'private, max-age=300, must-revalidate', ...corsHeaders(request) }) });
@@ -1665,7 +1859,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         });
       }
 
-      // Phase 7 — public-safe profile projection (unauthenticated,
+      // Phase 7, public-safe profile projection (unauthenticated,
       // rate-limited). Private profiles never surface.
       if (request.method === 'GET' && url.pathname.startsWith(PUBLIC_PROFILE_PREFIX)) {
         const suffix = decodeURIComponent(url.pathname.slice(PUBLIC_PROFILE_PREFIX.length));
@@ -1851,6 +2045,8 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
           throw new NativeAuthError(AUTH_ERROR_CODES.BACKUP_UNAVAILABLE);
         }
         const body = await readJson(request);
+        // A1.5 / AU-SEC-01 L4: human check before any send.
+        await verifyTurnstile({ env, token: body?.turnstileToken, ip: context.ip, fetchImpl });
         const contact = String(body.contact || '').trim();
         if (contact && !/^\+[1-9]\d{7,14}$/.test(contact)) throw new NativeAuthError(AUTH_ERROR_CODES.INVALID_INPUT);
         const current = await firebaseReadySession({ provider, jar, env, context, allowTelegram: telegramVerificationRequested(env, url) });
@@ -1935,7 +2131,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
       }
       if (request.method === 'POST' && url.pathname === `${AUTH_API_PREFIX}/session/logout-all`) {
         // Phase 5 §12: revoke every session for the current user on every
-        // device. Phase 6 §12: step-up gated — a verified step-up challenge
+        // device. Phase 6 §12: step-up gated, a verified step-up challenge
         // (stepUpToken) is required once the session is no longer recent or
         // current risk reaches ELEVATED. A STEP_UP_REQUIRED error keeps the
         // session alive so the client can run the challenge and retry.
@@ -1949,7 +2145,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         return json(request, 200, { ok: true, authenticated: false, revoked: Number(result?.revoked || 0) }, { 'Set-Cookie': clearAuthCookies() });
       }
 
-      // Phase 6 — purpose-bound security challenges (§11-§12). Session
+      // Phase 6, purpose-bound security challenges (§11-§12). Session
       // required; codes are delivered by the existing verification pipeline
       // (email/Telegram). A verified challenge returns a one-time
       // stepUpToken bound to this user+device.
@@ -2005,7 +2201,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
           'Set-Cookie': sessionCookies(current.session, current.refreshed.refreshToken, context)
         });
       }
-      // Phase 6 — explicit "trust this device" (the 30-day consent).
+      // Phase 6, explicit "trust this device" (the 30-day consent).
       if (request.method === 'POST' && url.pathname === `${AUTH_API_PREFIX}/security/device/trust`) {
         await readJson(request);
         const current = await firebaseReadySession({ provider, jar, env, context, allowTelegram: telegramVerificationRequested(env, url) });
@@ -2017,7 +2213,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
           'Set-Cookie': sessionCookies(current.session, current.refreshed.refreshToken, context)
         });
       }
-      // Phase 6 Chunk 4 — signed-in security state (device list, trust, status).
+      // Phase 6 Chunk 4, signed-in security state (device list, trust, status).
       if (request.method === 'GET' && url.pathname === `${AUTH_API_PREFIX}/security/state`) {
         const current = await firebaseReadySession({ provider, jar, env, context, allowTelegram: telegramVerificationRequested(env, url) });
         const result = await callAuthority(env, '/internal/security/state', {
@@ -2028,7 +2224,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
           'Set-Cookie': sessionCookies(current.session, current.refreshed.refreshToken, context)
         });
       }
-      // Phase 6 Chunk 4 — recent login history (privacy boundary: method,
+      // Phase 6 Chunk 4, recent login history (privacy boundary: method,
       // coarse browser class and time only; no IP, no location, ever).
       if (request.method === 'GET' && url.pathname === `${AUTH_API_PREFIX}/security/history`) {
         const current = await firebaseReadySession({ provider, jar, env, context, allowTelegram: telegramVerificationRequested(env, url) });
@@ -2040,7 +2236,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
           'Set-Cookie': sessionCookies(current.session, current.refreshed.refreshToken, context)
         });
       }
-      // Phase 6 Chunk 4 — step-up-gated trusted-device revocation.
+      // Phase 6 Chunk 4, step-up-gated trusted-device revocation.
       if (request.method === 'POST' && url.pathname === `${AUTH_API_PREFIX}/security/devices/revoke`) {
         const body = await readJson(request);
         const current = await firebaseReadySession({ provider, jar, env, context, allowTelegram: telegramVerificationRequested(env, url) });
@@ -2059,13 +2255,13 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
           'Set-Cookie': sessionCookies(current.session, current.refreshed.refreshToken, context)
         });
       }
-      // Phase 6 Chunk 4 — admin security surface (token-gated, refs only).
+      // Phase 6 Chunk 4, admin security surface (token-gated, refs only).
       if (request.method === 'GET' && url.pathname === `${AUTH_API_PREFIX}/admin/security/health`) {
         if (!adminAuthorized(request, env)) return json(request, 403, { ok: false, error: { code: 'FORBIDDEN', message: 'অনুমতি নেই।' } });
         const result = await callAuthority(env, '/internal/admin/security/health', {});
         return json(request, 200, { ok: true, result });
       }
-      // Fresh Start phase 3 — Control Center Students (read-only, admin token).
+      // Fresh Start phase 3, Control Center Students (read-only, admin token).
       if (request.method === 'GET' && url.pathname === `${AUTH_API_PREFIX}/admin/students`) {
         if (!adminAuthorized(request, env)) return json(request, 403, { ok: false, error: { code: 'FORBIDDEN', message: 'অনুমতি নেই।' } });
         const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 50, 1), 100);
@@ -2080,7 +2276,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         const result = await callAuthority(env, '/internal/admin/students/get', { input: { userId } });
         return json(request, result?.found ? 200 : 404, { ok: Boolean(result?.found), ...result }, { 'X-Robots-Tag': 'noindex, nofollow' });
       }
-      // Fresh Start phase 4 — wipe all users (admin token + allowed Origin).
+      // Fresh Start phase 4, wipe all users (admin token + allowed Origin).
       // { dryRun: true } (default) returns counts; { dryRun: false, confirm:
       // 'WIPE-ALL-<users>' } deletes. OTP config/quota tables are kept.
       if (request.method === 'POST' && url.pathname === `${AUTH_API_PREFIX}/admin/students/wipe`) {

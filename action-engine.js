@@ -1,4 +1,4 @@
-// 🧩 PHASE 9 — M9: WRITE / EXECUTE ACTIONS
+// 🧩 PHASE 9, M9: WRITE / EXECUTE ACTIONS
 // The action permission layer the audit called missing (§52 gap 5/6): READ /
 // WRITE / EXECUTE are separate classes, a write or execute action is disabled
 // until a human confirms it, and every attempt leaves an audit record.
@@ -7,7 +7,7 @@
 // requires explicit confirmation. That is why `ENABLED` is `false`: this module
 // ships the *mechanism* (declaration, proposal, single-use confirmation, audit)
 // without granting any live capability. Turning the layer on is a separate,
-// owner-approved step — flip `ENABLED` in one place.
+// owner-approved step, flip `ENABLED` in one place.
 //
 // Like the M6 tool registry, this module is pure data plus pure guards: no
 // `env`, no I/O, no model call. The Worker performs the actual KV write; the
@@ -179,7 +179,7 @@ export function sanitizeActionArgs(name, args) {
  * layer is on, the action exists, is enabled, has a resolvable owner, and its
  * arguments are clean.
  *
- * `enabled` defaults to the module master switch — the Worker never overrides it.
+ * `enabled` defaults to the module master switch, the Worker never overrides it.
  * Tests pass `enabled: true` to exercise the flow the switch guards.
  */
 export function authorizeAction(name, { uid, args, enabled = ENABLED } = {}) {
@@ -229,7 +229,7 @@ export function proposalSummary(name, args = {}) {
     if (a.langStyle) bits.push('ভাষা: ' + a.langStyle);
     if (a.tone) bits.push('সুর: ' + a.tone);
     if (a.responseLen) bits.push('উত্তরের দৈর্ঘ্য: ' + a.responseLen);
-    line = bits.length ? 'তোমার AI পছন্দ সেভ করব — ' + bits.join(', ') : 'তোমার AI পছন্দ সেভ করব।';
+    line = bits.length ? 'তোমার AI পছন্দ সেভ করব, ' + bits.join(', ') : 'তোমার AI পছন্দ সেভ করব।';
   } else {
     line = 'এই কাজটা করব: ' + String(name || '');
   }
@@ -243,7 +243,7 @@ export function proposalSummary(name, args = {}) {
  * missing or malformed, the caller is not the owner, the token does not match,
  * or the proposal has expired.
  *
- * Single-use is enforced by the caller deleting the stored proposal on success —
+ * Single-use is enforced by the caller deleting the stored proposal on success -
  * the same token then finds no proposal and reports `already-consumed`.
  */
 export function confirmProposal(proposal, token, callerUid, { now = Date.now(), enabled = ENABLED } = {}) {
@@ -308,7 +308,7 @@ export function appendAudit(list, record, callerUid) {
   return [Object.freeze({ ...record }), ...base].slice(0, MAX_AUDIT);
 }
 
-/** Metadata for `agentStatus` — shape only, never a capability. */
+/** Metadata for `agentStatus`, shape only, never a capability. */
 export function describeActions(env) {
   const on = actionsEnabled(env);
   return Object.freeze({

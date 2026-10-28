@@ -114,13 +114,16 @@ test('Google, Passkey, and the explicit Email-or-Telegram selector are public wi
   assert.match(wrangler, /VERIFICATION_AUTH_ACTIVATION = "enabled"/);
   // The email OTP slots are enabled with declared daily caps and rotate ahead of
   // Telegram, but their provider identities stay server-side.
-  assert.match(wrangler, /VERIFICATION_ORCHESTRATOR_CONFIG = '\{"enabled":true,"providers":\[\{"id":"otp-a","enabled":true,"priority":10,"dailyQuota":300/);
+  // F-02 added a "policy" object between "enabled" and "providers"; the order of
+  // those two keys is not the contract, the slots below are.
+  assert.match(wrangler, /VERIFICATION_ORCHESTRATOR_CONFIG = '\{"enabled":true,("policy":\{[^}]*\},)?"providers":\[\{"id":"otp-a","enabled":true,"priority":10,"dailyQuota":300/);
+  assert.match(wrangler, /"deliveryBudgetMs":25000/);
   assert.match(wrangler, /\{"id":"otp-b","enabled":true,"priority":20,"dailyQuota":100/);
   assert.match(wrangler, /\{"id":"otp-c","enabled":true,"priority":45,"dailyQuota":200/);
   assert.match(wrangler, /\{"id":"otp-d","enabled":true,"priority":35,"dailyQuota":100/);
   assert.match(wrangler, /\{"id":"otp-e","enabled":true,"priority":37,"dailyQuota":100/);
-  assert.match(wrangler, /\{"id":"otp-f","enabled":true,"priority":38,"dailyQuota":100/);
-  assert.match(wrangler, /\{"id":"otp-g","enabled":true,"priority":39,"dailyQuota":150/);
+  assert.match(wrangler, /\{"id":"otp-f","enabled":true,"priority":38,"dailyQuota":16/);
+  assert.match(wrangler, /\{"id":"otp-g","enabled":true,"priority":39,"dailyQuota":165/);
   assert.match(wrangler, /\{"id":"telegram","enabled":true,"priority":50/);
   // LOCKED LAST-RESORT PAIR (owner order 2026-10-14): Dead Simple (otp-g) and
   // Mailjet (otp-c) are the two last-resort slots and must stay enabled with
@@ -134,11 +137,11 @@ test('Google, Passkey, and the explicit Email-or-Telegram selector are public wi
   assert.match(wrangler, /OTP_C_DAILY_QUOTA = "200"/);
   assert.match(wrangler, /OTP_D_DAILY_QUOTA = "100"/);
   assert.match(wrangler, /OTP_E_DAILY_QUOTA = "100"/);
-  assert.match(wrangler, /OTP_F_DAILY_QUOTA = "100"/);
+  assert.match(wrangler, /OTP_F_DAILY_QUOTA = "16"/);
   // otp-g quota now comes from the authoritative orchestrator config, not a
   // duplicate text var (that duplicate pushed the Worker past the 64-var limit).
   assert.doesNotMatch(wrangler, /OTP_G_DAILY_QUOTA\s*=/);
-  assert.match(wrangler, /\{"id":"otp-g","enabled":true,"priority":39,"dailyQuota":150/);
+  assert.match(wrangler, /\{"id":"otp-g","enabled":true,"priority":39,"dailyQuota":165/);
   assert.doesNotMatch(wrangler, /BREVO_API_KEY|BREVO_FROM_ADDRESS|OTP_B_PROVIDER_SHARED_SECRET\s*=|MAILJET_API_KEY|MAILJET_SECRET_KEY/);
   assert.doesNotMatch(wrangler, /"id":"whatsapp","enabled":true/);
   assert.match(handler, /googlePublished\(env\)/);
@@ -275,18 +278,19 @@ test('credentials remain in server-managed HttpOnly cookies and are never return
   assert.doesNotMatch(client, /localStorage|Authorization\s*:\s*['"`]Bearer/i);
   assert.match(client, /const OAUTH_REDIRECT_FLAG = 'ah-oauth-redirect'/);
   assert.match(client, /const GOOGLE_REDIRECT_FLAG = 'ah-google-redirect'/);
+  assert.match(client, /const TELEGRAM_LOGIN_FLAG = 'ah-telegram-login-pending'/);
   assert.doesNotMatch(client, /DIRECT_GOOGLE|initTokenClient/);
   const storageCalls = [...client.matchAll(/sessionStorage\.(setItem|getItem|removeItem)\(([^)]*)\)/g)];
   assert.equal((client.match(/sessionStorage/g) || []).length, storageCalls.length,
     'all tab storage use must be an explicitly checked direct method call');
   // +2: the fixed Firebase pendingRedirect mark restored after a lost tab
   // (apply-google-return-recovery-20261017). Still never a token or profile.
-  assert.equal(storageCalls.length, 8, 'only the six OAuth boolean flag accesses plus the two Firebase pending-mark calls are permitted');
+  assert.equal(storageCalls.length, 11, 'only the six OAuth boolean flag accesses, the three Telegram login-pending flag accesses, and the two Firebase pending-mark calls are permitted');
   assert.match(client, /const pendingKey = `firebase:pendingRedirect:\$\{GOOGLE_AUTH_API_KEY\}:\$\{appName\}`;/);
   for (const [, method, args] of storageCalls) {
     const permitted = method === 'setItem'
-      ? /^(?:(?:OAUTH_REDIRECT_FLAG|GOOGLE_REDIRECT_FLAG),\s*'1'|pendingKey,\s*'"true"')$/
-      : /^(?:OAUTH_REDIRECT_FLAG|GOOGLE_REDIRECT_FLAG|pendingKey)$/;
+      ? /^(?:(?:OAUTH_REDIRECT_FLAG|GOOGLE_REDIRECT_FLAG|TELEGRAM_LOGIN_FLAG),\s*'1'|pendingKey,\s*'"true"')$/
+      : /^(?:OAUTH_REDIRECT_FLAG|GOOGLE_REDIRECT_FLAG|TELEGRAM_LOGIN_FLAG|pendingKey)$/;
     assert.match(args.trim(), permitted, 'tab storage must never hold a token, profile or session');
   }
   assert.match(client, /ENTRY_COOKIE = 'ah_entry_v1'/);

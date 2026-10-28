@@ -1,5 +1,5 @@
 /*
- * Weekly AI Report — Admission Hub
+ * Weekly AI Report, Admission Hub
  * Progress পেজে "এই সপ্তাহের রিপোর্ট" কার্ড। সপ্তাহ-কী cache: একই সপ্তাহে
  * একটাই নতুন AI call; AI secure proxy থেকে আসে (কোনো key client-side নেই)।
  */
@@ -67,8 +67,8 @@
     const stats = weeklyStats();
     const cached = loadCached(stats.weekKey);
     const summary = stats.thisWeek.exams
-      ? `এই সপ্তাহে <b>${stats.thisWeek.exams}</b>টি পরীক্ষা · ${stats.thisWeek.questions} প্রশ্ন · accuracy ${stats.thisWeek.accuracy == null ? '—' : stats.thisWeek.accuracy + '%'}`
-      : 'এই সপ্তাহে এখনো কোনো পরীক্ষা হয়নি — পরীক্ষা দিলে রিপোর্ট আরও নিখুঁত হবে।';
+      ? `এই সপ্তাহে <b>${stats.thisWeek.exams}</b>টি পরীক্ষা · ${stats.thisWeek.questions} প্রশ্ন · accuracy ${stats.thisWeek.accuracy == null ? '-' : stats.thisWeek.accuracy + '%'}`
+      : 'এই সপ্তাহে এখনো কোনো পরীক্ষা হয়নি, পরীক্ষা দিলে রিপোর্ট আরও নিখুঁত হবে।';
     if (cached) return weeklyInner(cached.data, stats, true);
     return `<div class="card weekly-report-card" id="weeklyReportCard"><div class="row between"><b>📊 এই সপ্তাহের রিপোর্ট</b></div><div class="muted" style="margin-top:5px;font-size:12.5px">${summary}</div><button class="btn" style="margin-top:10px" onclick="WeeklyReport.generate()">${stats.thisWeek.exams ? '🤖 AI রিপোর্ট তৈরি করো' : '🤖 AI রিপোর্ট দেখাও'}</button></div>`;
   }
@@ -77,7 +77,7 @@
     const tasks = Array.isArray(data.tasks) ? data.tasks.filter(Boolean) : [];
     const strong = Array.isArray(data.strongAreas) ? data.strongAreas.filter(Boolean) : [];
     const weak = Array.isArray(data.weakTopics) ? data.weakTopics.filter(Boolean) : [];
-    return `<div class="card weekly-report-card" id="weeklyReportCard"><div class="row between"><b>📊 এই সপ্তাহের রিপোর্ট</b><span class="muted" style="font-size:10.5px">${fromCache ? 'জমানো ✓' : 'নতুন'}</span></div>${data.opening ? `<div style="margin-top:8px;font-size:13.5px;line-height:1.75;overflow-wrap:anywhere">${safe(data.opening)}</div>` : ''}${data.trend ? `<div class="muted" style="margin-top:7px;font-size:12.5px;line-height:1.7;overflow-wrap:anywhere">📈 ${safe(data.trend)}</div>` : ''}${strong.length ? `<div style="margin-top:9px;font-size:12.5px;line-height:1.7"><b>✓ শক্ত জায়গা:</b> ${strong.map((x) => safe(x)).join(' · ')}</div>` : ''}${weak.length ? `<div style="margin-top:5px;font-size:12.5px;line-height:1.7"><b>! একটু বেশি নজর দাও:</b> ${weak.map((x) => safe(x)).join(' · ')}</div>` : ''}${tasks.length ? `<div style="margin-top:10px"><b style="font-size:12.5px">📅 পরের সপ্তাহের ৩টি কাজ</b><ol style="margin:6px 0 0;padding-inline-start:20px;font-size:12.5px;line-height:1.8">${tasks.slice(0, 3).map((t) => `<li style="overflow-wrap:anywhere">${safe(t)}</li>`).join('')}</ol></div>` : ''}${data.motivation ? `<div style="margin-top:9px;font-size:12.5px;color:var(--emerald-d);font-weight:700;overflow-wrap:anywhere">${safe(data.motivation)}</div>` : ''}${data.verdict ? `<div style="margin-top:8px;font-size:13px;font-weight:800;overflow-wrap:anywhere">${safe(data.verdict)}</div>` : ''}<div class="muted" style="margin-top:8px;font-size:10.5px">AI রিপোর্ট — সিদ্ধান্তের আগে নিজের হিসাবও মিলিয়ে নিও।</div></div>`;
+    return `<div class="card weekly-report-card" id="weeklyReportCard"><div class="row between"><b>📊 এই সপ্তাহের রিপোর্ট</b><span class="muted" style="font-size:10.5px">${fromCache ? 'জমানো ✓' : 'নতুন'}</span></div>${data.opening ? `<div style="margin-top:8px;font-size:13.5px;line-height:1.75;overflow-wrap:anywhere">${safe(data.opening)}</div>` : ''}${data.trend ? `<div class="muted" style="margin-top:7px;font-size:12.5px;line-height:1.7;overflow-wrap:anywhere">📈 ${safe(data.trend)}</div>` : ''}${strong.length ? `<div style="margin-top:9px;font-size:12.5px;line-height:1.7"><b>✓ শক্ত জায়গা:</b> ${strong.map((x) => safe(x)).join(' · ')}</div>` : ''}${weak.length ? `<div style="margin-top:5px;font-size:12.5px;line-height:1.7"><b>! একটু বেশি নজর দাও:</b> ${weak.map((x) => safe(x)).join(' · ')}</div>` : ''}${tasks.length ? `<div style="margin-top:10px"><b style="font-size:12.5px">📅 পরের সপ্তাহের ৩টি কাজ</b><ol style="margin:6px 0 0;padding-inline-start:20px;font-size:12.5px;line-height:1.8">${tasks.slice(0, 3).map((t) => `<li style="overflow-wrap:anywhere">${safe(t)}</li>`).join('')}</ol></div>` : ''}${data.motivation ? `<div style="margin-top:9px;font-size:12.5px;color:var(--emerald-d);font-weight:700;overflow-wrap:anywhere">${safe(data.motivation)}</div>` : ''}${data.verdict ? `<div style="margin-top:8px;font-size:13px;font-weight:800;overflow-wrap:anywhere">${safe(data.verdict)}</div>` : ''}<div class="muted" style="margin-top:8px;font-size:10.5px">AI রিপোর্ট, সিদ্ধান্তের আগে নিজের হিসাবও মিলিয়ে নিও।</div></div>`;
   }
 
   let tsApiPromise = null;
@@ -159,7 +159,7 @@
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       const text = data.analysis || data.result || data.text || (data.runId ? await pollRun(endpoint, data.runId) : '');
       const parsed = parseJson(text);
-      if (!parsed) throw new Error('রিপোর্ট পড়া গেল না — আবার চেষ্টা করো।');
+      if (!parsed) throw new Error('রিপোর্ট পড়া গেল না, আবার চেষ্টা করো।');
       saveCached(stats.weekKey, parsed);
       const card = document.getElementById('weeklyReportCard');
       if (card) card.outerHTML = weeklyInner(parsed, stats, false);

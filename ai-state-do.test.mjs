@@ -148,6 +148,37 @@ test('AI-STATE: the store drives the object through a fake binding', async () =>
   assert.equal(rate.limit, 5);
 });
 
+test('AI-STATE: a repeated request id replays the decision instead of charging twice', async () => {
+  /* F0.1 step 4h. This is the only duplicate that costs the STUDENT something
+     real: a wasted message from the daily allowance. The id travels with the
+     request, so an attempt answered by either Worker counts once. */
+  const objects = new Map();
+  const binding = {
+    idFromName: (name) => name,
+    get: (id) => {
+      if (!objects.has(id)) objects.set(id, new AiStateObject(fakeCtx(), {}));
+      return { fetch: (req) => objects.get(id).fetch(req) };
+    }
+  };
+  const store = aiStateStore({ AI_STATE: binding });
+  const first = await store.consumeQuota('account-dup', 3, 'req-1');
+  assert.equal(first.allowed, true);
+  assert.equal(first.used, 1);
+  const again = await store.consumeQuota('account-dup', 3, 'req-1');
+  assert.equal(again.allowed, true);
+  assert.equal(again.used, 1, 'the same request id did not consume a second message');
+  assert.equal(again.remaining, first.remaining);
+  assert.equal(again.replayed, true);
+  // A different request still counts, so the guard is about identity, not about
+  // refusing every repeat.
+  const third = await store.consumeQuota('account-dup', 3, 'req-2');
+  assert.equal(third.used, 2);
+  assert.equal(third.replayed, undefined);
+  // Without an id nothing changes for callers that do not have one.
+  const fourth = await store.consumeQuota('account-dup', 3);
+  assert.equal(fourth.used, 3);
+});
+
 test('AI-STATE: two users do not share a quota', async () => {
   const objects = new Map();
   const binding = {

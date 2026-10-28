@@ -1,0 +1,63 @@
+name: Apply release-pin alignment 2026-10-18
+
+# Aligns test/canary release pins with the shipped shell and commits back to
+# the SAME branch. Never touches main and never deploys.
+# Note: GITHUB_TOKEN cannot push .github/workflows changes. The canary pin
+# edit is committed only when secret WORKFLOW_PUSH_TOKEN (workflow scope) exists.
+
+on:
+  push:
+    branches: [fix/align-release-pins]
+    paths:
+      - '.github/workflows/apply-release-pins-20261018.yml'
+      - 'scripts/apply-release-pins-20261018.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.ref_name == 'fix/align-release-pins'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      HAS_WF_TOKEN: ${{ secrets.WORKFLOW_PUSH_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: fix/align-release-pins
+          fetch-depth: 0
+          token: ${{ secrets.WORKFLOW_PUSH_TOKEN || github.token }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Apply
+        run: |
+          set -eu
+          python3 scripts/apply-release-pins-20261018.py
+          python3 scripts/apply-release-pins-20261018.py >/dev/null
+          git diff --stat
+      - name: Install
+        run: npm ci
+      - name: Auth + personal tests (must pass)
+        run: node --test --test-concurrency=1 native-auth-protection.test.mjs interactive-native-personal-v1.test.mjs
+      - name: Pending-decision tests (report only)
+        continue-on-error: true
+        run: node --test --test-concurrency=1 code-native-welcome-v1.test.mjs
+      - name: Commit and push to the feature branch
+        run: |
+          set -eu
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -u -- . ':!.github/workflows'
+          if [ "$HAS_WF_TOKEN" = "true" ]; then
+            git add -u -- .github/workflows/telegram-auth-canary-activate.yml
+          elif ! git diff --quiet -- .github/workflows/telegram-auth-canary-activate.yml; then
+            echo '::warning::Canary pin edit NOT committed (GITHUB_TOKEN cannot push workflow files). Add WORKFLOW_PUSH_TOKEN or apply manually.'
+          fi
+          if git diff --cached --quiet; then echo 'Nothing to commit.'; else
+            git commit -m 'test: align release pins (sky-goal, skyv13, logout-otp, Telegram login flag)' -m 'Applied by apply-release-pins-20261018.yml. No deploy.'
+            git push origin HEAD:fix/align-release-pins
+          fi

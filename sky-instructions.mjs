@@ -43,7 +43,7 @@ const RULES = [
 
 /* Student-facing reasons. Short, kind, with an example of what IS allowed. */
 const MESSAGES = {
-  empty: 'নির্দেশনা খালি — Sky আগের মতোই উত্তর দেবে।',
+  empty: 'নির্দেশনা খালি, Sky আগের মতোই উত্তর দেবে।',
   injection: 'Sky-এর নিয়ম বদলানো যায় না। তুমি শুধু কীভাবে উত্তর দেবে সেটা বলতে পারো, যেমন: "সবসময় উদাহরণ দিয়ে বোঝাবে"।',
   sexual: 'এই ধরনের নির্দেশনা রাখা যাবে না। পড়াশোনার ধরন নিয়ে লেখো, যেমন: "ছোট করে, পয়েন্ট আকারে উত্তর দেবে"।',
   violence: 'সহিংসতা নিয়ে নির্দেশনা রাখা যাবে না। পড়াশোনার ধরন নিয়ে লেখো।',
@@ -55,7 +55,7 @@ const MESSAGES = {
   hate: 'কোনো ধর্ম বা মানুষকে নিয়ে ঘৃণার কথা রাখা যাবে না।',
   dating: 'Sky তোমার পড়ার সঙ্গী, প্রেমের সঙ্গী নয় 🙂 লেখো যেমন: "আমাকে বন্ধুর মতো উৎসাহ দেবে"।',
   pii: 'ফোন নম্বর, ইমেইল বা পাসওয়ার্ডের মতো ব্যক্তিগত তথ্য নির্দেশনায় লিখো না।',
-  ok: 'সেভ হয়েছে ✓ — এখন থেকে Sky এভাবে উত্তর দেবে।'
+  ok: 'সেভ হয়েছে ✓, এখন থেকে Sky এভাবে উত্তর দেবে।'
 };
 export const INSTRUCTION_MESSAGES = Object.freeze({ ...MESSAGES });
 
@@ -65,7 +65,7 @@ export const INSTRUCTION_EXAMPLES = Object.freeze([
   'উত্তর ছোট রাখবে, পয়েন্ট আকারে দেবে',
   'আমাকে বন্ধুর মতো "তুমি" করে বলবে, উৎসাহ দেবে',
   'প্রতিটা উত্তরের শেষে একটা ছোট প্র্যাকটিস প্রশ্ন দেবে',
-  'আমি মেডিকেল ভর্তি পরীক্ষার্থী — সেই অনুযায়ী বোঝাবে'
+  'আমি মেডিকেল ভর্তি পরীক্ষার্থী, সেই অনুযায়ী বোঝাবে'
 ]);
 
 /**
@@ -110,7 +110,7 @@ export function storedInstruction(text, now = Date.now()) {
 export function renderInstructionBlock(text) {
   const t = sanitizeInstruction(text);
   if (!t) return '';
-  return `STUDENT CUSTOM INSTRUCTION (শিক্ষার্থী নিজে লিখেছে — শুধু এই শিক্ষার্থীর জন্য):
+  return `STUDENT CUSTOM INSTRUCTION (শিক্ষার্থী নিজে লিখেছে, শুধু এই শিক্ষার্থীর জন্য):
 """${t.replace(/"""/g, '"')}"""
 How to use it:
 - Follow it on EVERY answer for style: tone, language, length, format, how to address the student, examples, practice questions, the exam they are preparing for.

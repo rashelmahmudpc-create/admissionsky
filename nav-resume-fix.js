@@ -1,5 +1,5 @@
 /**
- * nav-resume-fix.js v4 — Safety net for bottom nav bar displacement
+ * nav-resume-fix.js v4, Safety net for bottom nav bar displacement
  * in iOS PWA after returning from background/external app.
  *
  * Primary fix: openExternalProvider now uses window.open('_blank') in

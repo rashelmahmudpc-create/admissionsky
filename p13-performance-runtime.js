@@ -1,4 +1,4 @@
-/* Admission Hub — P13 Performance Runtime.
+/* Admission Hub, P13 Performance Runtime.
  *
  * Wires window.AhPerf into the live app so the "no loading" feel is real:
  *   - prefetches the pages/assets a student opens next (idle, deduped, save-data aware)

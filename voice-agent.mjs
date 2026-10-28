@@ -1,9 +1,9 @@
 /**
- * 🎙️ P23 — LIVE VOICE AGENT · DURABLE OBJECT
+ * 🎙️ P23, LIVE VOICE AGENT · DURABLE OBJECT
  *
  * One instance per owner. Holds the WebSocket for a conversation and owns the
  * durable memory, so the session can be torn down and rebuilt without losing
- * context — the property the owner asked for when swapping provider keys.
+ * context, the property the owner asked for when swapping provider keys.
  *
  * Transport only: every decision (failover, transitions, prompt assembly) lives
  * in voice-agent-core.mjs, which is tested without a network.
@@ -77,7 +77,7 @@ function readKeys(env, names) {
  * admission-gk is already at that cap, so `wrangler secret put` fails with
  * code 10055. A KV entry is not a variable and does not count against the cap,
  * so a key that has nowhere left to go is stored in GK_KV under `secret:<NAME>`
- * and read here — from the agent's point of view it behaves exactly like a
+ * and read here, from the agent's point of view it behaves exactly like a
  * bound one.
  */
 const KV_SECRET_NAMES = ['CARTESIA_API_KEY', 'ELEVENLABS_API_KEY', 'GROQ_API_KEY', 'DEEPGRAM_API_KEY', 'VOICE_PAGE_PASSWORD', 'CF_ACCOUNT_ID', 'CF_GATEWAY_ID', 'CF_GATEWAY_TOKEN'];
@@ -92,7 +92,7 @@ async function kvSecrets(env) {
       if (typeof value === 'string' && value.trim()) out[name] = value.trim();
     } catch (_) {
       // A KV miss or outage must leave the agent working, just without the
-      // optional provider — never take the whole turn down over a lookup.
+      // optional provider, never take the whole turn down over a lookup.
     }
   }
   return out;
@@ -121,7 +121,7 @@ function fallbackPool(env, kind, extra = {}) {
     tts: [
       { names: ['CARTESIA_API_KEY', 'CARTESIA_KEYS'], id: 'cartesia' },
       { names: ['ELEVENLABS_API_KEY', 'ELEVENLABS_KEYS'], id: 'elevenlabs' },
-      // Last, because Cartesia/ElevenLabs sound better — but it needs no new
+      // Last, because Cartesia/ElevenLabs sound better, but it needs no new
       // credential, so without it a deployment with no TTS key is mute.
       { names: ['GEMINI_KEYS', 'GEMINI_API_KEY'], id: 'gemini-tts' },
     ],
@@ -130,7 +130,7 @@ function fallbackPool(env, kind, extra = {}) {
   // Cloudflare AI Gateway, when the account id and gateway token are present.
   // Every Groq entry then routes through it, which adds caching, retries,
   // fallbacks and per-request analytics without changing the call. Absent, the
-  // entries call Groq directly — the gateway is an improvement, not a dependency.
+  // entries call Groq directly, the gateway is an improvement, not a dependency.
   const gwBase = gatewayBase(source.CF_ACCOUNT_ID || env.CF_ACCOUNT_ID, source.CF_GATEWAY_ID || env.CF_GATEWAY_ID || 'inflowsky');
   const gwToken = source.CF_GATEWAY_TOKEN || env.CF_GATEWAY_TOKEN || null;
   for (const entry of map[kind] || []) {
@@ -185,7 +185,7 @@ export class VoiceAgentSession {
   /**
    * Who may open a socket. The app header is the same gate the existing voice
    * worker uses, so the two agree. When VOICE_ACCESS_TOKEN is bound it is also
-   * required — that is the stronger option, and the owner can add it later
+   * required, that is the stronger option, and the owner can add it later
    * without a code change.
    */
   approved(request) {
@@ -205,7 +205,7 @@ export class VoiceAgentSession {
    * changing the password invalidates every session without a deploy.
    *
    * A cookie is only meaningful when the page and this endpoint share an
-   * origin — a browser will not send a cookie cross-site. The page is served
+   * origin, a browser will not send a cookie cross-site. The page is served
    * from Pages and reaches this object through the same-origin Pages proxy
    * (see _worker.js), which is what makes the gate work at all.
    */
@@ -242,7 +242,7 @@ export class VoiceAgentSession {
     if (!fails || typeof fails !== 'object' || now - Number(fails.start || 0) > LOGIN_FAIL_WINDOW_MS) fails = { n: 0, start: now };
     if (fails.n >= LOGIN_FAIL_LIMIT) {
       const retryAfter = Math.max(1, Math.ceil((Number(fails.start) + LOGIN_FAIL_WINDOW_MS - now) / 1000));
-      return jsonReply({ error: 'too_many_attempts', message: 'অনেকবার ভুল পাসওয়ার্ড — কিছুক্ষণ পরে আবার চেষ্টা করো।', retryAfter }, 429, { 'Retry-After': String(retryAfter) });
+      return jsonReply({ error: 'too_many_attempts', message: 'অনেকবার ভুল পাসওয়ার্ড, কিছুক্ষণ পরে আবার চেষ্টা করো।', retryAfter }, 429, { 'Retry-After': String(retryAfter) });
     }
     if (!passwordMatches(env, given)) {
       try { await this.ctx.storage.put(LOGIN_FAIL_KEY, { n: fails.n + 1, start: fails.start }); } catch (_) {}
@@ -295,7 +295,7 @@ export class VoiceAgentSession {
     if (url.pathname.endsWith('/ticket')) {
       if (request.method !== 'POST') return new Response('method not allowed', { status: 405 });
       if (!this.approved(request)) return new Response('forbidden', { status: 403 });
-      /* Once a password is set, the app header alone is not enough — it is
+      /* Once a password is set, the app header alone is not enough, it is
        * public knowledge. The signed cookie is what proves the owner. */
       const gateEnv = await this.gateEnv();
       if (gateConfigured(gateEnv) && !(await sessionValid(gateEnv, request))) {

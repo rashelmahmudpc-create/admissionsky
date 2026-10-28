@@ -34,7 +34,7 @@ test('a valid token is confirmed against Cloudflare with the secret and the clie
 test('a token Cloudflare rejects is refused', async () => {
   await assert.rejects(
     () => verifyTurnstile({ env: secretEnv, token: 'bad-token', fetchImpl: async () => asJson({ success: false, 'error-codes': ['invalid-input-response'] }) }),
-    error => error?.code === AUTH_ERROR_CODES.INVALID_INPUT
+    error => error?.code === AUTH_ERROR_CODES.HUMAN_CHECK_FAILED
   );
 });
 
@@ -42,7 +42,7 @@ test('a missing token is refused once the secret is configured', async () => {
   let called = false;
   await assert.rejects(
     () => verifyTurnstile({ env: secretEnv, token: '', fetchImpl: async () => { called = true; return asJson({ success: true }); } }),
-    error => error?.code === AUTH_ERROR_CODES.INVALID_INPUT
+    error => error?.code === AUTH_ERROR_CODES.HUMAN_CHECK_FAILED
   );
   assert.equal(called, false, 'no siteverify call for an empty token');
 });
@@ -50,6 +50,19 @@ test('a missing token is refused once the secret is configured', async () => {
 test('a Cloudflare outage refuses the send rather than waving it through', async () => {
   await assert.rejects(
     () => verifyTurnstile({ env: secretEnv, token: 'good-token', fetchImpl: async () => { throw new Error('network down'); } }),
-    error => error?.code === AUTH_ERROR_CODES.INVALID_INPUT
+    error => error?.code === AUTH_ERROR_CODES.HUMAN_CHECK_FAILED
   );
+});
+
+// A rejected human check must not borrow INVALID_INPUT: that code is what the
+// signup form shows for a malformed field, and it sent the owner hunting through
+// an email and password that were both correct (report 2026-10-24).
+test('a failed human check reports its own code and an actionable Bengali message', async () => {
+  assert.notEqual(AUTH_ERROR_CODES.HUMAN_CHECK_FAILED, AUTH_ERROR_CODES.INVALID_INPUT);
+  const error = await verifyTurnstile({ env: secretEnv, token: 'bad-token', fetchImpl: async () => asJson({ success: false }) })
+    .then(() => null, cause => cause);
+  assert.equal(error?.code, AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
+  assert.equal(error?.status, 400);
+  assert.match(error.message, /মানব যাচাই/);
+  assert.match(error.message, /রিফ্রেশ/);
 });

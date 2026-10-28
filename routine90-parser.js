@@ -1,4 +1,4 @@
-/* routine90-parser.js — full-page 90-day routine parser */
+/* routine90-parser.js, full-page 90-day routine parser */
 (function (window, document) {
   'use strict';
 
@@ -82,7 +82,7 @@
         days[activeDay].push({ subject: subject, topic: topic, line: lineNumber, position: position + 1 });
         topicCount += 1;
       });
-      if (topics.length > 1) warnings.push('Line ' + lineNumber + ': ' + topics.length + ' topics kept under serial ' + (position + 1) + ' — ' + subject + '.');
+      if (topics.length > 1) warnings.push('Line ' + lineNumber + ': ' + topics.length + ' topics kept under serial ' + (position + 1) + ', ' + subject + '.');
     });
 
     var dayKeys = Object.keys(days).map(Number).sort(function (a, b) { return a - b; });

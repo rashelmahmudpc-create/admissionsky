@@ -68,8 +68,14 @@ test('১২. build/cache/static-Welcome and main-app AI versions are synchroniz
      the 2026-10-12 audit: shell pinned v…-static-welcome-lock3 while the page
      loaded v…-kbsafe1). */
   (() => {
-    const loaded = H.match(/account-access\.(?:css|js)\?v=([^"']+)/);
-    return Boolean(loaded) && SW.includes(`account-access.css?v=${loaded[1]}`) && SW.includes(`account-access.js?v=${loaded[1]}`);
+    /* The page and the precache must agree per asset. They no longer share one
+       version string: the CSS and the JS are re-pinned independently, so a
+       combined match compared the CSS version against the JS entry. */
+    const loadedCss = H.match(/account-access\.css\?v=([^"']+)/);
+    const loadedJs = H.match(/account-access\.js\?v=([^"']+)/);
+    return Boolean(loadedCss && loadedJs) &&
+      SW.includes(`account-access.css?v=${loadedCss[1]}`) &&
+      SW.includes(`account-access.js?v=${loadedJs[1]}`);
   })() &&
   H.includes('ai-agent-chat.js?v=agent-f1-ui-skyv13') && SW.includes('ai-agent-chat.js?v=agent-f1-ui-skyv13'));
 test('১৩. service-worker activation never navigates or reloads open clients',
@@ -93,7 +99,7 @@ test('১৪গ. a notification tap can never open a retired host',
   SW.includes('new URL(raw, self.location.origin).origin === self.location.origin ? raw : ') &&
   !/nd\.url\s*\|\|\s*'\.\/';\s*\n\s*\}/.test(SW) &&
   !NW.includes("'https://sheikhrashel47-stack.github.io/admission-hub/'") &&
-  NW.includes("'https://admissionhub.pages.dev/'"));
+  NW.includes("'https://admissionsky.pages.dev/'"));
 test('১৪ঘ. an installed-PWA launch (no navigate mode) still gets the rescue page, never a bare ERR_FAILED',
   /* owner screenshot 2026-10-13: .../?source=pwa#dashboard → "This site can't
      be reached — ERR_FAILED". A PWA/WebView top-level navigation can arrive
@@ -112,7 +118,11 @@ test('১৫. precache stays lean because code-native entry pages add no raster 
      screen (its CSS and JS are precached the same way). The
      point of the ceiling is to catch an accidental bulk import, not to pin an
      exact size. */
-  shellAssets > 0 && shellAssets <= 48 && !appShellBlock.includes('result-analysis-500.js') && !appShellBlock.includes("  '',"));
+  /* Ceiling raised 48 → 64 (2026-10-24): the code-native entry page, the Sky
+     tool client and the vocabulary/notification bundles that ship with the
+     current shell pushed the hand-curated list to 60 entries. The ceiling
+     exists to catch an accidental bulk import, not to pin an exact size. */
+  shellAssets > 0 && shellAssets <= 64 && !appShellBlock.includes('result-analysis-500.js') && !appShellBlock.includes("  '',"));
 test('১৬. PWA updates are in-place; active worker is never unregistered first', !H.includes('registration.unregister()'));
 
 /* AI composer and response */

@@ -284,7 +284,10 @@ test('guided Signup validates steps, caps institution matches, preserves canonic
   await waitFor(() => app.document.querySelector('[data-view="verify"]').hidden === false && app.document.querySelector('[data-role="verification-selection"]').hidden === false);
   const signupCalls = app.calls.filter(call => call.path.includes('/signup'));
   assert.equal(signupCalls.length, 1);
-  assert.deepEqual(signupCalls[0].body, { email: 'student@example.com', password: 'StrongPassword!9' });
+  const { turnstileToken: signupToken, ...signupBody } = signupCalls[0].body;
+  assert.deepEqual(signupBody, { email: 'student@example.com', password: 'StrongPassword!9' });
+  // F-03: the signup call also carries the Turnstile token field.
+  assert.equal(typeof signupToken, 'string');
   await waitFor(() => app.calls.some(call => call.path.includes('/profile/pending')));
   const profileCall = app.calls.find(call => call.path.includes('/profile/pending'));
   assert.equal(profileCall.body.fullName, 'Test Student');

@@ -1,7 +1,7 @@
-// 🧩 PHASE 9 — M10: OBSERVABILITY + COST / QUOTA
+// 🧩 PHASE 9, M10: OBSERVABILITY + COST / QUOTA
 // The last gap the audit listed (§52 items 9/10): every AI request should leave
-// a record of *what happened* — request id, provider, model, latency, token
-// estimate, fallback reason, and the prompt/context versions in play — and the
+// a record of *what happened*, request id, provider, model, latency, token
+// estimate, fallback reason, and the prompt/context versions in play, and the
 // spend should be countable.
 //
 // Two hard rules shape this module:
@@ -10,13 +10,13 @@
 //     such. Cost is `null` with `priced: false` until the owner fills the rate
 //     sheet, so a total can never carry a made-up figure. This mirrors the
 //     repo-wide rule that the assistant never fabricates statistics.
-//  2. **A trace is not a transcript.** It carries ids, counts and durations —
+//  2. **A trace is not a transcript.** It carries ids, counts and durations -
 //     never message text, prompt text, keys, or a raw uid. The caller passes a
 //     correlation ref, and `renderTrace()` re-sanitises on the way out, so a
 //     stray field added at a call site cannot leak content into the logs.
 //
 // Like M6/M7/M9 this is pure data plus pure guards: no `env`, no I/O, no model
-// call. It also adds **zero KV writes** — the chat path already spends its
+// call. It also adds **zero KV writes**, the chat path already spends its
 // two-write budget on the rate counter and memory, so traces go to the Worker's
 // log sink and the engine stays a pure accumulator.
 
@@ -57,7 +57,7 @@ export const QUOTA_WARN_AT = 0.8;
 
 /**
  * Rough token estimate. Real tokenisers differ per provider and are not
- * available inside a Worker, so this is a ~4-chars-per-token approximation —
+ * available inside a Worker, so this is a ~4-chars-per-token approximation -
  * good enough to spot a runaway prompt, never presented as exact.
  */
 export function estimateTokens(text) {
@@ -77,7 +77,7 @@ export function makeRequestId(seed) {
 
 /**
  * Short, stable correlation ref for a caller. FNV-1a is *not* a security
- * boundary — it exists so traces can be grouped without logging a raw account
+ * boundary, it exists so traces can be grouped without logging a raw account
  * uid. Anything that must resist reversal belongs in a hash, not here.
  */
 export function callerRef(uid) {
@@ -106,7 +106,7 @@ export function costFor(provider, model, pricing = PRICING) {
 
 /**
  * Estimated USD for one request. Returns `{ usd: null, priced: false }` when the
- * model has no rate — the caller must show "unpriced", never a fabricated cost.
+ * model has no rate, the caller must show "unpriced", never a fabricated cost.
  * `pricing` is injectable so the arithmetic is testable while the shipped sheet
  * stays honest.
  */
@@ -174,7 +174,7 @@ export function makeTrace(input = {}) {
 /**
  * Normalise a trace: keep whitelisted fields, drop forbidden ones, coerce
  * numbers, clamp lengths. Corrupt input yields a minimal well-formed trace
- * rather than throwing — a bad log line must never break a chat.
+ * rather than throwing, a bad log line must never break a chat.
  */
 export function sanitizeTrace(raw) {
   const src = raw && typeof raw === 'object' ? raw : {};
@@ -261,7 +261,7 @@ export function renderTrace(trace) {
   return JSON.stringify(sanitizeTrace(trace)).replace(/[\r\n]+/g, ' ');
 }
 
-/** Shape advertised by `agentStatus` — names and versions, never a capability. */
+/** Shape advertised by `agentStatus`, names and versions, never a capability. */
 export function describeObservability() {
   return {
     version: OBSERVABILITY_VERSION,

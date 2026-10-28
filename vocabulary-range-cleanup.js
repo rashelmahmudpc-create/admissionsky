@@ -116,7 +116,7 @@
 
       if (typeof loadCache === 'function') await loadCache();
       if (typeof window.__admissionRenderRoute === 'function') window.__admissionRenderRoute();
-      if (typeof toast === 'function') toast(`${candidates.length}টি প্রশ্ন মুছে ফেলা হয়েছে — Vocabulary 1–100 · 101–547`);
+      if (typeof toast === 'function') toast(`${candidates.length}টি প্রশ্ন মুছে ফেলা হয়েছে, Vocabulary 1–100 · 101–547`);
       console.info('[Admission Hub] Vocabulary range cleanup completed.', { deleted: candidates.length, expected: EXPECTED, verifiedNumbers });
     } catch (error) {
       console.error('[Admission Hub] Vocabulary range cleanup failed; no completion marker was written.', error);

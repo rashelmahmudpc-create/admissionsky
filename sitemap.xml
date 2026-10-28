@@ -1,33 +1,45 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://admissionhub.pages.dev/</loc>
+    <loc>https://admissionsky.pages.dev/</loc>
     <lastmod>2026-09-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://admissionhub.pages.dev/courses/prottoy/</loc>
+    <loc>https://admissionsky.pages.dev/courses/prottoy/</loc>
     <lastmod>2026-09-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://admissionhub.pages.dev/courses/prottoy-master/</loc>
+    <loc>https://admissionsky.pages.dev/courses/prottoy-master/</loc>
     <lastmod>2026-09-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://admissionhub.pages.dev/courses/sandhi/</loc>
+    <loc>https://admissionsky.pages.dev/courses/sandhi/</loc>
     <lastmod>2026-09-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://admissionhub.pages.dev/courses/somas/</loc>
+    <loc>https://admissionsky.pages.dev/courses/somas/</loc>
     <lastmod>2026-09-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://admissionsky.pages.dev/privacy.html</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://admissionsky.pages.dev/data-deletion.html</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
   </url>
 </urlset>

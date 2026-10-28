@@ -230,6 +230,19 @@ test('m3-4: reaching the result screen emits quiz_complete with accuracy and dur
   assert.equal(typesOf(window, 'QUIZ_COMPLETE').length, 1, 'a result screen is reported once');
 });
 
+test('security: a tampered course document cannot inject markup either', async () => {
+  /* Gating `scripts` alone left the other half open: payload.bodyHtml was still
+   * injected with host.innerHTML, so an <img onerror> in a tampered document ran
+   * in the app origin without any script ever being compiled. The markup must be
+   * dropped by the same integrity flag. */
+  const tampered = COURSE_HTML.replace('<body>', '<body><img src=x onerror="window.__htmlPwned=1">');
+  assert.notEqual(tampered, COURSE_HTML, 'the tamper fixture must actually differ');
+  const window = await boot('source-courses/sandhi', { courseHtml: tampered });
+  await sleep(400);
+  assert.equal(window.__htmlPwned, undefined, 'tampered markup must not be injected');
+  assert.ok(window.document.body.innerHTML.includes('যাচাই করা যায়নি'), 'the student sees a mismatch notice');
+});
+
 test('security: a tampered course document renders but its scripts never execute', async () => {
   /* The course scripts run through new Function() in the app origin, so an
    * altered document would be stored XSS. The SHA-256 in COURSE_DEFS must
@@ -240,5 +253,21 @@ test('security: a tampered course document renders but its scripts never execute
   await sleep(400);
   assert.equal(window.__pwned, undefined, 'tampered course scripts must not execute');
   assert.equal(typesOf(window, 'QUESTION_ATTEMPT').length, 0, 'no quiz behaviour from an unverified document');
+});
+
+test('production: the Cloudflare Pages analytics beacon does not disable a course', async () => {
+  /* Cloudflare Pages appends its beacon to every served HTML document, so the
+   * bytes the browser receives are never the bytes in the repository. Hashing
+   * the response as-is made the integrity pin fail in production only -- every
+   * course kept rendering but silently lost its scripts, while these tests
+   * passed because they read the file from disk. Measured live 2026-10-24:
+   * /courses/sandhi/ differs from the repo file by exactly this one line. */
+  const beacon = `<!-- Cloudflare Pages Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "1cd9675a9c374f478b623367a1470aa4"}'></script><!-- Cloudflare Pages Analytics -->`;
+  const served = COURSE_HTML.replace('</body>', `${beacon}</body>`);
+  assert.notEqual(served, COURSE_HTML, 'the beacon fixture must actually differ');
+  const window = await boot('source-courses/sandhi', { courseHtml: served });
+  const host = await waitFor(() => window.document.querySelector('.source-native-host'), 'course host');
+  assert.ok(host.querySelector('.done-btn[data-lesson="lesson3"]'), 'a beacon-appended course keeps its scripts');
+  assert.equal(typesOf(window, 'COURSE_VIEW').length, 1);
 });
 

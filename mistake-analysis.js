@@ -1,7 +1,7 @@
 /* ============================================================================
    MISTAKE ANALYSIS / ভুল খাতা (Additive Module)
    --------------------------------------------------------------------------
-   Fully additive layer — does NOT touch the Exam engine, Question Bank,
+   Fully additive layer, does NOT touch the Exam engine, Question Bank,
    Rewards/XP, Daily Quests, Vocabulary, Study Planner or the existing
    Smart Mistake Book. All data is saved in localStorage under a dedicated
    key, so the IndexedDB schema and existing questions remain untouched.
@@ -15,7 +15,7 @@
    whyWrong, topic, concept, commonMistake, revisionPoints, memoryTrick,
    relatedPracticeQuestions, difficulty, examImportance, agentStatus).
    The `toAgentPayload()` helper builds the payload the future Mistake
-   Analysis Agent can consume directly — no API is called in this phase.
+   Analysis Agent can consume directly, no API is called in this phase.
    ============================================================================ */
 (function(){
   'use strict';
@@ -78,14 +78,14 @@
     const similar = selLen > 2 && corLen > 2 &&
       (String(selText).includes(String(corText)) || String(corText).includes(String(selText)) ||
        Math.abs(selLen - corLen) <= Math.min(selLen, corLen) / 2);
-    if(similar) return 'সঠিক উত্তরের সাথে তোমার বেছে নেওয়া উত্তরটি প্রায় একই ধরনের — দুটি সাদৃশ্যপূর্ণ অপশনের মধ্যে পার্থক্যটি খেয়াল করো, যেমন সংখ্যা, তারিখ, বানান বা verb-এর রূপ।';
-    return 'বেছে নেওয়া উত্তরটি সঠিক concept-এর সাথে মেলেনি। সঠিক option টি কোন ধারণার উপর ভিত্তি করে দেওয়া হয়েছে, সেটি প্রথমে নিজেয়ে বুঝে নাও — তারপর দেখো তোমার উত্তরটি কেন concept থেকে দূরে সরে গেছে।';
+    if(similar) return 'সঠিক উত্তরের সাথে তোমার বেছে নেওয়া উত্তরটি প্রায় একই ধরনের, দুটি সাদৃশ্যপূর্ণ অপশনের মধ্যে পার্থক্যটি খেয়াল করো, যেমন সংখ্যা, তারিখ, বানান বা verb-এর রূপ।';
+    return 'বেছে নেওয়া উত্তরটি সঠিক concept-এর সাথে মেলেনি। সঠিক option টি কোন ধারণার উপর ভিত্তি করে দেওয়া হয়েছে, সেটি প্রথমে নিজেয়ে বুঝে নাও, তারপর দেখো তোমার উত্তরটি কেন concept থেকে দূরে সরে গেছে।';
   }
   function deriveConcept(s){
     const names = [];
     if(typeof window.subjectName === 'function' && s.subjectId) names.push(subjectName(s.subjectId));
     if(typeof window.topicName === 'function' && s.topicId) names.push(topicName(s.topicId));
-    return names.length ? names.join(' — ') : 'General';
+    return names.length ? names.join(', ') : 'General';
   }
 
   /* P10: use the pure mistake engine when present; degrade to an empty label
@@ -118,7 +118,7 @@
     return {
       id: uid(),
       examId: (result && result.id) ? String(result.id) : '',
-      examName: 'Exam Result — ' + (typeof window.examTypeLabel === 'function' && result ? examTypeLabel(result) : (result && result.mode) || 'Exam'),
+      examName: 'Exam Result, ' + (typeof window.examTypeLabel === 'function' && result ? examTypeLabel(result) : (result && result.mode) || 'Exam'),
       questionId: snapshot.questionId,
       question: snapshot.question || '',
       options: options,
@@ -166,8 +166,8 @@
   }
 
   /* ---------------- render: Mistake Analysis view -------------------- */
-  function subjectOf(sid){ return (typeof window.subjectName === 'function' && sid) ? subjectName(sid) : '—'; }
-  function topicOf(tid){ return (typeof window.topicName === 'function' && tid) ? topicName(tid) : '—'; }
+  function subjectOf(sid){ return (typeof window.subjectName === 'function' && sid) ? subjectName(sid) : '-'; }
+  function topicOf(tid){ return (typeof window.topicName === 'function' && tid) ? topicName(tid) : '-'; }
 
   function renderAnalysisCard(card, resultId){
     const diffCls = { easy:'green', medium:'orange', hard:'red' }[card.difficulty] || '';
@@ -196,9 +196,9 @@
       subHtml('💡 ব্যাখ্যা (Explanation)', card.explanation || 'এই প্রশ্নের ব্যাখ্যা এখনো সংরক্ষণ করা হয়নি।'),
       subHtml('কেন ভুল হয়েছে (Why Wrong)', card.whyWrong),
       subHtml('Topic / Concept', card.concept || card.topic),
-      subHtml('Common Mistake', card.commonMistake || '(Common mistake analysis — AI/Agent প্রস্তুত হলে এখানে দেখা যাবে)'),
+      subHtml('Common Mistake', card.commonMistake || '(Common mistake analysis, AI/Agent প্রস্তুত হলে এখানে দেখা যাবে)'),
       subHtml('📝 Revision Points', card.revisionPoints),
-      subHtml('🧠 Memory Trick', card.memoryTrick || '(Memory trick — AI/Agent প্রস্তুত হলে এখানে দেখা যাবে)'),
+      subHtml('🧠 Memory Trick', card.memoryTrick || '(Memory trick, AI/Agent প্রস্তুত হলে এখানে দেখা যাবে)'),
       subHtml('🎯 Related Practice Questions', card.relatedPracticeQuestions)
     ].filter(Boolean).join('');
 
@@ -223,7 +223,7 @@
         '<button class="btn ghost sm" onclick="MA.editCard(\'' + esc(card.id) + '\')">✏️ Edit Analysis</button>' +
         (resultId ? '<button class="btn ghost sm" onclick="resultPracticeOne(\'' + esc(resultId) + '\',\'' + esc(card.questionId) + '\')">🔁 আবার অনুশীলন</button>' : '') +
       '</div>' +
-      '<div class="muted" style="font-size:10.5px; margin-top:10px;">Analysis fields যেমন Common Mistake, Memory Trick ইত্যাদি এই ধাপে খালি রাখা হয়েছে — পরবর্তী phases-এ Mistake Analysis Agent এর structured response এখানে বসানো হবে।</div>' +
+      '<div class="muted" style="font-size:10.5px; margin-top:10px;">Analysis fields যেমন Common Mistake, Memory Trick ইত্যাদি এই ধাপে খালি রাখা হয়েছে, পরবর্তী phases-এ Mistake Analysis Agent এর structured response এখানে বসানো হবে।</div>' +
     '</div>';
   }
 
@@ -242,7 +242,7 @@
       ['inputExplanation', 'Explanation', card.explanation || '', 'textarea']
     ];
     const html = '<h3>Analysis Edit</h3>' +
-      '<p class="muted">Pending fields সম্পাদনা করুন — save করলে ভুল খাতায় এই তথ্যসহ সংরক্ষিত হবে।</p>' +
+      '<p class="muted">Pending fields সম্পাদনা করুন, save করলে ভুল খাতায় এই তথ্যসহ সংরক্ষিত হবে।</p>' +
       fields.map(function(f){
         return '<label class="flabel">' + f[1] + '</label>' +
           (f[3] === 'textarea'
@@ -292,7 +292,7 @@
     var filtered = notebook.filter(function(it){ return matchesFilter(it, MAState.filter) && matchesSearch(it, MAState.search); });
 
     var savedCount = notebook.length;
-    var lastUpdated = notebook[0] ? formatDate(notebook[0].updatedAt || notebook[0].createdAt) : '—';
+    var lastUpdated = notebook[0] ? formatDate(notebook[0].updatedAt || notebook[0].createdAt) : '-';
 
     var statsHtml = '<div class="ma-stats-row">' +
       '<div class="ma-stat"><span class="ma-stat-label">Saved Mistakes</span><span class="ma-stat-value">' + savedCount + '</span></div>' +
@@ -315,15 +315,15 @@
     '</div>';
 
     var cardsHtml = filtered.length === 0
-      ? '<div class="empty">📒 ' + (MAState.search || MAState.filter !== 'all' ? 'কোনো মিল পাওয়া যায়নি — filter পরিবর্তন করো' : 'ভুল খাতা এখনো খালি') +
+      ? '<div class="empty">📒 ' + (MAState.search || MAState.filter !== 'all' ? 'কোনো মিল পাওয়া যায়নি, filter পরিবর্তন করো' : 'ভুল খাতা এখনো খালি') +
           (notebook.length === 0 ? '<br><br>Exam Result পাতায় কোনো ভুল প্রশ্ন থেকে "🔍 Mistake Analysis" প্রেস করে Analysis Card দেখো, তারপর "📌 ভুল খাতায় যোগ করুন" চাপো।' : '') + '</div>'
       : filtered.map(function(it){ return renderNotebookCard(it); }).join('');
 
     var html = '<div class="ma-page">' +
-      '<div class="explorer-head"><div class="explorer-kicker">Revision Tools</div><h1 class="explorer-title">Mistake Analysis / ভুল খাতা</h1><p class="explorer-subtitle">Exam-এর ভুল প্রশ্নগুলো বিশ্লেষণ করে structured card হিসেবে সংরক্ষণ করো — future Mistake Analysis Agent integration-এর জন্য প্রস্তুত।</p></div>' +
+      '<div class="explorer-head"><div class="explorer-kicker">Revision Tools</div><h1 class="explorer-title">Mistake Analysis / ভুল খাতা</h1><p class="explorer-subtitle">Exam-এর ভুল প্রশ্নগুলো বিশ্লেষণ করে structured card হিসেবে সংরক্ষণ করো, future Mistake Analysis Agent integration-এর জন্য প্রস্তুত।</p></div>' +
       statsHtml + controlsHtml +
       '<div class="row between" style="margin:12px 0 6px;"><b>📒 Notebook <span class="muted">(' + filtered.length + ' item' + (filtered.length === 1 ? '' : 's') + ')</span></b>' +
-        (notebook.length > 0 ? '<span class="muted" style="font-size:11px;">সংরক্ষিত কার্ড browser-এর localStorage-এ থাকবে — refresh-এর পরেও থাকবে।</span>' : '') +
+        (notebook.length > 0 ? '<span class="muted" style="font-size:11px;">সংরক্ষিত কার্ড browser-এর localStorage-এ থাকবে, refresh-এর পরেও থাকবে।</span>' : '') +
       '</div>' +
       cardsHtml +
       renderAITutorSection() +
@@ -396,7 +396,7 @@
   function capitalize(v){ return String(v || '').charAt(0).toUpperCase() + String(v || '').slice(1); }
   function formatDate(iso){
     const d = new Date(iso);
-    if(isNaN(d.getTime())) return '—';
+    if(isNaN(d.getTime())) return '-';
     return d.toLocaleString(undefined, { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
   }
   function isMistakeSaved(questionId){
@@ -434,7 +434,7 @@
 
   function renderMAView(card, questionId, resultId){
     const html = '<div class="ma-page">' +
-      '<div class="explorer-head"><div class="explorer-kicker">Mistake Analysis</div><h1 class="explorer-title">Analysis Card</h1><p class="explorer-subtitle">প্রশ্নটি কেন ভুল হয়েছে, সঠিক concept কী — structure হিসেবে দেখো ও ভুল খাতায় সংরক্ষণ করো।</p></div>' +
+      '<div class="explorer-head"><div class="explorer-kicker">Mistake Analysis</div><h1 class="explorer-title">Analysis Card</h1><p class="explorer-subtitle">প্রশ্নটি কেন ভুল হয়েছে, সঠিক concept কী, structure হিসেবে দেখো ও ভুল খাতায় সংরক্ষণ করো।</p></div>' +
       renderAnalysisCard(card, resultId) +
     '</div>';
     renderShell(html, { title: 'Mistake Analysis', back: "MA.backToResult('" + esc(resultId || '') + "','" + esc(questionId || '') + "')" });
@@ -448,7 +448,7 @@
 
   publicApi.saveCard = function(cardId){
     const card = findPending(cardId);
-    if(!card){ toast('Card পাওয়া যায়নি — আগে Analysis page-এ ফিরে যাও'); return; }
+    if(!card){ toast('Card পাওয়া যায়নি, আগে Analysis page-এ ফিরে যাও'); return; }
     const notebook = loadNotebook();
     if(notebook.some(function(it){ return it.questionId === card.questionId; })){
       toast('এই প্রশ্নটি ইতোমধ্যে ভুল খাতায় আছে');
@@ -616,7 +616,7 @@
       return;
     }
     if(p === 'mistake-analysis/view' || p === 'bhul-khata/view'){
-      // pending view without a specific question — go to notebook
+      // pending view without a specific question, go to notebook
       renderNotebookPage();
       return;
     }
@@ -690,7 +690,7 @@
     tryPatchResultPage();
   })();
   publicApi.openAnalysisFromResult = function(btn, resultId){
-    // btn lives inside a .result-review-card — find its question id.
+    // btn lives inside a .result-review-card, find its question id.
     const cardEl = btn.closest('.result-review-card');
     if(!cardEl){ toast('প্রশ্ন তথ্য পাওয়া যায়নি'); return; }
     // The existing resultAddMistake('qid','rid') call encodes both ids.

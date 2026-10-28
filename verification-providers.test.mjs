@@ -270,7 +270,7 @@ test('Brevo OTP provider sends through the Brevo API and derives quota from acco
   assert.deepEqual(body.to, [{ email: 'user@example.com' }]);
   assert.match(body.textContent, /123456/);
   assert.match(body.htmlContent, /123456/);
-  assert.match(body.subject, /AdmissionSky — আপনার যাচাইকরণ কোড/);
+  assert.match(body.subject, /AdmissionSky, আপনার যাচাইকরণ কোড/);
   assert.match(body.htmlContent, /AdmissionSky/);
   assert.equal(calls.every(call => call.init.redirect === 'manual'), true);
 });
@@ -343,7 +343,7 @@ test('every email provider brands the sender name and the body without an env ov
     const body = JSON.parse(send.init.body);
     assert.equal(testCase.nameOf(body), 'AdmissionSky', `${testCase.name}: sender name must be the brand`);
     const subject = body.subject || body.Messages[0].Subject;
-    assert.match(subject, /AdmissionSky — আপনার যাচাইকরণ কোড/, `${testCase.name}: subject must carry the brand`);
+    assert.match(subject, /AdmissionSky, আপনার যাচাইকরণ কোড/, `${testCase.name}: subject must carry the brand`);
   }
 });
 
@@ -1181,5 +1181,5 @@ test('wrangler.toml enables otp-j and otp-k at 38 without new vars, ahead of the
   assert.match(toml, /\{"id":"otp-k","enabled":true,"priority":38,"dailyQuota":300/);
   const rows = JSON.parse(toml.match(/VERIFICATION_ORCHESTRATOR_CONFIG = '(.*)'/)[1]).providers;
   const order = rows.slice().sort((a, b) => a.priority - b.priority || a.id.localeCompare(b.id)).map(row => row.id);
-  assert.deepEqual(order.slice(order.indexOf('otp-f')), ['otp-f', 'otp-i', 'otp-j', 'otp-k', 'otp-l', 'otp-m', 'otp-g', 'otp-c', 'telegram']);
+  assert.deepEqual(order.slice(order.indexOf('otp-f')), ['otp-f', 'otp-i', 'otp-j', 'otp-k', 'otp-l', 'otp-m', 'otp-n', 'otp-o', 'otp-q', 'otp-r', 'otp-s', 'otp-t', 'otp-u', 'otp-v', 'otp-w', 'otp-x', 'otp-y', 'otp-z', 'otp-za', 'otp-g', 'otp-c', 'telegram']);
 });

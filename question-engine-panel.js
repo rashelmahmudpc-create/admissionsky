@@ -1,8 +1,8 @@
-/* Admission Hub — P07 Intelligent Question Engine: analysis panel.
+/* Admission Hub, P07 Intelligent Question Engine: analysis panel.
  *
  * The visible half of P07. It reads the bank through window.AhQuestionEngine
- * (see question-engine.js), shows what the bank actually contains — difficulty
- * and type mix, quality gaps, and duplicate clusters — and can write the
+ * (see question-engine.js), shows what the bank actually contains, difficulty
+ * and type mix, quality gaps, and duplicate clusters, and can write the
  * computed tags back onto the questions. All persistence goes through the
  * app's own dbPut, and only after a confirm, so the panel never writes by itself.
  *
@@ -95,7 +95,7 @@
     }
     el.innerHTML = `
       <div class="qe-sheet">
-        <div class="qe-head"><b>🧬 Question Engine — বিশ্লেষণ</b><button class="qe-x" onclick="window.closeQuestionEnginePanel()">×</button></div>
+        <div class="qe-head"><b>🧬 Question Engine, বিশ্লেষণ</b><button class="qe-x" onclick="window.closeQuestionEnginePanel()">×</button></div>
         <div class="qe-body">${bodyHtml(report)}</div>
         <div class="qe-foot">
           <button class="btn secondary sm" onclick="window.tagAllQuestions()">সব প্রশ্নে ট্যাগ দাও</button>
@@ -110,7 +110,7 @@
     if (!eng || typeof dbPut !== 'function') return;
     const list = questions();
     if (!list.length) { window.toast && window.toast('প্রশ্নভান্ডার খালি'); return; }
-    if (!window.confirm(`এই ${list.length}টি প্রশ্নে difficulty/type/concept ট্যাগ বসানো হবে — ঠিক আছে?`)) return;
+    if (!window.confirm(`এই ${list.length}টি প্রশ্নে difficulty/type/concept ট্যাগ বসানো হবে, ঠিক আছে?`)) return;
     let changed = 0;
     try {
       for (const q of list) {

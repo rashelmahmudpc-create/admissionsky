@@ -14,7 +14,8 @@ test('startup runtime occurs at the real document end, never inside inline strin
 });
 test('optional feature scripts do not block initial parsing, order preserved',()=>{
  const tags=[...html.matchAll(/<script type="application\/x-ah-idle" data-ah-src="([^"]+)"><\/script>/g)].map(x=>x[1]);
- assert.equal(tags.length,14);
+ assert.equal(tags.length,22);
+ assert.ok(tags.findIndex(x=>x.includes('sky-faq.js'))<tags.findIndex(x=>x.includes('ai-agent-chat')));
  assert.ok(tags.findIndex(x=>x.includes('experience-studio-store'))<tags.findIndex(x=>x.includes('experience-studio-shell')));
  assert.ok(tags.findIndex(x=>x.includes('notification-hub'))<tags.findIndex(x=>x.includes('notification-fcm')));
  assert.match(html,/await window\.__admissionBootPromise/);

@@ -1,12 +1,12 @@
 /* ============================================================
-   DASHBOARD v3 — Scholar Dashboard (owner's design, ২০২৬-১০-১৫)
+   DASHBOARD v3, Scholar Dashboard (owner's design, ২০২৬-১০-১৫)
    The owner supplied the design; it is rendered in an isolated full-screen
    frame so the layout is pixel-for-pixel what he approved. This file is the
    host half: it turns the app's real CACHE data into the frame's data model
    and routes the frame's button taps back into the app.
 
    নিয়ম:
-   • ডেটা-ইঞ্জিন/DB/অন্য-পৃষ্ঠা স্পর্শ করে না — শুধু dashboard-দৃশ্য।
+   • ডেটা-ইঞ্জিন/DB/অন্য-পৃষ্ঠা স্পর্শ করে না, শুধু dashboard-দৃশ্য।
    • সব সংখ্যা CACHE (সত্যিকারের ব্যবহারকারী-ডেটা) থেকে; কোনো ডেমো/বানানো সংখ্যা নেই।
    • ডেটা নেই → সৎ শূন্য-অবস্থা + কর্ম-বাটন (কখনো ভাঙা লেআউট নয়)।
    • থিম অ্যাপেরই (AhAppearance); ফ্রেম কখনো আলাদা থিম রাখে না।
@@ -873,12 +873,12 @@ $$('.st').forEach(function(b){b.addEventListener('click',function(){toast(tips[b
 /* ---- 5 board ---- */
 var bset='week';
 function drawBoardEmpty(){
-  $('#rk').textContent='—';$('#rkUp').innerHTML='';$('#tops').innerHTML='';
+  $('#rk').textContent='-';$('#rkUp').innerHTML='';$('#tops').innerHTML='';
   $('#rkNext').textContent='লিডারবোর্ড এখনো চালু হয়নি';$('#rkBar').style.width='0';
 }
 function drawBoard(){
   var B=DATA.board[bset];
-  if(!B||!B.next){$('#rk').textContent='—';$('#rkUp').innerHTML='';$('#tops').innerHTML='';
+  if(!B||!B.next){$('#rk').textContent='-';$('#rkUp').innerHTML='';$('#tops').innerHTML='';
     $('#rkNext').textContent='লিডারবোর্ড এখনো চালু হয়নি';$('#rkBar').style.width='0';return}
   roll($('#rk'),B.rank,B.rank+28,1000);$('#rk').dataset.pre='#';
   $('#rkUp').innerHTML=icon('up')+bn(B.up)+' ধাপ';
@@ -913,7 +913,7 @@ function radar(vals,labels,cls){
   labels.forEach(function(l,i){var p=pt(i,1.2),c=Math.cos((-90+i*360/n)*Math.PI/180);s+='<text class="rl" data-t="'+i+'" x="'+p[0].toFixed(1)+'" y="'+(p[1]+4).toFixed(1)+'" text-anchor="'+(Math.abs(c)<.3?'middle':c>0?'start':'end')+'">'+l+'</text>'});
   return s+'</svg>';
 }
-if(!T.length)T=[{n:'এখনো ডেটা নেই',v:0},{n:'—',v:0},{n:'—',v:0}];
+if(!T.length)T=[{n:'এখনো ডেটা নেই',v:0},{n:'-',v:0},{n:'-',v:0}];
 var vals=T.map(function(t){return t.v}),labs=T.map(function(t){return t.n});
 $('#radarFull').innerHTML=radar(vals,labs,'');$('#radarMini').innerHTML=radar(vals,labs,'on-dark');
 function hl(i){
@@ -930,7 +930,7 @@ if(weakIdx.length)hl(weakIdx[0]);
 
 /* ---- performance chart (scrub) ---- */
 (function(){
-  if(!DATA.perfHasData){$('#perfSvg').innerHTML='<p class="wnote">এখনো কোনো পরীক্ষার উত্তর নেই — কয়েকটি প্রশ্ন সমাধান করলে এখানে সাপ্তাহিক গ্রাফ দেখা যাবে।</p>';return}
+  if(!DATA.perfHasData){$('#perfSvg').innerHTML='<p class="wnote">এখনো কোনো পরীক্ষার উত্তর নেই, কয়েকটি প্রশ্ন সমাধান করলে এখানে সাপ্তাহিক গ্রাফ দেখা যাবে।</p>';return}
   var v=DATA.perf,W=340,H=176,l=14,r=14,t=26,b=30,lo=40,hi=100,n=v.length;
   var X=function(i){return l+i*(W-l-r)/(n-1)},Y=function(x){return t+(hi-x)/(hi-lo)*(H-t-b)};
   var pts=v.map(function(x,i){return [X(i),Y(x)]});
@@ -1065,8 +1065,8 @@ requestAnimationFrame(function(){requestAnimationFrame(function(){onShow(0)})});
   const num = (v) => Number(v) || 0;
   const escv = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-  /* CACHE রেজলভার: index.html-এ `const CACHE` (ক্লাসিক-স্ক্রিপ্ট টপ-লেভেল const) window-এ যায় না —
-     তাই প্রথমে window, পরে গ্লোবাল-লেক্সিকাল (typeof-গার্ড), শেষ-ফলব্যাক {} — কোনো অবস্থায় ক্র্যাশ নয়। */
+  /* CACHE রেজলভার: index.html-এ `const CACHE` (ক্লাসিক-স্ক্রিপ্ট টপ-লেভেল const) window-এ যায় না -
+     তাই প্রথমে window, পরে গ্লোবাল-লেক্সিকাল (typeof-গার্ড), শেষ-ফলব্যাক {}, কোনো অবস্থায় ক্র্যাশ নয়। */
   const C = () => {
     try {
       if (window.CACHE) return window.CACHE;
@@ -1360,7 +1360,7 @@ requestAnimationFrame(function(){requestAnimationFrame(function(){onShow(0)})});
     return '<iframe class="dv3-frame" title="Dashboard" style="position:fixed;inset:0;width:100%;height:100%;border:0;display:block;z-index:5;background:var(--ah-chrome,#F4F6FD)"></iframe>';
   }
 
-  /* ফ্রেমের srcdoc বসানো — renderShell প্রতিবার নতুন ফ্রেম বানায়, তাই সোর্স এখানেই দেওয়া হয় */
+  /* ফ্রেমের srcdoc বসানো, renderShell প্রতিবার নতুন ফ্রেম বানায়, তাই সোর্স এখানেই দেওয়া হয় */
   function paintFrame() {
     const app = document.getElementById('app');
     const fr = app && app.querySelector('iframe.dv3-frame');

@@ -135,7 +135,7 @@ t('M7-২৬. the stored memory is rendered into the prompt, and external keys n
   })());
 t('M7-২৭. the prompt base is untouched by M7 (hash unchanged)',
   createHash('sha256').update(A.buildSystemPrompt({})).digest('hex')
-  === 'a4b802d1e5944acdf1af9cf9abdaefaeb52ad311de0add1e82571a0ddad31daa');
+  === 'e0f49e242fe3b4f342afdccf4cdcd40c36054d2310181dcf86b337982edb500f');
 t('M7-২৮. agentStatus advertises memory metadata only',
   AGENT_SRC.includes("memory: { version: MEMORY_VERSION, mode: 'auto', scope: 'account-only' }"));
 

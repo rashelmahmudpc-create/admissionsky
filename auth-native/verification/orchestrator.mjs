@@ -20,7 +20,7 @@ const SEND_LIMITS = Object.freeze([
   Object.freeze({ scope: 'backup-global-minute', source: 'global', limit: 120, windowMs: 60_000 })
 ]);
 
-// Owner 2026-10-16: "এক E-mail এ দিনে ৩–৫ বার সর্বোচ্চ, যতটা কম রাখা যায় ভালো" —
+// Owner 2026-10-16: "এক E-mail এ দিনে ৩–৫ বার সর্বোচ্চ, যতটা কম রাখা যায় ভালো" -
 // 3 per address per day, counted per email, on top of the hourly windows above.
 const DAY_MS = 24 * HOUR_MS;
 const EMAIL_DAILY_LIMIT = 3;
@@ -65,6 +65,16 @@ function providerFailure(error) {
   if (error instanceof VerificationProviderError) return error;
   return new VerificationProviderError('UNEXPECTED_PROVIDER_FAILURE', VERIFICATION_FAILURE_CLASS.TEMPORARY);
 }
+
+// A slot that has measurably slow sends moves behind the others. This is the one
+// latency lever that cannot create a duplicate: the send still happens once, it
+// just leaves through the provider that has been answering fastest. Readings are
+// only trusted after a few successful sends, and a slot is never demoted for
+// being under a sane absolute floor, so a quiet day on every provider does not
+// reshuffle the operator's order.
+const SLOW_SLOT_MIN_SAMPLES = 3;
+const SLOW_SLOT_FLOOR_MS = 1_500;
+const SLOW_SLOT_RATIO = 2;
 
 const PROBE_TIMEOUT_MS = 5000;
 
@@ -271,13 +281,16 @@ export class VerificationOrchestrator {
     });
   }
 
-  async #candidateRows(identity, destinations, now) {
+  async #candidateRows(identity, destinations, now, deadline = 0) {
     // otp-m (magic link) is never part of the code failover, and a magic-link
     // request never falls back to a code provider the student is not expecting.
     const magicLink = identity.deliveryMethod === 'magic-link';
     const eligible = this.config.enabled
       ? this.config.providers.filter(entry => entry.enabled && destinations[entry.channel] && ((entry.id === MAGIC_LINK_PROVIDER_ID) === magicLink))
       : [];
+    // Probes read live health from every enabled slot, so they are part of the
+    // student's wait and must come out of the same budget as the sends.
+    const probeCeiling = Math.min(PROBE_TIMEOUT_MS, Math.max(250, deadline - Date.now()));
     const rows = await Promise.all(eligible.map(async entry => {
       const provider = this.providers.get(entry.id);
       const started = Date.now();
@@ -286,8 +299,8 @@ export class VerificationOrchestrator {
           // Readiness probes run for every slot before a single send, so a slow
           // probe delayed the whole OTP past the browser's patience. Probes get
           // a short ceiling; the send itself keeps the slot's full timeoutMs.
-          bounded(() => provider.checkAvailability({ purpose: identity.purpose }), Math.min(entry.timeoutMs, PROBE_TIMEOUT_MS)),
-          bounded(() => provider.getRemainingQuota({ now }), Math.min(entry.timeoutMs, PROBE_TIMEOUT_MS)),
+          bounded(() => provider.checkAvailability({ purpose: identity.purpose }), Math.min(entry.timeoutMs, probeCeiling)),
+          bounded(() => provider.getRemainingQuota({ now }), Math.min(entry.timeoutMs, probeCeiling)),
           this.repository.dailyQuotaSnapshot({ providerId: entry.id, dailyQuota: entry.dailyQuota, now }),
           this.repository.providerSnapshot({ providerId: entry.id, now })
         ]);
@@ -299,8 +312,8 @@ export class VerificationOrchestrator {
         // Left unbounded, one hard failure (500) or a slow reading (latency/50)
         // demotes a slot permanently: it is never retried, so its counters never
         // recover and a repaired credential is never used again. Demotion is the
-        // circuit breaker's job — it opens after `circuitFailureThreshold`
-        // consecutive failures and probes again after the cooldown — so these two
+        // circuit breaker's job, it opens after `circuitFailureThreshold`
+        // consecutive failures and probes again after the cooldown, so these two
         // only break ties between equally ranked slots. `lowPenalty` stays large
         // on purpose: exhausted capacity is a hard constraint, not a preference.
         const failureTotal = Number(state.successCount || 0) + Number(state.failureCount || 0);
@@ -318,7 +331,9 @@ export class VerificationOrchestrator {
           // jumped ahead. They now only break ties; the order is the operator's
           // priority plus the deliberate recipient bias and resend demotion.
           score: entry.priority + lowPenalty + recipientBias(entry.id, destinations.otp) + (identity.previousProviderId && identity.previousProviderId === entry.id ? 25 : 0),
-          health: failurePenalty + latencyPenalty
+          health: failurePenalty + latencyPenalty,
+          latencyMs: Number(state.latencyEwmaMs || 0),
+          successes: Number(state.successCount || 0)
         };
       } catch (cause) {
         const failure = providerFailure(cause);
@@ -336,7 +351,27 @@ export class VerificationOrchestrator {
         return null;
       }
     }));
-    return rows.filter(Boolean).sort((left, right) => left.score - right.score || (Number(right.probe) - Number(left.probe)) || left.health - right.health || left.entry.priority - right.entry.priority);
+    const candidates = rows.filter(Boolean);
+    // Owner 2026-10-24: the OTP must be quick without ever sending twice, so the
+    // order — not a second parallel send — is what carries the speed. Only a slot
+    // that has proven itself slow (a few successes, and an average more than twice
+    // the fastest healthy slot, above an absolute floor) is pushed back, far enough
+    // to sit behind every other candidate. Everything else keeps the operator's
+    // priority order untouched.
+    const measured = candidates.filter(row => row.successes >= SLOW_SLOT_MIN_SAMPLES && row.latencyMs > 0);
+    if (measured.length > 1) {
+      const fastest = Math.min(...measured.map(row => row.latencyMs));
+      const slowFrom = Math.max(SLOW_SLOT_FLOOR_MS, fastest * SLOW_SLOT_RATIO);
+      const priorities = candidates.map(row => row.entry.priority);
+      // Wide enough to clear the whole priority span, so a demoted slot really is last.
+      const demotion = Math.max(...priorities) - Math.min(...priorities) + 10;
+      for (const row of measured) {
+        if (row.latencyMs < slowFrom) continue;
+        row.score += demotion;
+        row.slow = true;
+      }
+    }
+    return candidates.sort((left, right) => left.score - right.score || (Number(right.probe) - Number(left.probe)) || left.health - right.health || left.entry.priority - right.entry.priority);
   }
 
   async requestVerification(input = {}, requestContext = {}) {
@@ -349,6 +384,10 @@ export class VerificationOrchestrator {
       const provider = this.providers.get(entry.id);
       return entry.enabled && provider?.id === 'telegram' && provider?.verificationMode === VERIFICATION_MODES.LOCAL_CODE;
     });
+    // F-02: the student's clock starts when the request arrives, not when the
+    // first send leaves, so health probes cannot spend the budget for free.
+    const requestStarted = Date.now();
+    const deliveryDeadline = requestStarted + this.config.policy.deliveryBudgetMs;
     const [codeMac, linkTokenMac, codeCipher, linkCipher] = await Promise.all([
       this.hmac.hex('backup-verification-code-v1', `${attemptId}:${code}`),
       this.hmac.hex('backup-verification-link-v1', linkToken),
@@ -387,20 +426,32 @@ export class VerificationOrchestrator {
     } catch {}
     const destinations = identity.destinations;
     const deliveryMethod = input?.deliveryMethod === 'magic-link' && identity.purpose === 'email-ownership' ? 'magic-link' : '';
-    const candidates = await this.#candidateRows({ ...identity, attemptId, previousProviderId, deliveryMethod }, destinations, now);
-    const requestStarted = Date.now();
+    const candidates = await this.#candidateRows({ ...identity, attemptId, previousProviderId, deliveryMethod }, destinations, now, deliveryDeadline);
     const attemptRef = String(attemptId).slice(0, 8);
+    // Visible in the delivery log: which slots the latency rule moved back.
+    const demoted = candidates.filter(candidate => candidate.slow).map(candidate => candidate.entry.id).join(',');
     const tried = [];
     const logBase = { attempt: attemptRef, purpose: identity.purpose, method: deliveryMethod || 'code', candidates: candidates.length };
     const emit = (evt, fields) => { try { this.onDeliveryEvent?.({ evt, ...fields }); } catch {} };
     const logDelivery = fields => emit('otp_delivery', fields);
     const logRequest = fields => emit('otp_request', fields);
     let rank = 0;
+    let budgetExhausted = false;
+    // One send at a time, always. A parallel "hedged" send was tried on
+    // 2026-10-24 and withdrawn the same day: two providers can both deliver, so
+    // the student got two mails with the same code and no cancellation exists for
+    // a message already handed to a provider. Speed comes from the budget below
+    // and from the slot order, never from sending twice.
     for (const candidate of candidates) {
       const { entry, provider } = candidate;
       rank += 1;
       const maxTries = 1 + policy.maxProviderRetries;
       for (let currentTry = 0; currentTry < maxTries; currentTry += 1) {
+        // F-02: once the shared budget is gone, stop. Spending another slot's
+        // timeoutMs after the student has already given up only burns quota and
+        // turns a fast failure into a minute-long spinner.
+        const remainingBudget = deliveryDeadline - Date.now();
+        if (remainingBudget <= 0) { budgetExhausted = true; break; }
         const quota = await this.repository.reserveDailyQuota({ providerId: entry.id, dailyQuota: entry.dailyQuota, now });
         if (quota.exhausted) {
           tried.push(`${entry.id}:quota`);
@@ -419,13 +470,13 @@ export class VerificationOrchestrator {
             recipientName: identity.recipientName,
             expiresAt: now + (policy.codeTtlSeconds * 1000),
             signalContext: { origin: identity.context.origin }
-          }), entry.timeoutMs);
+          }), Math.min(entry.timeoutMs, deliveryDeadline - Date.now()));
           if (result?.accepted !== true) throw new VerificationProviderError('INVALID_PROVIDER_RESPONSE', VERIFICATION_FAILURE_CLASS.HARD);
-          providerAccepted = true;
           const latencyMs = Date.now() - started;
+          providerAccepted = true;
           tried.push(`${entry.id}:ok`);
           logDelivery({ ...logBase, provider: entry.id, label: entry.label, rank, try: currentTry + 1, outcome: 'accepted', latencyMs });
-          logRequest({ ...logBase, outcome: 'sent', provider: entry.id, totalMs: Date.now() - requestStarted, tried: tried.join(',') });
+          logRequest({ ...logBase, outcome: 'sent', provider: entry.id, totalMs: Date.now() - requestStarted, tried: tried.join(','), ...(demoted ? { demoted } : {}) });
           await this.#record(entry, { attemptId, userId: identity.userId, subjectRef: identity.subjectRef, success: true, reason: 'accepted', latencyMs, now });
           errorFromRepository(await this.repository.markChallengeDelivery({
             attemptId,
@@ -481,8 +532,16 @@ export class VerificationOrchestrator {
           if (failure.code === 'PROVIDER_TIMEOUT') break;
         }
       }
+      if (budgetExhausted) break;
     }
-    logRequest({ ...logBase, outcome: 'all_failed', totalMs: Date.now() - requestStarted, tried: tried.join(',') });
+    logRequest({
+      ...logBase,
+      outcome: budgetExhausted ? 'budget_exhausted' : 'all_failed',
+      budgetMs: policy.deliveryBudgetMs,
+      totalMs: Date.now() - requestStarted,
+      tried: tried.join(','),
+      ...(demoted ? { demoted } : {})
+    });
     await this.repository.failChallenge({ attemptId, reason: 'all_providers_unavailable', now });
     throw new NativeAuthError(AUTH_ERROR_CODES.BACKUP_UNAVAILABLE);
   }

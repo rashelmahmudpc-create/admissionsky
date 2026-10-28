@@ -1,11 +1,11 @@
-/* Admission Hub — Analytics Foundation (Phase 1).
+/* Admission Hub, Analytics Foundation (Phase 1).
  *
  * The single choke point between the app and Firebase Analytics (GA4). UI and
  * feature code never touch the Firebase SDK directly; they call this service,
  * so a future provider swap is one file, not a full-app rewrite.
  *
  * Design rules (see docs/ANALYTICS-FOUNDATION.md):
- *  • Never throws. Analytics failure is never app failure — every public call
+ *  • Never throws. Analytics failure is never app failure, every public call
  *    is wrapped and degrades to a no-op.
  *  • Privacy-first. Only named, whitelisted parameters survive; anything that
  *    looks like identity, credentials or free text is dropped before it leaves
@@ -39,7 +39,7 @@
   /* ── Master Event Dictionary ────────────────────────────────────────────────
    * Every allowed event with the parameters it may carry. `required` must be
    * present and non-empty; `optional` may be absent. Any parameter not listed
-   * here is dropped — that is what keeps the schema honest. Events are grouped
+   * here is dropped, that is what keeps the schema honest. Events are grouped
    * by the surface that emits them, which is also the naming prefix rule. */
   const EVENTS = {
     app_open: {
@@ -237,7 +237,7 @@
   const MAX_PARAM_STR = 120;
   const MAX_PARAMS = 24;
 
-  /* ── Phase 2 M4/M5 — learning funnel ──────────────────────────────────────
+  /* ── Phase 2 M4/M5, learning funnel ──────────────────────────────────────
    * The funnel is defined here, in one place, and every step is an EVENT name
    * (never a screen name): trackScreen collapses deep routes to their first
    * segment (pinned by test a16), so a screen-based funnel would silently
@@ -254,22 +254,22 @@
   /* A stage is "unusually steep" when it keeps far fewer students than the
    * stages before it. 40% is the drop that has always meant a real problem in
    * this app (a step that loses most of its traffic), and a step is only
-   * flagged once at least 5 students reached it — below that a percentage is
+   * flagged once at least 5 students reached it, below that a percentage is
    * noise, not a signal. */
   const DROPOFF_ALERT_RATE = 0.4;
   const DROPOFF_MIN_SAMPLE = 5;
 
-  /* ── Phase 2 M4–M7 — derived learning insights ────────────────────────────
+  /* ── Phase 2 M4–M7, derived learning insights ────────────────────────────
    * Pure: takes already-counted funnel counts (or raw events) and returns the
    * funnel, the steepest drop-off, engagement/streak/retention and the data
-   * quality report. No DOM, no storage, no network — so the same function runs
+   * quality report. No DOM, no storage, no network, so the same function runs
    * in the browser, in an admin panel, and in node:test. */
   function buildLearningInsights(input = {}) {
     const events = Array.isArray(input.events) ? input.events.filter(e => e && e.name) : [];
     const counts = (input.counts && typeof input.counts === 'object') ? input.counts : countByEvent(events);
     const dayCount = (input.dayCount && typeof input.dayCount === 'object') ? input.dayCount : countByDay(events);
 
-    /* M4 — funnel. Each step reports how many reached it, how many of the
+    /* M4, funnel. Each step reports how many reached it, how many of the
      * previous step survived, and the drop from the step before. */
     const funnel = FUNNEL_STEPS.map((step, index) => {
       const count = Number(counts[step.event]) || 0;
@@ -283,7 +283,7 @@
       };
     });
 
-    /* M5 — drop-off intelligence: the steepest step that has enough students
+    /* M5, drop-off intelligence: the steepest step that has enough students
      * to be meaningful. Ties break toward the earliest step, which is the one
      * worth fixing first. */
     const eligible = funnel.filter(step => step.count >= DROPOFF_MIN_SAMPLE && step.dropRate >= DROPOFF_ALERT_RATE);
@@ -299,7 +299,7 @@
       message: steepest ? dropOffMessage(steepest.key, steepest.dropRate) : ''
     };
 
-    /* M6 — engagement, streak, retention. All derived from the same events;
+    /* M6, engagement, streak, retention. All derived from the same events;
      * nothing new is collected. */
     const days = Object.keys(dayCount).sort();
     const activeDays = days.filter(day => (Number(dayCount[day]) || 0) > 0);
@@ -312,7 +312,7 @@
       retention: retentionBuckets(activeDays)
     };
 
-    /* M7 — data quality: which expected events never fired, and which rows are
+    /* M7, data quality: which expected events never fired, and which rows are
      * missing a required parameter or are duplicates. */
     const quality = checkDataQuality(events, counts);
 
@@ -373,7 +373,7 @@
     return out;
   };
 
-  /* M7 — expected-event validation. `expected` defaults to the learning events
+  /* M7, expected-event validation. `expected` defaults to the learning events
    * every funnel needs; `required` reuses the dictionary so this can never
    * drift from what normalizeEvent enforces. */
   function checkDataQuality(events, counts, options = {}) {
@@ -415,14 +415,14 @@
       quiz_start: 'পাঠ শেষ করে কুইজ শুরু করেনি',
       quiz_complete: 'কুইজ শুরু করে শেষ করেনি'
     };
-    return `${labels[key] || key} — ${Math.round(rate * 100)}% এখানেই থেমে গেছে।`;
+    return `${labels[key] || key}, ${Math.round(rate * 100)}% এখানেই থেমে গেছে।`;
   }
 
   /* An append-only, bounded local trail of the learning events this device
    * emitted. GA4 owns the aggregate view; this exists so the admin panel and
    * the data-quality check have something to read on-device without waiting on
    * the Data API (which is still not enabled). It stores the SAME already-
-   * filtered params that were sent — no new personal data. */
+   * filtered params that were sent, no new personal data. */
   const LEDGER_KEY = 'ahLearningLedgerV1';
   const MAX_LEDGER = 500;
   /* Held in memory and flushed on a coalesced timer: re-parsing and re-writing
@@ -606,7 +606,7 @@
 
   /* The GA4 measurement ID and the public Firebase web config are served by
    * the Worker (/api/notifications/config). When the measurement ID is absent,
-   * Analytics has never been switched on for the project — the service then
+   * Analytics has never been switched on for the project, the service then
    * stays in console mode instead of failing. */
   async function fetchRemoteConfig() {
     try {
@@ -685,7 +685,7 @@
 
   /* ── public API ─────────────────────────────────────────────────────────── */
 
-  /* trackEvent(name, params) — the one entry point every other helper uses.
+  /* trackEvent(name, params), the one entry point every other helper uses.
    * Always returns a small result object; never throws. */
   function trackEvent(name, params) {
     try {
@@ -738,7 +738,7 @@
     }
   }
 
-  /* trackScreen(name, opts) — screen views are the backbone of Phase 2. */
+  /* trackScreen(name, opts), screen views are the backbone of Phase 2. */
   function trackScreen(name, opts = {}) {
     try {
       const screen = String(name || '').replace(/^#?\/?/, '').split('?')[0] || 'dashboard';
@@ -819,7 +819,7 @@
            * ready. The moment the owner adds the ID, this path lights up. */
           config.mode = 'debug';
           config.debug = true;
-          try { console.warn('[AhAnalytics] no measurementId yet — running in console mode'); } catch (_) {}
+          try { console.warn('[AhAnalytics] no measurementId yet, running in console mode'); } catch (_) {}
         }
       }
 
@@ -835,7 +835,7 @@
     }
   }
 
-  /* start() — idempotent boot: configure, then emit app_open exactly once. */
+  /* start(), idempotent boot: configure, then emit app_open exactly once. */
   async function start(opts = {}) {
     if (started) return status();
     const st = await configure(opts);
@@ -920,7 +920,7 @@
         for (const k of Object.keys(d)) if (k !== 'type') slice[k] = d[k];
         trackLearning(mapped, slice);
       });
-    } catch (_) { /* no DOM (node:test) — hooks are optional */ }
+    } catch (_) { /* no DOM (node:test), hooks are optional */ }
   }
 
   /* Derive the Phase-1 learning events from a rendered route plus whatever the

@@ -37,7 +37,7 @@ export function isSmallTalkTopic(v) {
  * input: { records (parsed long-term memory), stats (capStats shape),
  *          recent: { mistakes: n, since: ts } (client-counted, last 48 h), now }
  * output: { line, button: { label, prompt }, kinds: [...], version } | null
- * Plain text only — the chat bubble uses textContent, never Markdown/HTML.
+ * Plain text only, the chat bubble uses textContent, never Markdown/HTML.
  */
 export function buildRecall(input = {}) {
   const now = Number(input.now) || Date.now();
@@ -55,8 +55,8 @@ export function buildRecall(input = {}) {
   if (wrong > 0) {
     const when = whenWord(Number(recent.since) || 0, now);
     const lead = when === 'আজ' ? 'আজ' : when === 'গতকাল' ? 'গতকাল থেকে' : 'সম্প্রতি';
-    parts.push(lead + ' ' + bn(wrong) + 'টা প্রশ্নে ভুল হয়েছে — আগে ওগুলো একবার ঝালিয়ে নেবে?');
-    buttons.push({ label: '🔁 ভুলগুলো ঝালাই করি', prompt: 'গত দুই দিনে আমার কয়েকটা প্রশ্ন ভুল হয়েছে — Mistake Bank থেকে কীভাবে রিভিশন করব, ধাপে ধাপে বলো' });
+    parts.push(lead + ' ' + bn(wrong) + 'টা প্রশ্নে ভুল হয়েছে, আগে ওগুলো একবার ঝালিয়ে নেবে?');
+    buttons.push({ label: '🔁 ভুলগুলো ঝালাই করি', prompt: 'গত দুই দিনে আমার কয়েকটা প্রশ্ন ভুল হয়েছে, Mistake Bank থেকে কীভাবে রিভিশন করব, ধাপে ধাপে বলো' });
     kinds.push('mistakes');
   }
 
@@ -67,7 +67,7 @@ export function buildRecall(input = {}) {
     const worst = measured.slice().sort((a, b) => (a.accuracy | 0) - (b.accuracy | 0))[0];
     const name = cleanName(worst.name);
     if (name) {
-      parts.push(name + '-এ সঠিকতা এখন ' + bn(worst.accuracy | 0) + '% — আজ একটু ' + name + ' চর্চা করি?');
+      parts.push(name + '-এ সঠিকতা এখন ' + bn(worst.accuracy | 0) + '%, আজ একটু ' + name + ' চর্চা করি?');
       buttons.push({ label: '🎯 ' + name + ' চর্চা', prompt: name + ' থেকে ৫টা প্রশ্নে কুইজ দাও' });
       kinds.push('weak-measured');
       weakDone = true;
@@ -80,7 +80,7 @@ export function buildRecall(input = {}) {
       const base = topicBase(name) || name;
       const noExam = !parts.length && stats.exams === 0 ? 'তুমি এখনো পরীক্ষা দাওনি, তবে ' : '';
       const forGoal = goal && !parts.length ? goal + '-এর প্রস্তুতিতে ' : '';
-      parts.push(noExam + 'আগে বলেছিলে ' + name + ' দুর্বল — ' + (forGoal ? forGoal + 'আজ ' : 'আজ ') + base + ' দিয়ে শুরু করি?');
+      parts.push(noExam + 'আগে বলেছিলে ' + name + ' দুর্বল, ' + (forGoal ? forGoal + 'আজ ' : 'আজ ') + base + ' দিয়ে শুরু করি?');
       buttons.push({ label: '🎯 ' + base + ' দিয়ে শুরু', prompt: base + ' থেকে ৫টা প্রশ্নে কুইজ দাও' });
       kinds.push('weak-stated');
     }
@@ -95,7 +95,7 @@ export function buildRecall(input = {}) {
       const topic = cleanName(last.value, 60);
       if (topic && !isSmallTalkTopic(topic)) {
         const when = whenWord(Number(last.ts), now);
-        parts.push((when ? when + ' ' : '') + 'আমরা “' + topic + '” নিয়ে কথা বলছিলাম — সেখান থেকে চালিয়ে যাবে?');
+        parts.push((when ? when + ' ' : '') + 'আমরা “' + topic + '” নিয়ে কথা বলছিলাম, সেখান থেকে চালিয়ে যাবে?');
         buttons.push({ label: '↩️ চালিয়ে যাই', prompt: 'আগের আলোচনাটা চালিয়ে যাও: ' + topic });
         kinds.push('last-topic');
       }
@@ -104,7 +104,7 @@ export function buildRecall(input = {}) {
 
   /* 4. Only the goal is known: offer a plan for it. */
   if (!parts.length && goal) {
-    parts.push('তোমার লক্ষ্য ' + goal + ' — আজকের পড়া কোথা থেকে শুরু করবে, একটা প্ল্যান করে দিই?');
+    parts.push('তোমার লক্ষ্য ' + goal + ', আজকের পড়া কোথা থেকে শুরু করবে, একটা প্ল্যান করে দিই?');
     buttons.push({ label: '🎯 আজকের প্ল্যান', prompt: 'আমার ভর্তির লক্ষ্য অনুযায়ী আজকের পড়ার প্ল্যান দাও' });
     kinds.push('goal');
   }

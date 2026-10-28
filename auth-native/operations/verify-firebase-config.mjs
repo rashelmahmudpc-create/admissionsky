@@ -1,6 +1,13 @@
 import { pathToFileURL } from 'node:url';
 
 const PROJECTS_ENDPOINT = 'https://identitytoolkit.googleapis.com/v1/projects';
+// Both live production origins. This gate used to require `admissionhub.pages.dev`
+// alone, which was the main address before the owner moved to the short one; a
+// project that authorises only `admissionsky.pages.dev` is not broken for
+// students, and failing the deploy over it was a false alarm waiting to happen.
+// Either satisfied domain passes, and the one that is missing is reported rather
+// than hidden.
+export const LIVE_PAGES_DOMAINS = Object.freeze(['admissionhub.pages.dev', 'admissionsky.pages.dev']);
 const REQUIRED_DOMAIN = 'admissionhub.pages.dev';
 
 export class FirebaseConfigError extends Error {
@@ -18,9 +25,15 @@ export function validateFirebaseProjectConfig(payload) {
     ? payload.authorizedDomains.map(value => String(value).toLowerCase())
     : [];
   const authorizedDomainReady = domains.includes(REQUIRED_DOMAIN);
+  const authorizedLiveDomains = LIVE_PAGES_DOMAINS.filter(domain => domains.includes(domain));
   if (!projectIdentified) throw new FirebaseConfigError('PROJECT_NOT_IDENTIFIED');
-  if (!authorizedDomainReady) throw new FirebaseConfigError('PAGES_DOMAIN_NOT_AUTHORIZED');
-  return Object.freeze({ projectIdentified, authorizedDomainReady });
+  if (!authorizedLiveDomains.length) throw new FirebaseConfigError('PAGES_DOMAIN_NOT_AUTHORIZED');
+  return Object.freeze({
+    projectIdentified,
+    authorizedDomainReady,
+    authorizedLiveDomains,
+    missingLiveDomains: LIVE_PAGES_DOMAINS.filter(domain => !domains.includes(domain))
+  });
 }
 
 export async function verifyFirebaseConfig({ apiKey, fetchImpl = globalThis.fetch } = {}) {
@@ -43,7 +56,10 @@ export async function verifyFirebaseConfig({ apiKey, fetchImpl = globalThis.fetc
 async function main({ env = process.env, stdout = process.stdout, stderr = process.stderr } = {}) {
   try {
     const result = await verifyFirebaseConfig({ apiKey: env.FIREBASE_WEB_API_KEY });
-    stdout.write(`FIREBASE_CONFIG status=PASS projectIdentified=${result.projectIdentified} authorizedDomainReady=${result.authorizedDomainReady} keyPrinted=false\n`);
+    stdout.write(`FIREBASE_CONFIG status=PASS projectIdentified=${result.projectIdentified} authorizedDomainReady=${result.authorizedDomainReady} live=${result.authorizedLiveDomains.join(',')} keyPrinted=false\n`);
+    for (const domain of result.missingLiveDomains) {
+      stdout.write(`::notice title=Firebase domain not authorized::${domain} is not in the project's authorized domains. Auth still completes on the other live origin; add it when convenient.\n`);
+    }
   } catch (error) {
     const safe = error instanceof FirebaseConfigError ? error : new FirebaseConfigError('CONFIG_CHECK_FAILED');
     stderr.write(`::error title=Firebase configuration check failed::code=${safe.code} status=${safe.status}\n`);

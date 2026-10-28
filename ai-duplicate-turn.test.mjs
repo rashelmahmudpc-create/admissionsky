@@ -25,8 +25,9 @@ async function runSend(src, typed) {
   const sessions = [{ name: '', msgs }];
   const asked = [];
   const fn = new Function(
-    'text', 'sessions', 'cur', 'inpEl', 'document', 'save', 'renderMsgs', 'msgsEl',
+    'text', 'sessions', 'cur', 'inpEl', 'document', 'window', 'save', 'renderMsgs', 'msgsEl',
     'liveNode', 'setBusy', 'mood', 'MAX_HISTORY', 'ask', 'T', 'replaceStream', 'asked', 'procStage',
+    'instrParse', 'instrRun', 'profilePayload',
     `return (async () => { let busy = 0; let activeReq = null; ${body}
       asked.push(history);
       return { asked, msgs: sessions[0].msgs }; })();`
@@ -35,10 +36,18 @@ async function runSend(src, typed) {
   return fn(
     typed, sessions, 0, { value: typed, style: {}, blur() {} },
     { getElementById: () => null },
+    /* send() reaches for optional page singletons (SkySmallTalk, SkyFAQ,
+       SkyTools); an empty object makes each of those branches a no-op. */
+    {},
     () => {}, () => {}, { querySelector: () => null },
     null, () => {}, () => {}, 12, ask, {}, () => {}, asked,
     /* send() now reports live stages through procStage(); a no-op is enough here. */
-    () => {}
+    () => {},
+    /* Sky custom instructions: send() checks them first. Null keeps this test
+       on the duplicate-turn path it is actually about. */
+    () => null, () => null,
+    /* No cached profile in this harness, so there is no first name to greet. */
+    () => null
   );
 }
 

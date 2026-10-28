@@ -29,7 +29,9 @@ test('the built page boots and renders honest empty state with no session', asyn
   await new Promise((r) => setTimeout(r, 60));
 
   // No session, no cache: nothing fake may appear.
-  assert.equal(win.document.querySelector('#nm').textContent, '—');
+  // The empty-state placeholder is a dash; the shipped-copy typography pass
+  // (29a1ac7) turned the em dash into a hyphen, so accept either.
+  assert.match(win.document.querySelector('#nm').textContent, /^[—–-]$/);
   assert.equal(win.document.querySelector('#ahid').textContent, '');
   assert.ok(win.ProfileV2, 'adapter exposes its API');
   // Compare fields: the object comes from the jsdom realm, so a structural

@@ -18,7 +18,7 @@ t('২. কোনো আনগার্ডেড C().settings.X অ্যাক�
 t('৩. goal(): DB-লেখা সর্বদা window.dbPut-গার্ডেড (আনগার্ডেড-লেখা নেই)', V2.includes("if (window.dbPut) window.dbPut('settings', s)") && !/(?<!if \(window\.dbPut\) )window\.dbPut\('settings'/.test(V2.replace("if (window.dbPut) window.dbPut('settings', s)", '')));
 t('৪. renderV3 try/catch → বন্ধুত্বপূর্ণ-ব্যর্থতা (কখনো ক্র্যাশ নয়)', V2.includes("console.warn('[dv3] render failed") && V2.includes('ড্যাশবোর্ড লোড হয়নি'));
 
-t('৫. ভার্সন-অখণ্ডতা: dashboard-v2.js ?v=dash2f10-main-ai (index+sw) + current BUILD_ID', H.includes('<script defer src="./dashboard-v2.js?v=dash2f18-chrome"></script>') && SW.includes("'./dashboard-v2.js?v=dash2f18-chrome'") && SW.includes("const BUILD_ID = 'v350-notes-screen-v2'") && H.includes("const expectedSwVersion = 'v350-notes-screen-v2'") && H.includes("const expectedSwVersion = 'v350-notes-screen-v2'") && !H.includes('v196-gfix'));
+t('৫. ভার্সন-অখণ্ডতা: dashboard-v2.js ?v=dash2f10-main-ai (index+sw) + current BUILD_ID', H.includes('<script defer src="./dashboard-v2.js?v=dash2f18-chrome"></script>') && SW.includes("'./dashboard-v2.js?v=dash2f18-chrome'") && SW.includes("const BUILD_ID = 'v364-sky-goal'") && H.includes("const expectedSwVersion = 'v364-sky-goal'") && H.includes("const expectedSwVersion = 'v364-sky-goal'") && !H.includes('v196-gfix'));
 
 /* ── ২. রানটাইম (jsdom): আসল সিনারিওতে আর কোনো ক্র্যাশ নেই ── */
 function runtimeCase(name, setup) {

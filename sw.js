@@ -37,7 +37,7 @@ const APP_SHELL = [
   './sky-onboarding.css?v=sky-flow-20261018-v12',
   './institutions-bd.js?v=bd-institutions-v2',
   './language-engine.js?v=lang-v5-single-email-button',
-  './account-access.js?v=20261018-logout-otp-v1&startup=fast1',
+  './account-access.js?v=20261021-turnstile-v1&startup=fast1',
   './sky-onboarding.js?v=sky-flow-20261018-v12',
   './email-policy-client.js?v=20261018-allowlist-v1',
   './welcome-story.css?v=welcome-story-20261018-v3',
@@ -45,8 +45,8 @@ const APP_SHELL = [
   './academic-catalog.js?v=acad-cat-v2',
   './profile-ui.js?v=profile-v20-sky-instr',
   './profile-ui.css?v=profile-v15-uni-tap',
-  './profile-v2.html?v=profile-v2-6',
-  './profile-v2-mount.js?v=profile-v2-6',
+  './profile-v2.html?v=profile-v2-7',
+  './profile-v2-mount.js?v=profile-v2-7',
   './data-protection.js?v=dp-v3-fastboot',
   './dashboard-v2.js?v=dash2f18-chrome',
   './sky-smalltalk.js?v=st2',
@@ -92,64 +92,64 @@ const APP_SHELL = [
 // A truncated/corrupt download is NEVER written to the shell cache.
 const ASSET_DIGESTS = {
 /* sw-manifest:start */
-  "./index.html": "f4e30fdb7c21f393c6d14153b5c1ad0dbe21f0b65a9e4a0dacf9d1252b0aa51b",
+  "./index.html": "4c366975124550edc875ef117508036d229fb1d951c9876d5322313266a2f864",
   "./manifest.json": "6dcf0e0c6f7671750549e53558ba8b9f0c2c83b0c6759072a6b5e2276331f491",
   "./manifest.webmanifest": "abcd26174710f6df3e183889a5a9da182f73ee8cdcc543b43db8fb4070cad54f",
   "./dashboard-v2.css?v=dash2f13-theme": "4541bc1e65fd158c593443562975400d128b8f1d3b636595df3c235b99e8cced",
   "./3d-loader.css?v=3d-v2": "43ca21b0a41be5d223c317fd63582f19ff6ffab5d010639ef26349464550da63",
-  "./session-persist.js?v=session-v2": "99f3d1f49f6d5714fd25f1c12b2aa978ca97a009d6caba9a690a0442d082593c",
-  "./analytics-service.js?v=analytics-p2-v2-insights": "6c1f711ed0d99baade68bccd2754f78029c7a7d62d65934239f60a710317d0b0",
+  "./session-persist.js?v=session-v2": "81f7fe7d56e934c4a2706e1c6f2f8a8a671aaf7718a0062ef155d9a7e2491401",
+  "./analytics-service.js?v=analytics-p2-v2-insights": "9afcc7a0842ed69b4394e5b61ef8d4c944ab72f1d8d8f4ea6f9670f264b54cf7",
   "./account-access.css?v=20261018-allowlist-v1": "bf4f6e237ddfffd888d094b492a9cf49c10fcd85958ab13e91770a23fc8949f0",
   "./sky-onboarding.css?v=sky-flow-20261018-v12": "f94c44b34348038eea1b934f68ae0988a27ef64d76dbef47cd6dd640efde0bbe",
   "./institutions-bd.js?v=bd-institutions-v2": "602c5549515e8207ad152b948ca9b8fe3ad0fbe429afb56380e4e21b662f779d",
-  "./language-engine.js?v=lang-v5-single-email-button": "52aaa5d77b3030721ccbc1c777801a3787c1d1061391b0f4b80841b6a9ddd054",
-  "./account-access.js?v=20261018-logout-otp-v1&startup=fast1": "44d2e65887f13bd33b6e093a17ba4e4a12f9ef6b226548de5acb505a044a6c4d",
-  "./sky-onboarding.js?v=sky-flow-20261018-v12": "6aca49e00f6a1b7376f73e1270fe00e9ae76b7a269ee82d60a172a4c0aca43f3",
+  "./language-engine.js?v=lang-v5-single-email-button": "414b9fc68022a48d46fcb5e0492ca46042e93a5ec3da8eb0e5c437cf5a930e0f",
+  "./account-access.js?v=20261021-turnstile-v1&startup=fast1": "007a27731bd9d290981c7060db17cea510e26816d41c1a0b80b8717c4036523c",
+  "./sky-onboarding.js?v=sky-flow-20261018-v12": "f601a6e189d2a0123546b024ba3da24e8ebe3bbd92c374d95fe66f092793e5b6",
   "./email-policy-client.js?v=20261018-allowlist-v1": "d52570ca207888a5dc0e320a30ea59b576887e4bc4f33f48bfec64c2eb2245b5",
   "./welcome-story.css?v=welcome-story-20261018-v3": "4b589890fdf457149113e236320f94014b5cc2845c190b1bdf853f1f2963073d",
-  "./welcome-story.js?v=welcome-story-20261018-v3": "893a1d0d2ce8683bd802181bffc3e0496994a3faaf6ed27e968b2d19a21afa91",
-  "./academic-catalog.js?v=acad-cat-v2": "75e7b80663d41330658c948ad1d4829d49f5c9abed581350582cfeace06d5b32",
-  "./profile-ui.js?v=profile-v20-sky-instr": "4db65994d9b9c7ac0f7cfb1dcf57118cc1d016314f8865614b58dba8de9993e7",
+  "./welcome-story.js?v=welcome-story-20261018-v3": "af3aa4e476c890acbb5eba5420e9a0dd71cfdae90d9a42dcd981cddc8a3eacbb",
+  "./academic-catalog.js?v=acad-cat-v2": "b5c8e1145b553a4f67854d380c00dfbc507e932552415f640d7fed7d8d3a9990",
+  "./profile-ui.js?v=profile-v20-sky-instr": "dac012fca41d8b3986667d6178675fa69dbad4a75e29a004d5f65f88148315d9",
   "./profile-ui.css?v=profile-v15-uni-tap": "6408a4b7ac8acf6845cd0148c58377a4953c8ff879d30b2c520eafae0314b98a",
-  "./profile-v2.html?v=profile-v2-6": "00dce1ac58ca9ec4ff4f6672c054e4874915ce6ce66c104781cab459b3ae456e",
-  "./profile-v2-mount.js?v=profile-v2-6": "967e7d81fbf821c06ce5b1ddd867ab4fa5e882e37ef3aa1f0c445e0c623f3ec0",
+  "./profile-v2.html?v=profile-v2-7": "b9b8325f372c6bdb822a8c19b39d7f459baf2aa868f36f174a9b932c90164d2f",
+  "./profile-v2-mount.js?v=profile-v2-7": "45ffae2bdc26107148eaa1a7c04365c9c983e4c1a1a73935666c8d92c8e63665",
   "./data-protection.js?v=dp-v3-fastboot": "359dc907ade4bcb3a6a722385969ebb6af47f7e436e6cdf2cce0dd6b7343723d",
-  "./dashboard-v2.js?v=dash2f18-chrome": "943a731165376cadca9bb4da2a33c7f3ccc1d24d063165fcede77089615e3739",
-  "./sky-smalltalk.js?v=st2": "ee85bc86a84d6c75f391d7f76fa03abd53f2df1973dd7980ae15ee94eb122a49",
+  "./dashboard-v2.js?v=dash2f18-chrome": "94befaeffd3953fad071c8ec3099f68addf29869320dab41bb25fac13b56b1ed",
+  "./sky-smalltalk.js?v=st2": "114b0b0ebead92de93c11063196323f3218a82259067ad05b0fadbf924fe6fa5",
   "./sky-replies.json?v=r1": "f5e97d43641a1dbedbe3d17f24c740ebb38b761a79c833a902b8876b7ead5a9f",
-  "./sky-tools-client.js?v=tools1": "0c07c9945f1cca5210314b4885c5c821907807d89cf9555a8320681fdb0f6736",
+  "./sky-tools-client.js?v=tools1": "dc88322912df86a210bca7fe5c0fa3c1f1ddc3481eaddddcf155f987fae1f558",
   "./sky-faq.js?v=faq1": "00149c15af74f969c26af581133c83b45bf922f7d1bf98293bc3c9c489b3547e",
   "./sky-faq-bn.js?v=faq1": "f417de34ddc4b08dce2dc212610ccc4ca265ca323876c5f3f5c1d52b01d859f9",
   "./sky-faq-en.js?v=faq1": "4923f584193c9569329b001b20867f2954b93b8e232a704e2effd632f25bb833",
   "./sky-faq-sci.js?v=faq1": "f574bcdb1441678c6ae4cbf6be8baa73d5cdd06a24bccfab712e241a29b6a42b",
   "./sky-faq-gk.js?v=faq1": "e406ee8982e255881ff5a6c854c19dc0c4f8004d6e4cc341a2c114bf678ee492",
-  "./ai-agent-chat.js?v=agent-f1-ui-skyv13": "987c7ffb6910f5781a7fa47ceb75f3b6ceb5d116e006a1291a3791f62bc34786",
-  "./question-engine.js?v=qe1": "db404fefd97bea27dad177748bafb0a9ba7d87bedca094e3da795c5b77946cd4",
-  "./question-engine-panel.js?v=qe1": "33376e371654d575484194b5fcf8e486f4e3329c13e5330ff8619caab0399ec4",
-  "./notification-fcm.js?v=fcm-p3-v15": "3b1880bc1ab5b9f91cf844b021369f2431eae099175873ab4d7eb018370318ee",
-  "./notification-inbox.js?v=notif-inbox-v6": "681c8727fe1a448dfe70f9fcac9342a6454d648304e9e727131939b09b5640fd",
-  "./notification-center-route.js?v=ns-cc-route-v1": "d616507f4550697a38c0d441070ff979d1be51b332c252d4a4251136018f0dd4",
-  "./analytics-dashboard.js?v=analytics-p4-v1": "ee2d5fcf1b3850ed5c1b83de136085be340ab8c31805e26bd3db15d7a8e41f8b",
-  "./analytics-insight-engine.js?v=p09-v1": "8f001e9e9535fa636ebe2822cb2d2d5d16297f6baa36451e5882ba5281ec7ee1",
-  "./analytics-insights-panel.js?v=p09-v1": "f39d9c7b9fade9361b662af8b58b7f6d37025cdb859e4370ce455b7a5053f546",
-  "./mistake-engine.js?v=p10-v1": "4266b9acb49107d4bf48cd88c0d82492d2324f351ca4b4235b6b156706b44f50",
-  "./adaptive-engine.js?v=p11-v1": "4d684652043d4ab0fe38660546491a2c31f67264548cf4040be181aa39a63d45",
-  "./adaptive-insights-panel.js?v=p11-v1": "bb3a42e5d386b2d3861ab088cf0a30354b981cb1b40c419603c0fbdf47fddb27",
-  "./study-plan-engine.js?v=p17-v1": "53a4161abec5fd4e0256d96bb41202a61625a8265ac770c404bc093372999b13",
-  "./study-plan-panel.js?v=p17-v2": "e5e0eff07f36d62666c2e9cc4d8cc72c17713cdb12a4035b517076b646b99dbc",
-  "./question-pattern.js?v=p18-v1": "ded5c7732ade141097aedc168a008c1d11aa461c6e706e8d22e5ba4accd03a1b",
-  "./admission-intel-engine.js?v=p18-v3": "25e07bec32a568776866208879df3ff892577d11481d8ecf86e496f5ec02239a",
-  "./admission-intel-panel.js?v=p18-v3": "77b821900b78c42a4ffb8dc2f55e58edcfa6e7eeb0cee5a5f357a7ecd4dd1c42",
-  "./p13-performance-core.js?v=p13-core-v1": "a51cc8a619d04b2f7b2bed2d4752a2d4c1da652f9e2034faacd47addf8cdcdca",
-  "./p13-performance-runtime.js?v=p13-runtime-v1": "60fb332e307a6606e3dec74100fbb2b4337d4497c6d0fe3ee2e40e0470c1391a",
-  "./student-data-sync.js?v=student-sync-v1": "f81ed126b0c8104c29fc0838a8f373c6c444ac45f17c2050850805285ce479c1",
+  "./ai-agent-chat.js?v=agent-f1-ui-skyv13": "b5c5c73c92f08cc0acf4274e9cfe6fe8be835b2d60000f146504182ffd2bc13f",
+  "./question-engine.js?v=qe1": "7f63c4d5f8d917c853dd85ba1a9fd4fdd8f51f7f36f3f9d561ee8fdd1d6441e5",
+  "./question-engine-panel.js?v=qe1": "f86b20b325fa1139d3cca774a2bd9f086093fba2e249630b8c32ea7800d02c24",
+  "./notification-fcm.js?v=fcm-p3-v15": "5c9b73e7c9b93a9db3a5dc8ca0e78be8dd22484270f4596611719161e43215dd",
+  "./notification-inbox.js?v=notif-inbox-v6": "2de1c6b5c572ee60bea9d53b43b3650326ba1e58b5bab00e1d0175c99c778061",
+  "./notification-center-route.js?v=ns-cc-route-v1": "5367fd1e9d23759874b68cc9b4688fb849644904e8a9945c80414cad0aed55ef",
+  "./analytics-dashboard.js?v=analytics-p4-v1": "77c1d07fd9b5a74c141322edf9536e3bc522bd4efdc4db1f24276652ee4326c6",
+  "./analytics-insight-engine.js?v=p09-v1": "7cac05d2955ea34688321a0abac2b1e81abe21100fcf46051fdbc29e82f98dec",
+  "./analytics-insights-panel.js?v=p09-v1": "3f1f2b57428918e1d90d31b7cf1c96afb155b1af51bf24ae8e9a496c5db00d4b",
+  "./mistake-engine.js?v=p10-v1": "509007fbd3cd399b2c7aca42d759428c719215b9d245ec30f0163f29e7c8987b",
+  "./adaptive-engine.js?v=p11-v1": "d6953b96ef6dff610a34f3b6d7016857fe96d2ed61a7b622ad3de02b776acb57",
+  "./adaptive-insights-panel.js?v=p11-v1": "82051f70bf464e1ae80e5ed8ceaabd3c42611214dcbf6ba08a68a582e55d4cc0",
+  "./study-plan-engine.js?v=p17-v1": "4cfae2b1c0bd9fe210984587386c7a7d234d9d0fa2757c2e46d1d0b03a73c941",
+  "./study-plan-panel.js?v=p17-v2": "c4471a70a5c624ef2c622b732f9d743b4bac8fb032681e560ebaa7b34a50227e",
+  "./question-pattern.js?v=p18-v1": "bb3a606f4adf1fad3e554bbace40c6658fcbfa475bb7aa48805458a13a5b30d2",
+  "./admission-intel-engine.js?v=p18-v3": "35a854d4ba9a435663e96036cd0d72ff29e0fabc41d4134ab8573b6336eefbe3",
+  "./admission-intel-panel.js?v=p18-v3": "fcb4007c5c2178ef76ea7c5f22ac8b02678f3747c39a5f15dd9ec5a9c84cf218",
+  "./p13-performance-core.js?v=p13-core-v1": "2e8bf6d22b8dbf3b66c87f64f0fcf717149c361d2a5c5d97cb71e317b7298979",
+  "./p13-performance-runtime.js?v=p13-runtime-v1": "93670f8b356f3c6ab527a185822c0a58d9d192369f39ee2b861c2b6b99bd075e",
+  "./student-data-sync.js?v=student-sync-v1": "296abb5271f4350e2c759b177e781aee524357e3826605e7f86414d5859a9d09",
   "./install-guide.css?v=install-v4": "0eb58c7551f8d973390fb7b19fd98e4dd63ea2070f9f6cbe9429962098c3635c",
-  "./install-guide.js?v=install-v4": "138c750972a6a08cca27ac64234086f9d30ab09305031442afdc2956441cbf72",
-  "./sentry-report.js?v=sentry-v2": "22cca4702b3844fbfbbaddb00964fed898baa2a89530ac46cb349d22da4af52f",
+  "./install-guide.js?v=install-v4": "aaa6e4215cd474fd3a8851f07b868c8e18f3a6d60037fd7708d48c496b323953",
+  "./sentry-report.js?v=sentry-v2": "9ea89f2625dabedff0e53e7c15a95f7c705768e3a2ada7d4269fab08455e44bd",
   "./a11y-core.css?v=a11y-v1": "c3829667c87b46bbe7effd4ca4e9732f02b58ed849c4ac481f9be7ef02026aac",
-  "./a11y-core.js?v=a11y-v1": "633500e94e202d7035bccb5868f64d273c67324f1962e4c8b2e2df741ca5c6c5",
+  "./a11y-core.js?v=a11y-v1": "ade17443592bdf9f435bcb6d3d4155105516bd73d7b7a27c7f7a44b94bba9423",
   "./offline-status.css?v=offline-v2": "da9bd572435484b98efc921273e7f244fb68ea18b9a926f6a5e928e6dcd87d58",
-  "./offline-status.js?v=offline-v2": "5bc0b303252cde7759111dd655d61f26f1294ceac3d2c3f051a2d22453ecbbf0",
+  "./offline-status.js?v=offline-v2": "0ceefc5bb67e9acc7db222e853551605f6721042d8a5881bd0e00449d211638b",
   "./icons/icon-192.png": "777ce5566fbeff0f2e384c787c8dde4f47d7c869e455c6e577a503decd4f1683",
   "./icons/icon-512.png": "86459109582f82b1d891a3e5a82723fefd21a3c65e9d0d22ab4dae33bb540520",
 /* sw-manifest:end */
@@ -159,7 +159,7 @@ const isDocumentRequest = request => request.mode === 'navigate' || request.dest
   // An installed PWA / in-app WebView can launch a top-level navigation without
   // mode:'navigate' or destination:'document'. Those fell through to
   // `return Response.error()` and the phone showed a bare "This site can't be
-  // reached — ERR_FAILED" with no way back (owner screenshot 2026-10-13, url
+  // reached, ERR_FAILED" with no way back (owner screenshot 2026-10-13, url
   // .../?source=pwa#dashboard). Treat any GET that asks for HTML as a document
   // so it still gets the self-healing rescue page.
   || (request.method === 'GET' && String(request.headers.get('accept') || '').includes('text/html'));
@@ -188,7 +188,7 @@ async function offlineFallback(request) {
     if (fallback && isCurrentBuild(fallback)) return fallback;
     // No current-build shell is available (first run, or the cached shell is
     // from a previous build after a network blip). The owner hit exactly this:
-    // a blank page with no way back — the old code returned Response.error(),
+    // a blank page with no way back, the old code returned Response.error(),
     // which is an opaque failure the phone cannot recover from on its own.
     // Hand back a rescue page instead; it clears the stale cache and reloads
     // once, so the phone heals without anyone having to clear site data.
@@ -206,7 +206,7 @@ async function offlineFallback(request) {
 function rescueResponse() {
   const html = `<!doctype html><html lang="bn"><meta charset="utf-8">`
     + `<meta name="viewport" content="width=device-width,initial-scale=1">`
-    + `<title>Admission Hub — আবার চেষ্টা করছি</title>`
+    + `<title>Admission Hub, আবার চেষ্টা করছি</title>`
     + `<style>body{margin:0;min-height:100dvh;display:flex;align-items:center;justify-content:center;`
     + `font-family:system-ui,-apple-system,"Hind Siliguri",sans-serif;background:#f5f8ff;color:#0b1b3a;text-align:center}`
     + `main{padding:24px;max-width:340px}b{display:block;font-size:19px;margin-bottom:8px}`
@@ -242,13 +242,13 @@ self.addEventListener('install', event => {
         const request = new Request(url, {cache: 'reload'});
         const response = await fetch(request, {cache: 'no-store'});
         if (!response.ok) return;
-        // Digest gate: a truncated body has the wrong SHA-256 — never cache it.
+        // Digest gate: a truncated body has the wrong SHA-256, never cache it.
         const expected = ASSET_DIGESTS[asset];
         if (expected) {
           const blob = await response.clone().blob();
           const digest = await blob.digest('SHA-256');
           const hex = Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
-          if (hex !== expected) return; // poisoned download — fetch fresh at runtime
+          if (hex !== expected) return; // poisoned download, fetch fresh at runtime
         }
         await cacheNetworkResponse(request, response);
       } catch (_) {
@@ -268,7 +268,7 @@ self.addEventListener('activate', event => {
       keys
         // AVATAR_CACHE is version-keyed by the ?v= in its URL, not by the build,
         // so deleting it here threw away a perfectly valid photo on every
-        // activation and forced a fresh download — the owner's "বারবার লোডিং"
+        // activation and forced a fresh download, the owner's "বারবার লোডিং"
         // (report 2026-10-17). It holds exactly one image and trims itself on
         // write, so it is safe to keep across builds.
         .filter(key => key !== CACHE_NAME && key !== AVATAR_CACHE)
@@ -292,7 +292,7 @@ self.addEventListener('message', event => {
 });
 
 // Background Sync (P15): when the OS regains connectivity it wakes the worker
-// even with no page open. We do not touch IndexedDB here — that would need a
+// even with no page open. We do not touch IndexedDB here, that would need a
 // second, duplicate sync engine in the worker. Instead we nudge every open
 // client to flush; the page owns the queue and the auth cookie. This is what
 // lets a student finish an exam offline, close the app, and still have the
@@ -303,7 +303,7 @@ self.addEventListener('sync', event => {
     try {
       const open = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
       open.forEach(client => client.postMessage({ type: 'FLUSH_STUDENT_SYNC' }));
-    } catch (_) { /* best effort — the page also flushes on its own 'online' event */ }
+    } catch (_) { /* best effort, the page also flushes on its own 'online' event */ }
   })());
 });
 
@@ -313,6 +313,16 @@ self.addEventListener('fetch', event => {
 
   const requestUrl = new URL(request.url);
   if (requestUrl.origin !== self.location.origin) return;
+
+  // Firebase Auth's helper pages are not app pages and the shell cache must
+  // never answer them. /__/auth/handler is where Google returns from the OAuth
+  // dance and /__/auth/iframe is the hidden frame the SDK handshakes with;
+  // _worker.js proxies both to the Firebase project. Every GET with an HTML
+  // Accept header counted as a document here, so the iframe was handed the
+  // cached app shell, its handshake never came back, and "Continue with Google"
+  // sat for a minute or two before Google appeared (owner 2026-10-22). Leaving
+  // these requests alone — no respondWith at all — is the only safe answer.
+  if (requestUrl.pathname.startsWith('/__/auth/') || requestUrl.pathname.startsWith('/__/firebase/')) return;
 
   // The privileged control page is network-only and must never be replaced by or
   // written into the offline application shell.
@@ -329,7 +339,7 @@ self.addEventListener('fetch', event => {
   if (requestUrl.pathname.startsWith('/api/auth/')) {
     // The profile photo is the one auth route that is cacheable: its URL carries
     // a ?v=<avatar.updatedAt> version, so a cached copy stays correct until the
-    // photo is replaced. Caching it here is what stops the "বারবার লোডিং" — the
+    // photo is replaced. Caching it here is what stops the "বারবার লোডিং", the
     // blanket no-store below re-downloads the bytes on every render.
     if (request.method === 'GET' && requestUrl.pathname === '/api/auth/v1/profile/avatar') {
       event.respondWith((async () => {
@@ -376,7 +386,7 @@ self.addEventListener('fetch', event => {
       // Serve the current-build shell instantly when we have it (a returning
       // visitor, and every in-app navigation), then revalidate in the
       // background. A current-build shell is the SAME build, so this can never
-      // show an old UI — it only removes the per-navigation network wait.
+      // show an old UI, it only removes the per-navigation network wait.
       const shell = await caches.match('./index.html');
       if (shell && isCurrentBuild(shell)) {
         event.waitUntil((async () => {
@@ -389,7 +399,7 @@ self.addEventListener('fetch', event => {
         return shell;
       }
       // No cache yet (a first visit): wait for the real document. It is NOT
-      // aborted on a fixed timer — aborting a slow-but-working navigation and
+      // aborted on a fixed timer, aborting a slow-but-working navigation and
       // handing back the splash is exactly what made the app look "stuck
       // loading" on a slow link.
       try {
@@ -408,7 +418,7 @@ self.addEventListener('fetch', event => {
       if (cached && isCurrentBuild(cached)) return cached;
       // Bounded + cache:'no-store': the browser HTTP cache is NEVER consulted
       // (a truncated body cached during a network blip would be served on every
-      // load otherwise — owner bug v262/v263). The shell cache is the only cache.
+      // load otherwise, owner bug v262/v263). The shell cache is the only cache.
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), STATIC_ASSET_TIMEOUT_MS);
       try {
@@ -435,15 +445,15 @@ self.addEventListener('fetch', event => {
   })());
 });
 
-// v108 — Web Push display + notification click routing.
+// v108, Web Push display + notification click routing.
 // Handles BOTH delivery paths without double-firing:
-//   1) FCM (Phase 1, fcm-notification.mjs) — payload: { "0":"gcm", notification:{title,body}, data:{link,src} }
+//   1) FCM (Phase 1, fcm-notification.mjs), payload: { "0":"gcm", notification:{title,body}, data:{link,src} }
 //      Foreground: the focused page shows an in-app toast (postMessage), no system notification.
 //      Background: system notification; click deep-links to the app route.
 //      NOTE: FCM subscriptions live on the push-scope worker
 //      (firebase-messaging-sw.js), so in practice these pushes do not reach this
-//      worker — that worker's SDK does the background display.
-//   2) Legacy admission-notify VAPID push (v107) — payload: { title, body, tag, url } — unchanged behavior.
+//      worker, that worker's SDK does the background display.
+//   2) Legacy admission-notify VAPID push (v107), payload: { title, body, tag, url }, unchanged behavior.
 const isFcmPayload = data => Boolean(data && typeof data === 'object' && (data['0'] === 'gcm' || data.notification));
 
 self.addEventListener('push', (event) => {
@@ -458,7 +468,7 @@ self.addEventListener('push', (event) => {
       self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
         const focused = list.find((client) => client.visibilityState === 'visible');
         if (focused) {
-          // Foreground — the page renders it in-app (single delivery, no system popup).
+          // Foreground, the page renders it in-app (single delivery, no system popup).
           try { focused.postMessage({ ah: 'fcm', title, body, data: fcmData }); } catch (_) {}
           return;
         }
@@ -470,7 +480,7 @@ self.addEventListener('push', (event) => {
     );
     return;
   }
-  // Legacy v107 path (admission-notify worker) — behavior preserved.
+  // Legacy v107 path (admission-notify worker), behavior preserved.
   event.waitUntil(self.registration.showNotification(String(data.title || 'Admission Hub 🔔'), {
     body: String(data.body || ''), tag: String(data.tag || 'admission-hub'), renotify: true, data: { url: data.url || './' }
   }));
@@ -486,7 +496,7 @@ self.addEventListener('notificationclick', (event) => {
     url = `./#${route}`;
   } else {
     /* A push payload may carry an absolute url. Never hand the user a foreign or
-     * retired host — the old GitHub mirror is deleted and fails DNS on every
+     * retired host, the old GitHub mirror is deleted and fails DNS on every
      * device ("Safari can't open the page… server can't be found", owner
      * 2026-10-13). Keep navigation on this origin unless the url already is. */
     const raw = String(nd.url || './');

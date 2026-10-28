@@ -1,4 +1,4 @@
-/* Phase 4 (FCM blueprint) — notification analytics.
+/* Phase 4 (FCM blueprint), notification analytics.
  *
  * The blueprint asks to see which notifications are effective: Sent, Delivered,
  * Opened, Clicked, Failed, Invalid token, CTR, Engagement. Every one of those
@@ -7,15 +7,15 @@
  * place so the admin figure and the tests cannot drift apart.
  *
  * Definitions used (so the numbers mean one thing everywhere):
- *   Sent       — a notification row whose send was attempted and accepted.
- *   Delivered  — distinct devices that accepted the message (topic reach, or
+ *   Sent      , a notification row whose send was attempted and accepted.
+ *   Delivered , distinct devices that accepted the message (topic reach, or
  *                the per-device fallback count when the topic was not usable).
- *   Failed     — a row that could not be delivered to any device.
- *   Opened     — rows in notification_reads: the student opened the item in the
+ *   Failed    , a row that could not be delivered to any device.
+ *   Opened    , rows in notification_reads: the student opened the item in the
  *                Notification Center. Opened is a subset of delivered.
- *   Clicked    — taps recorded on the row's action link.
- *   CTR        — clicked / delivered, as a percentage.
- *   Engagement — opened / delivered, as a percentage.
+ *   Clicked   , taps recorded on the row's action link.
+ *   CTR       , clicked / delivered, as a percentage.
+ *   Engagement, opened / delivered, as a percentage.
  *
  * All math is pure and takes plain rows; the D1 reads are thin SQL.
  */

@@ -38,13 +38,13 @@
 
     const subjectItems = subjects.map(s => ({ value: s.id, name: `${s.icon || '📘'} ${s.name}` }));
     const selectedSubject = subjectId || (st.subjectIds?.length === 1 ? st.subjectIds[0] : '');
-    subjectSection.innerHTML = `${subjectSection.querySelector('h3')?.outerHTML || '<h3>Step 2 — Subjects</h3>'}<div class="exam-dropdown-grid">${field('Subject', 'examSubjectSelect', options(subjectItems, 'All Subjects', selectedSubject, item => item.name), 'Choose one subject or keep all subjects selected.')}</div><div class="muted exam-dropdown-summary">${st.subjectIds?.length ? `${st.subjectIds.length} subject selected` : 'All subjects included'}</div>`;
+    subjectSection.innerHTML = `${subjectSection.querySelector('h3')?.outerHTML || '<h3>Step 2, Subjects</h3>'}<div class="exam-dropdown-grid">${field('Subject', 'examSubjectSelect', options(subjectItems, 'All Subjects', selectedSubject, item => item.name), 'Choose one subject or keep all subjects selected.')}</div><div class="muted exam-dropdown-summary">${st.subjectIds?.length ? `${st.subjectIds.length} subject selected` : 'All subjects included'}</div>`;
 
     const topicItems = (selectedSubject ? rootsFor(selectedSubject).map(t => ({ value: t.id, name: t.name })) : rootsForAll(subjects, rootsFor).map(t => ({ value: t.id, name: `${subjectName(t.subjectId)} · ${t.name}` })));
     const selectedTopic = topicItems.some(item => item.value === topicId) ? topicId : '';
     const topicChildren = selectedTopic ? childrenFor(selectedTopic) : [];
     const subtopicItems = topicChildren.map(t => ({ value: t.id, name: t.name }));
-    topicSection.innerHTML = `${topicSection.querySelector('h3')?.outerHTML || '<h3>Step 3 — Topics</h3>'}<div class="exam-dropdown-grid exam-dropdown-grid-topics">${field('Topic', 'examTopicSelect', options(topicItems, 'All Topics', selectedTopic, item => item.name), 'Choose a parent topic.')}${field('Sub-topic', 'examSubtopicSelect', options(subtopicItems, subtopicItems.length ? 'All sub-topics' : 'No sub-topics for this topic', subtopicId, item => item.name), 'Optional: narrow the exam to one sub-topic.')}</div><div class="muted exam-dropdown-summary">${st.topicIds?.length ? 'A topic filter is active' : 'All topics included'}</div>`;
+    topicSection.innerHTML = `${topicSection.querySelector('h3')?.outerHTML || '<h3>Step 3, Topics</h3>'}<div class="exam-dropdown-grid exam-dropdown-grid-topics">${field('Topic', 'examTopicSelect', options(topicItems, 'All Topics', selectedTopic, item => item.name), 'Choose a parent topic.')}${field('Sub-topic', 'examSubtopicSelect', options(subtopicItems, subtopicItems.length ? 'All sub-topics' : 'No sub-topics for this topic', subtopicId, item => item.name), 'Optional: narrow the exam to one sub-topic.')}</div><div class="muted exam-dropdown-summary">${st.topicIds?.length ? 'A topic filter is active' : 'All topics included'}</div>`;
   }
 
   function rootsForAll(subjects, rootGetter) {

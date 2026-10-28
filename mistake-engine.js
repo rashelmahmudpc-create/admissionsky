@@ -1,4 +1,4 @@
-/* Admission Hub — P10 Smart Mistake & Revision: mistake engine.
+/* Admission Hub, P10 Smart Mistake & Revision: mistake engine.
  *
  * Pure and dependency-free (like question-engine.js / analytics-insight-engine.js),
  * so it runs in the browser as window.AhMistakeEngine and under node:test for
@@ -31,7 +31,7 @@
   const wrongCountOf = (rec, snap) => num(rec && rec.wrongCount) || num(snap && snap.wrongCount) || 1;
 
   /* Two options look alike when their bare text is very close once the leading
-     A/B/C/D markers are stripped — the trap the naive student falls into. */
+     A/B/C/D markers are stripped, the trap the naive student falls into. */
   function normOption(o) {
     return String(o == null ? '' : o).replace(/^\s*[A-Da-d][).:-]\s*/, '').replace(/\s+/g, '').toLowerCase();
   }

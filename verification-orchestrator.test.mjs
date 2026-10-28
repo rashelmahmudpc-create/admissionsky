@@ -745,7 +745,7 @@ test('wrangler.toml timeoutMs matches each slot speed (owner 2026-10-16)', async
   const got = Object.fromEntries(rows.map(row => [row.id, row.timeoutMs]));
   assert.deepEqual(got, {
     'otp-a': 8000, 'otp-h': 12000, 'otp-i': 12000, 'otp-j': 12000, 'otp-k': 12000, 'otp-l': 12000, 'otp-m': 12000, 'otp-b': 20000,
-    'otp-d': 8000, 'otp-e': 8000, 'otp-f': 8000, 'otp-g': 8000, 'otp-c': 8000, telegram: 20000
+    'otp-d': 8000, 'otp-e': 8000, 'otp-f': 8000, 'otp-g': 8000, 'otp-c': 8000, 'otp-n': 8000, 'otp-o': 8000, 'otp-q': 8000, 'otp-r': 8000, 'otp-s': 8000, 'otp-t': 8000, 'otp-u': 8000, 'otp-v': 12000, 'otp-w': 12000, 'otp-x': 12000, 'otp-y': 12000, 'otp-z': 12000, 'otp-za': 12000, telegram: 20000
   });
 });
 
@@ -792,4 +792,146 @@ test('owner 2026-10-17: an admin save without timeoutMs keeps each slot timeout'
   assert.equal(status.providers.find(row => row.id === 'otp-a').timeoutMs, 8000);
   assert.equal(status.policy.codeTtlSeconds, 600);
   assert.deepEqual([...app.orchestrator.config.allowedDomains], ['gmail.com', 'example.com']);
+});
+
+/* F-02 (blueprint 06): one code, one deadline. Before this the chain waited a
+   full timeoutMs per slot — 26 enabled slots in production meant a bad day could
+   hold the student for minutes. The budget is wall-clock for the whole request,
+   health probes included. */
+test('F-02: the delivery budget caps the whole chain, not one timeout per slot', async () => {
+  const hung = id => {
+    const provider = new MockProvider({ id });
+    provider.sendVerification = async input => {
+      provider.sends.push(input);
+      return new Promise(() => {});
+    };
+    return provider;
+  };
+  const providers = [hung('otp-a'), hung('otp-b'), hung('otp-c'), hung('otp-d')];
+  const app = setup({ providers, config: rawConfig(providers, { deliveryBudgetMs: 3_000 }) });
+  const started = Date.now();
+  await expectCode(() => app.orchestrator.requestVerification(identity, context), AUTH_ERROR_CODES.BACKUP_UNAVAILABLE);
+  const elapsed = Date.now() - started;
+  assert.ok(elapsed < 4_500, `the budget must bound the request; it took ${elapsed}ms`);
+  const sends = providers.reduce((sum, provider) => sum + provider.sends.length, 0);
+  assert.ok(sends < providers.length, 'the budget stops the chain instead of trying every slot');
+});
+
+test('F-02: a budget that is still fresh never shortens a healthy first send', async () => {
+  const primary = new MockProvider({ id: 'otp-a' });
+  const secondary = new MockProvider({ id: 'otp-b' });
+  const app = setup({ providers: [primary, secondary], config: rawConfig([primary, secondary], { deliveryBudgetMs: 25_000 }) });
+  const result = await app.orchestrator.requestVerification(identity, context);
+  assert.equal(result.accepted, true);
+  assert.match(result.attemptId, /.+/);
+  assert.equal(secondary.sends.length, 0, 'a healthy primary still takes the send alone');
+});
+
+/* Duplicate guard (owner 2026-10-24). A parallel "hedged" send shipped earlier
+   the same day and was withdrawn: two providers can both deliver, and a message
+   handed to a provider cannot be recalled. These two tests pin the rule that
+   makes a duplicate impossible — one slot sends at a time, always. */
+test('F-02: a slow but working slot is waited for, never doubled', async () => {
+  const order = [];
+  const primary = new MockProvider({ id: 'otp-a' });
+  primary.sendVerification = input => {
+    primary.sends.push(input);
+    order.push('otp-a');
+    return new Promise(resolve => setTimeout(() => resolve({ accepted: true }), 400));
+  };
+  const secondary = new MockProvider({ id: 'otp-b' });
+  secondary.sendVerification = input => {
+    secondary.sends.push(input);
+    order.push('otp-b');
+    return Promise.resolve({ accepted: true });
+  };
+  const app = setup({ providers: [primary, secondary], config: rawConfig([primary, secondary], { deliveryBudgetMs: 25_000 }) });
+
+  const result = await app.orchestrator.requestVerification(identity, context);
+  assert.equal(result.accepted, true);
+  assert.equal(secondary.sends.length, 0, 'the second slot is never asked while the first is still sending');
+  assert.deepEqual(order, ['otp-a'], 'exactly one send left the process');
+});
+
+test('F-02: the next slot starts only after the previous one has failed', async () => {
+  const started = Date.now();
+  let secondAt = -1;
+  const primary = new MockProvider({ id: 'otp-a' });
+  primary.sendVerification = input => {
+    primary.sends.push(input);
+    return new Promise(() => {}); // hangs until its own timeoutMs
+  };
+  const secondary = new MockProvider({ id: 'otp-b' });
+  secondary.sendVerification = input => {
+    secondary.sends.push(input);
+    secondAt = Date.now() - started;
+    return Promise.resolve({ accepted: true });
+  };
+  const app = setup({ providers: [primary, secondary], config: rawConfig([primary, secondary], { deliveryBudgetMs: 25_000 }) });
+
+  const result = await app.orchestrator.requestVerification(identity, context);
+  assert.equal(result.accepted, true);
+  assert.equal(primary.sends.length, 1);
+  assert.equal(secondary.sends.length, 1);
+  assert.ok(secondAt >= 900, `the next slot must wait for the first slot's 1000ms timeout; it started at ${secondAt}ms`);
+});
+
+/* Owner 2026-10-24: OTP has to be quick without ever sending twice. Speed comes
+   from the slot order, not from a parallel send: a provider that has measurably
+   slow sends is pushed behind the others, so the first attempt already leaves
+   through the fast one. Everything else keeps the operator's priority order. */
+const seedProviderSpeed = async (repository, providerId, { latencyMs, times = 5, now = 1_800_000_000_000 }) => {
+  for (let index = 0; index < times; index += 1) {
+    await repository.recordProviderResult({
+      providerId,
+      attemptId: `seed-${providerId}-${index}`,
+      userId: 'usr_seed',
+      subjectRef: 'subject_seed',
+      channel: VERIFICATION_CHANNELS.OTP,
+      success: true,
+      reason: 'accepted',
+      latencyMs,
+      failureThreshold: 3,
+      forceCooldown: false,
+      cooldownMs: 0,
+      now
+    });
+  }
+};
+
+test('a measurably slow slot moves behind the fast one, and only one send leaves', async () => {
+  const slow = new MockProvider({ id: 'otp-a' });
+  const fast = new MockProvider({ id: 'otp-b' });
+  const app = setup({ providers: [slow, fast] });
+  await seedProviderSpeed(app.repository, 'otp-a', { latencyMs: 6_000 });
+  await seedProviderSpeed(app.repository, 'otp-b', { latencyMs: 400 });
+
+  const result = await app.orchestrator.requestVerification(identity, context);
+  assert.equal(result.accepted, true);
+  assert.equal(fast.sends.length, 1, 'the fast slot carries the send');
+  assert.equal(slow.sends.length, 0, 'the slow slot is behind it, not beside it');
+});
+
+test('slots that perform alike keep the operator priority order', async () => {
+  const first = new MockProvider({ id: 'otp-a' });
+  const second = new MockProvider({ id: 'otp-b' });
+  const app = setup({ providers: [first, second] });
+  await seedProviderSpeed(app.repository, 'otp-a', { latencyMs: 900 });
+  await seedProviderSpeed(app.repository, 'otp-b', { latencyMs: 400 });
+
+  await app.orchestrator.requestVerification(identity, context);
+  assert.equal(first.sends.length, 1, 'priority 10 still goes first when the gap is not a problem');
+  assert.equal(second.sends.length, 0);
+});
+
+test('a slow reading is not trusted until the slot has a few successes', async () => {
+  const unproven = new MockProvider({ id: 'otp-a' });
+  const fast = new MockProvider({ id: 'otp-b' });
+  const app = setup({ providers: [unproven, fast] });
+  await seedProviderSpeed(app.repository, 'otp-a', { latencyMs: 6_000, times: 2 });
+  await seedProviderSpeed(app.repository, 'otp-b', { latencyMs: 400 });
+
+  await app.orchestrator.requestVerification(identity, context);
+  assert.equal(unproven.sends.length, 1, 'two samples are not enough to demote an operator-ordered slot');
+  assert.equal(fast.sends.length, 0);
 });

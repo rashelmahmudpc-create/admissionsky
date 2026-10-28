@@ -836,12 +836,12 @@ $$('.st').forEach(function(b){b.addEventListener('click',function(){toast(tips[b
 /* ---- 5 board ---- */
 var bset='week';
 function drawBoardEmpty(){
-  $('#rk').textContent='—';$('#rkUp').innerHTML='';$('#tops').innerHTML='';
+  $('#rk').textContent='-';$('#rkUp').innerHTML='';$('#tops').innerHTML='';
   $('#rkNext').textContent='লিডারবোর্ড এখনো চালু হয়নি';$('#rkBar').style.width='0';
 }
 function drawBoard(){
   var B=DATA.board[bset];
-  if(!B||!B.next){$('#rk').textContent='—';$('#rkUp').innerHTML='';$('#tops').innerHTML='';
+  if(!B||!B.next){$('#rk').textContent='-';$('#rkUp').innerHTML='';$('#tops').innerHTML='';
     $('#rkNext').textContent='লিডারবোর্ড এখনো চালু হয়নি';$('#rkBar').style.width='0';return}
   roll($('#rk'),B.rank,B.rank+28,1000);$('#rk').dataset.pre='#';
   $('#rkUp').innerHTML=icon('up')+bn(B.up)+' ধাপ';
@@ -876,7 +876,7 @@ function radar(vals,labels,cls){
   labels.forEach(function(l,i){var p=pt(i,1.2),c=Math.cos((-90+i*360/n)*Math.PI/180);s+='<text class="rl" data-t="'+i+'" x="'+p[0].toFixed(1)+'" y="'+(p[1]+4).toFixed(1)+'" text-anchor="'+(Math.abs(c)<.3?'middle':c>0?'start':'end')+'">'+l+'</text>'});
   return s+'</svg>';
 }
-if(!T.length)T=[{n:'এখনো ডেটা নেই',v:0},{n:'—',v:0},{n:'—',v:0}];
+if(!T.length)T=[{n:'এখনো ডেটা নেই',v:0},{n:'-',v:0},{n:'-',v:0}];
 var vals=T.map(function(t){return t.v}),labs=T.map(function(t){return t.n});
 $('#radarFull').innerHTML=radar(vals,labs,'');$('#radarMini').innerHTML=radar(vals,labs,'on-dark');
 function hl(i){
@@ -893,7 +893,7 @@ if(weakIdx.length)hl(weakIdx[0]);
 
 /* ---- performance chart (scrub) ---- */
 (function(){
-  if(!DATA.perfHasData){$('#perfSvg').innerHTML='<p class="wnote">এখনো কোনো পরীক্ষার উত্তর নেই — কয়েকটি প্রশ্ন সমাধান করলে এখানে সাপ্তাহিক গ্রাফ দেখা যাবে।</p>';return}
+  if(!DATA.perfHasData){$('#perfSvg').innerHTML='<p class="wnote">এখনো কোনো পরীক্ষার উত্তর নেই, কয়েকটি প্রশ্ন সমাধান করলে এখানে সাপ্তাহিক গ্রাফ দেখা যাবে।</p>';return}
   var v=DATA.perf,W=340,H=176,l=14,r=14,t=26,b=30,lo=40,hi=100,n=v.length;
   var X=function(i){return l+i*(W-l-r)/(n-1)},Y=function(x){return t+(hi-x)/(hi-lo)*(H-t-b)};
   var pts=v.map(function(x,i){return [X(i),Y(x)]});

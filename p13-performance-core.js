@@ -1,13 +1,13 @@
-/* Admission Hub — P13 Performance Core.
+/* Admission Hub, P13 Performance Core.
  *
  * The "no loading" goal needs three things, and this file provides them as a
  * small, testable layer (window.AhPerf):
  *
- *   1. Windowing  — render only the rows on screen, so a 50,000-row list costs
+ *   1. Windowing , render only the rows on screen, so a 50,000-row list costs
  *      the same as a 20-row one. computeWindow() is pure; the tool paints it.
- *   2. Stale-while-revalidate — show cached data instantly, refresh silently.
+ *   2. Stale-while-revalidate, show cached data instantly, refresh silently.
  *      swr() decides what to render now and what to fetch in the background.
- *   3. Prefetch — warm the browser cache for the routes/assets a student is
+ *   3. Prefetch, warm the browser cache for the routes/assets a student is
  *      most likely to open next, during idle time, deduped.
  *
  * Plus a tiny mark/measure helper so the speed claim is measured, not asserted.
@@ -103,7 +103,7 @@
     return { addMany, drain, size: () => queue.length, warmedCount: () => warmed.size, has: u => warmed.has(String(u)) };
   }
 
-  /* mark/measure — a thin, safe wrapper over the User Timing API. */
+  /* mark/measure, a thin, safe wrapper over the User Timing API. */
   const marks = new Map();
   function mark(name) {
     const at = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();

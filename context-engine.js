@@ -1,11 +1,11 @@
-// 🧩 PHASE 9 — M4: CONTEXT ENGINE
+// 🧩 PHASE 9, M4: CONTEXT ENGINE
 // Typed, permission-scoped, minimum-necessary context for the AI agent.
 //
 // Blueprint rule (§52 gap 2): every context category is a *typed* thing with an
 // explicit permission scope on the ladder NONE → MINIMAL → SUMMARY →
 // FULL_ALLOWED, and the AI only ever receives what the current scope allows.
 // Nothing here reaches a provider on its own; the caller renders the bundle it
-// was given. The legacy prompt path stays untouched — see ai-agent.js.
+// was given. The legacy prompt path stays untouched, see ai-agent.js.
 
 export const CONTEXT_VERSION = 'ctx-v1';
 
@@ -75,7 +75,7 @@ export function resolveScopes({ uid, prefs, stats, onboarding, profile, memoryOn
 /**
  * Build an immutable context bundle. Each category's payload is attached only
  * when its scope is at least MINIMAL, so a NONE category can never leak by
- * accident. The uid itself is never included — only its kind.
+ * accident. The uid itself is never included, only its kind.
  */
 export function buildContext(input = {}) {
   const scope = resolveScopes(input);
@@ -168,5 +168,5 @@ export function renderContext(bundle) {
   const tail = named
     ? ` Address the student by first name (${data.profile.firstName}) where it reads naturally. Never ask for or infer anything outside the categories above.`
     : ` Only the categories above were shared with you. Never ask for or infer anything outside them.`;
-  return `\n\nCONTEXT ENGINE (permission-scoped — ${CONTEXT_VERSION}):\n${lines.join('\n')}\n${tail}`;
+  return `\n\nCONTEXT ENGINE (permission-scoped, ${CONTEXT_VERSION}):\n${lines.join('\n')}\n${tail}`;
 }

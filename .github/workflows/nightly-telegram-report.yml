@@ -1,0 +1,101 @@
+name: Nightly Bangla Report (Telegram)
+
+# Every night at 23:00 Asia/Dhaka (17:00 UTC) collects the last 24 hours of
+# this repo (guards on main, Actions runs, commits, open PRs/issues) and sends
+# a short Bangla summary to Telegram. Read-only: it never changes the repo.
+# Needs secrets TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID; without them the
+# report is still written to the run's Job Summary.
+on:
+  schedule:
+    - cron: '0 17 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+  issues: read
+
+concurrency:
+  group: nightly-telegram-report
+  cancel-in-progress: true
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Build report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const { owner, repo } = context.repo;
+            const now = new Date();
+            const sinceIso = new Date(now.getTime() - 24 * 3600 * 1000).toISOString();
+            const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const bn = n => Number(n).toLocaleString('bn-BD');
+            const days = d => Math.floor((now - new Date(d)) / 86400000);
+
+            const runs = await github.paginate(github.rest.actions.listWorkflowRunsForRepo, { owner, repo, created: `>=${sinceIso}`, per_page: 100 });
+            const done = runs.filter(r => r.status === 'completed');
+            const ok = done.filter(r => r.conclusion === 'success').length;
+            const bad = done.filter(r => ['failure', 'timed_out', 'startup_failure'].includes(r.conclusion)).length;
+
+            const latestMain = new Map();
+            for (const r of done.filter(r => r.head_branch === 'main')) {
+              const prev = latestMain.get(r.name);
+              if (!prev || new Date(r.created_at) > new Date(prev.created_at)) latestMain.set(r.name, r);
+            }
+            const redMain = [...latestMain.values()].filter(r => ['failure', 'timed_out', 'startup_failure'].includes(r.conclusion));
+
+            const commits = await github.paginate(github.rest.repos.listCommits, { owner, repo, since: sinceIso, per_page: 100 });
+            const prs = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', per_page: 100 });
+            const issues = (await github.paginate(github.rest.issues.listForRepo, { owner, repo, state: 'open', per_page: 100 })).filter(i => !i.pull_request);
+
+            const when = now.toLocaleString('bn-BD', { timeZone: 'Asia/Dhaka', dateStyle: 'full', timeStyle: 'short' });
+            const L = [];
+            L.push('<b>🌙 Admission Hub — রাতের রিপোর্ট</b>');
+            L.push(`<i>${esc(when)}</i>`);
+            L.push('');
+            L.push(redMain.length ? `🔴 <b>main-এ এখন ${bn(redMain.length)}টা গার্ড লাল</b>` : '🟢 <b>main-এর সব গার্ড সবুজ (গত ২৪ ঘণ্টায় যেগুলো চলেছে)</b>');
+            for (const r of redMain.slice(0, 10)) L.push(`• <a href="${r.html_url}">${esc(r.name)}</a>`);
+            L.push('');
+            L.push(`⚙️ <b>গত ২৪ ঘণ্টার রান:</b> মোট ${bn(runs.length)} · সফল ${bn(ok)} · ব্যর্থ ${bn(bad)}`);
+            L.push(`📝 <b>নতুন commit:</b> ${bn(commits.length)}টা`);
+            for (const c of commits.slice(0, 8)) L.push(`• <code>${c.sha.slice(0, 7)}</code> ${esc(c.commit.message.split('\n')[0].slice(0, 80))}`);
+            L.push('');
+            L.push(`🔀 <b>খোলা PR:</b> ${bn(prs.length)}টা`);
+            for (const p of prs.slice(0, 10)) {
+              const a = days(p.created_at);
+              L.push(`• <a href="${p.html_url}">#${p.number}</a> ${esc(p.title.slice(0, 70))} — ${bn(a)} দিন${a >= 7 ? ' ⚠️ পুরোনো' : ''}`);
+            }
+            L.push('');
+            L.push(`🐞 <b>খোলা Issue:</b> ${bn(issues.length)}টা`);
+            for (const i of issues.slice(0, 5)) L.push(`• <a href="${i.html_url}">#${i.number}</a> ${esc(i.title.slice(0, 70))}`);
+            L.push('');
+            L.push(`<a href="https://github.com/${owner}/${repo}/actions">সব Actions দেখুন</a>`);
+
+            let msg = '';
+            for (const line of L) {
+              if ((msg + line).length > 3800) { msg += '\n…'; break; }
+              msg += (msg ? '\n' : '') + line;
+            }
+            fs.writeFileSync('report.html', msg);
+            await core.summary.addRaw(msg.replace(/\n/g, '<br>')).write();
+
+      - name: Send to Telegram
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ -z "$TG_TOKEN" ] || [ -z "$TG_CHAT" ]; then
+            echo "::warning::TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID not set — report is only in the Job Summary"
+            exit 0
+          fi
+          curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TG_CHAT}" \
+            --data-urlencode "parse_mode=HTML" \
+            --data-urlencode "disable_web_page_preview=true" \
+            --data-urlencode "text@report.html" > /dev/null
+          echo "Telegram report sent"

@@ -1,11 +1,11 @@
 /*
- * Offline status indicator — Admission Hub
+ * Offline status indicator, Admission Hub
  *
  * P15's promise is "works offline, syncs when the network returns". The device
  * only speaks up when it is actually offline, and never over the UI:
  *   · offline with unsent changes  → tells them how many will be sent later,
  *   · offline with nothing pending → a quiet "offline" note.
- * While online it stays silent — the owner read a lingering sync pill as a bug.
+ * While online it stays silent, the owner read a lingering sync pill as a bug.
  * It never blocks the UI and never claims success it cannot verify.
  */
 (() => {

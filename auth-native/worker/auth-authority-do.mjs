@@ -13,6 +13,7 @@ import { listStudents, studentProfile } from '../storage/student-admin-view.mjs'
 import { wipeAll, wipeConfirmPhrase, wipeCounts } from '../storage/student-wipe.mjs';
 import { normalizeAuthEmail } from '../core/crypto.mjs';
 import { PendingSignupStore } from './pending-signup.mjs';
+import { isTelegramLoginEmail, TELEGRAM_LOGIN_DOMAIN } from '../verification/telegram-login.mjs';
 import { handlePendingSignupRoute, isPendingSignupRoute } from './pending-signup-authority.mjs';
 
 const JSON_HEADERS = Object.freeze({
@@ -53,8 +54,8 @@ export class AdmissionAuthAuthority {
         repository: this.repository,
         hmacSecret: env.AUTH_HMAC_SECRET,
         securityConfigRaw: env.SECURITY_CONFIG_JSON,
-        // Phase 7 — avatar store (D1 binding PROFILE_DB; absent until the
-        // binding is added at publish time — avatar routes degrade to 503).
+        // Phase 7, avatar store (D1 binding PROFILE_DB; absent until the
+        // binding is added at publish time, avatar routes degrade to 503).
         avatarStore: new D1ProfileStore(env.PROFILE_DB || null)
       });
       const persistedVerificationConfig = await this.verificationRepository.getRuntimeConfig();
@@ -67,12 +68,12 @@ export class AdmissionAuthAuthority {
         // AUTH-ROADMAP step 0: Workers Logs line per send + Telegram alert on failure / >30s.
         onDeliveryEvent: createOtpDeliverySink({ env, waitUntil: typeof state.waitUntil === 'function' ? promise => state.waitUntil(promise) : null })
       });
-      // Phase 6 — the engine's security challenges reuse this orchestrator
+      // Phase 6, the engine's security challenges reuse this orchestrator
       // for email/Telegram delivery.
       this.engine.bindVerification(this.verification);
       // AUTH-ROADMAP step 1: account-less signup rows (DO KV, prefix psu:).
       try { this.pendingSignups = new PendingSignupStore({ storage: state.storage, hmacSecret: env.AUTH_HMAC_SECRET }); } catch { this.pendingSignups = null; }
-      // Phase 6 Chunk 4 — security notifications. Phase 6 ships DRY-RUN:
+      // Phase 6 Chunk 4, security notifications. Phase 6 ships DRY-RUN:
       // nothing is sent live unless the deployment explicitly enables it AND
       // a sender is configured (none is wired yet, so it stays inert).
       this.securityNotificationsDryRun = String(env.SECURITY_NOTIFICATIONS_ACTIVATION || 'dry-run') !== 'enabled';
@@ -151,7 +152,7 @@ export class AdmissionAuthAuthority {
         return response(200, { ok: true, ...(await this.engine.ping()) });
       }
       if (request.method !== 'POST') return response(405, { ok: false, error: { code: 'METHOD_NOT_ALLOWED' } }, { Allow: 'POST' });
-      // Phase 7 — avatar uploads are base64 JSON (≤ ~2.8 MB for 2 MB images).
+      // Phase 7, avatar uploads are base64 JSON (≤ ~2.8 MB for 2 MB images).
       const body = await readJson(request, url.pathname === '/internal/avatar/save' ? 3_500_000 : 32_768);
       if (isPendingSignupRoute(url.pathname)) {
         const result = await handlePendingSignupRoute(this, url.pathname, body);
@@ -166,7 +167,7 @@ export class AdmissionAuthAuthority {
       if (url.pathname === '/internal/firebase/session/create') {
         const result = await this.engine.establishFirebaseSession(body.input, body.context);
         await this.#scheduleExpiry();
-        // Phase 6 Chunk 4 — a login the policy flags as a new device earns
+        // Phase 6 Chunk 4, a login the policy flags as a new device earns
         // the new-device-login notice (dry-run in Phase 6).
         if (result?.security?.trustOffer === true && result?.security?.trusted !== true && result?.user?.emailMasked) {
           this.#dispatchSecurityEvents([{
@@ -207,7 +208,7 @@ export class AdmissionAuthAuthority {
         const result = await this.engine.getProfile(body.input, body.context);
         return response(200, { ok: true, result });
       }
-      // Phase 7 — Profile & Personal Identity.
+      // Phase 7, Profile & Personal Identity.
       if (url.pathname === '/internal/profile/get-v2') {
         const result = await this.engine.getProfileV2(body.input, body.context);
         return response(200, { ok: true, result });
@@ -363,6 +364,16 @@ export class AdmissionAuthAuthority {
         }, body.context);
         return response(200, { ok: true, result });
       }
+      // F-04 phase 3: the split-out auth Worker cannot hold AUTH_HMAC_SECRET —
+      // a Cloudflare secret is write-only, and re-issuing it would change every
+      // derived Telegram address and orphan those accounts. So the derivation
+      // stays with the secret, and the front asks instead of guessing.
+      if (url.pathname === '/internal/telegram/login-email') {
+        const email = String(body?.email || '').trim().toLowerCase();
+        const loginAccount = email.endsWith(`@${TELEGRAM_LOGIN_DOMAIN}`)
+          && await isTelegramLoginEmail(email, this.env);
+        return response(200, { ok: true, result: { loginAccount } });
+      }
       if (url.pathname === '/internal/verification/telegram/status') {
         const identity = await this.engine.getFirebaseIdentity(body.input, body.context);
         const result = await this.verification.isTelegramLinked({
@@ -416,10 +427,10 @@ export class AdmissionAuthAuthority {
         return response(200, { ok: true, result });
       }
       if (url.pathname === '/internal/session/revoke-all') {
-        // Phase 6 — step-up-gated: the engine enforces recent-session or a
+        // Phase 6, step-up-gated: the engine enforces recent-session or a
         // verified step-up challenge before any session is revoked.
         const result = await this.engine.revokeAllSessions({ ...(body.input || {}), sessionToken: body.sessionToken }, body.context);
-        // A step-up token proves the policy demanded a fresh verification —
+        // A step-up token proves the policy demanded a fresh verification -
         // that is the suspicious-activity signal worth a notice.
         if (result?.emailMasked && String(body.input?.stepUpToken || '')) {
           this.#dispatchSecurityEvents([{
@@ -430,7 +441,7 @@ export class AdmissionAuthAuthority {
         }
         return response(200, { ok: true, result });
       }
-      // Phase 6 — device trust + security state (internal; the public
+      // Phase 6, device trust + security state (internal; the public
       // /security/* surface lands with its own auth+shape in Chunk 4).
       if (url.pathname === '/internal/firebase/login/failure') {
         const result = await this.engine.recordLoginFailure(body.input, body.context);
@@ -450,7 +461,7 @@ export class AdmissionAuthAuthority {
         const result = await this.engine.getSecurityState(body.input, body.context);
         return response(200, { ok: true, result });
       }
-      // Phase 6 — purpose-bound security challenges (§11-§12).
+      // Phase 6, purpose-bound security challenges (§11-§12).
       if (url.pathname === '/internal/security/challenge/request') {
         const result = await this.engine.requestChallenge(body.input, body.context);
         return response(200, { ok: true, result });
@@ -470,19 +481,19 @@ export class AdmissionAuthAuthority {
         const result = await this.engine.cancelChallenge(body.input, body.context);
         return response(200, { ok: true, result });
       }
-      // Phase 6 Chunk 4 — user-facing security history (privacy boundary:
+      // Phase 6 Chunk 4, user-facing security history (privacy boundary:
       // method + coarse browser class + time; no IP, no location).
       if (url.pathname === '/internal/security/history') {
         const result = await this.engine.securityHistory(body.input, body.context);
         return response(200, { ok: true, result });
       }
-      // Phase 6 Chunk 4 — admin security surface (token-gated in the public
+      // Phase 6 Chunk 4, admin security surface (token-gated in the public
       // handler; refs only, no PII).
       if (url.pathname === '/internal/admin/security/health') {
         const result = await this.engine.securityHealth();
         return response(200, { ok: true, result });
       }
-      // Fresh Start phase 3 — Control Center Students (read-only; token-gated
+      // Fresh Start phase 3, Control Center Students (read-only; token-gated
       // in the public handler; masked email, short refs, no secrets).
       if (url.pathname === '/internal/admin/students/list') {
         const input = body.input || {};
@@ -501,7 +512,7 @@ export class AdmissionAuthAuthority {
         const profile = studentProfile(this.state.storage.sql, String(body.input?.userId || ''), { now: Date.now() });
         return response(200, { ok: true, result: profile ? { found: true, student: profile } : { found: false } });
       }
-      // Fresh Start phase 4 — wipe all users (token-gated in the public
+      // Fresh Start phase 4, wipe all users (token-gated in the public
       // handler). Dry run by default; the real wipe needs the exact phrase
       // WIPE-ALL-<users> for the count the dry run just returned.
       if (url.pathname === '/internal/admin/students/wipe') {

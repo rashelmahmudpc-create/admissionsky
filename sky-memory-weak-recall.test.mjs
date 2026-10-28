@@ -59,7 +59,7 @@ test('no exam and nothing stated → the honest "not enough data" answer is unch
 test('measured weak topics still lead; the stated one is added, not replacing them', () => {
   const r = { name: 'analyze_weak_topics', ...analyzeWeakTopics({ exams: 3, weakTopics: [{ name: 'ইংরেজি', accuracy: 40, attempts: 9 }] }, ['সমাসে']) };
   const text = renderSimpleAnswer([r]);
-  assert.match(text, /ইংরেজি — সঠিকতা/);
+  assert.match(text, /ইংরেজি, সঠিকতা/);
   assert.match(text, /আগে নিজেও বলেছিলে \*\*সমাসে\*\* দুর্বল/);
 });
 

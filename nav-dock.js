@@ -1,11 +1,11 @@
 /* ============================================================
-   NAV DOCK — the Dashboard's bottom navigation, everywhere (owner 2026-10-17)
+   NAV DOCK, the Dashboard's bottom navigation, everywhere (owner 2026-10-17)
    The Dashboard (dashboard-v2.js frame) has the floating 5-slot dock:
    Home · Bank · AI orb · Exam · Profile. Every other screen that shows a
    bottom bar still drew the old flat 4-tab bar. This file replaces
    window.bottomNavHtml so those screens draw the SAME dock (same markup,
    sizes, colours, icons and motion as the Dashboard frame).
-   • Screens that hide the bar (hideNav) stay hidden — nothing is added there.
+   • Screens that hide the bar (hideNav) stay hidden, nothing is added there.
    • Taps go through the same routes the Dashboard dock uses.
    • Theme follows the app (html[data-theme="dark"] = dark dock).
    ============================================================ */

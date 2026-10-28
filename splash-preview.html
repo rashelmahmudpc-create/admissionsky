@@ -3,7 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Admission Hub — Premium 3D Intro (v175 blank-proof)</title>
+<!-- Design preview the owner opens directly; not a page for search results. -->
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<title>Admission Hub | Premium 3D Intro (v175 blank-proof)</title>
 <style>
   html,body{margin:0;padding:0;background:#f1faf6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans Bengali','Hind Siliguri',sans-serif}
   .hint{padding:12px 18px;font-size:12px;color:#5c6f65;text-align:center;line-height:1.6}
@@ -12,10 +15,10 @@
 </style>
 </head>
 <body>
-<div class="hint">ব্ল্যাংক-প্রুফ সংস্করণ — intro শেষে root কখনো খালি থাকে না (ব্র্যান্ড prefill)। বাটনে আবার দেখুন।</div>
+<div class="hint">ব্ল্যাংক-প্রুফ সংস্করণ, intro শেষে root কখনো খালি থাকে না (ব্র্যান্ড prefill)। বাটনে আবার দেখুন।</div>
 <div id="ahSplash" class="app-loading" role="status"></div>
 <script>/* ============================================================
-   ADMISSION HUB — PREMIUM 3D INTRO / SPLASH SYSTEM (v1 · 2026-09-03)
+   ADMISSION HUB, PREMIUM 3D INTRO / SPLASH SYSTEM (v1 · 2026-09-03)
    - সম্পূর্ণ CSS 3D + inline SVG (কোনো external image নয়)
    - শুধু transform/opacity animation (GPU-friendly, ~60FPS)
    - prefers-reduced-motion: শুধু হালকা fade
@@ -193,7 +196,7 @@
       try {
         root.innerHTML = sceneHTML();
       } catch (_) {
-        // fail-safe: কখনো blank নয় — brand prefill থাকে
+        // fail-safe: কখনো blank নয়, brand prefill থাকে
         if (!root.querySelector('.ahfs-prefill')) root.innerHTML = PREFILL_HTML;
       }
     }
@@ -239,7 +242,7 @@
     current = null;
     window.__admissionSplashDone = true; // autoMount আর কখনো আবার scene বানাবে না
     return new Promise(function (resolve) {
-      // ⚠️ blank-proof: scene সরানোর আগেই root-এ brand prefill ফেরাও —
+      // ⚠️ blank-proof: scene সরানোর আগেই root-এ brand prefill ফেরাও -
       // যাতে render()-এর মাঝে এক মুহূর্তের জন্যও খালি পর্দা না আসে।
       if (root && root.parentNode) {
         root.innerHTML = PREFILL_HTML;
@@ -270,7 +273,7 @@
   }
 
   // 🔒 জরুরি force-hide (১০-সেকেন্ড watchdog): যেকোনো অবস্থায় splash সরাও,
-  // সব splash-root-এ ব্র্যান্ড prefill ফেরাও — অ্যাপ কখনো blank না।
+  // সব splash-root-এ ব্র্যান্ড prefill ফেরাও, অ্যাপ কখনো blank না।
   function forceHide() {
     try {
       document.querySelectorAll('.ahfs-overlay').forEach(function (f) { if (f.parentNode) f.parentNode.removeChild(f); });
@@ -289,7 +292,7 @@
 
   /* প্রথম UI-তে থাকা splash-গুলোতে অটো mount */
   function autoMount() {
-    if (window.__admissionSplashDone) return; // dismiss-এর পরে আর mount নয় — blank-loop বন্ধ
+    if (window.__admissionSplashDone) return; // dismiss-এর পরে আর mount নয়, blank-loop বন্ধ
     var targets = [];
     var appMain = document.querySelector('#app > .app-loading');
     if (appMain) targets.push(appMain);

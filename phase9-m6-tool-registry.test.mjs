@@ -88,7 +88,7 @@ t('M6-১৩. the chat path runs tools only through sky-tools.mjs (READ-only run
 })());
 t('M6-১৪. the prompt text and its hash are unchanged by M6', (() => {
   return createHash('sha256').update(A.buildSystemPrompt({})).digest('hex')
-    === 'a4b802d1e5944acdf1af9cf9abdaefaeb52ad311de0add1e82571a0ddad31daa';
+    === 'e0f49e242fe3b4f342afdccf4cdcd40c36054d2310181dcf86b337982edb500f';
 })());
 t('M6-১৫. agentStatus advertises declared tools without exposing any executable path', (() => {
   const src = readFileSync('ai-agent.js', 'utf8');

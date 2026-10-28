@@ -47,6 +47,53 @@ const styles = [...raw.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => 
 const css = styles[1];
 const uiScript = pick(/<script[^>]*>([\s\S]*?)<\/script>/);
 
+/* ---- text size: the app is an app, not a website ---------------------- */
+/* Pinch-zoom is off by owner order (2026-10-22), so text size is a setting.
+   The scale lives in --ah-ts, set on this page's own :root by the boot block
+   below and by the settings sheet. The parent document (index.html) runs the
+   same engine and shares the localStorage key, so the choice survives a reload
+   and stays in step between the shell and this frame. Inputs keep a 16px floor:
+   below that iOS Safari zooms the whole page on focus, which is the exact bug
+   the shell's guard exists for. */
+const tsPx = (m) => `font-size:calc(${m[1]}px * var(--ah-ts,1))`;
+
+const INPUT_RE = /(^|[,\s{])(input|textarea|select|\.inp)\b/;
+const cssSized = css.replace(/([^{}]*)\{([^{}]*)\}/g, (rule, sel, body) => {
+  const floor = INPUT_RE.test(sel);
+  const sized = body.replace(
+    /font-size:([0-9.]+)px/g,
+    (m, px) => (floor ? `font-size:max(16px,calc(${px}px * var(--ah-ts,1)))` : tsPx(m))
+  );
+  return sel + '{' + sized + '}';
+});
+
+const TS_ROW =
+  "srow('tsize','device','\u099f\u09c7\u0995\u09cd\u09b8\u099f \u09b8\u09be\u0987\u099c'," +
+  "(function(){try{var v=parseFloat(localStorage.getItem('ah-textscale'));" +
+  "return v===0.9?'\u099b\u09cb\u099f':v===1.15?'\u09ac\u09a1\u09bc':v===1.3?'\u09b8\u09ac\u099a\u09c7\u09df\u09c7 \u09ac\u09a1\u09bc':'\u09b8\u09cd\u09ac\u09be\u09ad\u09be\u09ac\u09bf\u0995'}" +
+  "catch(_){return '\u09b8\u09cd\u09ac\u09be\u09ad\u09be\u09ac\u09bf\u0995'}})()," +
+  "'rgba(18,162,125,.14)','#12A27D')+\n  ";
+
+const TS_SHEET = `
+function sheetTextSize(){
+  var STEPS=[['small',0.9,'\u099b\u09cb\u099f'],['normal',1,'\u09b8\u09cd\u09ac\u09be\u09ad\u09be\u09ac\u09bf\u0995'],['large',1.15,'\u09ac\u09a1\u09bc'],['xlarge',1.3,'\u09b8\u09ac\u099a\u09c7\u09df\u09c7 \u09ac\u09a1\u09bc']];
+  function cur(){try{var v=parseFloat(localStorage.getItem('ah-textscale'));return STEPS.some(function(s){return s[1]===v})?v:1}catch(_){return 1}}
+  var v=cur();
+  openSheet({title:'\u099f\u09c7\u0995\u09cd\u09b8\u099f \u09b8\u09be\u0987\u099c',sub:'\u09b2\u09c7\u0996\u09be \u0995\u09a4 \u09ac\u09a1\u09bc \u09a6\u09c7\u0996\u09ac\u09c7\u0964',
+   body:'<div class="opts" id="tsopts">'+STEPS.map(function(s){return '<button type="button" class="opt'+(v===s[1]?' on':'')+'" data-v="'+s[1]+'" aria-pressed="'+(v===s[1])+'">'+s[2]+'</button>'}).join('')+'</div>',
+   foot:false,
+   mount:function(r){$$('.opt',r).forEach(function(b){b.onclick=function(){
+     var val=parseFloat(b.dataset.v);
+     try{localStorage.setItem('ah-textscale',String(val))}catch(_){}
+     try{document.documentElement.style.setProperty('--ah-ts',String(val))}catch(_){}
+     try{if(window.parent&&window.parent.AhTextScale)window.parent.AhTextScale.set(val)}catch(_){}
+     closeSheet();toast('\u099f\u09c7\u0995\u09cd\u09b8\u099f \u09b8\u09be\u0987\u099c \u09ac\u09a6\u09b2\u09c7\u099b\u09c7')}})}})}
+`;
+
+const TS_BOOT =
+  "(function(){try{var v=parseFloat(localStorage.getItem('ah-textscale'));" +
+  "if(v===0.9||v===1||v===1.15||v===1.3)document.documentElement.style.setProperty('--ah-ts',String(v))}catch(_){}})();";
+
 /* ---- strip the demo data the owner asked to be gone ------------------- */
 let script = uiScript;
 
@@ -70,6 +117,21 @@ script = script.replace(
   'var SAMPLE=window.PROFILE_STATS||{solved:0,mockDone:false};'
 );
 if (script.includes("solved:266")) throw new Error('SAMPLE demo value still present');
+
+/* ---- text size, wired into the owner's own script ---------------------- */
+if (!script.includes("srow('sec','shield'")) throw new Error('settings rows not found');
+script = script.replace("srow('sec','shield'", TS_ROW + "srow('sec','shield'");
+
+if (!script.includes("else if(k==='sec')openPage('pSec');"))
+  throw new Error('settings tap handler not found');
+script = script.replace(
+  "else if(k==='sec')openPage('pSec');",
+  "else if(k==='sec')openPage('pSec');else if(k==='tsize')sheetTextSize();"
+);
+
+if (!script.includes('function applyTheme(')) throw new Error('applyTheme not found');
+script = script.replace('function applyTheme(', TS_SHEET + '\nfunction applyTheme(');
+script = script.trimEnd() + '\n' + TS_BOOT + '\n';
 
 /* ---- adapter: real data in, real actions out ------------------------- */
 /* Split in two: the SEED must run before the owner's UI script, because that
@@ -101,7 +163,7 @@ const shared = `
 
   /* The WRITE side of the cache above. profile-ui.js owned this, but the v2
      mount replaces renderProfilePage before that module's boot runs, so on this
-     route nothing ever wrote it — the read above always missed and every tap on
+     route nothing ever wrote it, the read above always missed and every tap on
      the profile tab re-fetched and re-painted from scratch. That is the owner's
      "বারবার লোডিং" (report 2026-10-17). The entry shape matches profile-ui's
      profileCacheWrite so the two modules never disagree about a cached profile. */
@@ -139,7 +201,7 @@ const shared = `
      paints the dashboard dark; the same rule is what this design keys off.
      Pinning 'light' here made the profile lighter than the dashboard on exactly
      those phones (owner report, 2026-10-16). 'green' has no equivalent in this
-     UI, so it follows the phone too — which is also what the dashboard does. */
+     UI, so it follows the phone too, which is also what the dashboard does. */
   function themeForUi() {
     var mode = '';
     try {
@@ -229,7 +291,7 @@ const shared = `
 `;
 
 const seed = `
-/* ===== ADMISSION HUB — PROFILE DATA SEED (runs before the UI) ===== */
+/* ===== ADMISSION HUB, PROFILE DATA SEED (runs before the UI) ===== */
 (function () {
   'use strict';
 ${shared}
@@ -256,7 +318,7 @@ ${shared}
 `;
 
 const wiring = `
-/* ===== ADMISSION HUB — PROFILE BACKEND WIRING =====
+/* ===== ADMISSION HUB, PROFILE BACKEND WIRING =====
    Routes every action this UI raises back to the existing backend, and
    refreshes from the server. The UI above is the owner's design, verbatim. */
 (function () {
@@ -362,7 +424,7 @@ ${shared}
     return out;
   }
   /* The backend's patch validator REQUIRES mobile to match a phone pattern, so
-     an empty string is rejected — unlike signup, where mobile is optional.
+     an empty string is rejected, unlike signup, where mobile is optional.
      A student who signed up without a number therefore had every save refused,
      and because the edit-all form sends the whole profile in one patch, one
      empty mobile lost every other edit with it. There is no way to express
@@ -405,7 +467,7 @@ ${shared}
           email: cachedIdentity.email,
           /* The patch response carries the profile only, so the avatar must come
              from the last good read. Taking it from localStorage instead showed
-             the mascot again after every edit — the cache key it reads is
+             the mascot again after every edit, the cache key it reads is
              written by the app, not by this frame. */
           avatar: lastAvatar || undefined
         };
@@ -422,7 +484,7 @@ ${shared}
   /* Avatar upload/remove. The owner's design keeps the cropped photo in its own
      store (as.profile.v4) and dispatches the action AFTER persisting it, so the
      bytes are readable here without touching the design. The backend wants
-     { mime, data } with the base64 payload only — no data: prefix — and
+     { mime, data } with the base64 payload only, no data: prefix, and
      validates the magic bytes itself. */
   function readPersistedPhoto() {
     try {
@@ -467,7 +529,7 @@ ${shared}
     } catch (_) {}
   }
   function reportSaveFailure(e) {
-    showError((e && e.message) || 'সংরক্ষণ করা যায়নি — আবার চেষ্টা করুন।');
+    showError((e && e.message) || 'সংরক্ষণ করা যায়নি, আবার চেষ্টা করুন।');
     console.warn('[profile-v2] save failed', e && (e.code || e.message));
   }
 
@@ -515,7 +577,7 @@ ${shared}
         /* A theme tap inside the frame must reach the app's own store, or the
            rest of the app keeps the previous theme. AhAppearance lives on the
            parent document (index.html is not loaded in the frame), so use it
-           when reachable and fall back to its storage key — same origin, so
+           when reachable and fall back to its storage key, same origin, so
            localStorage is shared either way. */
         var mode = themeForApp(d.theme);
         try {
@@ -566,11 +628,15 @@ const page = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>প্রোফাইল — Admission Hub</title>
+<!-- Fetched into an iframe's srcdoc by the profile mount, never navigated to,
+     so it must not be offered to a crawler as a page of its own. -->
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<title>প্রোফাইল, Admission Hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap">
-<style>${css}</style>
+<style>${cssSized}</style>
 </head>
 <body>
 ${markup}

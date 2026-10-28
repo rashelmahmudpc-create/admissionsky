@@ -1,5 +1,5 @@
 /**
- * P26 — difficulty-aware tier routing (step 2 of the owner's AI cost plan).
+ * P26, difficulty-aware tier routing (step 2 of the owner's AI cost plan).
  *
  * THE PROBLEM
  * -----------
@@ -8,7 +8,7 @@
  * Measured against the real classifier, that is not true: "নিউটনের দ্বিতীয়
  * সূত্র কী?" and "বাংলাদেশের রাজধানী কোনটি?" are academic by the regex and
  * simple by any human reading. They were paying the SMART rate for an answer
- * the FAST model gives just as well — and every provider here is on a free
+ * the FAST model gives just as well, and every provider here is on a free
  * tier, so the real cost is quota spent on questions that did not need it.
  *
  * THE RULE
@@ -34,7 +34,7 @@ export const DIFFICULTY = Object.freeze({ SIMPLE: 'simple', COMPLEX: 'complex' }
  *
  * NOTE: `\b` is ASCII-only in JS, so it never matches after a Bengali letter
  * (Bengali letters are not \w). A Bengali marker must use (?!\p{L}) with the `u`
- * flag instead — `/কেন\b/` silently never fired, which let "সালোকসংশ্লেষণ কেন
+ * flag instead, `/কেন\b/` silently never fired, which let "সালোকসংশ্লেষণ কেন
  * হয়?" fall through to FAST. */
 const HARD_MARKERS = [
   /পার্থক্য|তুলনা|তুলনামূলক/u, // compare / contrast

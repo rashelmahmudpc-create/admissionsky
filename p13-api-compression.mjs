@@ -1,4 +1,4 @@
-/* Admission Hub — P13 API compression.
+/* Admission Hub, P13 API compression.
  *
  * Large JSON replies travel gzipped when the client asks for it. The decision
  * is separated from the compression so it is testable, and compression itself
@@ -21,7 +21,7 @@ export function preferEncoding(acceptEncoding = '') {
 }
 
 /* Returns a compressed Response (or the original when the platform stream is
-   unavailable, e.g. an older runtime). Never throws on a compression failure —
+   unavailable, e.g. an older runtime). Never throws on a compression failure -
    an uncompressed 200 beats a 500. */
 export async function compressResponse(request, response, threshold = MIN_COMPRESS_BYTES) {
   try {

@@ -50,6 +50,6 @@ t('PR3-১০. chat: bubble shows the note and an "আরো বিস্তা�
   /আরো বিস্তারিত বুঝিয়ে বলো/.test(chat) && /#app\.sky \.faqm\{/.test(chat));
 const html = readFileSync('./index.html', 'utf8'), sw = readFileSync('./sw.js', 'utf8');
 t('PR3-১১. index.html loads and sw.js precaches all five files', () =>
-  ['sky-faq.js', ...FILES].every(f => html.includes('<script defer src="./' + f + '?v=faq1"></script>') && sw.includes("'./" + f + "?v=faq1'") && sw.includes('"./' + f + '?v=faq1": "')));
+  ['sky-faq.js', ...FILES].every(f => html.includes('<script type="application/x-ah-idle" data-ah-src="./' + f + '?v=faq1"></script>') && html.includes('"./' + f + '?v=faq1"') && sw.includes("'./" + f + "?v=faq1'") && sw.includes('"./' + f + '?v=faq1": "')));
 console.log(`\nPR-3 shared answers: ${pass} pass, ${fail} fail`);
 process.exit(fail ? 1 : 0);

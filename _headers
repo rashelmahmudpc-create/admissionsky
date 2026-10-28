@@ -38,7 +38,7 @@
   Referrer-Policy: no-referrer
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
-  Content-Security-Policy: default-src 'none'; script-src 'sha256-rFR9Nk/53RKBme7ysM4rDbvL42GupM5XjGzUphnlDZA='; style-src 'sha256-6qQ51VbDwN4CUZbdcMCGc0kJw5vMNogVaxM4qg1YWXw='; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; img-src 'none'
+  Content-Security-Policy: default-src 'none'; script-src 'sha256-GnDke1skLBRvnGWSMmEdPt2ER1CIOvW5pRNrPeDIdYw='; style-src 'sha256-6qQ51VbDwN4CUZbdcMCGc0kJw5vMNogVaxM4qg1YWXw='; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; img-src 'none'
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
 
 /students-control-center.html
@@ -47,7 +47,7 @@
   Referrer-Policy: no-referrer
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
-  Content-Security-Policy: default-src 'none'; script-src 'sha256-rFR9Nk/53RKBme7ysM4rDbvL42GupM5XjGzUphnlDZA='; style-src 'sha256-6qQ51VbDwN4CUZbdcMCGc0kJw5vMNogVaxM4qg1YWXw='; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; img-src 'none'
+  Content-Security-Policy: default-src 'none'; script-src 'sha256-GnDke1skLBRvnGWSMmEdPt2ER1CIOvW5pRNrPeDIdYw='; style-src 'sha256-6qQ51VbDwN4CUZbdcMCGc0kJw5vMNogVaxM4qg1YWXw='; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; img-src 'none'
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
 
 /verification-control-center
@@ -56,7 +56,7 @@
   Referrer-Policy: no-referrer
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
-  Content-Security-Policy: default-src 'none'; script-src 'sha256-3Wvz5dnFVDvTd82OyUWDKlLpd2pQCbhhUF16xoNzX7k='; style-src 'sha256-ISpUa2hAF3Be5xsNT/e0dDHWrNtQqjEIhnXPunOdIqQ='; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; img-src 'none'
+  Content-Security-Policy: default-src 'none'; script-src 'sha256-NzdapWs+s3bSZFj/8vnEhAK6094g1VQtBqHWPcXB8VU='; style-src 'sha256-ISpUa2hAF3Be5xsNT/e0dDHWrNtQqjEIhnXPunOdIqQ='; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; img-src 'none'
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
 
 /verification-control-center.html
@@ -65,7 +65,7 @@
   Referrer-Policy: no-referrer
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
-  Content-Security-Policy: default-src 'none'; script-src 'sha256-3Wvz5dnFVDvTd82OyUWDKlLpd2pQCbhhUF16xoNzX7k='; style-src 'sha256-ISpUa2hAF3Be5xsNT/e0dDHWrNtQqjEIhnXPunOdIqQ='; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; img-src 'none'
+  Content-Security-Policy: default-src 'none'; script-src 'sha256-NzdapWs+s3bSZFj/8vnEhAK6094g1VQtBqHWPcXB8VU='; style-src 'sha256-ISpUa2hAF3Be5xsNT/e0dDHWrNtQqjEIhnXPunOdIqQ='; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; img-src 'none'
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
 
 /phase3-intelligence.js*

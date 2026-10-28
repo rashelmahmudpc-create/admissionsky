@@ -2,7 +2,7 @@
   'use strict';
   const MANIFEST = [{
     id: 'sandhi-interactive-v1', category: 'bangla', language: 'বাংলা', icon: 'সন্ধি',
-    title: 'সন্ধি — Interactive Quiz Course', subtitle: 'Concept → Rule → Trap → Practice', pages: 84, lessons: 8, mcqs: 60
+    title: 'সন্ধি, Interactive Quiz Course', subtitle: 'Concept → Rule → Trap → Practice', pages: 84, lessons: 8, mcqs: 60
   }];
   const state = { packPromise: null, loaded: false, lesson: Object.create(null), sourceOpen: Object.create(null) };
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

@@ -2,9 +2,11 @@
    Same-origin /api/* requests are proxied to the production Workers; all other
    requests are served from Pages assets. No client or service credential is
    stored here. */
+import { corsHeaders } from './cors-policy.mjs';
+
 const ORIGIN = 'https://admission-gk.admissionhub.workers.dev';
 const VOICE_ORIGIN = 'https://admission-voice.admissionhub.workers.dev';
-/* P23 — the live voice AGENT is served by the main Worker, not the vocabulary
+/* P23, the live voice AGENT is served by the main Worker, not the vocabulary
    voice worker, so its ticket/login/session calls must be proxied there. Every
    other /api/voice path still belongs to the vocabulary voice worker. */
 const AGENT_API = /^\/api\/voice\/(agent|login|session)(\/|$)/;
@@ -18,7 +20,8 @@ const SERVER_ONLY_ASSETS = new Set([
   '/gk-agent-worker.js', '/public-worker.js', '/ai-agent.js', '/worker-bundle.mjs',
   '/voice-worker.js', '/notification-worker.js', '/fcm-notification.mjs',
   '/p14-abuse-guard.mjs', '/action-engine.js', '/userdata-api.mjs',
-  '/wrangler.toml', '/package.json', '/package-lock.json',
+  '/wrangler.toml', '/wrangler.staging.toml', '/supabase_sync_schema.sql',
+  '/package.json', '/package-lock.json',
   /* AI audit 2026-10-16: Worker-only AI modules (system prompt text, safety
      validator patterns, memory/cache/router internals). None is loaded by a
      page; they were being served as public assets. */
@@ -27,15 +30,35 @@ const SERVER_ONLY_ASSETS = new Set([
   '/ai-chat-cache.mjs', '/ai-history-trim.mjs', '/ai-tier-router.mjs',
   '/ai-state-do.mjs', '/ai-provider-health.mjs', '/ai-analytics-copilot.mjs',
   '/ai-analytics-routes.mjs', '/ai-analytics-provider.mjs', '/ai-analytics-store.mjs',
-  '/ai-analytics-policy.mjs', '/ai-analytics-intelligence.mjs', '/p19-error-monitor.mjs'
+  '/ai-analytics-policy.mjs', '/ai-analytics-intelligence.mjs', '/p19-error-monitor.mjs',
+  /* Audit 2026-10-20 (SEC-001): further Worker-only modules that were still
+     being served as public assets. Verified none is referenced by index.html or
+     sw.js, and none is imported by a client-public module, so all are
+     server-only. sentry-report.js is deliberately NOT listed here: index.html
+     loads it as a module, so it must stay downloadable. */
+  '/analytics-engine.mjs', '/personalized-notification.mjs',
+  '/notification-intelligence.mjs', '/sky-tools.mjs',
+  '/digest-notifications.mjs', '/event-notifications.mjs',
+  '/files-storage.mjs', '/email-policy.js',
+  '/sky-recall.mjs', '/sky-time.mjs', '/sky-goal.mjs', '/sky-contact.mjs',
+  '/sky-instructions.mjs', '/sky-web-search.mjs', '/sky-daily-report.mjs',
+  '/sky-app-features.mjs',
+  '/voice-agent.mjs', '/voice-agent-core.mjs', '/voice-agent-gate.mjs',
+  '/voice-agent-providers.mjs',
+  '/p19-backup.mjs', '/p13-api-compression.mjs', '/p13-d1-read.mjs',
+  '/p13-load-runner.mjs', '/p13-load-harness.js', '/master-update.js',
+  /* Same audit: server-only modules imported exclusively by other server-only
+     modules (never by a page, the service worker or a client bundle). */
+  '/cors-policy.mjs', '/admin-passkey.mjs', '/analytics-notifications.mjs',
+  '/send-planner.mjs', '/sky-ai-route.mjs'
 ]);
-const SERVER_ONLY_PREFIXES = ['/auth/', '/auth-native/', '/email-gateway/', '/apps-script/', '/docs/', '/AGENT_RESUME/', '/.github/'];
+const SERVER_ONLY_PREFIXES = ['/auth/', '/auth-native/', '/email-gateway/', '/apps-script/', '/docs/', '/AGENT_RESUME/', '/.github/', '/tools/', '/scripts/', '/tests/', '/sky-ai/'];
 const isRetiredAsset = pathname => RETIRED_ASSETS.has(pathname) ||
   RETIRED_ASSET_PREFIXES.some(prefix => pathname === prefix || pathname.startsWith(prefix + '/'));
 const isServerOnlyAsset = pathname => SERVER_ONLY_ASSETS.has(pathname) ||
   SERVER_ONLY_PREFIXES.some(prefix => pathname.startsWith(prefix));
 
-/* SEO — the SPA is hash-routed, so only these pathnames are real public URLs.
+/* SEO, the SPA is hash-routed, so only these pathnames are real public URLs.
    Anything else must answer 404 instead of a 200 copy of index.html, otherwise
    crawlers index unlimited duplicate pages. */
 const PUBLIC_ROUTES = new Set([
@@ -49,7 +72,7 @@ const PUBLIC_ROUTES = new Set([
   '/students-control-center', '/students-control-center.html',
   '/ai-performance-analysis-live', '/ai-performance-analysis-live.html',
   '/notification-command-center', '/notification-command-center.html',
-  /* Profile V2 — the design is fetched as a document and injected into an
+  /* Profile V2, the design is fetched as a document and injected into an
      iframe's srcdoc, so the page itself is never navigated to. It still has to
      be reachable, or the fetch gets the 404 page and the mount shows nothing. */
   '/profile-v2', '/profile-v2.html',
@@ -86,7 +109,7 @@ const NOT_FOUND_HTML = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, follow">
-<title>পেজটি পাওয়া যায়নি — Admission Hub</title>
+<title>পেজটি পাওয়া যায়নি, Admission Hub</title>
 <style>
 body{margin:0;min-height:100dvh;display:grid;place-content:center;justify-items:center;gap:10px;
 padding:32px 24px;background:#faf9f6;color:#1a1d1b;text-align:center;
@@ -124,7 +147,12 @@ export default {
     /* Firebase Auth helper (/__/auth/handler, /__/auth/iframe, init.json) served
      * same-origin, so the authDomain can become this site once
      * https://admissionsky.pages.dev/__/auth/handler is an authorised redirect
-     * URI for the Google and Facebook OAuth clients. */
+     * URI for the Google and Facebook OAuth clients.
+     *
+     * sw.js must leave these three paths alone (owner 2026-10-22): it used to
+     * answer them from the app shell, the hidden iframe never completed its
+     * handshake, and "Continue with Google" sat for a minute or two. Anything
+     * that touches the service worker has to keep that bypass. */
     if (url.pathname.startsWith('/__/auth/') || url.pathname === '/__/firebase/init.json') {
       const upstream = new URL(url.pathname + url.search, 'https://admissionsky-997d2.firebaseapp.com');
       const init = { method: request.method, headers: request.headers, redirect: 'manual' };
@@ -169,7 +197,9 @@ export default {
       } catch (_) {
         return new Response(JSON.stringify({ error: 'api-unavailable', at: Date.now() }), {
           status: 502,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          // BUG-005: never '*' here. corsHeaders returns {} (plus Vary: Origin)
+          // for a non-allowlisted Origin, so the response is unreadable to it.
+          headers: { 'Content-Type': 'application/json', ...corsHeaders(request) }
         });
       }
     }

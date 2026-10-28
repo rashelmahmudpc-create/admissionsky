@@ -3,7 +3,7 @@
   "id": "sandhi-interactive-v1",
   "category": "bangla",
   "language": "bn",
-  "title": "সন্ধি — Interactive Quiz Course",
+  "title": "সন্ধি, Interactive Quiz Course",
   "subtitle": "বাংলা ২য় পত্র · Concept → Rule → Trap → Practice",
   "icon": "সন্ধি",
   "source": {
@@ -58,7 +58,7 @@
     },
     {
       "id": "sandhi-lesson-03",
-      "title": "তৎসম স্বরসন্ধি — ১ম পর্ব",
+      "title": "তৎসম স্বরসন্ধি, ১ম পর্ব",
       "startPage": 13,
       "endPage": 16,
       "kind": "interactive",
@@ -66,7 +66,7 @@
     },
     {
       "id": "sandhi-lesson-04",
-      "title": "তৎসম স্বরসন্ধি — ২য় পর্ব",
+      "title": "তৎসম স্বরসন্ধি, ২য় পর্ব",
       "startPage": 17,
       "endPage": 21,
       "kind": "interactive",
@@ -74,7 +74,7 @@
     },
     {
       "id": "sandhi-lesson-05",
-      "title": "তৎসম ব্যঞ্জনসন্ধি — ১ম পর্ব",
+      "title": "তৎসম ব্যঞ্জনসন্ধি, ১ম পর্ব",
       "startPage": 22,
       "endPage": 26,
       "kind": "interactive",
@@ -82,7 +82,7 @@
     },
     {
       "id": "sandhi-lesson-06",
-      "title": "তৎসম ব্যঞ্জনসন্ধি — ২য় পর্ব",
+      "title": "তৎসম ব্যঞ্জনসন্ধি, ২য় পর্ব",
       "startPage": 27,
       "endPage": 30,
       "kind": "interactive",
@@ -200,7 +200,7 @@
     },
     {
       "id": "sandhi-lesson-03",
-      "title": "তৎসম স্বরসন্ধি — ১ম পর্ব",
+      "title": "তৎসম স্বরসন্ধি, ১ম পর্ব",
       "startPage": 13,
       "endPage": 16,
       "style": "swarasandhi-guna",
@@ -237,7 +237,7 @@
     },
     {
       "id": "sandhi-lesson-04",
-      "title": "তৎসম স্বরসন্ধি — ২য় পর্ব",
+      "title": "তৎসম স্বরসন্ধি, ২য় পর্ব",
       "startPage": 17,
       "endPage": 21,
       "style": "vriddhi-phala",
@@ -277,7 +277,7 @@
     },
     {
       "id": "sandhi-lesson-05",
-      "title": "তৎসম ব্যঞ্জনসন্ধি — ১ম পর্ব",
+      "title": "তৎসম ব্যঞ্জনসন্ধি, ১ম পর্ব",
       "startPage": 22,
       "endPage": 26,
       "style": "consonant-varga",
@@ -317,7 +317,7 @@
     },
     {
       "id": "sandhi-lesson-06",
-      "title": "তৎসম ব্যঞ্জনসন্ধি — ২য় পর্ব",
+      "title": "তৎসম ব্যঞ্জনসন্ধি, ২য় পর্ব",
       "startPage": 27,
       "endPage": 30,
       "style": "consonant-special",

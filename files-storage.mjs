@@ -1,17 +1,17 @@
-/* R2 file storage (owner approved 2026-09-18 — R2 activated on the account).
+/* R2 file storage (owner approved 2026-09-18, R2 activated on the account).
  *
  * Private objects in the `admission-hub` R2 bucket, served from OUR domain
  * (R2 = $0 egress, the point of the switch). Keys are server-generated
- * `<folder>/<userId>/<yyyy-mm-dd>/<rand>.<ext>` — user input can never
+ * `<folder>/<userId>/<yyyy-mm-dd>/<rand>.<ext>`, user input can never
  * control the path (no traversal, no overwrite).
  *
  * Routes (worker; session = __Host-ah_session vs AUTH_AUTHORITY DO):
- *   POST /api/files/upload  — session; raw binary body + X-File-Ext / X-File-Folder
- *   GET  /api/files/...     — public read (unguessable keys), immutable cache
- *   POST /api/files/delete  — session; only the caller's own folder
+ *   POST /api/files/upload , session; raw binary body + X-File-Ext / X-File-Folder
+ *   GET  /api/files/...    , public read (unguessable keys), immutable cache
+ *   POST /api/files/delete , session; only the caller's own folder
  *
  * Limits: 5 MB, image types only (jpg/jpeg/png/webp/gif), 10 uploads/hour
- * per user (KV). Every limit is fail-soft — storage errors return 503,
+ * per user (KV). Every limit is fail-soft, storage errors return 503,
  * they never crash the worker. */
 
 import { corsHeaders } from './cors-policy.mjs';
@@ -40,7 +40,7 @@ const r2Host = env => {
 };
 const FOLDER_RE = /^[a-z][a-z0-9-]{0,31}$/;
 /* User segment stays deliberately permissive (production user ids vary in
- * shape) — unguessability comes from the 12-char random key + date, not
+ * shape), unguessability comes from the 12-char random key + date, not
  * from the id length. */
 const KEY_RE = /^[a-z][a-z0-9-]{0,31}\/[A-Za-z0-9_-]{1,64}\/\d{4}-\d{2}-\d{2}\/[a-z0-9]{10,24}\.[a-z0-9]{2,4}$/;
 
@@ -98,7 +98,7 @@ const hmacHex = async (keyBytes, msg) => {
 const hexToBytes = h => Uint8Array.from(h.match(/.{2}/g), x => parseInt(x, 16));
 
 /* Total bytes stored in the bucket, via the S3 ListObjectsV2 API
- * (the R2 binding has no list). Returns null when it cannot be determined —
+ * (the R2 binding has no list). Returns null when it cannot be determined -
  * callers must treat null as "unknown", never as "empty". */
 async function s3ListTotalBytes(env) {
   const ak = String(env.R2_ACCESS_KEY || '');
@@ -118,7 +118,7 @@ async function s3ListTotalBytes(env) {
       const query = { 'list-type': '2', 'max-keys': '1000' };
       if (token) query['continuation-token'] = token;
       const queryStr = Object.keys(query).sort().map(k => `${k}=${query[k]}`).join('&');
-      /* R2 (unlike real S3) requires the bucket in the URL path — a bare
+      /* R2 (unlike real S3) requires the bucket in the URL path, a bare
        * `GET /` is ListBuckets and fails with 501. */
       const path = `/${bucketName}`;
       /* R2 requires the real payload hash (never UNSIGNED_PAYLOAD); a GET
@@ -133,7 +133,7 @@ async function s3ListTotalBytes(env) {
       k = await hmacHex(hexToBytes(k), region);
       k = await hmacHex(hexToBytes(k), service);
       k = await hmacHex(hexToBytes(k), 'aws4_request');
-      /* The signature is over the StringToSign (NOT over 'aws4_request' —
+      /* The signature is over the StringToSign (NOT over 'aws4_request' -
        * that is the final derivation step of the signing key). Verified
        * live against R2 on 2026-09-18. */
       const signature = await hmacHex(hexToBytes(k), stringToSign);
@@ -181,7 +181,7 @@ const readCounter = async kv => {
     }
     const n = Number(raw);
     if (!Number.isFinite(n)) return null;
-    return { bytes: n, ts: 0 }; /* legacy format — force reconciliation */
+    return { bytes: n, ts: 0 }; /* legacy format, force reconciliation */
   } catch {
     return null;
   }
@@ -190,10 +190,10 @@ const readCounter = async kv => {
 const writeCounter = async (kv, bytes) => {
   try {
     await kv.put(USAGE_KEY, JSON.stringify({ b: Math.max(0, Math.round(bytes)), t: Math.floor(Date.now() / 1000) }));
-  } catch { /* counter is a cache — reconciliation heals it */ }
+  } catch { /* counter is a cache, reconciliation heals it */ }
 };
 
-/* Current bucket usage in bytes. Returns { bytes, exact } — exact=false
+/* Current bucket usage in bytes. Returns { bytes, exact }, exact=false
  * means the number may be stale-low, so the limit check treats it
  * conservatively (it only ever blocks MORE than the limit, never less,
  * because the pending upload is always added on top). */
@@ -208,7 +208,7 @@ async function bucketUsage(env) {
     return { bytes: total, exact: true };
   }
   /* Reconciliation failed: fall back to the cached number if we have one
-   * (stale beats unknown — it still bounds growth), flagged inexact. */
+   * (stale beats unknown, it still bounds growth), flagged inexact. */
   if (cached) return { bytes: cached.bytes, exact: false };
   return { bytes: 0, exact: false };
 }
@@ -219,7 +219,7 @@ const bumpUsage = async (env, delta) => {
   try {
     const c = await readCounter(kv);
     await writeCounter(kv, (c ? c.bytes : 0) + delta);
-  } catch { /* counter is a cache — reconciliation heals it */ }
+  } catch { /* counter is a cache, reconciliation heals it */ }
 };
 
 const jsonResponse = (request, obj, status = 200) => new Response(JSON.stringify(obj), {
@@ -278,8 +278,11 @@ export async function handleFilesStorageRequest(request, env) {
       headers: {
         'Content-Type': type,
         'Content-Length': String(obj.size),
-        'Cache-Control': 'public, max-age=31536000, immutable',
-        'Access-Control-Allow-Origin': '*'
+        // BUG-008: an unguessable key is not a licence for a wildcard. Keep a
+        // long cache but let the browser cache it privately, and do not invite
+        // arbitrary sites to read it via CORS.
+        'Cache-Control': 'private, max-age=86400',
+        'X-Content-Type-Options': 'nosniff'
       }
     });
   }
@@ -317,7 +320,7 @@ export async function handleFilesStorageRequest(request, env) {
     const ext = String(request.headers.get('X-File-Ext') || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const contentType = UPLOAD_TYPES[ext];
     if (!contentType) return jsonResponse(request, { error: 'invalid-type' }, 400);
-    /* Validate the RAW folder — sanitize-then-validate would turn `../etc`
+    /* Validate the RAW folder, sanitize-then-validate would turn `../etc`
      * into the legal folder `etc`. */
     const folder = String(request.headers.get('X-File-Folder') || '').toLowerCase();
     if (!FOLDER_RE.test(folder)) return jsonResponse(request, { error: 'invalid-folder' }, 400);
@@ -330,7 +333,7 @@ export async function handleFilesStorageRequest(request, env) {
     if (!bytes.length || bytes.length > MAX_UPLOAD_BYTES) {
       return jsonResponse(request, { error: 'too-large' }, 413);
     }
-    /* 9 GB hard lock — the card must never be charged (owner 2026-09-18). */
+    /* 9 GB hard lock, the card must never be charged (owner 2026-09-18). */
     const usage = await bucketUsage(env);
     if (usage.bytes + bytes.length > BUCKET_HARD_LIMIT_BYTES) {
       return jsonResponse(request, { error: 'bucket-limit', limitBytes: BUCKET_HARD_LIMIT_BYTES, usedBytes: usage.bytes }, 507);

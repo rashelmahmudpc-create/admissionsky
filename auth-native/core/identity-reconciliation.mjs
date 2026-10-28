@@ -1,15 +1,15 @@
-// Phase 3 — Identity Reconciliation Engine (blueprint §45-46 / EXTRA 06, 07)
+// Phase 3, Identity Reconciliation Engine (blueprint §45-46 / EXTRA 06, 07)
 //
 // Read-only reconciliation over the identity/account snapshot. Detect →
 // classify → report. Never mutates state; repair/escalation decisions are
 // made by an authorized operator or a later controlled repair flow.
 //
 // Finding types:
-//   orphan-external-identity  — external identity row exists without a user
-//   orphan-user               — user exists without any external identity
-//   duplicate-provider-identity — same provider+subject mapped to >1 user
-//   unknown-provider          — identity row with a provider outside the known set
-//   invalid-user-status       — user row with a status outside the canonical set
+//   orphan-external-identity , external identity row exists without a user
+//   orphan-user              , user exists without any external identity
+//   duplicate-provider-identity, same provider+subject mapped to >1 user
+//   unknown-provider         , identity row with a provider outside the known set
+//   invalid-user-status      , user row with a status outside the canonical set
 
 import { ACCOUNT_STATES } from './account-lifecycle.mjs';
 
@@ -105,7 +105,7 @@ export function reconcileIdentitySnapshot(snapshot = {}, options = {}) {
 }
 
 // Diagnostic summary for admin health endpoints (EXTRA 07). Never includes
-// raw subjects, emails, tokens or secrets — counts and flags only.
+// raw subjects, emails, tokens or secrets, counts and flags only.
 export function summarizeIdentityHealth(result) {
   return Object.freeze({
     ok: result.health.ok,

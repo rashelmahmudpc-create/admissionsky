@@ -1,4 +1,4 @@
-/* Admission Sky — Welcome Story v5 (owner's preview).
+/* Admission Sky, Welcome Story v5 (owner's preview).
  *
  * Ported from Admission_Sky___Welcome_Story_v5__preview_.html. The preview's
  * buttons only showed a toast; here Sign Up / Sign In / Google / Facebook /
@@ -41,7 +41,7 @@ const TEMPLATE=`<main class="app splash" id="app">
 <button class="b g rv" style="--i:4" type="button">গেস্ট হিসেবে ঘুরে দেখি</button>
 </div>
 </section>
-<div class="toast" id="toast">প্রিভিউ — পরের ধাপে যুক্ত হবে</div>
+<div class="toast" id="toast">প্রিভিউ, পরের ধাপে যুক্ত হবে</div>
 </main><svg width="0" height="0" style="position:absolute"><symbol id="mk" viewBox="0 0 120 120"><g fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"><path d="M30 94 60 54 90 94"/><path d="M60 16 92 29 60 42 28 29Z" fill="#fff" stroke-width="4"/><path d="M42 36v9c0 5 36 5 36 0v-9M92 29v16" stroke-width="4"/></g><path d="M100 14l3 8 8 3-8 3-3 8-3-8-8-3 8-3Z" fill="#FFB020" stroke="none"/></symbol></svg>`;
 const host=document.getElementById('ah-welcome-story');if(!host)return;host.innerHTML=TEMPLATE;
 const $=id=>host.querySelector('[id="'+id+'"]'),app=$('app'),fit=$('fit'),band=$('band'),top=$('top'),go=$('go'),auth=$('auth'),cam=$('cam'),tag=$('tag'),fg=$('fing'),root=host,meta=document.querySelector('meta[name=theme-color]');
@@ -98,12 +98,12 @@ go.addEventListener('click',()=>{const r=go.getBoundingClientRect(),x=(r.left+r.
 $('bk').addEventListener('click',()=>{app.classList.remove('open');open=false;setTimeout(()=>play(1),800)});
 const bridge=()=>window.AdmissionSkyBridge||null;
 function flash(msg){const t=$('toast');t.textContent=msg;t.classList.add('s');setTimeout(()=>t.classList.remove('s'),1600)}
-$('auth').querySelector('.b.p').addEventListener('click',()=>{const b=bridge();if(b)b.showSignup();else flash('প্রিভিউ — পরের ধাপে যুক্ত হবে')});
-$('auth').querySelector('.b.s').addEventListener('click',()=>{const b=bridge();if(b)b.showLogin();else flash('প্রিভিউ — পরের ধাপে যুক্ত হবে')});
+$('auth').querySelector('.b.p').addEventListener('click',()=>{const b=bridge();if(b)b.showSignup();else flash('প্রিভিউ, পরের ধাপে যুক্ত হবে')});
+$('auth').querySelector('.b.s').addEventListener('click',()=>{const b=bridge();if(b)b.showLogin();else flash('প্রিভিউ, পরের ধাপে যুক্ত হবে')});
 const so=$('auth').querySelector('.so');
-so.children[0].addEventListener('click',async()=>{const b=bridge();if(!b)return flash('প্রিভিউ — পরের ধাপে যুক্ত হবে');try{const ok=await b.google();if(!ok)flash('Google এখন প্রস্তুত নয়')}catch(_){flash('Google দিয়ে প্রবেশ করা গেল না')}});
-so.children[1].addEventListener('click',async()=>{const b=bridge();if(!b)return flash('প্রিভিউ — পরের ধাপে যুক্ত হবে');try{const ok=b.telegram?await b.telegram():false;if(!ok)flash('Telegram এখন প্রস্তুত নয়')}catch(_){flash('Telegram দিয়ে প্রবেশ করা গেল না')}});
-$('auth').querySelector('.b.g').addEventListener('click',()=>{const b=bridge();if(b&&b.continueGuest)b.continueGuest();else flash('প্রিভিউ — পরের ধাপে যুক্ত হবে')});
+so.children[0].addEventListener('click',async()=>{const b=bridge();if(!b)return flash('প্রিভিউ, পরের ধাপে যুক্ত হবে');try{const ok=await b.google();if(!ok)flash('Google এখন প্রস্তুত নয়')}catch(_){flash('Google দিয়ে প্রবেশ করা গেল না')}});
+so.children[1].addEventListener('click',async()=>{const b=bridge();if(!b)return flash('প্রিভিউ, পরের ধাপে যুক্ত হবে');try{const ok=b.telegram?await b.telegram():false;if(!ok)flash('Telegram এখন প্রস্তুত নয়')}catch(_){flash('Telegram দিয়ে প্রবেশ করা গেল না')}});
+$('auth').querySelector('.b.g').addEventListener('click',()=>{const b=bridge();if(b&&b.continueGuest)b.continueGuest();else flash('প্রিভিউ, পরের ধাপে যুক্ত হবে')});
 window.AdmissionWelcomeStory=Object.freeze({open(){app.classList.remove('open');open=false;size();play(1)},close(){app.classList.remove('open');open=false},resize:size,el:()=>host});
 })();
 

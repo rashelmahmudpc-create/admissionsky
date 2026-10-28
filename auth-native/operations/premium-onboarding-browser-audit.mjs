@@ -279,7 +279,7 @@ try {
   assert.equal(await page.locator('[data-signup-panel="personal"]').isVisible(), true);
   assert.match(await page.locator('[data-role="name-feedback"]').textContent(), /at least 2 characters/);
   await page.locator('#ah-signup-name').fill('Browser Student');
-  // Premium dropdown DOB — deterministic native selects, no scroll guessing.
+  // Premium dropdown DOB, deterministic native selects, no scroll guessing.
   await page.locator('#ah-dob-day').selectOption('2');
   await page.waitForTimeout(150);
   assert.equal(await page.evaluate(() => document.querySelector('#ah-dob-day').value), '2', 'day dropdown selects 2');

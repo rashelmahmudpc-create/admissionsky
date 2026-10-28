@@ -97,8 +97,10 @@
 ---
 
 ## 📝 শেষ অবস্থা
-- **শেষ session:** ১৮ অক্টোবর ২০২৬ (৭ম)
-  1. ধাপ ০ যাচাই: telemetry তে `otp_delivery` আছে (Logto, accepted, 6711 ms)। ✅ ঠিক আছে।
-  2. ধাপ ১ এর code খুঁটিয়ে দেখা হলো: OTP table এ `auth_users` FK থাকায় পুরোনো পরিকল্পনা (account ছাড়া userId) চলবে না; নতুন নকশা `AUTH-STEP1-PLAN.md` এ লেখা। Code বদলানো বা deploy হয়নি।
-  3. `test:native-auth` এর মূল ৪টা ফাইল sandbox এ চলে (`npm ci` ছাড়াই): 128 এর মধ্যে 126 pass, শুধু পুরোনো ২টা fail।
-- **পরের কাজ:** ধাপ ১ — `AUTH-STEP1-PLAN.md` এর "করণীয়" ১ থেকে শুরু (pending signup table + `signup` purpose), তারপর handler, test, CI bundle, staging → production।
+- **শেষ session:** ২০ অক্টোবর ২০২৬ (৮ম) — শুধু পড়া ও পরিকল্পনা, code বা deploy হয়নি। বিস্তারিত: `AGENT_RESUME/2026-10-20-auth-a1-prep.md`
+  1. `main` এ pending signup এর ফাইল (`pending-signup*.mjs`) আর test (`pending-signup.test.mjs`, `pending-signup-wire.test.mjs`) আছে; handler এ `p.` ticket ধারা যুক্ত। অর্থাৎ `AUTH-STEP1-PLAN.md` এর করণীয় ১–৪ এর code আছে, কিন্তু opt-in।
+  2. নতুন ধারা production এ কার্যত বন্ধ (F-01): `/signup` (L739) এ `X-AH-Signup-Flow: pending-v1` লাগে, কিন্তু frontend `api()` (`account-access.js` L1458) এটা পাঠায় না। তাই এখনো আগে Firebase account।
+  3. সিদ্ধান্ত: L739 এর শর্ত পুরো বাদ না দিয়ে `emailOwnershipRequested(env, url) && ...` — সুইচ বন্ধ থাকলে `/email-ownership/start` (L1250) বন্ধ, তখন pending signup শুরু করলে ছাত্র আটকাবে।
+  4. `main` এ `apply-pending-signup-wire-20261018.yml` রয়ে গেছে — A8 এ সরাতে হবে।
+- **যাচাই বাকি:** production `admission-gk` এ `VERIFICATION_AUTH_ACTIVATION` চালু কিনা (Cloudflare)।
+- **পরের কাজ:** ধাপ ১ (ব্লুপ্রিন্ট A1) — branch `auth/A1-AU-UX-02-pending-signup-default`, রাত ১১–১২টা: PR ① handler শর্ত + একই উত্তর (AU-SEC-06), PR ② frontend `/signup` এ হেডার, PR ③ test + CI bundle; তারপর staging → মালিকের "হ্যাঁ" → merge।

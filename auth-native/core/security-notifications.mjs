@@ -1,10 +1,10 @@
-// Phase 6 Chunk 4 — security notification boundary (§27).
+// Phase 6 Chunk 4, security notification boundary (§27).
 //
 // A structured catalog of user-facing security events plus a thin dispatch
 // adapter. Phase 6 ships DRY-RUN only: the dispatcher never sends live mail
 // unless the deployment explicitly opts in (SECURITY_NOTIFICATIONS_ACTIVATION
 // = 'enabled') AND a real sender is configured. Privacy boundary: the
-// renderer only ever accepts the masked email — a raw address in the input
+// renderer only ever accepts the masked email, a raw address in the input
 // fails closed.
 export const SECURITY_NOTIFICATION_EVENTS = Object.freeze({
   'new-device-login': Object.freeze({
@@ -30,7 +30,7 @@ export const SECURITY_NOTIFICATION_EVENTS = Object.freeze({
   'recovery-started': Object.freeze({
     template: 'security-recovery-started',
     subject: 'Admission Hub: account recovery শুরু হয়েছে',
-    body: 'তোমার Admission Hub account-এর জন্য একটি recovery শুরু হয়েছে। Recovery code কেবল তোমাকেই ব্যবহার করো—এটি কারো সঙ্গে শেয়ার করো না।'
+    body: 'তোমার Admission Hub account-এর জন্য একটি recovery শুরু হয়েছে। Recovery code কেবল তোমাকেই ব্যবহার করো, এটি কারো সঙ্গে শেয়ার করো না।'
   }),
   'recovery-completed': Object.freeze({
     template: 'security-recovery-completed',
@@ -46,7 +46,7 @@ export const SECURITY_NOTIFICATION_EVENTS = Object.freeze({
 
 const isMaskedEmail = value => {
   const text = String(value || '');
-  // Masked form only: 1-3 visible chars, an ellipsis, domain kept coarse —
+  // Masked form only: 1-3 visible chars, an ellipsis, domain kept coarse -
   // never a full local part.
   return /^[A-Za-z0-9]{1,3}\*{2,}@[A-Za-z0-9.-]+$/.test(text);
 };

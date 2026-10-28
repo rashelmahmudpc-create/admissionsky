@@ -1,10 +1,10 @@
-/* Phase 5 — AI Admin Copilot, Natural-Language Query and Notification Writer.
+/* Phase 5, AI Admin Copilot, Natural-Language Query and Notification Writer.
  *
  * Three surfaces, one shared rule: the model may write prose, never numbers.
  *
  *   intent      a question in Bangla or English is mapped to a *predefined*
  *               query over the Phase 4 payloads. The model never sees a SQL
- *               string and never picks what to read — `QUERY_CATALOGUE` decides.
+ *               string and never picks what to read, `QUERY_CATALOGUE` decides.
  *   answer      the numbers come out of that query, then the model is asked only
  *               to phrase them. `groundAnswer` re-checks the phrasing and throws
  *               it away if it cites a figure the query did not return.
@@ -40,14 +40,14 @@ const asNum = (v, fallback = 0) => {
  * instead of switching to Latin digits mid-sentence. */
 const BN_DIGITS = '০১২৩৪৫৬৭৮৯';
 function bn(value) {
-  if (value === null || value === undefined || value === '') return '—';
+  if (value === null || value === undefined || value === '') return '-';
   return String(value).replace(/[0-9]/g, (d) => BN_DIGITS[Number(d)]);
 }
 
 /* Latin digits for the English sentence, plus an em dash for a missing value so
  * an absent metric never prints as "0". */
 function sp(value) {
-  return value === null || value === undefined || value === '' ? '—' : String(value);
+  return value === null || value === undefined || value === '' ? '-' : String(value);
 }
 
 /* ── intent detection ─────────────────────────────────────────────────────── */
@@ -376,7 +376,7 @@ export function composeAnswer(intent, queryResult, filters = {}) {
       break;
     case 'risk':
       lines.push([
-        `ঝুঁকিতে ${bn(d.atRisk)} জন, নিষ্ক্রিয় ${bn(d.inactive)} জন — মোট ${bn(d.total)} জনের মধ্যে।`,
+        `ঝুঁকিতে ${bn(d.atRisk)} জন, নিষ্ক্রিয় ${bn(d.inactive)} জন, মোট ${bn(d.total)} জনের মধ্যে।`,
         `${sp(d.atRisk)} at risk and ${sp(d.inactive)} inactive out of ${sp(d.total)}.`
       ]);
       break;
@@ -422,7 +422,7 @@ export const COPILOT_SYSTEM_PROMPT = getPromptText('analytics-copilot') || [
   '1. Use only the numbers present in the provided result. Never compute, round differently, or invent a number.',
   '2. If the result is empty or null, say plainly that there is not enough data.',
   '3. Never mention a student by name or id, and never describe an individual student.',
-  '4. No markdown, no headings, no lists — one paragraph of at most three sentences.',
+  '4. No markdown, no headings, no lists, one paragraph of at most three sentences.',
   '5. Answer in the language asked for: Bangla if the question is Bangla, English if it is English.'
 ].join('\n');
 
@@ -441,7 +441,7 @@ export function buildCopilotPrompt(question, queryResult, filters = {}) {
 
 /* Runs intent → query → grounding. Returns `usedModel:false` and the
  * deterministic answer whenever the model is unavailable, fails, or produces an
- * answer that cites an ungrounded number — so the copilot degrades to correct
+ * answer that cites an ungrounded number, so the copilot degrades to correct
  * instead of to wrong. */
 export async function answerQuestion(question, options = {}) {
   const { dashboard = {}, filters = {}, deps = {} } = options;
@@ -549,7 +549,7 @@ const isBangla = (text) => /[\u0980-\u09FF]/.test(String(text || ''));
 /* ── AI notification writer ───────────────────────────────────────────────── */
 
 /* Phase 3 owns the copy catalogue and the variant assignment. This produces an
- * alternative wording for an already-decided notification — it never decides
+ * alternative wording for an already-decided notification, it never decides
  * whether to send, which kind, or to whom. Whatever comes back must pass the
  * policy sanitiser before it is usable. */
 export function buildWriterPrompt(kind, params = {}, options = {}) {
@@ -562,8 +562,8 @@ export function buildWriterPrompt(kind, params = {}, options = {}) {
   ].join('\n');
 }
 
-/* Only the fields the writer is allowed to see. Anything else — ids, internal
- * flags — is dropped before the prompt is built, so the model cannot echo it. */
+/* Only the fields the writer is allowed to see. Anything else, ids, internal
+ * flags, is dropped before the prompt is built, so the model cannot echo it. */
 function compactParams(params = {}) {
   const allowed = ['lessonTitle', 'courseTitle', 'topic', 'streak', 'remaining', 'target', 'percent', 'bestTime', 'name'];
   const out = {};
@@ -653,7 +653,7 @@ export function optimiseExperiment(rows = [], options = {}) {
     };
   }
 
-  /* Ranked on learning conversion first, then click, then open — deliberate
+  /* Ranked on learning conversion first, then click, then open, deliberate
    * ordering, because the spec forbids optimising for short-term clicks at the
    * expense of learning. */
   const ranked = usable.slice().sort((a, b) =>
@@ -678,10 +678,10 @@ export function optimiseExperiment(rows = [], options = {}) {
      * on a difference smaller than a couple of students. */
     decisive: margin === null ? true : margin >= asNum(options.minMargin, 0.02),
     recommendationBn: margin === null
-      ? `শুধু "${best.variant}" variant যথেষ্ট sample পেয়েছে — এখন এটিই ব্যবহার করা যুক্তিযুক্ত।`
+      ? `শুধু "${best.variant}" variant যথেষ্ট sample পেয়েছে, এখন এটিই ব্যবহার করা যুক্তিযুক্ত।`
       : `"${best.variant}" variant learning conversion-এ এগিয়ে (পার্থক্য ${Math.round(margin * 100)}%)।`,
     recommendationEn: margin === null
-      ? `Only variant "${best.variant}" has enough sample — use it for now.`
+      ? `Only variant "${best.variant}" has enough sample, use it for now.`
       : `Variant "${best.variant}" leads on learning conversion (margin ${Math.round(margin * 100)}%).`,
     noteBn: 'শুধু learning conversion-কে ভিত্তি ধরা হয়েছে, শুধু click বাড়ানোকে নয়।',
     noteEn: 'Ranked on learning conversion, not on short-term clicks.'

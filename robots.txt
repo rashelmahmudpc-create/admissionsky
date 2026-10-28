@@ -17,4 +17,4 @@ Disallow: /email-gateway/
 Disallow: /internal/
 Disallow: /api/
 
-Sitemap: https://admissionhub.pages.dev/sitemap.xml
+Sitemap: https://admissionsky.pages.dev/sitemap.xml

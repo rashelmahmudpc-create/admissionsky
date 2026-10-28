@@ -218,7 +218,7 @@
 
   function countdownDays(date) { if (!date) return null; const target = new Date(`${date}T23:59:59`); return Math.ceil((target.getTime() - now()) / 86400000); }
   function renderCountdown() {
-    const item = state().countdown; const days = countdownDays(item?.date); const display = days == null ? '—' : Math.max(0, days); const label = days == null ? 'DAYS LEFT' : days < 0 ? 'EXAM PASSED' : days === 0 ? 'EXAM DAY' : 'DAYS LEFT';
+    const item = state().countdown; const days = countdownDays(item?.date); const display = days == null ? '-' : Math.max(0, days); const label = days == null ? 'DAYS LEFT' : days < 0 ? 'EXAM PASSED' : days === 0 ? 'EXAM DAY' : 'DAYS LEFT';
     shell(`${sectionIntro('MAKE THE DATE VISIBLE', 'Exam Countdown', 'Keep your admission exam in view without adding pressure.')}
       <div class="sh-countdown-card"><div class="sh-countdown-ambient"></div><span class="sh-countdown-label">${htmlEsc(item?.name || 'Your next admission exam')}</span><strong>${display}</strong><span class="sh-countdown-days">${label}</span>${item ? `<div class="sh-countdown-date">Exam date · ${new Date(`${item.date}T12:00:00`).toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}</div>` : '<div class="sh-countdown-date">Add an exam date to begin</div>'}<div class="sh-card-actions">${actionButton(item ? 'Edit date' : 'Add exam date', 'studyHubOpenCountdownForm()', 'sh-button sh-button-primary')}${item ? actionButton('Reset', 'studyHubResetCountdown()', 'sh-button sh-button-soft') : ''}</div></div>`, 'Exam Countdown');
   }

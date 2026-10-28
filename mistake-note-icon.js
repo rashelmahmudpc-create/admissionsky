@@ -9,9 +9,9 @@
      (wrong-feedback box).
   4. Mock Test: nothing during the exam. Only AFTER the exam ends, each WRONG
      result card gets TWO icons:
-       (a) 🤖 AI Explain  — opens the existing Gemini prompt modal (manual,
+       (a) 🤖 AI Explain , opens the existing Gemini prompt modal (manual,
                             user copies the prompt themselves)
-       (b) 📝 Note        — opens the note editor (question + wrong answer +
+       (b) 📝 Note       , opens the note editor (question + wrong answer +
                             space to paste the AI explain) and saves to Notes.
 */
 (function installMistakeNoteIcon(){
@@ -57,7 +57,7 @@
     }
   }
 
-  // Gemini prompt modal — self-contained (manual-gemini-helper's showPrompt is
+  // Gemini prompt modal, self-contained (manual-gemini-helper's showPrompt is
   // not exported to window, so this builds the same kind of prompt modal).
   function buildMnPrompt({ q, selectedIndex, source }){
     const correctIndex = Number(q?.answerIndex ?? q?.answer ?? 0);
@@ -65,7 +65,7 @@
     return [
       'তুমি একজন ভালো admission teacher। এই ভুল MCQ-টি আমার।',
       'আমি যাতে খাত বুঝতে পারি "আমি ঠিক কোথায় ভুল করেছি" এবং একই ধরনের প্রশ্নে আবার না ভুলে।',
-      'লক্ষ্য: short নয় — short, memorable ও understandable।',
+      'লক্ষ্য: short নয়, short, memorable ও understandable।',
       '',
       'প্রশ্ন: ' + String(q?.question || '').slice(0, 600),
       'বিকল্প: ' + letters.slice(0, 600),
@@ -112,7 +112,7 @@
     };
   }
 
-  // v122: ম্যানুয়াল prompt-copy বাদ — AiExplain ইনলাইন-প্যানেল (এক প্রশ্ন = এক রিকোয়েস্ট, ক্যাশ-রিইউজ)
+  // v122: ম্যানুয়াল prompt-copy বাদ, AiExplain ইনলাইন-প্যানেল (এক প্রশ্ন = এক রিকোয়েস্ট, ক্যাশ-রিইউজ)
   function openInlineExplain(q, payload){
     const qid = String(q?.id || q?.question || '').slice(0, 60) || 'q-' + Date.now().toString(36);
     let host = document.getElementById('mnAiexHost');
@@ -139,7 +139,7 @@
   function correctOf(q){ return Number(q?.answerIndex ?? q?.answer ?? 0); }
   function selectedIndex(q, payload){
     if (payload && Number.isFinite(payload.selectedIndex)) return payload.selectedIndex;
-    // Unknown wrong selection — return first incorrect option.
+    // Unknown wrong selection, return first incorrect option.
     const c = correctOf(q); const len = (q?.options?.length || 0);
     return len > 1 ? (c + 1) % len : 0;
   }
@@ -246,13 +246,13 @@
       document.querySelectorAll(sel).forEach(card => {
         const existingRow = card.querySelector('.mn-note-row');
         if (existingRow) {
-          // A row from an older script version carries no question id — purge it
+          // A row from an older script version carries no question id, purge it
           // so the card gets re-evaluated against the current logic.
           if (!card.getAttribute('data-mistake-qid')) { removeRow(card); }
           else { card.setAttribute('data-mistake-done', '1'); return; }
         }
         // A stale 'done' flag from an earlier script version must not block
-        // attachment forever — only skip when we already attached in THIS version.
+        // attachment forever, only skip when we already attached in THIS version.
         const stale = card.getAttribute('data-mistake-done') && !card.querySelector('.mn-note-row');
         if (stale) card.removeAttribute('data-mistake-done');
         if (card.getAttribute('data-mistake-done')) return;

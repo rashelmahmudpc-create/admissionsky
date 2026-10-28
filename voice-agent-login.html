@@ -11,7 +11,7 @@
 <link rel="manifest" href="./voice-agent.webmanifest">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
 <link rel="icon" href="./icons/icon-192.png">
-<title>🎙️ কণ্ঠসহায়ক — প্রবেশ</title>
+<title>🎙️ কণ্ঠসহায়ক | প্রবেশ</title>
 <style>
   :root{ --bg:#0b1220; --panel:#121c2e; --line:#243352; --ink:#e8eef8;
     --dim:#93a4c0; --accent:#4ade80; --hot:#f87171; }
@@ -47,7 +47,7 @@
     <button id="go" type="submit">ঢুকুন</button>
     <div id="err" role="alert" aria-live="polite"></div>
   </form>
-  <div class="foot">একবার ঢুকলে এই ফোনে মনে রাখবে — বারবার দিতে হবে না।</div>
+  <div class="foot">একবার ঢুকলে এই ফোনে মনে রাখবে, বারবার দিতে হবে না।</div>
 
 <script>
 (function(){
@@ -70,7 +70,7 @@
       return r.json().catch(function(){ return {}; }).then(function(d){
         err.textContent = r.status === 403 ? 'পাসওয়ার্ড মিলল না'
           : r.status === 501 ? 'পাসওয়ার্ড এখনো বসানো হয়নি'
-          : r.status === 429 ? 'অনেকবার ভুল হয়েছে — ১৫ মিনিট পরে আবার চেষ্টা করুন'
+          : r.status === 429 ? 'অনেকবার ভুল হয়েছে, ১৫ মিনিট পরে আবার চেষ্টা করুন'
           : 'এখন হচ্ছে না, আবার চেষ্টা করুন';
       });
     }).catch(function(){ err.textContent = 'সংযোগে সমস্যা'; })

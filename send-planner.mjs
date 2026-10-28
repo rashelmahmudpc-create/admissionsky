@@ -1,4 +1,4 @@
-/* Phase 5 (FCM blueprint) — scale hardening.
+/* Phase 5 (FCM blueprint), scale hardening.
  *
  * Two jobs the blueprint defers to "at size":
  *
@@ -38,7 +38,7 @@ export const DEFAULT_CONCURRENCY = 10;
 export function planFanout(total, { budget = DEFAULT_WINDOW_BUDGET, cursor = 0 } = {}) {
   const size = Math.max(0, asInt(total));
   /* A missing, zero or negative budget means "no number was given", not "send
-   * one device per tick" — fall back to the default rather than stall. */
+   * one device per tick", fall back to the default rather than stall. */
   const budgetRaw = asInt(budget, DEFAULT_WINDOW_BUDGET);
   const limit = budgetRaw > 0 ? budgetRaw : DEFAULT_WINDOW_BUDGET;
   const start = clamp(asInt(cursor), 0, size);
@@ -99,7 +99,7 @@ export const TIMING_DEFAULTS = Object.freeze({
 });
 
 /* Build an hour-of-day histogram from engagement events.
- * `events` are `{ hour, opened? }` — an open counts double a plain send, since
+ * `events` are `{ hour, opened? }`, an open counts double a plain send, since
  * it is the behaviour we want to move, not the message we sent. */
 export function hourHistogram(events = []) {
   const hist = Array.from({ length: 24 }, () => ({ sent: 0, opened: 0 }));
@@ -113,7 +113,7 @@ export function hourHistogram(events = []) {
 }
 
 /* A 0..1 score per hour, weighted by opens, with a small floor so an hour we
- * have never seen is not treated as impossible — only as unproven. */
+ * have never seen is not treated as impossible, only as unproven. */
 export function scoreHours(events = []) {
   const hist = hourHistogram(events);
   const weights = hist.map(h => h.sent + 2 * h.opened);

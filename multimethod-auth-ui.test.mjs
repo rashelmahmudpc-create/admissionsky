@@ -11,6 +11,7 @@ const reply = (status, body) => ({
   async json() { return body; }
 });
 const sleep = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+
 async function waitFor(predicate, timeout = 1000) {
   const until = Date.now() + timeout;
   while (Date.now() < until) {
@@ -427,7 +428,10 @@ test('generic backup UX is hidden when unavailable and contains no provider-spec
   await waitFor(() => enabled.calls.some(call => call.path.endsWith('/backup/verify')));
   const requestCall = enabled.calls.find(call => call.path.endsWith('/backup/request'));
   const verifyCall = enabled.calls.find(call => call.path.endsWith('/backup/verify'));
-  assert.deepEqual(requestCall.body, { purpose: 'account-backup' });
+  const { turnstileToken: backupToken, ...backupRequest } = requestCall.body;
+  assert.deepEqual(backupRequest, { purpose: 'account-backup' });
+  // F-03: backup requests also carry the Turnstile field.
+  assert.equal(typeof backupToken, 'string');
   assert.equal(verifyCall.body.code, '123456');
   assert.doesNotMatch(script, /otp-a|otp-b|otp-c|mailjet|brevo|sendgrid/i);
   enabled.dom.window.close();
@@ -442,9 +446,9 @@ test('generic backup accepts a server-requested phone input without exposing an 
   app.document.querySelector('#ah-backup-contact').value = '+8801700000000';
   app.document.querySelector('[data-view="backup-prepare"]').dispatchEvent(new app.window.Event('submit', { bubbles: true, cancelable: true }));
   await waitFor(() => app.calls.some(call => call.path.endsWith('/backup/request')));
-  assert.deepEqual(app.calls.find(call => call.path.endsWith('/backup/request')).body, {
-    purpose: 'account-backup', contact: '+8801700000000'
-  });
+  const { turnstileToken: contactToken, ...contactRequest } = app.calls.find(call => call.path.endsWith('/backup/request')).body;
+  assert.deepEqual(contactRequest, { purpose: 'account-backup', contact: '+8801700000000' });
+  assert.equal(typeof contactToken, 'string');
   assert.doesNotMatch(app.document.querySelector('[data-view="backup-prepare"]').textContent, /otp-a|mailjet|brevo|sendgrid|whatsapp/i);
   app.dom.window.close();
 });

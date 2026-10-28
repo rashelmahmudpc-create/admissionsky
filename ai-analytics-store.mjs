@@ -1,4 +1,4 @@
-/* Phase 5 — AI Analytics Store.
+/* Phase 5, AI Analytics Store.
  *
  * Three jobs, all in D1 so they survive a restart and can be audited later:
  *
@@ -6,15 +6,15 @@
  *               re-generated. The spec's cost rule ("generate once, reuse") only
  *               holds if something actually remembers the result.
  *   decisions   one row per AI recommendation: what signal fired, what was
- *               suggested, which model and version, the confidence, and — later,
- *               when the outcome is known — what happened. This is what makes
+ *               suggested, which model and version, the confidence, and, later,
+ *               when the outcome is known, what happened. This is what makes
  *               `evaluateAiPerformance` measurable rather than a matter of taste.
  *   approvals   the human-approval records the policy layer demands. A decision
  *               that needed approval cannot be actioned without a row here.
  *
  * Schema is created lazily and only for tables this module owns. Every read
  * tolerates a missing table (a fresh database is not a fault) but a missing
- * column throws, matching the Phase 4 store's contract — a schema drift must be
+ * column throws, matching the Phase 4 store's contract, a schema drift must be
  * loud, not silently treated as no data.
  *
  * No PII beyond the caller-supplied student id is written. The decision log

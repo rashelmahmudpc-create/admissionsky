@@ -1151,7 +1151,7 @@ test('a fallback send is never followed by a second Firebase link for the same t
 
 const signupTicketCookies = async (app, email, password) => {
   const signup = await app.handler(apiRequest(`${AUTH_API_PREFIX}/signup`, {
-    method: 'POST', body: { email, password }
+    method: 'POST', body: { email, password, turnstileToken: 'turnstile-good-token' }
   }), app.env, {});
   assert.equal(signup.status, 202);
   return [
@@ -1159,6 +1159,22 @@ const signupTicketCookies = async (app, email, password) => {
     extractCookiePair(signup, '__Host-ah_device')
   ].filter(Boolean).join('; ');
 };
+
+test('A1.5: with the Turnstile secret set, signup/login/reset without a human token are refused', async () => {
+  for (const [path, body] of [
+    ['/signup', { email: 'no.token.signup@gmail.com', password: 'No-token-signup-71' }],
+    ['/login', { email: 'no.token.login@gmail.com', password: 'No-token-login-71' }],
+    ['/password-reset', { email: 'no.token.reset@gmail.com' }],
+    ['/verification/resend', { email: 'no.token.resend@gmail.com', password: 'No-token-resend-71' }]
+  ]) {
+    const app = handlerSetup();
+    app.env.TURNSTILE_SECRET_KEY = 'turnstile-secret-key';
+    const res = await app.handler(apiRequest(`${AUTH_API_PREFIX}${path}`, { method: 'POST', body }), app.env, {});
+    const json = await res.json();
+    assert.equal(res.status, 400, `${path} without a token`);
+    assert.equal(json.error.code, AUTH_ERROR_CODES.HUMAN_CHECK_FAILED, `${path} error code`);
+  }
+});
 
 test('a rejected human check stops the ownership OTP before any mailer is asked to send', async () => {
   const app = handlerSetup();
@@ -1177,7 +1193,7 @@ test('a rejected human check stops the ownership OTP before any mailer is asked 
   }), app.env, {});
   const body = await start.json();
   assert.equal(start.status, 400);
-  assert.equal(body.error.code, AUTH_ERROR_CODES.INVALID_INPUT);
+  assert.equal(body.error.code, AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
   assert.equal(sendAsked, false, 'a failed human check must never reach the OTP send');
 });
 

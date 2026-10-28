@@ -1,4 +1,4 @@
-/* Question Bank — clean UI (owner design: question-bank-clean.html).
+/* Question Bank, clean UI (owner design: question-bank-clean.html).
    Sole authority for #question-bank and #question-bank/* routes.
    Data: CACHE.subjects / CACHE.topics / CACHE.questions (cloud content sync).
    Progress: CACHE.settings.qbankState + mistakes + dailyStats (student sync). */

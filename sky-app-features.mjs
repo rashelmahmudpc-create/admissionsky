@@ -1,4 +1,4 @@
-/* AdmissionSky — get_app_features (owner 2026-10-17).
+/* AdmissionSky, get_app_features (owner 2026-10-17).
  *
  * Sky's live feature list. The permanent memory (prompt-registry.js) carries only
  * the stable core; everything that changes lives here. The server attaches this
@@ -11,7 +11,7 @@
 export const APP_FEATURES_KV_KEY = 'sky:app-features';
 export const APP_FEATURES_VERSION = '2026-10-17';
 export const APP_FEATURES = Object.freeze([
-  Object.freeze({ name: 'কোর্স', what: 'ভিজ্যুয়াল বাংলা ব্যাকরণ কোর্স — সন্ধি, সমাস, প্রত্যয়; নিয়ম, উদাহরণ, ফাঁদ ও রিভিশন' }),
+  Object.freeze({ name: 'কোর্স', what: 'ভিজ্যুয়াল বাংলা ব্যাকরণ কোর্স, সন্ধি, সমাস, প্রত্যয়; নিয়ম, উদাহরণ, ফাঁদ ও রিভিশন' }),
   Object.freeze({ name: 'প্রশ্নব্যাংক ও MCQ', what: 'বিষয়ভিত্তিক MCQ অনুশীলন, ব্যাখ্যাসহ' }),
   Object.freeze({ name: 'মক টেস্ট ও ফলাফল বিশ্লেষণ', what: 'মক পরীক্ষা, টপিকভিত্তিক নির্ভুলতা, দুর্বল টপিক ও অগ্রগতির ধারা' }),
   Object.freeze({ name: 'শব্দভান্ডার ফ্ল্যাশকার্ড', what: 'Vocabulary কার্ডে শেখা ও রিভিশন' }),
@@ -59,7 +59,7 @@ export async function loadAppFeatures(kv) {
 /** The block appended to the system prompt. */
 export function renderAppFeatures(data) {
   const d = data && Array.isArray(data.items) && data.items.length ? data : { version: APP_FEATURES_VERSION, items: APP_FEATURES };
-  return ['APP FEATURES (live, ' + clean(d.version, 40) + ') — the only source of truth for AdmissionSky features:']
+  return ['APP FEATURES (live, ' + clean(d.version, 40) + '), the only source of truth for AdmissionSky features:']
     .concat(d.items.map((it) => '- ' + clean(it.name, 80) + ': ' + clean(it.what, 240)))
     .concat(['Mention only what helps the student now; never add a feature that is not listed.'])
     .join('\n');

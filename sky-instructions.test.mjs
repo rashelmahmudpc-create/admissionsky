@@ -107,7 +107,12 @@ test('wiring: chat prompt, cache bypass, worker route, forget-me, UI', () => {
   assert.match(A, /chatCacheOn && !instrText && isCacheableRequest/);
   assert.match(A, /chatCacheOn && !instrText && isSharedAcademicCandidate/);
   assert.match(W, /path === '\/api\/ai\/instructions'/);
-  assert.match(W, /delete\('aiinstr:' \+ identity\.uid\)/);
+  // The forget-me delete moved into clearAiEverything() in ai-agent.js, which
+  // removes the whole key family ('aiprefs:', 'aiinstr:', 'actaudit:', ...) in
+  // one loop instead of one delete per key in the worker. Pin the behaviour
+  // where it lives now: an assertion against the old location proved nothing
+  // after the move, and this test ran in no workflow to say so.
+  assert.match(A, /'aiinstr:' \+ id/);
   assert.match(C, /function instrParse/);
   assert.ok(C.indexOf('instrParse(t)') < C.indexOf('window.SkySmallTalk;'), 'command runs before the small-talk bank');
   assert.match(P, /data-ai-instr-contract="sky-instructions-v1"/);

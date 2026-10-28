@@ -1,5 +1,5 @@
 /**
- * 🎙️ P23 — LIVE VOICE AGENT · CLIENT CORE
+ * 🎙️ P23, LIVE VOICE AGENT · CLIENT CORE
  *
  * The parts of the browser client that are worth testing: where the socket
  * points, what we ask the microphone for, and which container the recorder
@@ -130,7 +130,7 @@ export const MIME_PREFERENCE = Object.freeze([
 
 /**
  * Choose a recorder container from what the browser says it supports.
- * Returns null when nothing matches — the caller must handle that rather than
+ * Returns null when nothing matches, the caller must handle that rather than
  * hand MediaRecorder an unsupported type.
  */
 export function pickMime(supported) {
@@ -169,7 +169,7 @@ export function bytesToBase64(buffer) {
   return btoa(bin);
 }
 
-/** Human-readable label for a phase — the text on the button. */
+/** Human-readable label for a phase, the text on the button. */
 export function phaseLabel(phase) {
   return {
     [PHASE.OFFLINE]: 'সংযোগ নেই',

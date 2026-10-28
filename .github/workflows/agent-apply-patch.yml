@@ -1,0 +1,74 @@
+name: Agent — apply patch + rebuild bundle
+
+# Lets a remote agent ship edits to large files (gk-agent-worker.js, the
+# 1.5MB worker-bundle.mjs) that it cannot upload whole. The agent commits a
+# small patches/*.patch on a sky/** feature branch; this job applies it,
+# regenerates worker-bundle.mjs with the locked esbuild version, runs the
+# sky-ai binding test, and pushes the result back to the SAME branch.
+# Never runs on main, never deploys, touches no secrets. Study Lock still
+# applies (push is blocked outside 23:00-23:59). The bot's own push uses
+# GITHUB_TOKEN, so it does not retrigger this workflow.
+
+on:
+  push:
+    branches: ['sky/**']
+  workflow_dispatch:
+    inputs:
+      test_file:
+        description: Test file to run after applying (optional)
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ github.ref != 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Apply patches
+        id: apply
+        run: |
+          set -eu
+          shopt -s nullglob
+          n=0
+          for p in patches/*.patch; do
+            echo "applying $p"
+            git apply --whitespace=nowarn "$p"
+            git rm -q "$p"
+            n=$((n+1))
+          done
+          echo "count=$n" >> "$GITHUB_OUTPUT"
+      - name: Rebuild worker bundle
+        if: ${{ steps.apply.outputs.count != '0' }}
+        run: npm run build:worker
+      - name: Verify bundle matches sources
+        if: ${{ steps.apply.outputs.count != '0' }}
+        run: npm run check:worker-bundle
+      - name: Run test
+        if: ${{ steps.apply.outputs.count != '0' }}
+        env:
+          # BUG-004: never interpolate ${{ }} into the script text -- GitHub
+          # substitutes before the shell parses it, so a value like 'x; rm -rf'
+          # would execute. Passing it through the environment keeps it data.
+          TEST_FILE: ${{ inputs.test_file }}
+        run: |
+          f="$TEST_FILE"
+          [ -z "$f" ] && f=sky-ai-binding.test.mjs
+          [ -f "$f" ] && node --test "$f" || echo "no test file $f"
+      - name: Commit and push
+        if: ${{ steps.apply.outputs.count != '0' }}
+        run: |
+          set -eu
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then echo 'nothing to commit'; exit 0; fi
+          git commit -q -m 'agent: apply patches + rebuild worker-bundle.mjs'
+          git push origin "HEAD:${GITHUB_REF_NAME}"

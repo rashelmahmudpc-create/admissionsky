@@ -1,4 +1,4 @@
-/* Phase 4 (FCM blueprint) — event notifications.
+/* Phase 4 (FCM blueprint), event notifications.
  *
  * Phase G sends a nudge for the day. This engine reports what the student
  * actually achieved: a streak milestone, a new personal best, a cleared
@@ -6,7 +6,7 @@
  *
  * Two rules, same as Phase G:
  *   1. Never announce without a real transition. An event fires only when the
- *      server data moved — never for a state that was already true.
+ *      server data moved, never for a state that was already true.
  *   2. Never duplicate. Every event carries a stable key, so a cron tick that
  *      runs twice (or a retry) cannot deliver the same achievement again.
  *
@@ -43,24 +43,24 @@ export const DEFAULTS = Object.freeze({
 
 const MSG = {
   'streak-milestone': {
-    bn: n => ({ title: `🔥 ${n} দিনের স্ট্রিক!`, body: `${n} দিন টানা পড়ছো — এই অভ্যাসটাই তোমাকে এগিয়ে নেবে` }),
-    en: n => ({ title: `🔥 ${n}-day streak!`, body: `${n} days in a row — that habit is what moves you forward` })
+    bn: n => ({ title: `🔥 ${n} দিনের স্ট্রিক!`, body: `${n} দিন টানা পড়ছো, এই অভ্যাসটাই তোমাকে এগিয়ে নেবে` }),
+    en: n => ({ title: `🔥 ${n}-day streak!`, body: `${n} days in a row, that habit is what moves you forward` })
   },
   'personal-best': {
-    bn: n => ({ title: '🏆 নতুন ব্যক্তিগত সেরা', body: `সর্বোচ্চ স্কোর এখন ${n}% — আগের সেরাটাও তুমিই ভেঙেছো` }),
-    en: n => ({ title: '🏆 New personal best', body: `Your top score is now ${n}% — you broke your own record` })
+    bn: n => ({ title: '🏆 নতুন ব্যক্তিগত সেরা', body: `সর্বোচ্চ স্কোর এখন ${n}%, আগের সেরাটাও তুমিই ভেঙেছো` }),
+    en: n => ({ title: '🏆 New personal best', body: `Your top score is now ${n}%, you broke your own record` })
   },
   'backlog-cleared': {
-    bn: () => ({ title: '✅ রিভিশন শেষ', body: 'অপেক্ষমাণ ভুল প্রশ্নগুলো সব ঝালাই হয়ে গেছে — দুর্দান্ত!' }),
-    en: () => ({ title: '✅ Backlog cleared', body: 'Every pending revision is cleared — excellent work!' })
+    bn: () => ({ title: '✅ রিভিশন শেষ', body: 'অপেক্ষমাণ ভুল প্রশ্নগুলো সব ঝালাই হয়ে গেছে, দুর্দান্ত!' }),
+    en: () => ({ title: '✅ Backlog cleared', body: 'Every pending revision is cleared, excellent work!' })
   },
   'mastery-milestone': {
-    bn: n => ({ title: `🎖️ ${n}টি প্রশ্নে দক্ষ`, body: `${n}টি প্রশ্ন এখন তোমার মুঠোয় — পরের ধাপে যাওয়ার সময়` }),
-    en: n => ({ title: `🎖️ ${n} mastered`, body: `${n} questions mastered — time for the next milestone` })
+    bn: n => ({ title: `🎖️ ${n}টি প্রশ্নে দক্ষ`, body: `${n}টি প্রশ্ন এখন তোমার মুঠোয়, পরের ধাপে যাওয়ার সময়` }),
+    en: n => ({ title: `🎖️ ${n} mastered`, body: `${n} questions mastered, time for the next milestone` })
   },
   'exam-completed': {
-    bn: n => ({ title: '📝 পরীক্ষা সম্পন্ন', body: `তোমার স্কোর ${n}% — ফলাফল দেখে দুর্বল topic গুলোয় নজর দাও` }),
-    en: n => ({ title: '📝 Exam completed', body: `You scored ${n}% — check the weak topics in your result` })
+    bn: n => ({ title: '📝 পরীক্ষা সম্পন্ন', body: `তোমার স্কোর ${n}%, ফলাফল দেখে দুর্বল topic গুলোয় নজর দাও` }),
+    en: n => ({ title: '📝 Exam completed', body: `You scored ${n}%, check the weak topics in your result` })
   }
 };
 
@@ -79,7 +79,7 @@ const nextMilestone = (value, table) => {
   return first === undefined ? null : first;
 };
 
-/* The highest milestone reached at or below `value` — used to decide whether a
+/* The highest milestone reached at or below `value`, used to decide whether a
  * snapshot that predates this code still deserves one announcement. */
 const reachedMilestone = (value, table) => {
   let hit = null;
@@ -99,7 +99,7 @@ const examIds = list => (Array.isArray(list) ? list : [])
   .filter(v => v !== undefined && v !== null && String(v) !== '')
   .map(String);
 
-/* `prev` null means this student has never been seen — write the baseline only. */
+/* `prev` null means this student has never been seen, write the baseline only. */
 export function detectEvents(prev, curr, nowMs = Date.now()) {
   if (!prev) return { events: [], baseline: true };
   const events = [];

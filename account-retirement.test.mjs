@@ -105,7 +105,14 @@ await test('AI client uses ephemeral guests and Firebase-account-scoped local co
 await test('AI keeps local study-stat context', UI.includes('computeLifetimeStats()') && UI.includes('computeStreak()') && UI.includes('CACHE.mistakes'));
 await test('content hydration is public and account-independent',
   CLOUD.includes("apiFetch('/api/content/meta')") && CLOUD.includes("apiFetch('/api/content')") &&
-  !/AHAuth|ahPubToken|authHeaders|Authorization/.test(CLOUD));
+  /* The public content READS must stay unauthenticated, and they do: both use
+     the plain APP_HEADER. Only the control-role publish WRITE carries the
+     owner's token (BUG-001, 2026-10-25 audit) — the read path is untouched. */
+  /apiFetch\('\/api\/content\/meta'\)[^\n]*/.test(CLOUD) &&
+  !/apiFetch\('\/api\/content\/meta'\)[^\n]*Authorization/.test(CLOUD) &&
+  !/apiFetch\('\/api\/content'\)[^\n]*Authorization/.test(CLOUD) &&
+  !/AHAuth|ahPubToken|authHeaders/.test(CLOUD) &&
+  CLOUD.includes("apiFetch('/api/cloud/publish', { method: 'POST', headers: writeHeaders()"));
 
 await test('service-worker build and HTML registration are synchronized',
   (() => {
@@ -116,9 +123,9 @@ await test('service-worker build and HTML registration are synchronized',
   })());
 await test('service-worker shell cannot cache retired assets', !retiredAssetRe.test(SW));
 await test('premium account and institution assets use synchronized cache-busting versions',
-  ['account-access.css?v=20261018-allowlist-v1', 'account-access.js?v=20261018-logout-otp-v1', 'institutions-bd.js?v=bd-institutions-v2']
+  ['account-access.css?v=20261018-allowlist-v1', 'account-access.js?v=20261021-turnstile-v1', 'institutions-bd.js?v=bd-institutions-v2']
     .every(asset => H.includes(asset) && SW.includes(asset)) &&
-  H.indexOf('institutions-bd.js?v=bd-institutions-v2') < H.indexOf('account-access.js?v=20261018-logout-otp-v1'));
+  H.indexOf('institutions-bd.js?v=bd-institutions-v2') < H.indexOf('account-access.js?v=20261021-turnstile-v1'));
 await test('premium Auth UI/server contract and curated-manual institution policy are locked',
   ACCOUNT_UI.includes("'X-AH-Auth-UI': 'auth-premium-v6'") &&
   AUTH_HANDLER.includes("const AUTH_UI_VERSION = 'auth-premium-v6'") &&

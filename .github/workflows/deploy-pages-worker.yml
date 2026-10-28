@@ -14,6 +14,42 @@ on:
         description: Type DEPLOY to publish the committed Worker bundle and Pages UI
         required: true
         type: string
+  # Owner 2026-10-24: "why do I have to keep being told you cannot deploy?"
+  # The agent's GitHub token has no Actions: write, so it cannot dispatch a
+  # workflow — but it can merge a pull request. Every merge to main is therefore
+  # published automatically, which is the same gate the manual button applied
+  # minus the person: the PR had to pass guard, bundle-guard and visual first.
+  # Docs-only merges are skipped by the path filter below.
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'sw.js'
+      - 'account-access.*'
+      # A change to a course document or the tool that loads it is a change to
+      # the live Pages UI, but neither path was listed, so the course fix pushed
+      # 2026-10-24 published nothing until the filter was widened.
+      - 'source-course-tool.js'
+      - 'courses/**'
+      - 'worker-bundle.mjs'
+      - 'wrangler.toml'
+      - 'public-worker.js'
+      - 'gk-agent-worker.js'
+      - 'voice-worker.js'
+      - 'notification-worker.js'
+      - 'auth-native/**'
+      - 'email-gateway/**'
+      - 'observability/**'
+      - 'observability.js'
+      - 'sky-ai/**'
+      - 'ai-proxy/**'
+      - '_worker.js'
+      - 'scripts/pages-dist.mjs'
+      # Self-reference, so editing this workflow publishes immediately instead
+      # of needing a second unrelated commit to shake it loose.
+      - '.github/workflows/deploy-pages-worker.yml'
+      - 'package.json'
+      - 'package-lock.json'
 
 permissions:
   contents: read
@@ -24,9 +60,15 @@ concurrency:
 
 jobs:
   worker:
-    if: ${{ inputs.confirmation == 'DEPLOY' && github.ref == 'refs/heads/main' }}
+    if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.confirmation == 'DEPLOY') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # F-04: this job deploys admission-auth first, so it must not race the auth
+    # workflow doing the same upload. Sharing that workflow's concurrency group
+    # serialises the two instead of letting them collide mid-deploy.
+    concurrency:
+      group: admission-auth-deploy
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -37,6 +79,104 @@ jobs:
         run: npm ci
       - name: Verify the committed Worker bundle matches its sources
         run: npm run check:worker-bundle
+      # F-04: deploy the auth Worker BEFORE the app. Both scripts are deployed on
+      # every merge to main, and if the app went first it would briefly point at
+      # the previous auth build. Same content here as in the auth workflow, so a
+      # repeated deploy costs nothing; the concurrency group above keeps the two
+      # uploads from overlapping.
+      - name: Deploy admission-auth first
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4.35.0 deploy --config wrangler.auth.toml
+      # F0.1 step 4d: sky-ai before the app, for the same reason. admission-gk
+      # forwards /api/ai/recall to it, so the app must never point at a sky-ai
+      # that does not serve the route yet. Its own deploy workflow is manual-only,
+      # which is why this exists rather than relying on it.
+      - name: Deploy sky-ai
+        working-directory: sky-ai
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4.35.0 deploy --config wrangler.toml
+      # The route is signed-in only, so a deploy cannot call it without a
+      # student session. What it CAN prove is the part that fails silently: the
+      # cross-script AI_STATE binding. Missing it means recall falls back to KV
+      # and every student's reminder quietly disappears — a wrong answer, not an
+      # error. /health reports the binding, so this asserts it.
+      - name: Verify sky-ai can reach the shared memory store
+        run: |-
+          set -eu
+          for attempt in 1 2 3 4 5; do
+            body="$(curl -sS --max-time 20 "https://admission-gk.admissionhub.workers.dev/api/ai/sky-health?cb=$RANDOM" || true)"
+            printf 'attempt %s: %s\n' "$attempt" "$(printf '%s' "$body" | head -c 400)"
+            if printf '%s' "$body" | grep -q '"aiState":"ok"'; then
+              echo "::notice title=Sky AI ready::the AI_STATE binding reaches admission-gk's Durable Object."
+              exit 0
+            fi
+            sleep 6
+          done
+          echo "::error title=Sky AI memory store unreachable::/health did not report aiState=ok. Recall would silently return nothing. Check script_name in sky-ai/wrangler.toml."
+          exit 1
+      # F0.1 step 4h. Chat is listed in the allowlist, but sky-ai answers it only
+      # when it can reach EVERY provider admission-gk can — otherwise it steps
+      # aside and admission-gk answers, exactly as before. Both outcomes are
+      # correct, so this is a notice rather than a failure: a red deploy here
+      # would imply a fault where there is none. What it must never be is silent,
+      # because "chat is still on admission-gk" and "chat moved" look identical
+      # from outside, and the whole point of copying the credentials across is to
+      # find out which one is true.
+      # F0.1 step 4i made this worth checking on every deploy: the status body is
+      # now PRODUCED in one Worker and REDACTED in another. A mistake in that hand
+      # -off does not break anything a student can see — it quietly publishes the
+      # provider list, the model ids, the daily limit and which safety filters
+      # block. So the deploy asks the public endpoint the same question a stranger
+      # would: does a caller without the owner's token get those fields?
+      - name: Verify the AI status report is still owner-only
+        run: |
+          set -eu
+          url="https://admission-gk.admissionhub.workers.dev/api/ai/status?cb=$RANDOM"
+          for attempt in 1 2 3; do
+            body="$(curl -sS --max-time 20 -H 'X-AH-Guest: deploy-probe-0000000001' "$url" || true)"
+            printf 'attempt %s: %s\n' "$attempt" "$(printf '%s' "$body" | head -c 200)"
+            if [ -z "$body" ]; then sleep 5; continue; fi
+            if printf '%s' "$body" | grep -qE '"(providers|chain|limits|observability|tools)"'; then
+              echo "::error title=AI status leaked::a caller without the owner token received owner-only fields. Check redactAiStatus in public-worker.js."
+              exit 1
+            fi
+            echo "::notice title=AI status still owner-only::a token-less caller received the student view only."
+            exit 0
+          done
+          echo "::error title=AI status unreachable::/api/ai/status did not answer, so its privacy could not be checked."
+          exit 1
+      # The aiState check above proves the binding WORKS. It does not prove that
+      # THIS commit is the build being served: a Worker upload can succeed while
+      # requests are still answered by the previous isolate, and an upload that
+      # silently did nothing looks exactly the same from outside. Comparing the
+      # version the repo declares with the version the Worker reports is the only
+      # cheap way to tell "deployed" from "deployed last time" — and it turns a
+      # stale deploy into a red run instead of a quiet lie.
+      - name: Verify the deployed sky-ai build is this commit
+        run: |
+          set -eu
+          expected="$(grep -oE "SKY_AI_VERSION = '[^']+'" sky-ai/worker.mjs | head -1 | sed "s/.*'\([^']*\)'/\1/" || true)"
+          if [ -z "$expected" ]; then
+            echo "::error title=sky-ai version missing::sky-ai/worker.mjs declares no SKY_AI_VERSION."
+            exit 1
+          fi
+          got=''
+          for attempt in 1 2 3 4 5; do
+            body="$(curl -sS --max-time 20 "https://admission-gk.admissionhub.workers.dev/api/ai/sky-health?cb=$RANDOM" || true)"
+            got="$(printf '%s' "$body" | grep -oE '"version":"[^"]*"' | head -1 | cut -d'"' -f4 || true)"
+            printf 'attempt %s: expected %s, live %s\n' "$attempt" "$expected" "${got:-none}"
+            if [ "$got" = "$expected" ]; then
+              echo "::notice title=Sky AI version match::the live Worker reports $expected."
+              exit 0
+            fi
+            sleep 6
+          done
+          echo "::error title=Sky AI stale build::live reports '${got:-none}' but this commit expects '$expected'. The deploy did not take effect."
+          exit 1
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
         with:
@@ -44,6 +184,217 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: '4.35.0'
           command: deploy --config wrangler.toml
+
+      # ai-proxy was deployed once by hand and then dropped out of CI: every
+      # Pages bundle excludes the directory, and no workflow uploaded it, so the
+      # security fixes committed to ai-proxy/worker.js stayed in the repo while
+      # the live Worker kept the old origin check. That is how BUG-001/002
+      # survived the audit. Deploying it here makes the committed code live, and
+      # the check below fails if the live origin allowlist disagrees.
+      - name: Deploy the AI proxy
+        working-directory: ai-proxy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4.35.0 deploy --config wrangler.toml
+
+      # BUG-001 stayed open even after the code was right: /analyze reads
+      # TURNSTILE_SECRET_KEY, but the secret was only ever bound to admission-gk,
+      # so the proxy saw an empty value and skipped the check. Binding it here is
+      # what turns the verification on. Absent secret = explicit notice, not a
+      # silent pass, because an unverified /analyze is the finding itself.
+      - name: Bind the Turnstile secret to the AI proxy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+        run: |
+          set -eu
+          if [ -z "${TURNSTILE_SECRET_KEY:-}" ]; then
+            echo "::warning title=Turnstile not bound to the AI proxy::TURNSTILE_SECRET_KEY is unset, so /analyze still trusts a forgeable Origin header alone (BUG-001)."
+            exit 0
+          fi
+          printf '%s' "$TURNSTILE_SECRET_KEY" | npx --yes wrangler@4.35.0 secret put TURNSTILE_SECRET_KEY --name admission-hub-ai-proxy
+          echo "::notice title=Turnstile bound::the AI proxy now verifies the human check server-side."
+
+      # BUG-002: a non-allowlisted Origin must be refused, and the two real hosts
+      # must not be. The audit proved the opposite was live (admissionsky got a
+      # 403 while a forged Origin got a 202), so this compares the live behaviour
+      # with the allowlist this commit declares.
+      - name: Verify the AI proxy origin allowlist
+        run: |
+          set -eu
+          url="https://admission-hub-ai-proxy.admissionhub.workers.dev/analyze"
+          for attempt in 1 2 3 4 5; do
+            blocked="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 -X POST -H 'Origin: https://evil.example' -H 'Content-Type: application/json' -d '{}' "$url" || true)"
+            printf 'attempt %s: forged origin -> %s\n' "$attempt" "${blocked:-none}"
+            if [ "$blocked" = "403" ]; then break; fi
+            if [ "$attempt" -eq 5 ]; then
+              echo "::error title=AI proxy still accepts a forged origin::a non-allowlisted Origin was not refused, so /analyze is unguarded (BUG-001/002)."
+              exit 1
+            fi
+            sleep 6
+          done
+          # A Worker upload returns before every edge has the new isolate, so a
+          # real host can briefly still see the previous allowlist. Retry instead
+          # of reading that lag as a failure -- the first run of this check failed
+          # exactly that way, one second after its own deploy.
+          for origin in https://admissionsky.pages.dev https://admissionhub.pages.dev; do
+            for attempt in 1 2 3 4 5; do
+              code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 -X POST -H "Origin: $origin" -H 'Content-Type: application/json' -d '{}' "$url" || true)"
+              printf '%s attempt %s -> %s\n' "$origin" "$attempt" "${code:-none}"
+              if [ "$code" != "403" ]; then break; fi
+              if [ "$attempt" -eq 5 ]; then
+                echo "::error title=Real site refused::$origin got 403, so the AI report cannot work from the live site (BUG-002)."
+                exit 1
+              fi
+              sleep 6
+            done
+          done
+          echo "::notice title=AI proxy allowlist correct::the real hosts are accepted and a forged origin is refused."
+
+      # BUG-001: an Origin check is forgeable, so the guard is only real when a
+      # bad Turnstile token is refused. The Turnstile check runs BEFORE any quota
+      # is spent, so the healthy answer (403) costs nothing; only the broken case
+      # reaches a run. This is what proves the secret bound above actually took
+      # effect, rather than being present but unread.
+      - name: Verify the AI proxy rejects a forged human check
+        run: |
+          set -eu
+          url="https://admission-hub-ai-proxy.admissionhub.workers.dev/analyze"
+          body='{"schemaVersion":"admission-hub-result-analysis-v1","requestType":"weekly_report","result":{"id":"deploy-probe","title":"deploy probe"},"turnstileToken":"deploy-probe-invalid-token"}'
+          for attempt in 1 2 3 4 5; do
+            out="$(curl -sS --max-time 25 -w '\n%{http_code}' -X POST -H 'Origin: https://admissionsky.pages.dev' -H 'Content-Type: application/json' -d "$body" "$url" || true)"
+            code="$(printf '%s' "$out" | tail -1)"
+            printf 'attempt %s: status %s\n' "$attempt" "${code:-none}"
+            if [ "$code" = "403" ]; then
+              echo "::notice title=Human check enforced::/analyze refused a forged Turnstile token with no run started."
+              exit 0
+            fi
+            # A 202 here means the run started. The first run of this check read
+            # that as BUG-001, but the secret it had just uploaded needed a moment
+            # to reach the edge -- the probe fired two seconds later and still saw
+            # the old isolate. So retry, and only fail if a forged token keeps
+            # being accepted once propagation has had time to finish.
+            sleep 8
+          done
+          echo "::error title=Human check NOT enforced::/analyze still starts a run for a forged Turnstile token, so the Origin header is the only gate (BUG-001)."
+          exit 1
+
+      - name: Report whether sky-ai can answer chat itself
+        run: |
+          set -eu
+          body="$(curl -sS --max-time 20 "https://admission-gk.admissionhub.workers.dev/api/ai/sky-health?cb=$RANDOM" || true)"
+          providers="$(printf '%s' "$body" | grep -oE '"providers":\[[^]]*\]' | head -1 || true)"
+          if [ -z "$providers" ]; then
+            echo "::warning title=Sky AI chat status unknown::/health returned no provider list, so chat is answered by admission-gk (unchanged for students)."
+            exit 0
+          fi
+          # F0.1 step 4j: the provider list alone cannot tell "sky-ai has a key"
+          # apart from "sky-ai has every key admission-gk has". parity.ok is
+          # computed by the same function the routing gate uses, so it is the only
+          # answer that proves chat is really served here. A mismatch is reported
+          # rather than failed: the fallback keeps students working, and the fix is
+          # a credential, not a code change.
+          #
+          # ORDER MATTERS: this runs AFTER Deploy Worker. The first version of this
+          # step ran before it and reported "no parity field" on a healthy deploy,
+          # because it was asking the PREVIOUS admission-gk whether the NEW sky-ai
+          # matched — the header it needs is produced by the very deployment being
+          # measured. A check that reads a stale side is worse than no check.
+          parity="$(printf '%s' "$body" | grep -oE '"parity":(\{[^}]*\}|null)' | head -1 || true)"
+          case "$parity" in
+            *'"ok":true'*)
+              echo "::notice title=Sky AI parity ok::$providers — every provider admission-gk has is reachable here, so chat is answered by sky-ai."
+              ;;
+            *'"ok":false'*)
+              echo "::warning title=Sky AI parity mismatch::$parity — admission-gk can reach a provider sky-ai cannot, so chat falls back (students unaffected). Put that key in KV secret:AI_KEYS so both rooms read the same one."
+              ;;
+            *)
+              echo "::warning title=Sky AI parity unknown::${parity:-field absent} — the comparison could not be made, so whether chat is served by sky-ai is unproven. Check that admission-gk sends x-sky-need-providers on /api/ai/sky-health."
+              ;;
+          esac
+          if printf '%s' "$providers" | grep -q 'gemini'; then
+            echo "::notice title=Sky AI providers present::${providers}"
+          fi
+          # The shape of the credential file, never its contents. Without this, a
+          # mismatch cannot be told apart from a missing file, and those two need
+          # different fixes.
+          aiKeys="$(printf '%s' "$body" | grep -oE '"aiKeys":\{[^}]*\}' | head -1 || true)"
+          echo "::notice title=Sky AI key file::${aiKeys:-no shape reported}"
+          case "$aiKeys" in
+            *'"present":true'*) ;;
+            *)
+              echo "::warning title=Sky AI credential file missing or unreadable::${aiKeys:-none} — both rooms read KV secret:AI_KEYS; if it is gone, the providers that lived only there are unreachable from either room."
+              ;;
+          esac
+      # F-04: the public auth route must answer on the app Worker, whether it is
+      # served in process (AUTH_ROUTE=local) or forwarded to admission-auth
+      # (AUTH_ROUTE=service). One curl proves the path a student actually uses.
+      - name: Smoke-test the public auth route
+        run: |
+          set -eu
+          url="https://admission-gk.admissionhub.workers.dev/api/auth/v1/config?cb=$RANDOM"
+          body="$(curl -sS --max-time 25 -H 'X-AH-Auth-UI: auth-premium-v6' "$url" || true)"
+          printf '%s\n' "$body" | head -c 600
+          printf '%s' "$body" | grep -q '"ok":true'
+
+      # F-04: when the auth surface is forwarded, /config cannot prove it — that
+      # route stays in process on purpose so the login page keeps reporting the
+      # full environment. So this checks a route that IS forwarded and asserts
+      # who answered. The mark is absent when the request fell back in process,
+      # which is exactly the case this must catch: a deploy that looks green
+      # while the split is not actually carrying any traffic.
+      - name: Smoke-test the forwarded auth surface
+        run: |-
+          set -eu
+          mode="$(sed -n 's/^AUTH_ROUTE *= *"\([a-z]*\)"$/\1/p' wrangler.toml | head -1)"
+          echo "AUTH_ROUTE=${mode:-unset}"
+          if [ "$mode" != "service" ]; then
+            echo "::notice title=Forwarding check skipped::AUTH_ROUTE is not service, so the in-process handler is the expected answer."
+            exit 0
+          fi
+          # Several routes, not one: the split has to carry the login surface, not
+          # just whichever path happened to work. Reports every result as an
+          # annotation and then fails once, so a broken probe is diagnosable
+          # without reading the log.
+          #
+          # These are deliberately the routes that cost nothing: an unauthenticated
+          # GET answers 401 from the handler itself, and a preflight answers 204.
+          # Nothing here sends a message, consumes a rate slot or touches a
+          # provider, so the probe can run on every deploy without side effects.
+          failed=0
+          probe() {
+            path="$1"
+            expect="$2"
+            method="${3:-GET}"
+            headers="$(curl -sS -o /dev/null -D - --max-time 25 -X "$method" -H 'Origin: https://admissionsky.pages.dev' "https://admission-gk.admissionhub.workers.dev$path" || true)"
+            code="$(printf '%s' "$headers" | awk 'tolower($1) ~ /^http\// {print $2}' | tail -1)"
+            front="$(printf '%s' "$headers" | tr -d '\r' | awk -F': ' 'tolower($1) == "x-ah-auth-front" {print $2}' | tail -1)"
+            addr="$(printf '%s' "$headers" | tr -d '\r' | awk -F': ' 'tolower($1) == "x-ah-client-addr" {print $2}' | tail -1)"
+            echo "$method $path -> ${code:-no-response} front=${front:-none} addr=${addr:-none} (expected $expect)"
+            echo "::notice title=Probe $method $path::code=${code:-none} front=${front:-none} client-addr=${addr:-none} expected=$expect"
+            # The caller's address has to survive the hop: rate limits, the shadow
+            # guard and risk scoring are all keyed on it. If every forwarded request
+            # arrived looking alike, students would share one bucket and could lock
+            # each other out, which is worse than an outage because it looks normal.
+            if [ "${addr:-}" != "present" ]; then
+              failed=1
+              echo "::error title=Caller address lost in the hop::$method $path reached admission-auth without a client address (x-ah-client-addr=${addr:-none}). Do not leave AUTH_ROUTE on service until this is fixed."
+            fi
+            if [ "${front:-}" != "admission-auth" ] || [ "${code:-}" != "$expect" ]; then
+              failed=1
+              echo "::error title=Forwarded route failed::$method $path answered ${code:-nothing} from ${front:-the app}, expected $expect from admission-auth."
+            fi
+          }
+          probe "/api/auth/v1/session" 401
+          probe "/api/auth/v1/account" 401
+          probe "/api/auth/v1/session" 204 OPTIONS
+          if [ "$failed" -ne 0 ]; then
+            echo "::error title=Auth split broken::a forwarded auth route did not answer as admission-auth. Roll back with AUTH_ROUTE = \"local\"."
+            exit 1
+          fi
+          echo "::notice title=Auth split live::the forwarded login surface is answered by admission-auth."
 
       # The Worker must answer for the project the app now belongs to. The key is
       # the public Firebase Web API key of admissionsky-997d2 (project 916950643726),
@@ -114,7 +465,7 @@ jobs:
           node auth-native/operations/set-agentmail-display-name.mjs
 
   pages:
-    if: ${{ inputs.confirmation == 'DEPLOY' && github.ref == 'refs/heads/main' }}
+    if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.confirmation == 'DEPLOY') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -153,14 +504,37 @@ jobs:
       # Same sanitized bundle, second address: the owner's shorter
       # admissionsky.pages.dev. A Pages project named `admissionsky` owns that
       # hostname automatically, so both addresses serve identical bytes.
-      - name: Ensure the admissionsky Pages project exists
-        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
-        continue-on-error: true
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '4.35.0'
-          command: pages project create admissionsky --production-branch main
+      # Creating a project that already exists fails by design, and the action used
+      # here reported that failure as a red X on every deploy. A red mark that is
+      # always present is one nobody reads, which is how a real failure gets
+      # missed. So this is advisory: it reports what happened and never fails the
+      # job, because the deploy immediately below is the step that actually proves
+      # the project is usable. If the project were genuinely missing, that deploy
+      # fails with a clear error — there is no need to fail twice.
+      - name: Create the admissionsky Pages project if it is missing
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # `run:` steps execute under `bash -e`, so a failing command
+          # substitution aborts the script on the spot — before any of the checks
+          # below can run, and with no message. That is exactly what happened
+          # here: the step died at the assignment and the only evidence was
+          # "exit code 1". The `|| code=$?` is what makes the failure inspectable
+          # instead of fatal-at-birth.
+          set -u
+          code=0
+          out="$(npx --yes wrangler@4.35.0 pages project create admissionsky --production-branch main 2>&1)" || code=$?
+          printf '%s\n' "$out"
+          if [ "$code" -eq 0 ]; then
+            echo "::notice title=Pages project created::admissionsky did not exist and was created."
+            exit 0
+          fi
+          if printf '%s' "$out" | grep -qiE 'already exists|already_exist|project with this name|exists'; then
+            echo "::notice title=Pages project present::admissionsky already exists, so there is nothing to create."
+            exit 0
+          fi
+          echo "::warning title=Pages project create failed::wrangler exited $code for a reason other than 'already exists'. The deploy below decides whether that matters."
       - name: Deploy Pages UI to the short address
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
         with:
@@ -168,3 +542,33 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: '4.35.0'
           command: pages deploy dist --project-name admissionsky --branch main
+
+      # BUG-003: the deployed HTML has to carry the AI endpoint, or the weekly
+      # report dies in the browser with "Secure AI endpoint পাওয়া যায়নি" and no
+      # visible reason. The repo had it while the live bytes did not, and nothing
+      # compared the two — so the drift went unnoticed until an audit found it.
+      # A deploy that publishes HTML without the tag is the failure this catches.
+      - name: Verify the live HTML carries the AI endpoint
+        run: |
+          set -eu
+          expected="$(grep -oE "ADMISSION_HUB_AI_ENDPOINT='[^']+'" index.html | head -1 | sed "s/.*'\([^']*\)'/\1/" || true)"
+          if [ -z "$expected" ]; then
+            echo "::error title=AI endpoint missing in repo::index.html declares no ADMISSION_HUB_AI_ENDPOINT, so the weekly report cannot work anywhere."
+            exit 1
+          fi
+          for host in https://admissionsky.pages.dev/ https://admissionhub.pages.dev/; do
+            for attempt in 1 2 3 4 5; do
+              body="$(curl -sS --max-time 20 "$host?cb=$RANDOM" || true)"
+              got="$(printf '%s' "$body" | grep -oE "ADMISSION_HUB_AI_ENDPOINT='[^']+'" | head -1 | sed "s/.*'\([^']*\)'/\1/" || true)"
+              printf '%s attempt %s: expected %s, live %s\n' "$host" "$attempt" "$expected" "${got:-none}"
+              if [ "$got" = "$expected" ]; then
+                echo "::notice title=AI endpoint live::$host serves $expected."
+                break
+              fi
+              if [ "$attempt" -eq 5 ]; then
+                echo "::error title=AI endpoint stale::$host does not serve the endpoint this commit declares. The weekly report is dead in production."
+                exit 1
+              fi
+              sleep 6
+            done
+          done

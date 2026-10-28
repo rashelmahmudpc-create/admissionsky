@@ -2,7 +2,7 @@
    ADMISSION HUB · নোট স্ক্রিন (v2)
    ভুল প্রশ্নের রিভিশন: Question Bank / Flash Test-এর আসল ভুল
    (CACHE.mistakes) + নিজের সেভ করা নোট (CACHE.notes)।
-   কোনো ডেমো ডেটা নেই — সব লেখা dbPut দিয়ে account storage-এ যায়,
+   কোনো ডেমো ডেটা নেই, সব লেখা dbPut দিয়ে account storage-এ যায়,
    সেখান থেকে student-data-sync ব্যাকএন্ডে সিঙ্ক করে।
    হেডার status bar-এর সাথে এক রঙে মিশে থাকে; জুম/পাশে সরানো বন্ধ,
    শুধু তালিকা উপর-নিচ স্ক্রল হয়।
@@ -152,7 +152,7 @@
     const s = subOf(it), r = it.note, open = S.open.has(it.k);
     const sub = [s.name, when(it.ts)].filter(Boolean).join(' · ');
     const expl = it.explanation ? `<p class="ex">${esc(it.explanation)}</p>` : '';
-    return `<article class="nc ${it.mastered ? 'ok' : ''} ${open ? 'open' : ''}" data-k="${esc(it.k)}" style="--g:${s.color};--gt:${s.color}1F"><div class="ch"><span class="av">${esc(s.name.charAt(0) || 'ন')}</span><div class="mt2"><b>${esc(it.topic || s.name)}</b><small>${esc(sub)}${it.wrongCount > 1 ? ' · ' + bn(it.wrongCount) + ' বার ভুল' : ''}</small></div><button class="r bm ${it.saved ? 'a' : ''}" data-bm="1" aria-label="সেভ">${ic('mark')}</button><button class="r" data-sh="1" aria-label="শেয়ার">${ic('share')}</button></div><h3 data-ex="1">${esc(it.question)}</h3><div class="cmp">${it.wrongText ? `<div class="w"><small>${ic('x')}আপনার উত্তর</small><span>${esc(it.wrongText)}</span></div>` : ''}<div class="c" ${it.wrongText ? '' : 'style="grid-column:1/-1"'}><small>${ic('ck')}সঠিক উত্তর</small><span>${esc(it.correctText || '—')}</span></div></div><div class="more"><div>${expl}<textarea data-nt="1" placeholder="নিজের নোট লিখুন..." aria-label="নোট">${esc(r && r.aiExplain || '')}</textarea></div></div><div class="ft"><button class="lk" data-ex="1">${it.explanation ? 'ব্যাখ্যা' : 'নোট'} ${ic('dn')}</button><button class="ms" data-ms="1"><svg class="i" viewBox="0 0 24 24"><path d="${P.ck}"/></svg><span>${it.mastered ? 'আয়ত্ত হয়েছে' : 'আয়ত্ত করেছি'}</span></button></div></article>`;
+    return `<article class="nc ${it.mastered ? 'ok' : ''} ${open ? 'open' : ''}" data-k="${esc(it.k)}" style="--g:${s.color};--gt:${s.color}1F"><div class="ch"><span class="av">${esc(s.name.charAt(0) || 'ন')}</span><div class="mt2"><b>${esc(it.topic || s.name)}</b><small>${esc(sub)}${it.wrongCount > 1 ? ' · ' + bn(it.wrongCount) + ' বার ভুল' : ''}</small></div><button class="r bm ${it.saved ? 'a' : ''}" data-bm="1" aria-label="সেভ">${ic('mark')}</button><button class="r" data-sh="1" aria-label="শেয়ার">${ic('share')}</button></div><h3 data-ex="1">${esc(it.question)}</h3><div class="cmp">${it.wrongText ? `<div class="w"><small>${ic('x')}আপনার উত্তর</small><span>${esc(it.wrongText)}</span></div>` : ''}<div class="c" ${it.wrongText ? '' : 'style="grid-column:1/-1"'}><small>${ic('ck')}সঠিক উত্তর</small><span>${esc(it.correctText || '-')}</span></div></div><div class="more"><div>${expl}<textarea data-nt="1" placeholder="নিজের নোট লিখুন..." aria-label="নোট">${esc(r && r.aiExplain || '')}</textarea></div></div><div class="ft"><button class="lk" data-ex="1">${it.explanation ? 'ব্যাখ্যা' : 'নোট'} ${ic('dn')}</button><button class="ms" data-ms="1"><svg class="i" viewBox="0 0 24 24"><path d="${P.ck}"/></svg><span>${it.mastered ? 'আয়ত্ত হয়েছে' : 'আয়ত্ত করেছি'}</span></button></div></article>`;
   }
   let io = null;
   function list(){

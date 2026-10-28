@@ -1,4 +1,4 @@
-// 🧩 PHASE 9 — M7: MEMORY ENGINE (LONG-TERM LAYER)
+// 🧩 PHASE 9, M7: MEMORY ENGINE (LONG-TERM LAYER)
 // Typed, owner-scoped long-term memory for the AI agent.
 //
 // Blueprint rule (§52 gap: "Formal short/long-term memory split" was MISSING):
@@ -9,7 +9,7 @@
 // Owner decision for M7 (deliberate deviation from the plan's "default OFF,
 // explicit consent"): long-term memory is on automatically for signed-in students,
 // with no setting and no prompt, and it never expires. What does NOT change is the
-// safety boundary — guests have no durable identity so they get no memory at all,
+// safety boundary, guests have no durable identity so they get no memory at all,
 // and a memory whose owner is not the caller is a leak, not data.
 //
 // This module is pure data plus pure guards: no `env`, no I/O, no worker API, and
@@ -25,7 +25,7 @@ export const KIND = Object.freeze({
   HABIT: 'habit'           // when/how they study, routine
 });
 
-/** Where a memory came from — a statement the student made, or an inference. */
+/** Where a memory came from, a statement the student made, or an inference. */
 export const SOURCE = Object.freeze({
   USER_STATED: 'user_stated',
   AI_INFERRED: 'ai_inferred'
@@ -39,7 +39,7 @@ export const CONFIDENCE_MIN = 0.7;
  *  without bound. Records otherwise never expire. */
 export const MAX_RECORDS = 500;
 
-/** How many records are rendered into a prompt. Nothing is deleted by this —
+/** How many records are rendered into a prompt. Nothing is deleted by this -
  *  it only bounds the context the model sees. Newest and most confident first. */
 export const RENDER_LIMIT = 24;
 
@@ -180,7 +180,7 @@ export function validateMemoryEngine() {
 /* ── Extraction heuristics ────────────────────────────────────────────────────
    Both triggers the owner asked for are recognised here: something the student
    said explicitly ("মনে রাখো"), and a study/preference/habit fact stated in
-   passing. This is intentionally conservative — a candidate still has to clear
+   passing. This is intentionally conservative, a candidate still has to clear
    makeMemory() before it becomes a memory, so a weak signal never stores. */
 
 const RETAIN_TRIGGERS = Object.freeze([
@@ -197,7 +197,7 @@ const SIGNALS = Object.freeze([
   { kind: KIND.STUDIES, key: 'goal', re: new RegExp(`(?:লক্ষ্য|টার্গেট|goal|target)\\s*(?:হলো|হল|হচ্ছে|is)?\\s*[:\\-–]?\\s*(${GOAL_FRAG}{2,60})`, 'iu'), confidence: 0.8 },
   /* Sky step 3: "আমি ঢাকা মেডিকেলে ভর্তি হতে চাই" / "ঢাবিতে চান্স পেতে চাই" is a goal too. */
   { kind: KIND.STUDIES, key: 'goal', re: /((?:\S+\s+){0,4}?\S+?)(?:-?(?:এ|তে|য়))?\s+(?:ভর্তি\s*হতে|চান্স\s*পেতে|পড়তে)\s*চাই/iu, confidence: 0.8 },
-  // The trigger itself is the preference — trailing words add nothing.
+  // The trigger itself is the preference, trailing words add nothing.
   { kind: KIND.PREFERENCE, key: 'answer-style', re: /(ছোট করে|বিস্তারিত|detailed|short answers?|সহজ করে|simple করে)/iu, confidence: 0.75 },
   { kind: KIND.HABIT, key: 'study-time', re: /((?:রাতে|সকালে|বিকেলে|দুপুরে|at night|in the morning|evening)\s*(?:পড়ি|পড়াশোনা|study)[\p{L}\p{M}\p{N} ,.।-]{0,40})/iu, confidence: 0.75 }
 ]);
@@ -229,7 +229,7 @@ export function isRetentionRequest(text) {
 
 /**
  * Turn a user message into memory candidates. Returns an array of inputs to feed
- * makeMemory() — nothing here is stored, and nothing here is trusted yet.
+ * makeMemory(), nothing here is stored, and nothing here is trusted yet.
  */
 export function extractMemoryCandidates(text) {
   const value = sanitizeMemoryText(text, 600);
@@ -327,10 +327,10 @@ export function renderMemory(records, viewVersion = '') {
   const ranked = items
     .sort((a, b) => (b.confidence - a.confidence) || ((b.ts || 0) - (a.ts || 0)))
     .slice(0, RENDER_LIMIT);
-  const lines = ranked.map(r => `- ${KIND_LABEL[r.kind] || r.kind} — ${KEY_LABEL[r.key] || r.key}: ${r.value}`);
-  const v = viewVersion ? ' — ' + viewVersion : '';
+  const lines = ranked.map(r => `- ${KIND_LABEL[r.kind] || r.kind}, ${KEY_LABEL[r.key] || r.key}: ${r.value}`);
+  const v = viewVersion ? ', ' + viewVersion : '';
   const weakRule = ranked.some(r => r.kind === KIND.STUDIES && r.key === 'weak-topic')
-    ? '\nশিক্ষার্থী নিজের দুর্বলতা বা কী পড়বে জানতে চাইলে প্রথম উত্তরেই "দুর্বল বিষয় (শিক্ষার্থী নিজে বলেছে)" লাইনটি ব্যবহার করো — পরীক্ষার ফল না থাকলেও। '
+    ? '\nশিক্ষার্থী নিজের দুর্বলতা বা কী পড়বে জানতে চাইলে প্রথম উত্তরেই "দুর্বল বিষয় (শিক্ষার্থী নিজে বলেছে)" লাইনটি ব্যবহার করো, পরীক্ষার ফল না থাকলেও। '
       + 'কখনো বলবে না "দুর্বলতার কোনো তথ্য নেই"। উদাহরণ: "তুমি এখনো পরীক্ষা দাওনি, তবে আগে বলেছিলে সমাসে দুর্বল। আজ সমাস দিয়ে শুরু করি?"'
     : '';
   return `\n\nLONG-TERM MEMORY${v}:\n${lines.join('\n')}\n`

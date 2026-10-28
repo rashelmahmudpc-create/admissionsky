@@ -163,8 +163,8 @@ test('Firebase SDK self-hosted (Cloudflare stack) with gstatic fallback', () => 
   assert.match(FCM, /const SDK_LOCAL = '.\/sdk'/);
   assert.match(FCM, /try \{ return await tryLoadSdk\(SDK_LOCAL\); \}/);
   assert.match(FCM, /catch \(_\) \{ return await tryLoadSdk\(SDK_BASE\); \}/);
-  assert.ok(HUB.includes("bn: 'বেশিবার চেষ্টা হয়েছে — ১ ঘণ্টা পর আবার চেষ্টা করুন'"), '429 toast bn');
-  assert.ok(HUB.includes("bn: 'Login session সমস্যা — আবার login করে চেষ্টা করুন'"), '401 toast bn');
+  assert.ok(HUB.includes("bn: 'বেশিবার চেষ্টা হয়েছে, ১ ঘণ্টা পর আবার চেষ্টা করুন'"), '429 toast bn');
+  assert.ok(HUB.includes("bn: 'Login session সমস্যা, আবার login করে চেষ্টা করুন'"), '401 toast bn');
   assert.match(HUB, /r === 'register-429'\) toastShort\(sheetT\('errRate'\)/);
   assert.match(HUB, /r === 'register-401'\) toastShort\(sheetT\('errLogin'\)/);
 });

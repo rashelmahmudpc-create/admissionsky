@@ -25,7 +25,7 @@ t('৫. Pages proxy preserves method, headers and request body', WK.includes('ne
 
 /* ── ২. ভার্সন-অখণ্ডতা v204 ── */
 
-t('৬. el-voice-v111 stays deferred outside the lean current app shell', H.includes('vocabulary-elevenlabs.js?v=el-voice-v111') && !SW.includes("'./vocabulary-elevenlabs.js?v=el-voice-v111'") && SW.includes("const BUILD_ID = 'v350-notes-screen-v2'") && H.includes("const expectedSwVersion = 'v350-notes-screen-v2'") && H.includes("const expectedSwVersion = 'v350-notes-screen-v2'") && H.includes("const cur = 'admission-hub-shell-v350-notes-screen-v2'"));
+t('৬. el-voice-v111 stays deferred outside the lean current app shell', H.includes('vocabulary-elevenlabs.js?v=el-voice-v111') && !SW.includes("'./vocabulary-elevenlabs.js?v=el-voice-v111'") && SW.includes("const BUILD_ID = 'v364-sky-goal'") && H.includes("const expectedSwVersion = 'v364-sky-goal'") && H.includes("const expectedSwVersion = 'v364-sky-goal'") && H.includes("const cur = 'admission-hub-shell-v364-sky-goal'"));
 
 /* ── ৩. রানটাইম: এক-ক্লিক → generate+সেভ → ২য়-ক্লিক-নেট-নয় → অফলাইনে-বাজে ── */
 t('৭. রানটাইম: ১ম-ক্লিক generate+ক্যাশ ("generated") → ২য়-ক্লিক ক্যাশ থেকে ("cache", নেট-০) → অফলাইনেও বাজে', (async () => {

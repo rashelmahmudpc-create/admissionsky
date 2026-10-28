@@ -1,4 +1,4 @@
-/* P13 — repeatable load test for the public read path.
+/* P13, repeatable load test for the public read path.
  *
  *   node p13-load-runner.mjs                    # simulated, always runnable
  *   LOAD_URL=https://admission-gk.../api/content node p13-load-runner.mjs
@@ -27,7 +27,7 @@ async function main() {
 
   const res = await run({ users: USERS, perUser: PER_USER, concurrency: CONCURRENCY, request: real.request, now: real.now, budget: { p95: P95_BUDGET, errorRate: ERROR_BUDGET } });
   const s = res.summary;
-  console.log(`load: ${URL_UNDER_TEST || 'simulated'} — ${s.total} reqs, ${s.errors} errors (${(s.errorRate * 100).toFixed(2)}%)`);
+  console.log(`load: ${URL_UNDER_TEST || 'simulated'}, ${s.total} reqs, ${s.errors} errors (${(s.errorRate * 100).toFixed(2)}%)`);
   console.log(`load: p50 ${s.p50.toFixed(0)}ms  p95 ${s.p95.toFixed(0)}ms  p99 ${s.p99.toFixed(0)}ms  max ${s.max.toFixed(0)}ms`);
   console.log(`load: budget p95<=${P95_BUDGET}ms err<=${(ERROR_BUDGET * 100).toFixed(2)}% -> ${res.pass ? 'PASS' : 'FAIL'}`);
   process.exit(res.pass ? 0 : 1);

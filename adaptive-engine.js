@@ -1,4 +1,4 @@
-/* Admission Hub — P11 Adaptive Learning Engine.
+/* Admission Hub, P11 Adaptive Learning Engine.
  *
  * Pure and dependency-free (like question-engine.js / analytics-insight-engine.js /
  * mistake-engine.js), so it runs in the browser as window.AhAdaptiveEngine and
@@ -130,7 +130,7 @@
     return { profile, fastAccuracy: fastAcc == null ? null : Math.round(fastAcc), slowAccuracy: slowAcc == null ? null : Math.round(slowAcc), fastCount: fastN, slowCount: slowN, averageSeconds: avgSeconds };
   }
 
-  /* A small, honest memory of how the student practises — not a stored record,
+  /* A small, honest memory of how the student practises, not a stored record,
      just what this history says right now. */
   function practicePattern(results, rows) {
     const list = (Array.isArray(results) ? results : []).filter(r => r && typeof r === 'object');

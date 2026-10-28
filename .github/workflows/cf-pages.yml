@@ -3,8 +3,44 @@ name: Cloudflare Pages Bundle Guard (No Deploy)
 on:
   pull_request:
     branches: [main]
+    paths:
+      - 'index.html'
+      - 'slug/**'
+      - 'account-access.*'
+      - 'sw.js'
+      - 'public-worker.js'
+      - 'worker-bundle.mjs'
+      - 'gk-agent-worker.js'
+      - 'voice-worker.js'
+      - 'notification-worker.js'
+      - 'ai-agent.js'
+      - 'fcm-notification.mjs'
+      - 'scripts/pii-scan.mjs'
+      - 'seo-routing.test.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'wrangler.toml'
+      - '.github/workflows/cf-pages.yml'
   push:
     branches: [main]
+    paths:
+      - 'index.html'
+      - 'slug/**'
+      - 'account-access.*'
+      - 'sw.js'
+      - 'public-worker.js'
+      - 'worker-bundle.mjs'
+      - 'gk-agent-worker.js'
+      - 'voice-worker.js'
+      - 'notification-worker.js'
+      - 'ai-agent.js'
+      - 'fcm-notification.mjs'
+      - 'scripts/pii-scan.mjs'
+      - 'seo-routing.test.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'wrangler.toml'
+      - '.github/workflows/cf-pages.yml'
   workflow_dispatch:
 
 permissions:
@@ -15,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
       - name: Build the sanitized public bundle without publishing
@@ -42,12 +78,12 @@ jobs:
           head -c 200 dist/robots.txt | grep -Fq 'User-agent:'
           ! head -c 200 dist/robots.txt | grep -Fq '<!DOCTYPE'
           head -c 200 dist/sitemap.xml | grep -Fq '<urlset'
-          head -c 200 dist/sitemap.xml | grep -Fq 'https://admissionhub.pages.dev/'
+          head -c 200 dist/sitemap.xml | grep -Fq 'https://admissionsky.pages.dev/'
 
           # Root page must carry its own title, canonical, OG and JSON-LD.
           grep -Fq '<title>Admission Hub' dist/index.html
-          grep -Fq '<link rel="canonical" href="https://admissionhub.pages.dev/">' dist/index.html
-          grep -Fq 'property="og:image" content="https://admissionhub.pages.dev/og-image.png"' dist/index.html
+          grep -Fq '<link rel="canonical" href="https://admissionsky.pages.dev/">' dist/index.html
+          grep -Fq 'property="og:image" content="https://admissionsky.pages.dev/og-image.png"' dist/index.html
           grep -Fq 'name="twitter:card" content="summary_large_image"' dist/index.html
           grep -Fq 'type="application/ld+json"' dist/index.html
           ! grep -Fq 'A privacy-first admission preparation hub' dist/index.html
@@ -57,7 +93,7 @@ jobs:
           for slug in prottoy prottoy-master sandhi somas; do
             page="dist/courses/$slug/index.html"
             test -s "$page"
-            grep -Fq "<link rel=\"canonical\" href=\"https://admissionhub.pages.dev/courses/$slug/\">" "$page"
+            grep -Fq "<link rel=\"canonical\" href=\"https://admissionsky.pages.dev/courses/$slug/\">" "$page"
             grep -Fq 'name="description"' "$page"
             grep -Fq 'property="og:title"' "$page"
             grep -Fq 'type="application/ld+json"' "$page"
@@ -68,6 +104,9 @@ jobs:
           node --test seo-routing.test.mjs
 
           echo 'SEO artifacts, meta tags and 404 routing are intact.'
+
+      - name: Refuse to publish personal data in a public asset
+        run: node scripts/pii-scan.mjs
 
       - name: Require protected Telegram publication workflow
         run: |

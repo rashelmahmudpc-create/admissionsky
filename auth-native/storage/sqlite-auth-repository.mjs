@@ -178,7 +178,7 @@ export class SqliteAuthRepository {
         policy_version TEXT
       )`,
       `CREATE INDEX IF NOT EXISTS auth_security_events_time ON auth_security_events(occurred_at DESC)`,
-      // Phase 6 — device trust (§5-§7). Opaque HMAC device refs only; no
+      // Phase 6, device trust (§5-§7). Opaque HMAC device refs only; no
       // fingerprinting, no location. A trusted device skips the new-device
       // challenge for its TTL.
       `CREATE TABLE IF NOT EXISTS auth_trusted_devices (
@@ -193,7 +193,7 @@ export class SqliteAuthRepository {
         FOREIGN KEY(user_id) REFERENCES auth_users(user_id)
       )`,
       `CREATE INDEX IF NOT EXISTS auth_trusted_devices_expiry ON auth_trusted_devices(expires_at)`,
-      // Phase 6 — first-class security challenges (§11-§12). Purpose-bound,
+      // Phase 6, first-class security challenges (§11-§12). Purpose-bound,
       // single-use, attempt-capped, expiring. `attempt_id` links the
       // underlying verification attempt (email/Telegram material);
       // `step_up_token_mac` carries the one-time token a verified step-up
@@ -218,7 +218,7 @@ export class SqliteAuthRepository {
       )`,
       `CREATE INDEX IF NOT EXISTS auth_security_challenges_user ON auth_security_challenges(user_id,purpose,status,created_at DESC)`,
       `CREATE INDEX IF NOT EXISTS auth_security_challenges_expiry ON auth_security_challenges(expires_at)`,
-      // Phase 3 — lifecycle overlay. Existing auth_users rows stay untouched;
+      // Phase 3, lifecycle overlay. Existing auth_users rows stay untouched;
       // users without a state row implicitly hold the legacy 'active' state.
       `CREATE TABLE IF NOT EXISTS auth_account_state (
         user_id TEXT PRIMARY KEY,
@@ -231,7 +231,7 @@ export class SqliteAuthRepository {
       `CREATE INDEX IF NOT EXISTS auth_account_state_status ON auth_account_state(status)`
     ];
     for (const statement of statements) this.sql.exec(statement);
-    // Phase 6 — schema v6: auth_security_events gains device_ref / purpose /
+    // Phase 6, schema v6: auth_security_events gains device_ref / purpose /
     // policy_version. Brand-new databases get them from the CREATE above;
     // existing deployments are upgraded by column-presence checks. Gating on
     // actual columns (not the shared schema_version key, which the
@@ -241,12 +241,12 @@ export class SqliteAuthRepository {
     if (!eventColumns.has('device_ref')) this.sql.exec('ALTER TABLE auth_security_events ADD COLUMN device_ref TEXT');
     if (!eventColumns.has('purpose')) this.sql.exec('ALTER TABLE auth_security_events ADD COLUMN purpose TEXT');
     if (!eventColumns.has('policy_version')) this.sql.exec('ALTER TABLE auth_security_events ADD COLUMN policy_version TEXT');
-    // Phase 6 — challenge purpose on account-verification tickets (new-device
+    // Phase 6, challenge purpose on account-verification tickets (new-device
     // challenges reuse the existing ticket flow; NULL = legacy verification).
     const ticketColumns = new Set(this.#rows('PRAGMA table_info(auth_account_verification_tickets)').map(row => row.name));
     if (!ticketColumns.has('purpose')) this.sql.exec('ALTER TABLE auth_account_verification_tickets ADD COLUMN purpose TEXT');
-    // Phase 7 — schema v7: profile personalization fields (blueprint §2, §3,
-    // §12, §14, §21). Additive only — the protected Phase 3 core columns and
+    // Phase 7, schema v7: profile personalization fields (blueprint §2, §3,
+    // §12, §14, §21). Additive only, the protected Phase 3 core columns and
     // write path (setAccountState & friends) are untouched.
     const profileColumns = new Set(this.#rows('PRAGMA table_info(auth_profiles)').map(row => row.name));
     if (!profileColumns.has('mobile')) this.sql.exec('ALTER TABLE auth_profiles ADD COLUMN mobile TEXT');
@@ -267,7 +267,7 @@ export class SqliteAuthRepository {
     this.sql.exec("INSERT INTO auth_meta(key,value) VALUES('schema_version','7') ON CONFLICT(key) DO UPDATE SET value=excluded.value");
   }
 
-  // Phase 6 — device trust lifecycle (§5-§7). Refs are opaque HMAC values;
+  // Phase 6, device trust lifecycle (§5-§7). Refs are opaque HMAC values;
   // nothing here stores raw device ids, IPs or user agents.
   #storeTrustedDevice({ userId, deviceRef, browserClass, now, ttlMs, policyVersion, maxDevices }) {
     const browser = String(browserClass || '').slice(0, 40) || 'unknown';
@@ -342,7 +342,7 @@ export class SqliteAuthRepository {
     })));
   }
 
-  // Phase 6 — security challenge lifecycle (§11-§12).
+  // Phase 6, security challenge lifecycle (§11-§12).
   createSecurityChallenge({ challengeRef, userId, purpose, method, maxAttempts, now, ttlMs, policyVersion, deviceRef }) {
     this.sql.exec(
       `INSERT INTO auth_security_challenges(
@@ -383,7 +383,7 @@ export class SqliteAuthRepository {
   }
 
   // Single-use, race-safe: only a still-sent challenge can be flipped to
-  // verified. The flip is proven by the token MAC stored in the row — a
+  // verified. The flip is proven by the token MAC stored in the row, a
   // concurrent second verify sees the winner's MAC and loses.
   verifySecurityChallenge({ challengeRef, now, stepUpTokenMac }) {
     this.sql.exec(
@@ -447,7 +447,7 @@ export class SqliteAuthRepository {
   }
 
 
-  // Phase 6 Chunk 4 — recent login history for the privacy boundary (§27):
+  // Phase 6 Chunk 4, recent login history for the privacy boundary (§27):
   // method + coarse browser class + time only. No IP, no location, no raw
   // email or raw device identifier ever leave this method.
   recentSecurityHistory({ userId, now, limit }) {
@@ -476,7 +476,7 @@ export class SqliteAuthRepository {
     }));
   }
 
-  // Phase 6 Chunk 4 — admin security health: event counts inside a window.
+  // Phase 6 Chunk 4, admin security health: event counts inside a window.
   securityEventCounts({ now, windowMs }) {
     const start = Number(now) - Number(windowMs);
     const counts = {};
@@ -495,7 +495,7 @@ export class SqliteAuthRepository {
     });
   }
 
-  // Phase 6 Chunk 4 — paged ledger view for admins: refs only, no PII
+  // Phase 6 Chunk 4, paged ledger view for admins: refs only, no PII
   // (subject/user/device are opaque HMAC refs; there is no raw column here).
   listSecurityEvents({ limit, before }) {
     const rows = before
@@ -517,7 +517,7 @@ export class SqliteAuthRepository {
   }
 
   // Risk signals for the login decision (§3-§4), derived from auth_rate_limits
-  // state only — no new table, no raw identifiers leave the DO.
+  // state only, no new table, no raw identifiers leave the DO.
   async getLoginRiskSignals({ emailScope, emailWindowMs, ipScope, ipWindowMs, emailRef, ipRef, now }) {
     const emailStart = Math.floor(Number(now) / Number(emailWindowMs)) * Number(emailWindowMs);
     const ipStart = Math.floor(Number(now) / Number(ipWindowMs)) * Number(ipWindowMs);
@@ -529,7 +529,7 @@ export class SqliteAuthRepository {
     });
   }
 
-  // Read-only reconciliation snapshot (Phase 3). HMAC refs only — never
+  // Read-only reconciliation snapshot (Phase 3). HMAC refs only, never
   // emails, tokens or raw provider subjects.
   async identitySnapshot() {
     const users = this.#rows('SELECT user_id AS id, status FROM auth_users')
@@ -1001,7 +1001,7 @@ export class SqliteAuthRepository {
         input.ipRef, input.deviceRef, input.userAgent
       );
       this.sql.exec('UPDATE auth_users SET last_login_at=? WHERE user_id=?', input.now, row.userId);
-      // Phase 6 — completing a new-device challenge is the consent moment:
+      // Phase 6, completing a new-device challenge is the consent moment:
       // the device that verified earns 30-day trust (config-driven TTL).
       let trusted = false;
       // 2026-10-18: the first (signup) verification is also a consent moment;
@@ -1090,7 +1090,7 @@ export class SqliteAuthRepository {
   }
 
   // ---------------------------------------------------------------------
-  // Phase 7 — Profile & Personal Identity (blueprint §3-§4, §14, §21, §25)
+  // Phase 7, Profile & Personal Identity (blueprint §3-§4, §14, §21, §25)
   // Profile is a consumer of the protected Identity Core: everything below
   // derives the user from the verified session and never rewrites
   // identity/auth fields.
@@ -1123,13 +1123,13 @@ export class SqliteAuthRepository {
       attempt += 1;
       const candidate = await this.#derivePublicId(userId, attempt - 1);
       const clash = this.#one('SELECT user_id AS userId FROM auth_public_identities WHERE public_id=?', candidate);
-      if (clash && clash.userId !== userId) continue; // deterministic collision — retry
+      if (clash && clash.userId !== userId) continue; // deterministic collision, retry
       this.sql.exec('INSERT INTO auth_public_identities(user_id,public_id,created_at) VALUES(?,?,?)', userId, candidate, now);
       return candidate;
     }
   }
 
-  // Blueprint §4 — profile provisioning must never fail a login. Creates a
+  // Blueprint §4, profile provisioning must never fail a login. Creates a
   // neutral, editable placeholder row for accounts that reached a verified
   // session without an onboarding row (legacy/abandoned-onboarding edge).
   #provisionProfile(userId, now) {
@@ -1145,7 +1145,7 @@ export class SqliteAuthRepository {
     return this.#profileForUser(userId);
   }
 
-  // Blueprint §6 — weighted, display-only completion (never blocks access).
+  // Blueprint §6, weighted, display-only completion (never blocks access).
   #profileCompletion(profile, { avatarPresent = false } = {}) {
     if (!profile) return 0;
     let score = 0;
@@ -1184,7 +1184,7 @@ export class SqliteAuthRepository {
     };
   }
 
-  // Blueprint §27/§28 — PATCH semantics: only provided fields change;
+  // Blueprint §27/§28, PATCH semantics: only provided fields change;
   // optimistic concurrency via profile_version (client sends expectVersion).
   async saveProfilePatch(input) {
     return this.#transaction(() => {
@@ -1211,12 +1211,12 @@ export class SqliteAuthRepository {
     });
   }
 
-  // Blueprint §22 — public-safe projection. Private profiles never surface;
+  // Blueprint §22, public-safe projection. Private profiles never surface;
   // limited = name + ID + avatar; public = + target + joined year + bio.
   // Never includes email, mobile, DOB, school details or internal refs.
   async getPublicProfile(input) {
     // Phase 6 fact: suspension lives in auth_account_state (auth_users.status
-    // is the deactivation path) — both must be active for a public surface.
+    // is the deactivation path), both must be active for a public surface.
     const row = this.#one(
       `SELECT p.user_id AS userId,p.full_name AS fullName,p.bio AS bio,p.targets AS targets,p.visibility AS visibility,
         u.created_at AS createdAt,
@@ -1561,7 +1561,7 @@ export class SqliteAuthRepository {
     });
   }
 
-  // Phase 5 — logout-all: revoke every session for one user. Other users'
+  // Phase 5, logout-all: revoke every session for one user. Other users'
   // sessions are untouched (multi-device isolation, blueprint §10-12).
   async revokeUserSessions({ userId, now }) {
     return this.#transaction(() => {
