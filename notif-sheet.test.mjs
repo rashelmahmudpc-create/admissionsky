@@ -10,7 +10,8 @@ const HUB = readFileSync('notification-hub.js', 'utf8');
 const DASH = readFileSync('dashboard-v2.js', 'utf8');
 
 test('dashboard bell: bellTap (inbox/one-time sheet), never history', () => {
-  assert.match(DASH, /dv2-bell[^>]*onclick="NotificationHub\.bellTap\(\)"/, 'bell → bellTap (round 2)');
+  assert.match(DASH, /data-action="notifications"/, 'the bell is a notifications action (dashboard v3)');
+  assert.match(DASH, /notifications:\s*\(\)\s*=>[\s\S]{0,200}?NotificationHub\.bellTap\(\)/, 'the notifications action calls NotificationHub.bellTap()');
   assert.ok(!/dv2-bell[^>]*navigate\('history'\)/.test(DASH), 'bell must not navigate to history');
 });
 
@@ -86,7 +87,8 @@ const SW = readFileSync('sw.js', 'utf8');
 const FCM = readFileSync('notification-fcm.js', 'utf8');
 
 test('bell uses bellTap: registered → inbox, not registered → allow dialog (round 8)', () => {
-  assert.match(DASH, /dv2-bell[^>]*onclick="NotificationHub\.bellTap\(\)"/, 'bell → NotificationHub.bellTap()');
+  assert.match(DASH, /data-action="notifications"/, 'the bell is a notifications action (dashboard v3)');
+  assert.match(DASH, /notifications:\s*\(\)\s*=>[\s\S]{0,200}?NotificationHub\.bellTap\(\)/, 'the notifications action calls NotificationHub.bellTap()');
   assert.match(HUB, /const bellTap = async/);
   assert.match(HUB, /location\.hash = 'notifications'/, 'goInbox navigates to #notifications');
   const bell = HUB.slice(HUB.indexOf('const bellTap'), HUB.indexOf('const markOneRead'));
@@ -119,7 +121,7 @@ test('router: #notifications route + script tags + SW pin (round 8 pins)', () =>
   assert.match(INDEX, /notification-fcm\.js\?v=fcm-p3-v15/);
   assert.match(INDEX, /profile-ui\.js\?v=profile-v20-sky-instr/);
   assert.match(SW, /notification-inbox\.js\?v=notif-inbox-v7/);
-  assert.match(SW, /dashboard-v2\.js\?v=dash2f16-avatar-cache/);
+  assert.match(SW, /dashboard-v2\.js\?v=dash2f18-chrome/);
 })
 
 test('iOS fix: permission ask runs before any network await (hub + fcm)', () => {

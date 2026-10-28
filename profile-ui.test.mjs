@@ -660,7 +660,7 @@ test('v264: poisoned-cache fix — asset re-pin, no-store SW fetch, digest-verif
   // Generated digest manifest — a truncated download can never be precached
   assert.match(SW, /sw-manifest:start/);
   assert.match(SW, /sw-manifest:end/);
-  assert.match(SW, /blob\.digest\('SHA-256'\)/);
+  assert.match(SW, /crypto\.subtle\.digest\('SHA-256'/);
   assert.match(SW, /hex !== expected/);
 });
 

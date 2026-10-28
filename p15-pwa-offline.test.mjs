@@ -103,6 +103,19 @@ test('p15-09: the offline indicator is honest and shipped', () => {
   assert.ok(!/lastError[^\n]*সিংক হয়েছে/.test(js), 'an error must not read as success');
 });
 
+/* The shell precache was silently dead in production: the digest gate called
+ * `Blob.prototype.digest`, which no browser implements, so every asset threw
+ * inside the per-asset try/catch and the shell cache stayed empty (an offline
+ * open fell through to the rescue page). Two things must never come back. */
+test('p15-11: the digest gate uses Web Crypto and tolerates the edge-injected beacon', () => {
+  assert.match(sw, /crypto\.subtle\.digest\('SHA-256'/, 'hashing must use crypto.subtle.digest');
+  assert.doesNotMatch(sw, /\.digest\('SHA-256'\)/, 'Blob.prototype.digest does not exist in any browser');
+  // Cloudflare Pages injects its analytics beacon into HTML at the edge, so a
+  // served document can never match the file on disk byte-for-byte.
+  assert.match(sw, /stripEdgeInjectedAnalytics/, 'the edge-injected snippet must be stripped before hashing');
+  assert.match(sw, /cloudflareinsights/, 'the beacon script must be recognised');
+});
+
 test('p15-10: the offline data boundary is documented', () => {
   const doc = readFileSync(new URL('./docs/P15-OFFLINE-BOUNDARY.md', import.meta.url), 'utf8');
   assert.match(doc, /Safari/i, 'the iOS limitation must be stated');

@@ -178,7 +178,7 @@ test('command center composer: typing never re-renders the form (mobile keyboard
 });
 
 test('index.html: command-center script tag + route dispatch (hidden route, not in nav)', () => {
-  assert.match(INDEX, /<script defer src="\.\/notification-center-route\.js\?v=ns-cc-route-v1"><\/script>/);
+  assert.match(INDEX, /<script type="application\/x-ah-idle" data-ah-src="\.\/notification-center-route\.js\?v=ns-cc-route-v1"><\/script>/);
   assert.match(INDEX, /if\(p==='notif-admin'\)\{/);
   assert.match(INDEX, /window\.NotificationCenterRoute\.render/);
   assert.match(ADMIN_ROUTE, /window\.renderNotificationAdmin = openCenter;/, 'back-compat route contract kept');
@@ -193,7 +193,7 @@ test('pin consistency: index.html script pins match sw.js cache entries + digest
     'notification-center-route.js': 'ns-cc-route-v1'
   };
   for (const [file, pin] of Object.entries(pins)) {
-    assert.match(INDEX, new RegExp(`<script defer src="\\./${file}\\?v=${pin}">`), `${file} pin in index.html`);
+    assert.match(INDEX, new RegExp(`<script type="application/x-ah-idle" data-ah-src="\\./${file}\\?v=${pin}">`), `${file} pin in index.html`);
   }
   /* shell-precached subset (the hub is not in APP_SHELL by design) */
   for (const file of ['notification-fcm.js', 'notification-inbox.js', 'notification-center-route.js']) {

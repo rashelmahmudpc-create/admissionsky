@@ -26,7 +26,7 @@ test('welcome loader is prioritized and logged-in gate still requires verified s
  assert.match(auth,/const sessionReady = refreshSession\(\)\.then\(session =>/);
  assert.match(auth,/if \(accountVerified\(session\) && pageHost.hidden\)/);
  assert.match(auth,/session\?\.authenticated && \(session\?\.accountVerified/);
- assert.match(html,/account-access\.js\?v=20261018-allowlist-v1&startup=fast1/);
+  assert.match(html,/account-access\.js\?v=20261021-turnstile-v1&startup=fast1/);
 });
 test('empty account host does not dismiss loading and warm packs wait until after load',()=>{
  assert.match(html,/el\.innerText\|\|''\)\.trim\(\)\.length>20/);

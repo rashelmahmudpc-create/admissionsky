@@ -61,7 +61,7 @@ const APP_SHELL = [
   './question-engine.js?v=qe1',
   './question-engine-panel.js?v=qe1',
   './notification-fcm.js?v=fcm-p3-v15',
-  './notification-inbox.js?v=notif-inbox-v6',
+  './notification-inbox.js?v=notif-inbox-v7',
   './notification-center-route.js?v=ns-cc-route-v1',
   './analytics-dashboard.js?v=analytics-p4-v1',
   './analytics-insight-engine.js?v=p09-v1',
@@ -127,7 +127,7 @@ const ASSET_DIGESTS = {
   "./question-engine.js?v=qe1": "7f63c4d5f8d917c853dd85ba1a9fd4fdd8f51f7f36f3f9d561ee8fdd1d6441e5",
   "./question-engine-panel.js?v=qe1": "f86b20b325fa1139d3cca774a2bd9f086093fba2e249630b8c32ea7800d02c24",
   "./notification-fcm.js?v=fcm-p3-v15": "5c9b73e7c9b93a9db3a5dc8ca0e78be8dd22484270f4596611719161e43215dd",
-  "./notification-inbox.js?v=notif-inbox-v6": "2de1c6b5c572ee60bea9d53b43b3650326ba1e58b5bab00e1d0175c99c778061",
+  "./notification-inbox.js?v=notif-inbox-v7": "2de1c6b5c572ee60bea9d53b43b3650326ba1e58b5bab00e1d0175c99c778061",
   "./notification-center-route.js?v=ns-cc-route-v1": "5367fd1e9d23759874b68cc9b4688fb849644904e8a9945c80414cad0aed55ef",
   "./analytics-dashboard.js?v=analytics-p4-v1": "77c1d07fd9b5a74c141322edf9536e3bc522bd4efdc4db1f24276652ee4326c6",
   "./analytics-insight-engine.js?v=p09-v1": "7cac05d2955ea34688321a0abac2b1e81abe21100fcf46051fdbc29e82f98dec",
@@ -233,6 +233,35 @@ function rescueResponse() {
   });
 }
 
+/* ── The shell digest gate ───────────────────────────────────────────────────
+ * Two bugs lived here and both silently disabled the whole precache (owner
+ * report 2026-10-28):
+ *  1. `Blob.prototype.digest` is not a web API. The call threw a TypeError
+ *     inside the per-asset try/catch below, so EVERY shell asset was skipped
+ *     and the shell cache stayed empty — an offline open then fell through to
+ *     the rescue page, which unregisters the worker and clears every cache.
+ *     Use `crypto.subtle.digest`, the API every other module in this repo uses.
+ *  2. Cloudflare injects its own analytics beacon into HTML at the edge (Pages
+ *     Analytics: the snippet sits between two `Cloudflare Pages Analytics`
+ *     markers before `</body>`), so a served document can never match the file
+ *     on disk byte-for-byte. ./index.html was rejected on every install even
+ *     once the hash was computed correctly. The injected snippet is not ours,
+ *     so strip it before hashing — then hash exactly what we store. */
+const EDGE_INJECTED_MARK = 'Cloudflare Pages Analytics';
+function stripEdgeInjectedAnalytics(text) {
+  return String(text)
+    .replace(new RegExp(`<!-- ${EDGE_INJECTED_MARK} -->[\\s\\S]*?<!-- ${EDGE_INJECTED_MARK} -->`, 'g'), '')
+    .replace(/<script[^>]*static\.cloudflareinsights\.com\/beacon\.min\.js[^>]*><\/script>/g, '');
+}
+const isHtmlAsset = asset => /\.html?(\?|$)/i.test(asset);
+async function shellDigestHex(asset, blob) {
+  const bytes = isHtmlAsset(asset)
+    ? new TextEncoder().encode(stripEdgeInjectedAnalytics(await blob.text()))
+    : new Uint8Array(await blob.arrayBuffer());
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_NAME);
@@ -245,9 +274,7 @@ self.addEventListener('install', event => {
         // Digest gate: a truncated body has the wrong SHA-256, never cache it.
         const expected = ASSET_DIGESTS[asset];
         if (expected) {
-          const blob = await response.clone().blob();
-          const digest = await blob.digest('SHA-256');
-          const hex = Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+          const hex = await shellDigestHex(asset, await response.clone().blob());
           if (hex !== expected) return; // poisoned download, fetch fresh at runtime
         }
         await cacheNetworkResponse(request, response);
