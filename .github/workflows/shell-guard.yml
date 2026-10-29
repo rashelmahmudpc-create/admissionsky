@@ -2,6 +2,36 @@ name: App Shell Guard
 on:
   push:
     branches: [main]
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'honesty-guard.test.mjs'
+      - 'i18n-guard.test.mjs'
+      - 'intro.test.mjs'
+      - 'crash-pill.test.mjs'
+      - 'idb-hardening.test.mjs'
+      - 'startup-ai-regression.test.mjs'
+      - 'academic-catalog.test.mjs'
+      - 'files-storage.test.mjs'
+      - 'phase23-core.test.mjs'
+      - 'profile-crop-flow.test.mjs'
+      - 'profile-sheets.test.mjs'
+      - 'profile-v2-core.test.mjs'
+      - 'p08-*.test.mjs'
+      - 'p10-*.test.mjs'
+      - 'p11-*.test.mjs'
+      - 'p13-*.test.mjs'
+      - 'p16-*.test.mjs'
+      - 'p18-*.test.mjs'
+      - 'p20-*.test.mjs'
+      - 'p21-*.test.mjs'
+      - 'ai-agent.js'
+      - 'ai-key-sync.mjs'
+      - 'ai-key-sync.test.mjs'
+      - 'sky-ai/**'
+      - 'index.html'
+      - 'sw.js'
+      - '.github/workflows/shell-guard.yml'
   pull_request:
     paths:
       - 'package.json'

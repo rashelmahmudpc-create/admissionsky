@@ -91,8 +91,14 @@ jobs:
 
       - name: Alert Telegram if any guard is red
         env:
-          TG_TOKEN: ${{ secrets.GUARD_TELEGRAM_BOT_TOKEN || secrets.TELEGRAM_BOT_TOKEN }}
-          TG_CHAT: ${{ secrets.GUARD_TELEGRAM_CHAT_ID || secrets.TELEGRAM_CHAT_ID }}
+          # GUARD_TELEGRAM_* is the guard's own pair when one is set. The
+          # fallback is the report bot (REPORT_TELEGRAM_*), NOT the generic
+          # TELEGRAM_* pair: the generic names are the OTP/security-alert bot
+          # bound into the admission-auth Worker, and an alert sent from the
+          # account students receive codes from would be confusing and would
+          # publish the login bot's token in a workflow it does not belong to.
+          TG_TOKEN: ${{ secrets.GUARD_TELEGRAM_BOT_TOKEN || secrets.REPORT_TELEGRAM_BOT_TOKEN }}
+          TG_CHAT: ${{ secrets.GUARD_TELEGRAM_CHAT_ID || secrets.REPORT_TELEGRAM_CHAT_ID }}
         run: |
           if [ ! -s guard-health.txt ] || [ "$(cat guard-health.red 2>/dev/null || echo 0)" = "0" ]; then
             echo "all guards green (or not yet run) — staying quiet"
