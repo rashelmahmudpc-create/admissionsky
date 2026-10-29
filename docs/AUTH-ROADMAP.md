@@ -51,6 +51,11 @@
 - [ ] OTP সঠিক হলে তবেই Firebase account → সাথে সাথে login → dashboard
 - [ ] মাঝপথে ছেড়ে দেওয়া signup নিজে থেকে মুছে যাবে
 
+### A1.5 ③: গার্ড স্বাস্থ্য + ১৫ মিনিটের চেক 🟡 → ✅ (কোড)
+- [x] `.github/workflows/guard-health.yml` — প্রতি ১৫ মিনিটে main-এর ৮টা গার্ডের সর্বশেষ run দেখে, একটা লাল হলে Telegram-এ খবর; সব সবুজ হলে চুপ থাকে (AU-OB-03)
+- [x] নিজের secret জোড়া (`GUARD_TELEGRAM_*`) আগে, generic পরে; OTP বট থেকে পাঠানো নিষিদ্ধ (AdmissionHubVerifyBot নাম দেখে আটকায়)
+- [ ] staging-এ secret সরিয়ে অ্যালার্ট আসে কিনা যাচাই (লাইভ যাচাই বাকি)
+
 ### ধাপ ২: Bot আর অপব্যবহার আটকানো ⬜
 - [ ] একটা device থেকে দিনে সর্বোচ্চ ৫টা OTP (signed cookie + fingerprint + IP বা /64 + ASN)
 - [ ] Turnstile: signup আর OTP এর প্রতিটা request এ server নিজে token যাচাই; token ছাড়া বাতিল

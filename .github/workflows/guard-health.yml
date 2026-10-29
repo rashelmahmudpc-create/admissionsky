@@ -1,0 +1,118 @@
+name: Guards Health (15 min)
+
+# A1.5 ③ / AU-OB-03 (blueprint v1.0, owner order 2026-10-29):
+# "guards health + ১৫ মিনিটের চেক + Telegram".
+#
+# The nightly report already summarises the last 24 hours once a day. That is
+# too slow for a guard that has gone red: main can sit broken for most of a day
+# before anyone hears about it. This check runs every 15 minutes, looks only at
+# the LATEST run of each guard on main, and messages Telegram the moment one of
+# them is red. It is read-only: it never writes to the repo and never re-runs a
+# guard.
+#
+# Quiet by design: when every guard is green (or has not run yet) it sends
+# nothing, so the owner only hears about a real break. It reads its own secret
+# pair first (GUARD_TELEGRAM_*), then the generic pair, and never the OTP bot.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: guard-health
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Find red guards on main
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const { owner, repo } = context.repo;
+            const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const bn = n => Number(n).toLocaleString('bn-BD');
+
+            // The guards this repository promises to keep green. Named rather
+            // than "every workflow" so a deliberately-flaky or advisory
+            // workflow never pages the owner.
+            const GUARDS = [
+              'App Shell Guard',
+              'Cloudflare Native Auth Guard',
+              'Auth Foundation Guard',
+              'Auth Identity Guard',
+              'Email Gateway Guard',
+              'Account Retirement Guard',
+              'Voice Agent Guard',
+              'visual-guard',
+            ];
+            const RED = ['failure', 'timed_out', 'startup_failure'];
+
+            const runs = await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {
+              owner, repo, branch: 'main', per_page: 100,
+            });
+            const done = runs.filter(r => r.status === 'completed');
+
+            // Latest completed run per guard name.
+            const latest = new Map();
+            for (const r of done) {
+              if (!GUARDS.includes(r.name)) continue;
+              const prev = latest.get(r.name);
+              if (!prev || new Date(r.created_at) > new Date(prev.created_at)) latest.set(r.name, r);
+            }
+
+            const red = [...latest.values()].filter(r => RED.includes(r.conclusion));
+            const green = [...latest.values()].filter(r => r.conclusion === 'success');
+            const missing = GUARDS.filter(n => !latest.has(n));
+
+            const when = new Date().toLocaleString('bn-BD', { timeZone: 'Asia/Dhaka', dateStyle: 'medium', timeStyle: 'short' });
+            const L = [];
+            if (red.length) {
+              L.push('<b>🔴 Admission Hub — গার্ড লাল</b>');
+              L.push(`<i>${esc(when)}</i>`);
+              L.push('');
+              L.push(`main-এ ${bn(red.length)}টা গার্ড লাল:`);
+              for (const r of red.slice(0, 10)) L.push(`• <a href="${r.html_url}">${esc(r.name)}</a>`);
+              L.push('');
+              L.push(`🟢 সবুজ: ${bn(green.length)}টা · ❔ চলে নি: ${bn(missing.length)}টা`);
+            }
+            const body = L.join('\n');
+            fs.writeFileSync('guard-health.txt', body);
+            fs.writeFileSync('guard-health.red', String(red.length));
+            console.log(`red=${red.length} green=${green.length} missing=${missing.length}`);
+            if (body) await core.summary.addRaw(body.replace(/\n/g, '<br>')).write();
+
+      - name: Alert Telegram if any guard is red
+        env:
+          TG_TOKEN: ${{ secrets.GUARD_TELEGRAM_BOT_TOKEN || secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT: ${{ secrets.GUARD_TELEGRAM_CHAT_ID || secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ ! -s guard-health.txt ] || [ "$(cat guard-health.red 2>/dev/null || echo 0)" = "0" ]; then
+            echo "all guards green (or not yet run) — staying quiet"
+            exit 0
+          fi
+          if [ -z "$TG_TOKEN" ] || [ -z "$TG_CHAT" ]; then
+            echo "::warning::GUARD_TELEGRAM_BOT_TOKEN / GUARD_TELEGRAM_CHAT_ID not set — alert is only in the Job Summary"
+            exit 0
+          fi
+          # Never send from the OTP/login bot: a guard alert from the account
+          # students receive codes from would confuse both.
+          BOT_ID="$(curl -sS --fail-with-body "https://api.telegram.org/bot${TG_TOKEN}/getMe" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("result",{}).get("username",""))' 2>/dev/null || true)"
+          echo "alert bot: ${BOT_ID:-unknown}"
+          if [ "$BOT_ID" = "AdmissionHubVerifyBot" ]; then
+            echo "::error::the alert token belongs to the OTP bot (AdmissionHubVerifyBot) — refusing to send"
+            exit 1
+          fi
+          curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TG_CHAT}" \
+            --data-urlencode "parse_mode=HTML" \
+            --data-urlencode "disable_web_page_preview=true" \
+            --data-urlencode "text@guard-health.txt" > /dev/null
+          echo "guard alert sent"
