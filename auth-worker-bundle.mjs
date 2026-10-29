@@ -375,13 +375,13 @@ var ACCOUNT_VERIFICATION_LIMITS = Object.freeze([
 var FIREBASE_OPERATION_LIMITS = Object.freeze({
   signup: Object.freeze([
     Object.freeze({ scope: "firebase-verification-email-minute", source: "email", limit: 1, windowMs: FIREBASE_VERIFICATION_RESEND_COOLDOWN_MS }),
-    Object.freeze({ scope: "firebase-verification-email-day", source: "email", limit: 8, windowMs: 24 * 60 * 60 * 1e3 }),
+    Object.freeze({ scope: "firebase-verification-email-day", source: "email", limit: 3, windowMs: 24 * 60 * 60 * 1e3 }),
     Object.freeze({ scope: "firebase-verification-ip-hour", source: "ip", limit: 20, windowMs: 60 * 60 * 1e3 }),
     Object.freeze({ scope: "firebase-verification-device-hour", source: "device", limit: 10, windowMs: 60 * 60 * 1e3 })
   ]),
   "verification-resend": Object.freeze([
     Object.freeze({ scope: "firebase-verification-email-minute", source: "email", limit: 1, windowMs: FIREBASE_VERIFICATION_RESEND_COOLDOWN_MS }),
-    Object.freeze({ scope: "firebase-verification-email-day", source: "email", limit: 8, windowMs: 24 * 60 * 60 * 1e3 }),
+    Object.freeze({ scope: "firebase-verification-email-day", source: "email", limit: 3, windowMs: 24 * 60 * 60 * 1e3 }),
     Object.freeze({ scope: "firebase-verification-ip-hour", source: "ip", limit: 20, windowMs: 60 * 60 * 1e3 }),
     Object.freeze({ scope: "firebase-verification-device-hour", source: "device", limit: 10, windowMs: 60 * 60 * 1e3 })
   ]),
