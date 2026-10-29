@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="bn"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Admission Hub — অ্যাডমিন ড্যাশবোর্ড</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#14181f;--mu:#667085;--bd:#e4e7ec;--ok:#067647;--bad:#b42318;--ac:#2563eb}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1116;--card:#171b22;--tx:#e8eaee;--mu:#98a2b3;--bd:#2a303a;--ok:#4ade80;--bad:#f87171;--ac:#60a5fa}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,"Noto Sans Bengali",sans-serif;padding:16px;max-width:760px;margin-inline:auto}
+h1{font-size:20px;margin:0 0 12px}.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
+.card h2{font-size:15px;margin:0 0 8px;display:flex;justify-content:space-between;gap:8px}
+.row{display:flex;gap:8px;flex-wrap:wrap}input{flex:1;min-width:0;padding:10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx)}
+button{padding:10px 14px;border:0;border-radius:8px;background:var(--ac);color:#fff;font-weight:600}button.s{background:var(--bd);color:var(--tx)}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.mu{color:var(--mu);font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.stat{background:var(--bg);border-radius:8px;padding:10px}.stat b{display:block;font-size:20px}
+pre{margin:8px 0 0;padding:10px;background:var(--bg);border-radius:8px;overflow-x:auto;max-height:220px;font-size:12px;white-space:pre-wrap;word-break:break-word}
+</style></head><body>
+<h1>Admission Hub — অ্যাডমিন</h1>
+<div class="card"><h2>অ্যাডমিন টোকেন</h2>
+<div class="row"><input id="tok" type="password" placeholder="ADMIN_TOKEN" autocomplete="off"><button id="go">লোড</button></div>
+<p class="mu">টোকেন শুধু এই ট্যাবের সেশনে থাকে, ট্যাব বন্ধ করলে মুছে যায়। শুধু নিজের ডিভাইসে ব্যবহার করুন।</p></div>
+<div class="card"><h2>সার্ভার <span id="h-s"></span></h2><div id="h-b" class="mu">—</div></div>
+<div class="card"><h2>কনটেন্ট <span id="c-s"></span></h2><div class="stats" id="c-b"></div></div>
+<div class="card"><h2>ইন্টিগ্রিটি যাচাই <span id="v-s"></span></h2><pre id="v-b">—</pre></div>
+<div class="card"><h2>এরর লগ <span id="e-s"></span></h2><pre id="e-b">—</pre></div>
+<div class="card"><h2>ব্যাকআপ <span id="b-s"></span></h2>
+<button class="s" id="snap">এখনই স্ন্যাপশট নিন</button><pre id="b-b">—</pre></div>
+<script>
+const $=s=>document.querySelector(s),tok=$('#tok');
+tok.value=sessionStorage.getItem('ah_admin')||'';
+const api=async(p,o={})=>{const t=tok.value.trim();let r,d=null;
+try{r=await fetch(p,{...o,headers:{'Content-Type':'application/json',...(t?{Authorization:'Bearer '+t}:{})}});
+try{d=await r.json()}catch(_){}return{ok:r.ok,status:r.status,data:d}}catch(e){return{ok:false,status:0,data:{error:String(e)}}}};
+const tag=(id,r)=>{const e=$(id);e.className=r.ok?'ok':'bad';e.textContent=r.ok?'✓ ঠিক আছে':(r.status===403?'✗ টোকেন ভুল':'✗ ত্রুটি '+r.status)};
+const js=d=>JSON.stringify(d,null,2);const n=a=>Array.isArray(a)?a.length:'—';
+async function load(){sessionStorage.setItem('ah_admin',tok.value.trim());
+const [h,c,v,e,b]=await Promise.all([api('/api/health'),api('/api/admin/content'),api('/api/admin/verify'),api('/api/admin/errors'),api('/api/admin/backup')]);
+tag('#h-s',h);$('#h-b').textContent=h.data?('সর্বশেষ সাড়া: '+new Date(h.data.at||Date.now()).toLocaleString('bn-BD')):'—';
+tag('#c-s',c);const d=c.data||{};const st=$('#c-b');st.replaceChildren();
+if(c.ok)[['ভার্সন',d.v??'—'],['প্রশ্ন',n(d.questions)],['ভোকাবুলারি',n(d.vocabulary)],['পরীক্ষা',n(d.exams)]].forEach(([k,x])=>{const s=document.createElement('div');s.className='stat';const bb=document.createElement('b');bb.textContent=x;s.append(bb,k);st.append(s)});
+tag('#v-s',v);$('#v-b').textContent=js(v.data);
+tag('#e-s',e);$('#e-b').textContent=js(e.data);
+tag('#b-s',b);$('#b-b').textContent=js(b.data)}
+$('#go').onclick=load;
+$('#snap').onclick=async()=>{if(!confirm('এখনই একটি ব্যাকআপ স্ন্যাপশট নেবেন?'))return;const r=await api('/api/admin/backup',{method:'POST'});alert(r.ok?'স্ন্যাপশট নেওয়া হয়েছে':'ব্যর্থ: '+js(r.data));load()};
+if(tok.value)load();
+</script></body></html>
