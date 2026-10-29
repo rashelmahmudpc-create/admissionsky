@@ -103,10 +103,18 @@ test('seed assets and manifests stay 200', async () => {
 
 test('unknown crawler-visible URLs are real 404s', async () => {
   for (const path of ['/nonexistent-xyz', '/login', '/signup', '/dashboard',
-    '/about', '/blog', '/admin', '/wp-login.php']) {
+    '/blog', '/admin', '/wp-login.php']) {
     const res = await get(path);
     assert.equal(res.status, 404, `${path} must be 404`);
     assert.equal(res.headers.get('x-robots-tag'), 'noindex, follow');
+  }
+});
+
+test('about and contact are real public pages, not 404s', async () => {
+  for (const path of ['/about', '/about.html', '/contact', '/contact.html']) {
+    const res = await get(path);
+    assert.equal(res.status, 200, `${path} must stay 200`);
+    assert.match(res.headers.get('content-type'), /text\/html/);
   }
 });
 

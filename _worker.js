@@ -64,6 +64,7 @@ const isServerOnlyAsset = pathname => SERVER_ONLY_ASSETS.has(pathname) ||
 const PUBLIC_ROUTES = new Set([
   '/', '/index.html',
   '/privacy', '/privacy.html', '/data-deletion', '/data-deletion.html',
+  '/about', '/about.html', '/contact', '/contact.html',
   /* The account page is a single full-screen document now; these preview pages
      stay reachable so the owner can open the designs on their own. */
   '/splash-preview', '/splash-preview.html',
@@ -223,7 +224,7 @@ export default {
       // Serve only the two legal .html aliases through their Pages canonical paths.
       // This avoids the .html redirect while retaining the strict SEO allowlist.
       let assetRequest = request;
-      if (url.pathname === '/privacy.html' || url.pathname === '/data-deletion.html') {
+      if (['/privacy.html', '/data-deletion.html', '/about.html', '/contact.html'].includes(url.pathname)) {
         const assetUrl = new URL(request.url);
         assetUrl.pathname = url.pathname.slice(0, -5);
         assetRequest = new Request(assetUrl, request);

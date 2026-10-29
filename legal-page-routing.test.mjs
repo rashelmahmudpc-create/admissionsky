@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import worker from './_worker.js';
 
-for (const page of ['privacy', 'data-deletion']) {
+for (const page of ['privacy', 'data-deletion', 'about', 'contact']) {
   for (const suffix of ['', '.html']) {
     for (const method of ['GET', 'HEAD']) {
       test(`${method} /${page}${suffix} serves the legal page without redirect`, async () => {
         const html = await readFile(new URL(`./${page}.html`, import.meta.url), 'utf8');
-        const expected = page === 'privacy' ? 'Privacy Policy' : 'Data Deletion';
+        const expected = { privacy: 'Privacy Policy', 'data-deletion': 'Data Deletion', about: 'About', contact: 'Contact' }[page];
         const env = { ASSETS: { async fetch(request) {
           const url = new URL(request.url);
           assert.equal(url.pathname, `/${page}`);
