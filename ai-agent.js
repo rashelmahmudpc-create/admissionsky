@@ -15,6 +15,7 @@
  * Test-যোগ্যতা: module-import-এ কোনো worker-API নেই, pure ফাংশন + handler,
  * env/fetch পরীক্ষায় mock করা যায় (ai-agent-f1.test.mjs)।
  */
+import { corsHeaders } from './cors-policy.mjs';
 import { buildContext, renderContext, describeContext, CONTEXT_VERSION } from './context-engine.js';
 import { getPromptText, BASE_PROMPT_ID } from './prompt-registry.js';
 import { listTools, TOOL_REGISTRY_VERSION } from './tool-registry.js';
@@ -990,8 +991,8 @@ export function authVerificationGuidance(text) {
   return 'Telegram যাচাই করতে AdmissionSky-এ “Telegram দিয়ে যাচাই করুন” চাপুন, official bot খুলে START চাপুন, তারপর bot-এর পাঠানো কোডটি শুধু AdmissionSky-এর verification box-এ লিখুন। আমি OTP তৈরি, অনুমান, দেখা, পুনরাবৃত্তি বা যাচাই করতে পারি না এবং verification সফলও ঘোষণা করতে পারি না, শুধু AdmissionSky-এর নিশ্চিত ফলই চূড়ান্ত। Telegram যাচাই Gmail/ইমেইল মালিকানা প্রমাণ করে না।';
 }
 
-function guidanceResponse(text, stream) {
-  if (!stream) return jsonResp({ text, intent: INTENTS.GENERAL_CHAT, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, authoritative: false });
+function guidanceResponse(text, stream, request = null) {
+  if (!stream) return jsonResp({ text, intent: INTENTS.GENERAL_CHAT, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, authoritative: false }, 200, request);
   const encoder = new TextEncoder();
   return new Response(new ReadableStream({
     start(controller) {
@@ -1001,7 +1002,7 @@ function guidanceResponse(text, stream) {
     }
   }), {
     status: 200,
-    headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'Access-Control-Allow-Origin': '*' }
+    headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', ...corsHeaders(request) }
   });
 }
 
@@ -1025,14 +1026,14 @@ export async function agentChat(request, env, uid, opts = {}) {
      so it can neither personalise nor be remembered, it is refused up front. */
   if (!sendCtx.uid.startsWith('account-')) {
     const msg = { error: 'sign_in_required', message: 'AI চ্যাট ব্যবহার করতে লগইন করো।' };
-    return stream ? sseError(msg, 401) : jsonResp(msg, 401);
+    return stream ? sseError(msg, 401, request) : jsonResp(msg, 401, request);
   }
   const body = await request.json().catch(() => null);
   const v = validateChatReq(body);
-  if (!v.ok) return jsonResp({ error: v.code, message: v.message }, 400);
+  if (!v.ok) return jsonResp({ error: v.code, message: v.message }, 400, request);
   const onboarding = sanitizeOnboardingContext(body?.context?.onboarding);
   if (onboarding && v.messages.some(message => message.role === 'user' && onboardingSecretDetected(message.content))) {
-    return guidanceResponse('নিরাপত্তার জন্য Password, verification code বা গোপন তথ্য Assistant নেয় না। এমন কিছু লিখে থাকলে সেটি বদলে শুধু সাধারণ প্রশ্ন করো।', stream);
+    return guidanceResponse('নিরাপত্তার জন্য Password, verification code বা গোপন তথ্য Assistant নেয় না। এমন কিছু লিখে থাকলে সেটি বদলে শুধু সাধারণ প্রশ্ন করো।', stream, request);
   }
 
   const intentCls = classifyIntent(v.messages[v.messages.length - 1].content);
@@ -1122,7 +1123,7 @@ export async function agentChat(request, env, uid, opts = {}) {
   }
   if (toolPlan.length && isSimplePlan(toolPlan, toolText)) {
     const prof = sanitizeProfileContext(body && body.context && body.context.profile) || {};
-    const tr = await simpleToolResponse(toolPlan, stream, { intent, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, firstName: prof.firstName, stats, statedWeak, kv: env && env.PUB_KV }).catch(() => null);
+    const tr = await simpleToolResponse(toolPlan, stream, { intent, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, firstName: prof.firstName, stats, statedWeak, kv: env && env.PUB_KV }, request).catch(() => null);
     if (tr) { mark('tools'); emitTiming({ tools: toolPlan.length, quota: false }); return tr; }
   }
 
@@ -1148,7 +1149,7 @@ export async function agentChat(request, env, uid, opts = {}) {
     /* Owner 2026-10-17: tell the student exactly when the window reopens. */
     const resetAt = (quota.start || now) + RL_WINDOW_MS;
     try { bumpDailyStats(env, statsFromTiming({ limited: true })).catch(() => {}); } catch (_) {}
-    return jsonResp({ error: 'rate_limited', message: limitMessage(cap, resetAt, now), cap, remaining: quota.remaining, resetAt, retryAfterSec: Math.max(60, Math.ceil((resetAt - now) / 1000)) }, 429);
+    return jsonResp({ error: 'rate_limited', message: limitMessage(cap, resetAt, now), cap, remaining: quota.remaining, resetAt, retryAfterSec: Math.max(60, Math.ceil((resetAt - now) / 1000)) }, 429, request);
   }
   /* AI audit 2026-10-16: a message the AI never answered (every provider
      failed) gives its credit back, with a default cap of 10/day a provider
@@ -1163,16 +1164,16 @@ export async function agentChat(request, env, uid, opts = {}) {
   };
 
   const verificationGuidance = authVerificationGuidance(v.messages[v.messages.length - 1].content);
-  if (verificationGuidance) return guidanceResponse(verificationGuidance, stream);
+  if (verificationGuidance) return guidanceResponse(verificationGuidance, stream, request);
   const { kvKeys, badMap, badSet } = await providersP;
   let { chain } = await providersP;
   if (!chain.length) {
     const msg = { error: 'no_providers', message: 'AI-সেবা এখন কনফিগার করা নেই, দয়া করে মালিককে জানাও (GEMINI_KEYS)।' };
-    return stream ? sseError(msg, 503) : jsonResp(msg, 503);
+    return stream ? sseError(msg, 503, request) : jsonResp(msg, 503, request);
   }
   if (safety.blocked) {
     const msg = { error: 'mock_refused', message: safety.message };
-    return stream ? sseError(msg, 403) : jsonResp(msg, 403);
+    return stream ? sseError(msg, 403, request) : jsonResp(msg, 403, request);
   }
   /* PR-2: from here on, in streaming mode the work runs inside an already-open
      stream, so the student sees the first byte at once and each stage is sent
@@ -1403,9 +1404,9 @@ export async function agentChat(request, env, uid, opts = {}) {
         await settleBackground();
         emitTiming({ cache: cacheMode });
         if (!stream) {
-          return jsonResp({ text: cachedText, structured: hit.payload.structured ?? null, model: cachedModel || null, intent, cached: true, pv: SYSTEM_PROMPT_V, latencyMs: Date.now() - startedAt, agent: AGENT_VERSION });
+          return jsonResp({ text: cachedText, structured: hit.payload.structured ?? null, model: cachedModel || null, intent, cached: true, pv: SYSTEM_PROMPT_V, latencyMs: Date.now() - startedAt, agent: AGENT_VERSION }, 200, request);
         }
-        return sseCached(cachedText, intent, startedAt, cachedModel);
+        return sseCached(cachedText, intent, startedAt, cachedModel, request);
       }
     } catch (_) { /* a cache fault never breaks chat, fall through to the live path */ }
   }
@@ -1537,7 +1538,7 @@ export async function agentChat(request, env, uid, opts = {}) {
           await settleBackground();
           emitTrace({ provider: c.provider, model: c.model, text: raw, responseType: check.structured?.type, validated: !check.enforced });
           emitTiming({ cache: cacheMode ? cacheMode + '-miss' : 'off', provider: c.provider });
-          return jsonResp({ text: check.text, structured: check.structured, model: c.model, intent, pv: SYSTEM_PROMPT_V, latencyMs: Date.now() - startedAt, agent: AGENT_VERSION });
+          return jsonResp({ text: check.text, structured: check.structured, model: c.model, intent, pv: SYSTEM_PROMPT_V, latencyMs: Date.now() - startedAt, agent: AGENT_VERSION }, 200, request);
         }
         lastErr = 'empty-' + c.model;
       } catch (e) {
@@ -1557,7 +1558,7 @@ export async function agentChat(request, env, uid, opts = {}) {
     await refundQuota();
     emitTrace({ fallbackReason: FALLBACK.PROVIDER_ERROR, validated: false });
     emitTiming({ failed: true });
-    return jsonResp({ error: 'provider_failed', message: 'AI একটু ব্যস্ত, কয়েক সেকেন্ড পরে আবার চেষ্টা করো।', retryable: true }, 502);
+    return jsonResp({ error: 'provider_failed', message: 'AI একটু ব্যস্ত, কয়েক সেকেন্ড পরে আবার চেষ্টা করো।', retryable: true }, 502, request);
   }
 
   /* ── STREAMING (SSE) ── */
@@ -1682,20 +1683,20 @@ export async function agentChat(request, env, uid, opts = {}) {
       'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
       'X-Accel-Buffering': 'no',
-      'Access-Control-Allow-Origin': '*'
+      ...corsHeaders(request)
     }
   });
   };
   if (!stream) return core();
   mark('open');
-  return openEarly(core, early, () => prepStage('understand', STAGE_UNDERSTAND[intent] || STAGE_UNDERSTAND.GENERAL_CHAT));
+  return openEarly(core, early, () => prepStage('understand', STAGE_UNDERSTAND[intent] || STAGE_UNDERSTAND.GENERAL_CHAT), request);
 }
 
 /* PR-2: open the SSE response at once and pipe the real answer into it when it
    is ready. Stage events written during preparation go out first, in order.
    A plain queue (no backpressure): the work and the memory save must finish
    even when the reader is slow, exactly as with the inner stream. */
-function openEarly(run, early, first) {
+function openEarly(run, early, first, request = null) {
   const enc = new TextEncoder();
   let ctl = null;
   const readable = new ReadableStream({ start(c) { ctl = c; } });
@@ -1722,7 +1723,7 @@ function openEarly(run, early, first) {
       'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
       'X-Accel-Buffering': 'no',
-      'Access-Control-Allow-Origin': '*'
+      ...corsHeaders(request)
     }
   });
 }
@@ -1875,26 +1876,26 @@ export async function agentStatus(request, env, uid) {
   });
 }
 
-function jsonResp(d, s = 200) {
+function jsonResp(d, s = 200, request = null) {
   return new Response(JSON.stringify(d), {
     status: s,
-    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'content-type,x-ah-guest', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS' }
+    headers: { 'Content-Type': 'application/json', ...corsHeaders(request), 'Access-Control-Allow-Headers': 'content-type,x-ah-guest', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS' }
   });
 }
-function sseError(msg, status) {
+function sseError(msg, status, request = null) {
   const enc = new TextEncoder();
   return new Response(new ReadableStream({
     start(controller) {
       controller.enqueue(enc.encode(`event: error\ndata: ${JSON.stringify(msg)}\n\n`));
       controller.close();
     }
-  }), { status, headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache', 'Access-Control-Allow-Origin': '*' } });
+  }), { status, headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache', ...corsHeaders(request) } });
 }
 
 /* P25: replay a cached answer on the SSE contract the client already parses.
    No provider was called, so no stage events are emitted, the text and the
    `done` event are the whole exchange, exactly as the client expects. */
-function sseCached(text, intent, startedAt, model) {
+function sseCached(text, intent, startedAt, model, request = null) {
   const enc = new TextEncoder();
   return new Response(new ReadableStream({
     start(controller) {
@@ -1903,7 +1904,7 @@ function sseCached(text, intent, startedAt, model) {
       push(`event: done\ndata: ${JSON.stringify({ model: model || null, provider: 'cache', intent, cached: true, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt })}\n\n`);
       try { controller.close(); } catch (_) {}
     }
-  }), { status: 200, headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache', 'Access-Control-Allow-Origin': '*' } });
+  }), { status: 200, headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache', ...corsHeaders(request) } });
 }
 
 export const __test = {

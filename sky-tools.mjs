@@ -18,6 +18,7 @@
  * sends only the cleaned question text (no name, stats, email, phone or id),
  * and the answer must cite the source links. Off: PUB_KV 'sky:web-search' = "off".
  */
+import { corsHeaders } from './cors-policy.mjs';
 import { loadAppFeatures, renderAppFeatures, isAppFeatureQuestion } from './sky-app-features.mjs';
 import { isNewsQuestion, cleanSearchQuery, webSearch, renderSearchContext } from './sky-web-search.mjs';
 import { searchQueryFor, renderSearchFailure } from './sky-web-search.mjs';
@@ -303,7 +304,7 @@ export async function toolsEnabled(kv) {
  * Returns null when the tools could not produce an answer (the normal AI path
  * then takes over). meta: { intent, pv, agent, firstName, stats, kv }.
  */
-export async function simpleToolResponse(plan, stream, meta = {}) {
+export async function simpleToolResponse(plan, stream, meta = {}, request = null) {
   const startedAt = Date.now();
   const stages = [];
   const run = await runTools([plan], { stats: meta.stats, statedWeak: meta.statedWeak, kv: meta.kv, onStage: (id, label) => stages.push({ stage: id, label }) });
@@ -311,7 +312,7 @@ export async function simpleToolResponse(plan, stream, meta = {}) {
   if (!text) return null;
   const tools = run.results.map((r) => ({ name: r.name, ok: !!r.ok }));
   const done = { intent: meta.intent || 'GENERAL_CHAT', pv: meta.pv, agent: meta.agent, provider: 'tools', tools, toolsVersion: SKY_TOOLS_VERSION, latencyMs: Date.now() - startedAt, quotaUsed: false };
-  if (!stream) return new Response(JSON.stringify(Object.assign({ text }, done)), { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*' } });
+  if (!stream) return new Response(JSON.stringify(Object.assign({ text }, done)), { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', ...corsHeaders(request) } });
   const enc = new TextEncoder();
   return new Response(new ReadableStream({
     start(c) {
@@ -321,6 +322,6 @@ export async function simpleToolResponse(plan, stream, meta = {}) {
       push(`event: done\ndata: ${JSON.stringify(done)}\n\n`);
       try { c.close(); } catch (_) {}
     }
-  }), { status: 200, headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'Access-Control-Allow-Origin': '*' } });
+  }), { status: 200, headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', ...corsHeaders(request) } });
 }
 

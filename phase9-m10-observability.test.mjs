@@ -164,7 +164,7 @@ t('M10-২৯. agentStatus advertises observability as shape, not capability',
   && Array.isArray(describeObservability().pricedProviders)
   && describeObservability().pricedProviders.length === 0);
 t('M10-৩০. the rate limit still answers 429 with the same error code and cap',
-  AGENT_SRC.includes("error: 'rate_limited'") && AGENT_SRC.includes('}, 429)')
+  AGENT_SRC.includes("error: 'rate_limited'") && AGENT_SRC.includes('}, 429, request)')
   && AGENT_SRC.includes('quotaState({ used: quotaNow.n, cap })'));
 
 /* ── ৭ক. The per-user state moved to a Durable Object ──

@@ -234,6 +234,33 @@ CREATE INDEX IF NOT EXISTS idx_list_kind ON content_lists(kind, ord);
   }
 });
 
+// cors-policy.mjs
+var PRODUCTION_HOSTS = /* @__PURE__ */ new Set([
+  "admissionhub.pages.dev",
+  "admissionsky.pages.dev",
+  "admission-gk.admissionhub.workers.dev"
+]);
+var allowedOrigin = (origin) => {
+  if (!origin) return false;
+  try {
+    const url = new URL(origin);
+    if (url.protocol !== "https:") return false;
+    if (url.port) return false;
+    return PRODUCTION_HOSTS.has(url.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+};
+var corsHeaders = (request) => {
+  const origin = request && request.headers && request.headers.get("Origin") || "";
+  if (!origin || !allowedOrigin(origin)) return { Vary: "Origin" };
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Credentials": "true",
+    Vary: "Origin"
+  };
+};
+
 // context-engine.js
 var CONTEXT_VERSION = "ctx-v1";
 var CATEGORY = Object.freeze({
@@ -1230,7 +1257,7 @@ async function toolsEnabled(kv2) {
     return true;
   }
 }
-async function simpleToolResponse(plan, stream, meta = {}) {
+async function simpleToolResponse(plan, stream, meta = {}, request = null) {
   const startedAt = Date.now();
   const stages = [];
   const run = await runTools([plan], { stats: meta.stats, statedWeak: meta.statedWeak, kv: meta.kv, onStage: (id, label) => stages.push({ stage: id, label }) });
@@ -1238,7 +1265,7 @@ async function simpleToolResponse(plan, stream, meta = {}) {
   if (!text) return null;
   const tools = run.results.map((r) => ({ name: r.name, ok: !!r.ok }));
   const done = { intent: meta.intent || "GENERAL_CHAT", pv: meta.pv, agent: meta.agent, provider: "tools", tools, toolsVersion: SKY_TOOLS_VERSION, latencyMs: Date.now() - startedAt, quotaUsed: false };
-  if (!stream) return new Response(JSON.stringify(Object.assign({ text }, done)), { status: 200, headers: { "Content-Type": "application/json; charset=utf-8", "Access-Control-Allow-Origin": "*" } });
+  if (!stream) return new Response(JSON.stringify(Object.assign({ text }, done)), { status: 200, headers: { "Content-Type": "application/json; charset=utf-8", ...corsHeaders(request) } });
   const enc = new TextEncoder();
   return new Response(new ReadableStream({
     start(c) {
@@ -1264,7 +1291,7 @@ data: ${JSON.stringify(done)}
       } catch (_) {
       }
     }
-  }), { status: 200, headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform", "Access-Control-Allow-Origin": "*" } });
+  }), { status: 200, headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform", ...corsHeaders(request) } });
 }
 
 // sky-daily-report.mjs
@@ -4023,8 +4050,8 @@ function authVerificationGuidance(text) {
   if (!verificationTopic && !possibleBareOtp) return "";
   return "Telegram যাচাই করতে AdmissionSky-এ “Telegram দিয়ে যাচাই করুন” চাপুন, official bot খুলে START চাপুন, তারপর bot-এর পাঠানো কোডটি শুধু AdmissionSky-এর verification box-এ লিখুন। আমি OTP তৈরি, অনুমান, দেখা, পুনরাবৃত্তি বা যাচাই করতে পারি না এবং verification সফলও ঘোষণা করতে পারি না, শুধু AdmissionSky-এর নিশ্চিত ফলই চূড়ান্ত। Telegram যাচাই Gmail/ইমেইল মালিকানা প্রমাণ করে না।";
 }
-function guidanceResponse(text, stream) {
-  if (!stream) return jsonResp({ text, intent: INTENTS.GENERAL_CHAT, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, authoritative: false });
+function guidanceResponse(text, stream, request = null) {
+  if (!stream) return jsonResp({ text, intent: INTENTS.GENERAL_CHAT, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, authoritative: false }, 200, request);
   const encoder8 = new TextEncoder();
   return new Response(new ReadableStream({
     start(controller) {
@@ -4039,7 +4066,7 @@ data: ${JSON.stringify({ intent: INTENTS.GENERAL_CHAT, pv: SYSTEM_PROMPT_V, agen
     }
   }), {
     status: 200,
-    headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform", "Access-Control-Allow-Origin": "*" }
+    headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform", ...corsHeaders(request) }
   });
 }
 async function agentChat(request, env, uid, opts = {}) {
@@ -4064,14 +4091,14 @@ async function agentChat(request, env, uid, opts = {}) {
   const sendCtx = { uid: String(uid || ""), stream };
   if (!sendCtx.uid.startsWith("account-")) {
     const msg = { error: "sign_in_required", message: "AI চ্যাট ব্যবহার করতে লগইন করো।" };
-    return stream ? sseError(msg, 401) : jsonResp(msg, 401);
+    return stream ? sseError(msg, 401, request) : jsonResp(msg, 401, request);
   }
   const body = await request.json().catch(() => null);
   const v = validateChatReq(body);
-  if (!v.ok) return jsonResp({ error: v.code, message: v.message }, 400);
+  if (!v.ok) return jsonResp({ error: v.code, message: v.message }, 400, request);
   const onboarding = sanitizeOnboardingContext(body?.context?.onboarding);
   if (onboarding && v.messages.some((message) => message.role === "user" && onboardingSecretDetected(message.content))) {
-    return guidanceResponse("নিরাপত্তার জন্য Password, verification code বা গোপন তথ্য Assistant নেয় না। এমন কিছু লিখে থাকলে সেটি বদলে শুধু সাধারণ প্রশ্ন করো।", stream);
+    return guidanceResponse("নিরাপত্তার জন্য Password, verification code বা গোপন তথ্য Assistant নেয় না। এমন কিছু লিখে থাকলে সেটি বদলে শুধু সাধারণ প্রশ্ন করো।", stream, request);
   }
   const intentCls = classifyIntent(v.messages[v.messages.length - 1].content);
   const intent = intentCls.intent;
@@ -4140,7 +4167,7 @@ async function agentChat(request, env, uid, opts = {}) {
   }
   if (toolPlan.length && isSimplePlan(toolPlan, toolText)) {
     const prof = sanitizeProfileContext(body && body.context && body.context.profile) || {};
-    const tr = await simpleToolResponse(toolPlan, stream, { intent, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, firstName: prof.firstName, stats, statedWeak, kv: env && env.PUB_KV }).catch(() => null);
+    const tr = await simpleToolResponse(toolPlan, stream, { intent, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, firstName: prof.firstName, stats, statedWeak, kv: env && env.PUB_KV }, request).catch(() => null);
     if (tr) {
       mark("tools");
       emitTiming({ tools: toolPlan.length, quota: false });
@@ -4177,7 +4204,7 @@ async function agentChat(request, env, uid, opts = {}) {
       });
     } catch (_) {
     }
-    return jsonResp({ error: "rate_limited", message: limitMessage(cap, resetAt, now), cap, remaining: quota.remaining, resetAt, retryAfterSec: Math.max(60, Math.ceil((resetAt - now) / 1e3)) }, 429);
+    return jsonResp({ error: "rate_limited", message: limitMessage(cap, resetAt, now), cap, remaining: quota.remaining, resetAt, retryAfterSec: Math.max(60, Math.ceil((resetAt - now) / 1e3)) }, 429, request);
   }
   const refundQuota = async () => {
     try {
@@ -4192,16 +4219,16 @@ async function agentChat(request, env, uid, opts = {}) {
     }
   };
   const verificationGuidance = authVerificationGuidance(v.messages[v.messages.length - 1].content);
-  if (verificationGuidance) return guidanceResponse(verificationGuidance, stream);
+  if (verificationGuidance) return guidanceResponse(verificationGuidance, stream, request);
   const { kvKeys, badMap, badSet } = await providersP;
   let { chain } = await providersP;
   if (!chain.length) {
     const msg = { error: "no_providers", message: "AI-সেবা এখন কনফিগার করা নেই, দয়া করে মালিককে জানাও (GEMINI_KEYS)।" };
-    return stream ? sseError(msg, 503) : jsonResp(msg, 503);
+    return stream ? sseError(msg, 503, request) : jsonResp(msg, 503, request);
   }
   if (safety.blocked) {
     const msg = { error: "mock_refused", message: safety.message };
-    return stream ? sseError(msg, 403) : jsonResp(msg, 403);
+    return stream ? sseError(msg, 403, request) : jsonResp(msg, 403, request);
   }
   const early = { sent: /* @__PURE__ */ new Set(), push: null };
   const prepStage = (id, label) => {
@@ -4389,9 +4416,9 @@ data: ${JSON.stringify({ stage: id, label })}
           await settleBackground();
           emitTiming({ cache: cacheMode });
           if (!stream) {
-            return jsonResp({ text: cachedText, structured: hit.payload.structured ?? null, model: cachedModel || null, intent, cached: true, pv: SYSTEM_PROMPT_V, latencyMs: Date.now() - startedAt, agent: AGENT_VERSION });
+            return jsonResp({ text: cachedText, structured: hit.payload.structured ?? null, model: cachedModel || null, intent, cached: true, pv: SYSTEM_PROMPT_V, latencyMs: Date.now() - startedAt, agent: AGENT_VERSION }, 200, request);
           }
-          return sseCached(cachedText, intent, startedAt, cachedModel);
+          return sseCached(cachedText, intent, startedAt, cachedModel, request);
         }
       } catch (_) {
       }
@@ -4496,7 +4523,7 @@ data: ${JSON.stringify({ stage: id, label })}
             await settleBackground();
             emitTrace({ provider: c.provider, model: c.model, text: raw, responseType: check.structured?.type, validated: !check.enforced });
             emitTiming({ cache: cacheMode ? cacheMode + "-miss" : "off", provider: c.provider });
-            return jsonResp({ text: check.text, structured: check.structured, model: c.model, intent, pv: SYSTEM_PROMPT_V, latencyMs: Date.now() - startedAt, agent: AGENT_VERSION });
+            return jsonResp({ text: check.text, structured: check.structured, model: c.model, intent, pv: SYSTEM_PROMPT_V, latencyMs: Date.now() - startedAt, agent: AGENT_VERSION }, 200, request);
           }
           lastErr = "empty-" + c.model;
         } catch (e) {
@@ -4512,7 +4539,7 @@ data: ${JSON.stringify({ stage: id, label })}
       await refundQuota();
       emitTrace({ fallbackReason: FALLBACK.PROVIDER_ERROR, validated: false });
       emitTiming({ failed: true });
-      return jsonResp({ error: "provider_failed", message: "AI একটু ব্যস্ত, কয়েক সেকেন্ড পরে আবার চেষ্টা করো।", retryable: true }, 502);
+      return jsonResp({ error: "provider_failed", message: "AI একটু ব্যস্ত, কয়েক সেকেন্ড পরে আবার চেষ্টা করো।", retryable: true }, 502, request);
     }
     const encoder8 = new TextEncoder();
     const streamOut = new ReadableStream({
@@ -4635,15 +4662,15 @@ data: ${JSON.stringify({ error: "stream_failed", message: "সংযোগ ব�
         "Cache-Control": "no-cache, no-transform",
         "Connection": "keep-alive",
         "X-Accel-Buffering": "no",
-        "Access-Control-Allow-Origin": "*"
+        ...corsHeaders(request)
       }
     });
   };
   if (!stream) return core();
   mark("open");
-  return openEarly(core, early, () => prepStage("understand", STAGE_UNDERSTAND[intent] || STAGE_UNDERSTAND.GENERAL_CHAT));
+  return openEarly(core, early, () => prepStage("understand", STAGE_UNDERSTAND[intent] || STAGE_UNDERSTAND.GENERAL_CHAT), request);
 }
-function openEarly(run, early, first) {
+function openEarly(run, early, first, request = null) {
   const enc = new TextEncoder();
   let ctl = null;
   const readable = new ReadableStream({ start(c) {
@@ -4689,7 +4716,7 @@ data: ${JSON.stringify({ error: "stream_failed", message: "যুক্তি-�
       "Cache-Control": "no-cache, no-transform",
       "Connection": "keep-alive",
       "X-Accel-Buffering": "no",
-      "Access-Control-Allow-Origin": "*"
+      ...corsHeaders(request)
     }
   });
 }
@@ -4850,13 +4877,13 @@ async function agentStatus(request, env, uid) {
     context: ctxOn ? describeContext(buildContext({ uid, prefs: null, stats: null, onboarding: null, memoryOn: true })) : { enabled: false }
   });
 }
-function jsonResp(d, s = 200) {
+function jsonResp(d, s = 200, request = null) {
   return new Response(JSON.stringify(d), {
     status: s,
-    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "content-type,x-ah-guest", "Access-Control-Allow-Methods": "GET,POST,OPTIONS" }
+    headers: { "Content-Type": "application/json", ...corsHeaders(request), "Access-Control-Allow-Headers": "content-type,x-ah-guest", "Access-Control-Allow-Methods": "GET,POST,OPTIONS" }
   });
 }
-function sseError(msg, status) {
+function sseError(msg, status, request = null) {
   const enc = new TextEncoder();
   return new Response(new ReadableStream({
     start(controller) {
@@ -4866,9 +4893,9 @@ data: ${JSON.stringify(msg)}
 `));
       controller.close();
     }
-  }), { status, headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache", "Access-Control-Allow-Origin": "*" } });
+  }), { status, headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache", ...corsHeaders(request) } });
 }
-function sseCached(text, intent, startedAt, model) {
+function sseCached(text, intent, startedAt, model, request = null) {
   const enc = new TextEncoder();
   return new Response(new ReadableStream({
     start(controller) {
@@ -4890,7 +4917,7 @@ data: ${JSON.stringify({ model: model || null, provider: "cache", intent, cached
       } catch (_) {
       }
     }
-  }), { status: 200, headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache", "Access-Control-Allow-Origin": "*" } });
+  }), { status: 200, headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache", ...corsHeaders(request) } });
 }
 
 // ai-actions.mjs
@@ -5406,13 +5433,16 @@ async function restoreSnapshot(env, key) {
 }
 
 // public-worker.js
-var JSONH = {
-  "Content-Type": "application/json",
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization,content-type,x-ah-app,x-ah-guest",
-  "Access-Control-Allow-Methods": "GET,POST,OPTIONS"
-};
-var json2 = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: JSONH });
+var CORS_ALLOW_HEADERS = "authorization,content-type,x-ah-app,x-ah-guest";
+var json2 = (data, status = 200, request = null) => new Response(JSON.stringify(data), {
+  status,
+  headers: {
+    "Content-Type": "application/json",
+    ...corsHeaders(request),
+    "Access-Control-Allow-Headers": CORS_ALLOW_HEADERS,
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS"
+  }
+});
 var onlyRows = (rows4) => (Array.isArray(rows4) ? rows4 : []).filter((row) => row && row.id).map((row) => {
   const clean4 = { ...row };
   for (const key of ["imageDataUrl", "image", "thumbnail"]) {
@@ -5712,16 +5742,16 @@ var verifyIntegrity = (doc) => {
 };
 var admin = async (request, env, path) => {
   const token = String(request.headers.get("Authorization") || "").replace("Bearer ", "").trim();
-  if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) return json2({ error: "forbidden" }, 403);
+  if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) return json2({ error: "forbidden" }, 403, request);
   if (path === "/api/admin/content" && request.method === "GET") {
     const raw = await env.PUB_KV.get("pubContent");
-    return json2(raw ? JSON.parse(raw) : { v: 0, questions: [], vocabulary: [], exams: [] });
+    return json2(raw ? JSON.parse(raw) : { v: 0, questions: [], vocabulary: [], exams: [] }, 200, request);
   }
   if (path === "/api/admin/verify" && request.method === "GET") {
     const raw = await env.PUB_KV.get("pubContent");
     const doc = raw ? JSON.parse(raw) : {};
     const report = verifyIntegrity(doc);
-    return json2(report, report.ok ? 200 : 409);
+    return json2(report, report.ok ? 200 : 409, request);
   }
   if (path === "/api/admin/publish" && request.method === "POST") {
     const body = await request.json().catch(() => ({}));
@@ -5736,16 +5766,16 @@ var admin = async (request, env, path) => {
     }
     if (full && Array.isArray(full.questions) && full.questions.some((row) => row && row.id)) {
       const result = await publishGlobal(env, full);
-      if (result.error === "empty") return json2({ error: "প্রশ্ন খালি" }, 400);
-      if (result.error === "too-large") return json2({ error: "কনটেন্ট আকারসীমার বেশি, কমানো ছবি বাদ দিয়ে আবার চেষ্টা করো", code: "too-large" }, 413);
-      if (result.error === "integrity") return json2({ error: "কনটেন্ট যাচাইয়ে ব্যর্থ, আগের সংস্করণই থাকল", code: "integrity" }, 409);
-      return json2(result);
+      if (result.error === "empty") return json2({ error: "প্রশ্ন খালি" }, 400, request);
+      if (result.error === "too-large") return json2({ error: "কনটেন্ট আকারসীমার বেশি, কমানো ছবি বাদ দিয়ে আবার চেষ্টা করো", code: "too-large" }, 413, request);
+      if (result.error === "integrity") return json2({ error: "কনটেন্ট যাচাইয়ে ব্যর্থ, আগের সংস্করণই থাকল", code: "integrity" }, 409, request);
+      return json2(result, 200, request);
     }
-    return json2({ error: "প্রশ্ন খালি" }, 400);
+    return json2({ error: "প্রশ্ন খালি" }, 400, request);
   }
   if (path === "/api/admin/ai-daily-report" && request.method === "GET") {
     const days = new URL(request.url).searchParams.get("days");
-    return json2(await listReports(env.PUB_KV, days || 7));
+    return json2(await listReports(env.PUB_KV, days || 7), 200, request);
   }
   if (path === "/api/admin/errors" && request.method === "GET") {
     let log = [];
@@ -5755,46 +5785,52 @@ var admin = async (request, env, path) => {
     } catch (_) {
       log = [];
     }
-    return json2(summarizeErrors(log));
+    return json2(summarizeErrors(log), 200, request);
   }
   if (path === "/api/admin/backup" && request.method === "GET") {
-    return json2(await listSnapshots(env));
+    return json2(await listSnapshots(env), 200, request);
   }
   if (path === "/api/admin/backup" && request.method === "POST") {
     try {
       const entry = await createSnapshot(env);
-      return json2({ ok: true, snapshot: entry });
+      return json2({ ok: true, snapshot: entry }, 200, request);
     } catch (error) {
-      return json2({ ok: false, error: String(error?.message || error) }, 500);
+      return json2({ ok: false, error: String(error?.message || error) }, 500, request);
     }
   }
   if (path === "/api/admin/restore" && request.method === "POST") {
     const body = await request.json().catch(() => ({}));
     const key = String(body.key || "").trim();
-    if (!key) return json2({ ok: false, error: "key-required" }, 400);
+    if (!key) return json2({ ok: false, error: "key-required" }, 400, request);
     const result = await restoreSnapshot(env, key);
-    return json2(result, result.ok ? 200 : 404);
+    return json2(result, result.ok ? 200 : 404, request);
   }
-  return json2({ error: "not-found" }, 404);
+  return json2({ error: "not-found" }, 404, request);
 };
 var public_worker_default = {
   async fetch(request, env) {
-    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: JSONH });
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: {
+        ...corsHeaders(request),
+        "Access-Control-Allow-Headers": CORS_ALLOW_HEADERS,
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS"
+      } });
+    }
     const url = new URL(request.url);
     const path = url.pathname;
     try {
       if (isGuarded(request, path)) {
         const guard = await checkAbuse(request, env, { salt: env.PUBLIC_RATE_SALT || "" });
         if (!guard.allowed) {
-          return json2({ error: "rate_limited", message: "একটু বেশি অনুরোধ এসেছে, কিছুক্ষণ পরে আবার চেষ্টা করো।", retryAfter: guard.retryAfter }, 429);
+          return json2({ error: "rate_limited", message: "একটু বেশি অনুরোধ এসেছে, কিছুক্ষণ পরে আবার চেষ্টা করো।", retryAfter: guard.retryAfter }, 429, request);
         }
       }
-      if (path === "/api/health") return json2({ ok: true, accountSystem: "retired", legacyAccountSystem: "retired", nativeAuth: "cloudflare-native-v1", identity: "firebase-account-or-ephemeral-guest", at: Date.now() });
+      if (path === "/api/health") return json2({ ok: true, accountSystem: "retired", legacyAccountSystem: "retired", nativeAuth: "cloudflare-native-v1", identity: "firebase-account-or-ephemeral-guest", at: Date.now() }, 200, request);
       if (path === "/api/content/meta" && request.method === "GET") {
         const raw = await env.PUB_KV.get("pubContentMeta");
         if (raw) {
           const meta = JSON.parse(raw);
-          if (meta.categories) return json2(meta);
+          if (meta.categories) return json2(meta, 200, request);
           try {
             let vocabRows = null;
             if (env.PROFILE_DB) {
@@ -5810,15 +5846,15 @@ var public_worker_default = {
             if (vocabRows) {
               const enriched = { ...meta, categories: categoryCountsOf({ vocabularyMaster: vocabRows }) };
               await env.PUB_KV.put("pubContentMeta", JSON.stringify(enriched));
-              return json2(enriched);
+              return json2(enriched, 200, request);
             }
           } catch (_) {
           }
-          return json2(meta);
+          return json2(meta, 200, request);
         }
         const full = await env.PUB_KV.get("pubContent");
         const doc = full ? JSON.parse(full) : { v: 0, at: 0, questions: [] };
-        return json2({ v: doc.v || 0, at: doc.at || 0, sig: doc.sig || "", counts: countsOf(doc), categories: categoryCountsOf(doc) });
+        return json2({ v: doc.v || 0, at: doc.at || 0, sig: doc.sig || "", counts: countsOf(doc), categories: categoryCountsOf(doc) }, 200, request);
       }
       if (path === "/api/content" && request.method === "GET") {
         if (env.PROFILE_DB) {
@@ -5847,18 +5883,18 @@ var public_worker_default = {
                       total: meta.counts && meta.counts.questions,
                       page: { limit: pageLimit, offset },
                       source: "d1"
-                    });
+                    }, 200, request);
                   }
                 }
                 const document = await reader.document();
-                if (document) return json2({ v: meta.v || 0, at: meta.at || 0, sig: meta.sig, ...document, source: "d1" });
+                if (document) return json2({ v: meta.v || 0, at: meta.at || 0, sig: meta.sig, ...document, source: "d1" }, 200, request);
               }
             }
           } catch (_) {
           }
         }
         const raw = await env.PUB_KV.get("pubContent");
-        return json2(paginateContent(raw ? JSON.parse(raw) : { v: 0, at: 0, questions: [], vocabulary: [], exams: [] }, url.searchParams.get("limit"), url.searchParams.get("offset")));
+        return json2(paginateContent(raw ? JSON.parse(raw) : { v: 0, at: 0, questions: [], vocabulary: [], exams: [] }, url.searchParams.get("limit"), url.searchParams.get("offset")), 200, request);
       }
       if (path.startsWith("/api/admin/")) return admin(request, env, path);
       if (path === "/api/ai/status" && request.method === "GET") {
@@ -5875,12 +5911,12 @@ var public_worker_default = {
           const viaSky = await forwardWithIdentity(request, env, identity.uid, void 0, headers);
           if (viaSky) {
             const data2 = await viaSky.json().catch(() => null);
-            if (data2) return json2(redactAiStatus(data2, isOwner), viaSky.status);
+            if (data2) return json2(redactAiStatus(data2, isOwner), viaSky.status, request);
           }
         }
         const res = await agentStatus(request, env, identity.uid);
         const data = await res.json().catch(() => null);
-        return data ? json2(redactAiStatus(data, isOwner), res.status) : res;
+        return data ? json2(redactAiStatus(data, isOwner), res.status, request) : res;
       }
       if (path === "/api/ai/prefs" && request.method === "GET") {
         const identity = await aiRequestIdentity(request, env, false);
@@ -5893,30 +5929,30 @@ var public_worker_default = {
         } catch (_) {
           prefs = null;
         }
-        return json2({ prefs: prefs || AI_PREFS_DEFAULT });
+        return json2({ prefs: prefs || AI_PREFS_DEFAULT }, 200, request);
       }
       if (path === "/api/ai/sky-flags" && request.method === "GET") {
         const identity = await aiRequestIdentity(request, env, false);
         const viaSky = identity.uid ? await forwardWithIdentity(request, env, identity.uid) : null;
         if (viaSky) return viaSky;
-        return json2({ ok: true, flags: {}, source: "gk-fallback" });
+        return json2({ ok: true, flags: {}, source: "gk-fallback" }, 200, request);
       }
       if (path === "/api/ai/prefs" && request.method === "POST") {
         const identity = await aiRequestIdentity(request, env, false);
-        if (!identity.authenticated) return json2({ error: "sign_in_required", message: "AI Personalization save-এর জন্য login দরকার।" }, 401);
+        if (!identity.authenticated) return json2({ error: "sign_in_required", message: "AI Personalization save-এর জন্য login দরকার।" }, 401, request);
         const body = await request.json().catch(() => null);
         const prefs = sanitizeAiPrefs(body);
-        if (!prefs) return json2({ error: "invalid_prefs", message: "সঠিক preference দাও।" }, 400);
+        if (!prefs) return json2({ error: "invalid_prefs", message: "সঠিক preference দাও।" }, 400, request);
         try {
           await env.PUB_KV.put("aiprefs:" + identity.uid, JSON.stringify(prefs));
         } catch (_) {
-          return json2({ error: "save_failed", message: "এখন save করা গেল না, আবার চেষ্টা করো।" }, 500);
+          return json2({ error: "save_failed", message: "এখন save করা গেল না, আবার চেষ্টা করো।" }, 500, request);
         }
-        return json2({ ok: true, prefs });
+        return json2({ ok: true, prefs }, 200, request);
       }
       if (path === "/api/ai/instructions" && (request.method === "GET" || request.method === "POST" || request.method === "DELETE")) {
         const identity = await aiRequestIdentity(request, env, false);
-        if (!identity.authenticated) return json2({ error: "sign_in_required", message: "নির্দেশনা সেভ করতে লগইন করো।" }, 401);
+        if (!identity.authenticated) return json2({ error: "sign_in_required", message: "নির্দেশনা সেভ করতে লগইন করো।" }, 401, request);
         const viaSky = request.method === "GET" ? await forwardWithIdentity(request, env, identity.uid) : await forwardWithIdentityBody(request, env, identity.uid);
         if (viaSky) return viaSky;
         const body = request.method === "POST" ? await request.json().catch(() => null) : null;
@@ -5924,51 +5960,51 @@ var public_worker_default = {
       }
       if (path === "/api/ai/memory/clear" && request.method === "POST") {
         const identity = await aiRequestIdentity(request, env, false);
-        if (!identity.authenticated) return json2({ error: "sign_in_required", message: "AI মেমরি মুছতে লগইন করো।" }, 401);
+        if (!identity.authenticated) return json2({ error: "sign_in_required", message: "AI মেমরি মুছতে লগইন করো।" }, 401, request);
         const viaSky = await forwardWithIdentityBody(request, env, identity.uid);
         if (viaSky) return viaSky;
         try {
           await clearAiEverything(env, identity.uid);
         } catch (_) {
-          return json2({ error: "clear_failed", message: "এখন মুছে ফেলা গেল না, আবার চেষ্টা করো।" }, 500);
+          return json2({ error: "clear_failed", message: "এখন মুছে ফেলা গেল না, আবার চেষ্টা করো।" }, 500, request);
         }
-        return json2({ ok: true, message: "তোমার AI মেমরি মুছে ফেলা হয়েছে।" });
+        return json2({ ok: true, message: "তোমার AI মেমরি মুছে ফেলা হয়েছে।" }, 200, request);
       }
       if (path === "/api/ai/actions/propose" && request.method === "POST") {
         const identity = await aiRequestIdentity(request, env, false);
-        if (!identity.authenticated) return json2({ error: "sign_in_required", message: "AI action ব্যবহার করতে লগইন করো।" }, 401);
+        if (!identity.authenticated) return json2({ error: "sign_in_required", message: "AI action ব্যবহার করতে লগইন করো।" }, 401, request);
         if (actionsEnabled(env)) {
           const viaSky = await forwardWithIdentityBody(request, env, identity.uid);
           if (viaSky) return viaSky;
         }
         const body = await request.json().catch(() => null);
         const r = await proposeAction(env, identity.uid, body);
-        return json2(r.body, r.status);
+        return json2(r.body, r.status, request);
       }
       if (path === "/api/ai/actions/confirm" && request.method === "POST") {
         const identity = await aiRequestIdentity(request, env, false);
-        if (!identity.authenticated) return json2({ error: "sign_in_required", message: "AI action ব্যবহার করতে লগইন করো।" }, 401);
+        if (!identity.authenticated) return json2({ error: "sign_in_required", message: "AI action ব্যবহার করতে লগইন করো।" }, 401, request);
         if (actionsEnabled(env)) {
           const viaSky = await forwardWithIdentityBody(request, env, identity.uid);
           if (viaSky) return viaSky;
         }
         const body = await request.json().catch(() => null);
         const r = await confirmAction(env, identity.uid, body);
-        return json2(r.body, r.status);
+        return json2(r.body, r.status, request);
       }
       if (path === "/api/ai/actions/audit" && request.method === "GET") {
         const identity = await aiRequestIdentity(request, env, false);
-        if (!identity.authenticated) return json2({ error: "sign_in_required", message: "AI action ব্যবহার করতে লগইন করো।" }, 401);
+        if (!identity.authenticated) return json2({ error: "sign_in_required", message: "AI action ব্যবহার করতে লগইন করো।" }, 401, request);
         if (actionsEnabled(env)) {
           const viaSky = await forwardWithIdentity(request, env, identity.uid);
           if (viaSky) return viaSky;
         }
-        return json2({ ok: true, actionsEnabled: actionsEnabled(env), audit: await readAudit(env, identity.uid) });
+        return json2({ ok: true, actionsEnabled: actionsEnabled(env), audit: await readAudit(env, identity.uid) }, 200, request);
       }
       if (path === "/api/ai/recall" && request.method === "POST") {
         const identity = await aiRequestIdentity(request, env, false);
-        if (!identity.authenticated) return json2({ error: "sign_in_required", recall: null }, 401);
-        if (identity.persistMemory === false) return json2({ ok: true, recall: null });
+        if (!identity.authenticated) return json2({ error: "sign_in_required", recall: null }, 401, request);
+        if (identity.persistMemory === false) return json2({ ok: true, recall: null }, 200, request);
         const viaSky = await forwardWithIdentityBody(request, env, identity.uid);
         if (viaSky) return viaSky;
         const body = await request.json().catch(() => null);
@@ -5976,21 +6012,21 @@ var public_worker_default = {
       }
       if (path === "/api/ai/chat" && request.method === "POST") {
         const identity = await aiRequestIdentity(request, env, false);
-        if (!identity.authenticated) return json2({ error: "sign_in_required", message: "AI চ্যাট ব্যবহার করতে লগইন করো।" }, 401);
+        if (!identity.authenticated) return json2({ error: "sign_in_required", message: "AI চ্যাট ব্যবহার করতে লগইন করো।" }, 401, request);
         return await chatWithFallback(request, env, identity, { stream: true });
       }
       if (path === "/api/ai" && request.method === "POST") {
         const identity = await aiRequestIdentity(request, env, false);
-        if (!identity.authenticated) return json2({ error: "sign_in_required", message: "AI চ্যাট ব্যবহার করতে লগইন করো।" }, 401);
+        if (!identity.authenticated) return json2({ error: "sign_in_required", message: "AI চ্যাট ব্যবহার করতে লগইন করো।" }, 401, request);
         return await chatWithFallback(request, env, identity, { stream: false });
       }
-      return json2({ error: "not-found" }, 404);
+      return json2({ error: "not-found" }, 404, request);
     } catch (error) {
       const status = Number(error?.status) || 500;
       if (status >= 500) {
         await recordError(env, { path, method: request.method, status, message: error?.message || String(error) });
       }
-      return json2({ error: String(error?.message || error).slice(0, 180) }, status);
+      return json2({ error: String(error?.message || error).slice(0, 180) }, status, request);
     }
   }
 };
@@ -8449,33 +8485,6 @@ async function handleInternalEmailRequest(request, env = {}, ctx = {}, runtime =
   }
 }
 var __emailWorkerTest = Object.freeze({ readBoundedBody });
-
-// cors-policy.mjs
-var PRODUCTION_HOSTS = /* @__PURE__ */ new Set([
-  "admissionhub.pages.dev",
-  "admissionsky.pages.dev",
-  "admission-gk.admissionhub.workers.dev"
-]);
-var allowedOrigin = (origin) => {
-  if (!origin) return false;
-  try {
-    const url = new URL(origin);
-    if (url.protocol !== "https:") return false;
-    if (url.port) return false;
-    return PRODUCTION_HOSTS.has(url.hostname.toLowerCase());
-  } catch {
-    return false;
-  }
-};
-var corsHeaders = (request) => {
-  const origin = request && request.headers && request.headers.get("Origin") || "";
-  if (!origin || !allowedOrigin(origin)) return { Vary: "Origin" };
-  return {
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Credentials": "true",
-    Vary: "Origin"
-  };
-};
 
 // auth-native/core/errors.mjs
 var AUTH_ERROR_CODES = Object.freeze({
@@ -32938,6 +32947,27 @@ var ownerProof = (request, env) => {
   const header = String(request.headers.get("X-AH-Admin-Token") || "").trim();
   return tokenEquals2(bearer, env.ADMIN_TOKEN) || tokenEquals2(header, env.ADMIN_TOKEN);
 };
+var hex2 = (buffer) => [...new Uint8Array(buffer)].map((b) => b.toString(16).padStart(2, "0")).join("");
+var alertSignature = async (secret, timestamp, body) => {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  return hex2(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${timestamp}.${body}`)));
+};
+var ALERT_SIGNATURE_SKEW_MS = 5 * 60 * 1e3;
+var proxyProof = async (request, rawBody, env) => {
+  if (!env || !env.ALERT_PROXY_SECRET) return false;
+  const stamp = String(request.headers.get("x-ah-proxy-ts") || "").trim();
+  const sent = String(request.headers.get("x-ah-proxy-sig") || "").trim();
+  if (!stamp || !sent) return false;
+  const ts = Number(stamp);
+  if (!Number.isFinite(ts) || Math.abs(Date.now() - ts) > ALERT_SIGNATURE_SKEW_MS) return false;
+  return tokenEquals2(await alertSignature(env.ALERT_PROXY_SECRET, stamp, rawBody), sent);
+};
 var readSessionCookie = (request) => {
   const raw = String(request.headers.get("Cookie") || "");
   for (const part of raw.split(";")) {
@@ -33380,11 +33410,13 @@ async function sendTelegramAlert(env, text) {
   }
 }
 async function handleErrorReport(request, env) {
-  const proxied = request.headers.get("x-ah-pages-proxy") === "1";
-  if (!proxied) return json7(request, { error: "forbidden" }, 403);
+  const rawBody = await request.text();
+  if (request.headers.get("x-ah-pages-proxy") !== "1" || !await proxyProof(request, rawBody, env)) {
+    return json7(request, { error: "forbidden" }, 403);
+  }
   let body = {};
   try {
-    body = await request.json();
+    body = JSON.parse(rawBody);
   } catch (_) {
   }
   const message = alertField(body.message, 500);
@@ -33393,8 +33425,14 @@ async function handleErrorReport(request, env) {
   const signature = alertField(body.signature, 120) || path;
   const release = alertField(body.release, 60);
   const source = alertField(body.source, 40);
-  if (!env.TG_BOT_TOKEN || !env.TG_CHAT_ID) return json7(request, { skipped: "telegram-not-configured" });
-  if (!env.GK_KV) return json7(request, { skipped: "no-kv" });
+  if (!env.TG_BOT_TOKEN || !env.TG_CHAT_ID) {
+    console.error("[alert] Telegram is not configured: TG_BOT_TOKEN/TG_CHAT_ID missing");
+    return json7(request, { error: "telegram-not-configured" }, 503);
+  }
+  if (!env.GK_KV) {
+    console.error("[alert] GK_KV is not bound: alert de-duplication and the hourly cap cannot run");
+    return json7(request, { error: "no-kv" }, 503);
+  }
   const now = Date.now();
   const hourBucket = `alertHour:${Math.floor(now / 36e5)}`;
   try {
@@ -33536,14 +33574,18 @@ var gk_agent_worker_default = {
       }
     }
     if (url.pathname === "/health") {
-      return json7(request, { ok: true, keys: keys(env).length, askKey: !!env.ASK_API_KEY, kv: !!env.GK_KV, tg: !!env.TG_BOT_TOKEN, agent: "agent-f1", gemini: !!env.GEMINI_KEYS, groq: !!env.GROQ_API_KEY, lastDay: env.GK_KV ? await env.GK_KV.get("gkDay") : null });
+      if (ownerProof(request, env)) {
+        return json7(request, { ok: true, keys: keys(env).length, askKey: !!env.ASK_API_KEY, kv: !!env.GK_KV, tg: !!env.TG_BOT_TOKEN, agent: "agent-f1", gemini: !!env.GEMINI_KEYS, groq: !!env.GROQ_API_KEY, lastDay: env.GK_KV ? await env.GK_KV.get("gkDay") : null });
+      }
+      return json7(request, { ok: true });
     }
     const isApp = request.headers.get("X-AH-App") === APP_HEADER;
     const writeRoute = url.pathname === "/api/cloud/publish" || url.pathname === "/api/bank" || url.pathname === "/api/ask";
     const stateChanging = writeRoute && request.method === "POST";
     const beaconOk = false;
     if (!isApp && !beaconOk) return json7(request, { error: "forbidden" }, 403);
-    if (stateChanging && !ownerProof(request, env) && !await verifiedSession(request, env)) {
+    const bankRead = url.pathname === "/api/bank" && request.method === "GET";
+    if ((stateChanging || bankRead) && !ownerProof(request, env) && !await verifiedSession(request, env)) {
       return json7(request, { error: "forbidden" }, 403);
     }
     if (request.method === "POST" && url.pathname === "/api/ask") return await createAsk(request, env, ctx);

@@ -19,6 +19,7 @@ async function test(name, check) {
 }
 
 const ADMIN = 'admin-test-token-0123456789abcdef';
+const PROXY_SECRET = 'proxy-secret-0123456789abcdef';
 const SESSION = 's'.repeat(48);
 
 class MemoryKV {
@@ -44,7 +45,18 @@ const authAuthority = (valid = SESSION) => ({
   })
 });
 
-const env = () => ({ GK_KV: new MemoryKV(), PUB_KV: new MemoryKV(), ADMIN_TOKEN: ADMIN, ASK_API_KEY: 'ask-key', AUTH_AUTHORITY: authAuthority() });
+const env = () => ({ GK_KV: new MemoryKV(), PUB_KV: new MemoryKV(), ADMIN_TOKEN: ADMIN, ASK_API_KEY: 'ask-key', AUTH_AUTHORITY: authAuthority(), ALERT_PROXY_SECRET: PROXY_SECRET });
+
+/* BUG-001 (2026-10-29 audit): the proxy header alone is forgeable, so the
+   Pages proxy signs the alert body. These helpers sign the same way so the
+   valid path is exercised, not assumed. */
+const hex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+async function proxyHeaders(body, { ts = Date.now(), secret = PROXY_SECRET } = {}) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = hex(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${ts}.${body}`)));
+  return { 'x-ah-pages-proxy': '1', 'x-ah-proxy-ts': String(ts), 'x-ah-proxy-sig': sig };
+}
 const fetchWorker = (request, e = env()) => gkWorker.fetch(request, e, { waitUntil() {}, passThroughOnException() {} });
 
 const post = (path, headers = {}, body = '{}') => new Request('https://worker' + path, {
@@ -109,14 +121,94 @@ await test('BUG-001-১১. the gate fails closed when ADMIN_TOKEN is unset', as
   return r.status === 403;
 });
 
-await test('BUG-001-১২. reading GET /api/bank is not blocked by the write gate', async () => {
+await test('BUG-001-১২. reading GET /api/bank now needs a proof too (BUG-002 fix)', async () => {
+  /* This used to assert the opposite. That assertion pinned the vulnerability
+     BUG-002 describes: the public X-AH-App literal opened the whole bank via
+     ?full=1. The read now requires the same owner/session proof as a write. */
   const r = await fetchWorker(new Request('https://worker/api/bank', { headers: APP }));
-  return r.status !== 403;
+  return r.status === 403;
 });
 
 await test('BUG-001-১৩. /health stays open for monitoring', async () => {
   const r = await fetchWorker(new Request('https://worker/health', { headers: APP }));
   return r.status === 200;
+});
+
+
+/* ── BUG-001 (2026-10-29): the alert channel needs a real proof ───────────── */
+
+const alertBody = JSON.stringify({ message: 'probe', path: '/probe', signature: 's-' + Math.random() });
+const alertReq = async (headers, body = alertBody) => new Request('https://worker/api/report-error', {
+  method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body
+});
+
+await test('BUG-001-১৪. a forged x-ah-pages-proxy header can no longer inject an alert', async () => {
+  const r = await fetchWorker(await alertReq({ 'x-ah-pages-proxy': '1' }));
+  return r.status === 403;
+});
+
+await test('BUG-001-১৫. a WRONG signature is refused', async () => {
+  const r = await fetchWorker(await alertReq(await proxyHeaders(alertBody, { secret: 'not-the-secret' })));
+  return r.status === 403;
+});
+
+await test('BUG-001-১৬. a STALE timestamp is refused (no replay)', async () => {
+  const r = await fetchWorker(await alertReq(await proxyHeaders(alertBody, { ts: Date.now() - 10 * 60 * 1000 })));
+  return r.status === 403;
+});
+
+await test('BUG-001-১৭. a signature over a DIFFERENT body is refused', async () => {
+  const r = await fetchWorker(await alertReq(await proxyHeaders('{"message":"other"}'), alertBody));
+  return r.status === 403;
+});
+
+await test('BUG-001-১৮. the gate fails closed when ALERT_PROXY_SECRET is unset', async () => {
+  const e = env(); delete e.ALERT_PROXY_SECRET;
+  const r = await fetchWorker(await alertReq(await proxyHeaders(alertBody)), e);
+  return r.status === 403;
+});
+
+await test('BUG-001-১৯. a validly signed alert passes the gate', async () => {
+  const e = env();
+  const r = await fetchWorker(await alertReq(await proxyHeaders(alertBody)), e);
+  return r.status !== 403;
+});
+
+/* ── BUG-002 (2026-10-29): the bank read needs the same proof as a write ──── */
+
+await test('BUG-002-১. GET /api/bank with only the public header is refused', async () => {
+  const r = await fetchWorker(new Request('https://worker/api/bank?full=1', { headers: APP }));
+  return r.status === 403;
+});
+
+await test('BUG-002-২. GET /api/bank?full=1 with no header is refused', async () => {
+  const r = await fetchWorker(new Request('https://worker/api/bank?full=1'));
+  return r.status === 403;
+});
+
+await test('BUG-002-৩. the OWNER token still reads the bank', async () => {
+  const r = await fetchWorker(new Request('https://worker/api/bank', { headers: { ...APP, Authorization: 'Bearer ' + ADMIN } }));
+  return r.status !== 403;
+});
+
+await test('BUG-002-৪. a VERIFIED session still reads the bank', async () => {
+  const r = await fetchWorker(new Request('https://worker/api/bank', { headers: { ...APP, Cookie: '__Host-ah_session=' + SESSION } }));
+  return r.status !== 403;
+});
+
+/* ── BUG-003 (2026-10-29): /health must not fingerprint the deployment ────── */
+
+await test('BUG-003-১. an anonymous /health reveals no secret booleans', async () => {
+  const r = await fetchWorker(new Request('https://worker/health', { headers: APP }));
+  const body = await r.json();
+  return r.status === 200 && body.ok === true
+    && !('keys' in body) && !('askKey' in body) && !('tg' in body) && !('gemini' in body);
+});
+
+await test('BUG-003-২. the OWNER still sees the full health detail', async () => {
+  const r = await fetchWorker(new Request('https://worker/health', { headers: { ...APP, Authorization: 'Bearer ' + ADMIN } }));
+  const body = await r.json();
+  return r.status === 200 && body.ok === true && typeof body.keys === 'number' && 'tg' in body;
 });
 
 console.log('\n✅ BUG-001 write-route auth: ' + passed + ' passed, ' + failed + ' failed');

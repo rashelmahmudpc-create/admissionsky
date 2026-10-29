@@ -88,7 +88,7 @@ test('endpoint: guests get nothing; the kill switch turns it off', async () => {
 test('wiring: 401 route, timeout, greet fallback, en skipped, textContent only', () => {
   const pub = readFileSync(new URL('./public-worker.js', import.meta.url), 'utf8');
   assert.ok(pub.includes("path === '/api/ai/recall' && request.method === 'POST'"));
-  assert.ok(pub.includes("if (!identity.authenticated) return json({ error: 'sign_in_required', recall: null }, 401);"));
+  assert.ok(pub.includes("if (!identity.authenticated) return json({ error: 'sign_in_required', recall: null }, 401, request);"));
   const ui = readFileSync(new URL('./ai-agent-chat.js', import.meta.url), 'utf8');
   assert.ok(ui.includes("fetch('/api/ai/recall'"));
   assert.ok(ui.includes("ctrl.abort(); } catch (_) {} }, 2500);"));

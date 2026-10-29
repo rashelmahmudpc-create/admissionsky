@@ -133,6 +133,35 @@ const ownerProof = (request, env) => {
   const header = String(request.headers.get('X-AH-Admin-Token') || '').trim();
   return tokenEquals(bearer, env.ADMIN_TOKEN) || tokenEquals(header, env.ADMIN_TOKEN);
 };
+/* BUG-001 (2026-10-29 audit). `x-ah-pages-proxy` is caller-supplied, so any
+   non-browser client can forge it and inject text into the owner's Telegram
+   channel. The Pages proxy now also signs the request body with a shared
+   secret, and only that signature proves the call came from the proxy. Kept
+   separate from ownerProof because this route sits before the app gate: the
+   reporter is an unauthenticated browser beacon, so the proxy — not the
+   visitor — is the caller being authenticated. */
+const hex = buffer => [...new Uint8Array(buffer)].map(b => b.toString(16).padStart(2, '0')).join('');
+
+const alertSignature = async (secret, timestamp, body) => {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return hex(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${timestamp}.${body}`)));
+};
+
+/* Fails closed: no secret bound, no signature, or a stale timestamp all refuse.
+   The skew window is what stops a captured signature being replayed later. */
+const ALERT_SIGNATURE_SKEW_MS = 5 * 60 * 1000;
+
+const proxyProof = async (request, rawBody, env) => {
+  if (!env || !env.ALERT_PROXY_SECRET) return false;
+  const stamp = String(request.headers.get('x-ah-proxy-ts') || '').trim();
+  const sent = String(request.headers.get('x-ah-proxy-sig') || '').trim();
+  if (!stamp || !sent) return false;
+  const ts = Number(stamp);
+  if (!Number.isFinite(ts) || Math.abs(Date.now() - ts) > ALERT_SIGNATURE_SKEW_MS) return false;
+  return tokenEquals(await alertSignature(env.ALERT_PROXY_SECRET, stamp, rawBody), sent);
+};
+
 const readSessionCookie = request => {
   const raw = String(request.headers.get('Cookie') || '');
   for (const part of raw.split(';')) {
@@ -548,15 +577,18 @@ async function handleErrorReport(request, env) {
      purpose — the reporter is an unauthenticated browser beacon — but its only
      control was an Origin whitelist, and Origin is set by the caller, so any
      script could inject arbitrary text into the owner's Telegram alert channel.
-     The Pages proxy sets x-ah-pages-proxy on the requests it forwards, and that
-     header cannot survive a cross-origin call (it would need a CORS preflight
-     the Pages deployment does not grant), so it is the one signal a foreign
-     origin cannot fake. Origin alone no longer suffices. */
-  const proxied = request.headers.get('x-ah-pages-proxy') === '1';
-  if (!proxied) return json(request, { error: 'forbidden' }, 403);
+     A static header is no better: a non-browser client sets it freely.
+     BUG-001 (2026-10-29 audit) confirmed that live. The proxy now signs the
+     body with ALERT_PROXY_SECRET and the timestamped signature is what this
+     Worker verifies, so a foreign caller cannot forge the alert path at all. */
+  const rawBody = await request.text();
+  if (request.headers.get('x-ah-pages-proxy') !== '1'
+      || !(await proxyProof(request, rawBody, env))) {
+    return json(request, { error: 'forbidden' }, 403);
+  }
 
   let body = {};
-  try { body = await request.json(); } catch (_) {}
+  try { body = JSON.parse(rawBody); } catch (_) {}
   const message = alertField(body.message, 500);
   if (!message) return json(request, { error: 'empty' }, 400);
   const path = alertField(body.path, 120) || '(unknown)';
@@ -564,8 +596,18 @@ async function handleErrorReport(request, env) {
   const release = alertField(body.release, 60);
   const source = alertField(body.source, 40);
 
-  if (!env.TG_BOT_TOKEN || !env.TG_CHAT_ID) return json(request, { skipped: 'telegram-not-configured' });
-  if (!env.GK_KV) return json(request, { skipped: 'no-kv' });
+  /* BUG-007 (2026-10-29 audit). This used to answer 200 `skipped`, so a missing
+     bot token looked like a healthy alert path and the reporter's own success
+     beacon stayed green while nothing was delivered. A misconfiguration is a
+     failure: report it as one so the gap is visible instead of silent. */
+  if (!env.TG_BOT_TOKEN || !env.TG_CHAT_ID) {
+    console.error('[alert] Telegram is not configured: TG_BOT_TOKEN/TG_CHAT_ID missing');
+    return json(request, { error: 'telegram-not-configured' }, 503);
+  }
+  if (!env.GK_KV) {
+    console.error('[alert] GK_KV is not bound: alert de-duplication and the hourly cap cannot run');
+    return json(request, { error: 'no-kv' }, 503);
+  }
 
   const now = Date.now();
   const hourBucket = `alertHour:${Math.floor(now / 3600000)}`;
@@ -763,7 +805,16 @@ export default {
     }
 
     if (url.pathname === '/health') {
-      return json(request, { ok: true, keys: keys(env).length, askKey: !!env.ASK_API_KEY, kv: !!env.GK_KV, tg: !!env.TG_BOT_TOKEN, agent: 'agent-f1', gemini: !!env.GEMINI_KEYS, groq: !!env.GROQ_API_KEY, lastDay: env.GK_KV ? await env.GK_KV.get('gkDay') : null });
+      /* BUG-003 (2026-10-29 audit). This used to answer with a boolean for every
+         bound secret (askKey, kv, tg, gemini, groq) to any caller, which tells an
+         attacker exactly which providers are live and that Telegram alerting is
+         on — the fact that makes the report-error channel worth attacking. The
+         detail moves behind the owner token; the public liveness answer stays
+         free so uptime monitors keep working. */
+      if (ownerProof(request, env)) {
+        return json(request, { ok: true, keys: keys(env).length, askKey: !!env.ASK_API_KEY, kv: !!env.GK_KV, tg: !!env.TG_BOT_TOKEN, agent: 'agent-f1', gemini: !!env.GEMINI_KEYS, groq: !!env.GROQ_API_KEY, lastDay: env.GK_KV ? await env.GK_KV.get('gkDay') : null });
+      }
+      return json(request, { ok: true });
     }
 
     const isApp = request.headers.get('X-AH-App') === APP_HEADER;
@@ -778,7 +829,17 @@ export default {
     const stateChanging = writeRoute && request.method === 'POST';
     const beaconOk = false;
     if (!isApp && !beaconOk) return json(request, { error: 'forbidden' }, 403);
-    if (stateChanging && !ownerProof(request, env) && !(await verifiedSession(request, env))) {
+    /* BUG-002 (2026-10-29 audit). The gate above is `X-AH-App: admission-hub`,
+       a literal that ships in the client bundle (cloud-content-sync.js,
+       vocabulary-elevenlabs.js), so it is a routing hint and never a credential.
+       The proof used to be computed only for state-changing POSTs, which left
+       the GET branch of /api/bank open: `?full=1` returned the owner's entire
+       question bank, exam history, mistakes-with-answers and vocabulary to
+       anyone who read the bundle. Reads of the bank now need the same proof as
+       writes. Other GETs (content, status, today) stay reachable — they are
+       public product data the pages load without a token. */
+    const bankRead = url.pathname === '/api/bank' && request.method === 'GET';
+    if ((stateChanging || bankRead) && !ownerProof(request, env) && !(await verifiedSession(request, env))) {
       return json(request, { error: 'forbidden' }, 403);
     }
     if (request.method === 'POST' && url.pathname === '/api/ask') return await createAsk(request, env, ctx);

@@ -117,7 +117,7 @@ test('admission-gk answers recall itself when the forward returns null', async (
   assert.match(src, /path === '\/api\/ai\/recall' && request\.method === 'POST'/);
   assert.match(src, /const viaSky = await forwardWithIdentityBody\(request, env, identity\.uid\);/);
   // The identity decisions stay on this side of the hop.
-  assert.match(src, /if \(!identity\.authenticated\) return json\(\{ error: 'sign_in_required', recall: null \}, 401\);/);
+  assert.match(src, /if \(!identity\.authenticated\) return json\(\{ error: 'sign_in_required', recall: null \}, 401, request\);/);
   // And the local handler is still reachable after the forward: the fallback
   // is the code that runs today, so the move can never be worse than doing
   // nothing.

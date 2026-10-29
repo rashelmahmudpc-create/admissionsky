@@ -190,6 +190,21 @@ export default {
         const headers = new Headers(request.headers);
         headers.delete('host');
         headers.set('x-ah-pages-proxy', '1');
+        /* BUG-001 (2026-10-29 audit). The header above is caller-supplied, so it
+           proves nothing on its own — a non-browser client sets it freely. For
+           the alert route the proxy also signs the body with ALERT_PROXY_SECRET,
+           which only this worker and the gk worker hold, so the gk worker can
+           tell a real forward from a forged one. */
+        if (url.pathname === '/api/report-error' && env.ALERT_PROXY_SECRET
+            && request.method === 'POST' && request.body) {
+          const raw = await request.clone().text();
+          const ts = String(Date.now());
+          const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.ALERT_PROXY_SECRET),
+            { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+          const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${ts}.${raw}`));
+          headers.set('x-ah-proxy-ts', ts);
+          headers.set('x-ah-proxy-sig', [...new Uint8Array(mac)].map(b => b.toString(16).padStart(2, '0')).join(''));
+        }
         const init = { method: request.method, headers, redirect: 'manual' };
         if (request.method !== 'GET' && request.method !== 'HEAD' && request.body) init.body = request.body;
         const response = await fetch(target, init);

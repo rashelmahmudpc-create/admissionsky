@@ -97,6 +97,6 @@ test('agentChat reads the stated weak topics before the tool shortcut and reuses
   const read = SRC.indexOf('statedWeak = statedWeakTopics(parseMemory(await earlyLongP');
   assert.ok(read > 0 && read < shortcut, 'memory must be read before the shortcut answers');
   assert.ok(SRC.includes('(earlyLongP || safeRead(() => stateGet(memKeyEarly)))'), 'no second read');
-  assert.ok(SRC.includes('statedWeak, kv: env && env.PUB_KV }).catch'));
+  assert.ok(SRC.includes('statedWeak, kv: env && env.PUB_KV }, request).catch'));
   assert.ok(SRC.includes('runTools([extraTools], { stats, statedWeak,'));
 });

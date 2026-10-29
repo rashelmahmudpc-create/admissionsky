@@ -10,13 +10,24 @@ import { listReports } from './sky-daily-report.mjs';
 import { forwardWithIdentity, forwardWithIdentityBody } from './sky-ai-route.mjs';
 import { createSnapshot, listSnapshots, restoreSnapshot } from './p19-backup.mjs';
 
-const JSONH = {
-  'Content-Type': 'application/json',
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization,content-type,x-ah-app,x-ah-guest',
-  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
-};
-const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: JSONH });
+import { corsHeaders } from './cors-policy.mjs';
+
+/* BUG-004 (2026-10-29 audit). This used to hardcode
+   `Access-Control-Allow-Origin: *` on every JSON response, which let any site
+   read them cross-origin and drive the header-based guest identity from a
+   foreign page. The shared allowlist in cors-policy.mjs is the one the auth and
+   gk workers already use, so this handler now honours it too: an allowed Origin
+   is echoed, anything else gets no grant at all. */
+const CORS_ALLOW_HEADERS = 'authorization,content-type,x-ah-app,x-ah-guest';
+const json = (data, status = 200, request = null) => new Response(JSON.stringify(data), {
+  status,
+  headers: {
+    'Content-Type': 'application/json',
+    ...corsHeaders(request),
+    'Access-Control-Allow-Headers': CORS_ALLOW_HEADERS,
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
+  }
+});
 const onlyRows = rows => (Array.isArray(rows) ? rows : []).filter(row => row && row.id).map(row => {
   const clean = { ...row };
   for (const key of ['imageDataUrl', 'image', 'thumbnail']) {
@@ -373,16 +384,16 @@ export const verifyIntegrity = doc => {
 
 const admin = async (request, env, path) => {
   const token = String(request.headers.get('Authorization') || '').replace('Bearer ', '').trim();
-  if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) return json({ error: 'forbidden' }, 403);
+  if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) return json({ error: 'forbidden' }, 403, request);
   if (path === '/api/admin/content' && request.method === 'GET') {
     const raw = await env.PUB_KV.get('pubContent');
-    return json(raw ? JSON.parse(raw) : { v: 0, questions: [], vocabulary: [], exams: [] });
+    return json(raw ? JSON.parse(raw) : { v: 0, questions: [], vocabulary: [], exams: [] }, 200, request);
   }
   if (path === '/api/admin/verify' && request.method === 'GET') {
     const raw = await env.PUB_KV.get('pubContent');
     const doc = raw ? JSON.parse(raw) : {};
     const report = verifyIntegrity(doc);
-    return json(report, report.ok ? 200 : 409);
+    return json(report, report.ok ? 200 : 409, request);
   }
   if (path === '/api/admin/publish' && request.method === 'POST') {
     const body = await request.json().catch(() => ({}));
@@ -397,17 +408,17 @@ const admin = async (request, env, path) => {
     }
     if (full && Array.isArray(full.questions) && full.questions.some(row => row && row.id)) {
       const result = await publishGlobal(env, full);
-      if (result.error === 'empty') return json({ error: 'প্রশ্ন খালি' }, 400);
-      if (result.error === 'too-large') return json({ error: 'কনটেন্ট আকারসীমার বেশি, কমানো ছবি বাদ দিয়ে আবার চেষ্টা করো', code: 'too-large' }, 413);
-      if (result.error === 'integrity') return json({ error: 'কনটেন্ট যাচাইয়ে ব্যর্থ, আগের সংস্করণই থাকল', code: 'integrity' }, 409);
-      return json(result);
+      if (result.error === 'empty') return json({ error: 'প্রশ্ন খালি' }, 400, request);
+      if (result.error === 'too-large') return json({ error: 'কনটেন্ট আকারসীমার বেশি, কমানো ছবি বাদ দিয়ে আবার চেষ্টা করো', code: 'too-large' }, 413, request);
+      if (result.error === 'integrity') return json({ error: 'কনটেন্ট যাচাইয়ে ব্যর্থ, আগের সংস্করণই থাকল', code: 'integrity' }, 409, request);
+      return json(result, 200, request);
     }
-    return json({ error: 'প্রশ্ন খালি' }, 400);
+    return json({ error: 'প্রশ্ন খালি' }, 400, request);
   }
   if (path === '/api/admin/ai-daily-report' && request.method === 'GET') {
     /* Anonymous daily AI report, counts only, newest first. */
     const days = new URL(request.url).searchParams.get('days');
-    return json(await listReports(env.PUB_KV, days || 7));
+    return json(await listReports(env.PUB_KV, days || 7), 200, request);
   }
   if (path === '/api/admin/errors' && request.method === 'GET') {
     /* P19, what the Worker actually caught. Reads the same KV the catch block
@@ -417,20 +428,20 @@ const admin = async (request, env, path) => {
       const raw = await env.PUB_KV.get('errlog:v1');
       log = raw ? JSON.parse(raw) : [];
     } catch (_) { log = []; }
-    return json(summarizeErrors(log));
+    return json(summarizeErrors(log), 200, request);
   }
   if (path === '/api/admin/backup' && request.method === 'GET') {
     /* P19, what snapshots exist, newest first. Real index, never padded. */
-    return json(await listSnapshots(env));
+    return json(await listSnapshots(env), 200, request);
   }
   if (path === '/api/admin/backup' && request.method === 'POST') {
     /* P19, take a snapshot now. The daily cron does this too; this is the
        on-demand door for the owner before a risky change. */
     try {
       const entry = await createSnapshot(env);
-      return json({ ok: true, snapshot: entry });
+      return json({ ok: true, snapshot: entry }, 200, request);
     } catch (error) {
-      return json({ ok: false, error: String(error?.message || error) }, 500);
+      return json({ ok: false, error: String(error?.message || error) }, 500, request);
     }
   }
   if (path === '/api/admin/restore' && request.method === 'POST') {
@@ -438,16 +449,26 @@ const admin = async (request, env, path) => {
        the body must name the snapshot, so a bare POST cannot guess a target. */
     const body = await request.json().catch(() => ({}));
     const key = String(body.key || '').trim();
-    if (!key) return json({ ok: false, error: 'key-required' }, 400);
+    if (!key) return json({ ok: false, error: 'key-required' }, 400, request);
     const result = await restoreSnapshot(env, key);
-    return json(result, result.ok ? 200 : 404);
+    return json(result, result.ok ? 200 : 404, request);
   }
-  return json({ error: 'not-found' }, 404);
+  return json({ error: 'not-found' }, 404, request);
 };
 
 export default {
   async fetch(request, env) {
-    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: JSONH });
+    if (request.method === 'OPTIONS') {
+      /* Preflight metadata only advertises which headers/methods exist; the
+         browser still requires a matching Access-Control-Allow-Origin on the
+         real response, so the allow-list in corsHeaders is what actually
+         decides access. */
+      return new Response(null, { status: 204, headers: {
+        ...corsHeaders(request),
+        'Access-Control-Allow-Headers': CORS_ALLOW_HEADERS,
+        'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
+      } });
+    }
     const url = new URL(request.url);
     const path = url.pathname;
     try {
@@ -457,15 +478,15 @@ export default {
       if (isGuarded(request, path)) {
         const guard = await checkAbuse(request, env, { salt: env.PUBLIC_RATE_SALT || '' });
         if (!guard.allowed) {
-          return json({ error: 'rate_limited', message: 'একটু বেশি অনুরোধ এসেছে, কিছুক্ষণ পরে আবার চেষ্টা করো।', retryAfter: guard.retryAfter }, 429);
+          return json({ error: 'rate_limited', message: 'একটু বেশি অনুরোধ এসেছে, কিছুক্ষণ পরে আবার চেষ্টা করো।', retryAfter: guard.retryAfter }, 429, request);
         }
       }
-      if (path === '/api/health') return json({ ok: true, accountSystem: 'retired', legacyAccountSystem: 'retired', nativeAuth: 'cloudflare-native-v1', identity: 'firebase-account-or-ephemeral-guest', at: Date.now() });
+      if (path === '/api/health') return json({ ok: true, accountSystem: 'retired', legacyAccountSystem: 'retired', nativeAuth: 'cloudflare-native-v1', identity: 'firebase-account-or-ephemeral-guest', at: Date.now() }, 200, request);
       if (path === '/api/content/meta' && request.method === 'GET') {
         const raw = await env.PUB_KV.get('pubContentMeta');
         if (raw) {
           const meta = JSON.parse(raw);
-          if (meta.categories) return json(meta);
+          if (meta.categories) return json(meta, 200, request);
           /* One-time lazy backfill for a meta written before `categories`
              existed. The vocabulary bank now lives in D1, so read the small
              mirrored list there and fall back to the KV blob; fold the totals
@@ -486,14 +507,14 @@ export default {
             if (vocabRows) {
               const enriched = { ...meta, categories: categoryCountsOf({ vocabularyMaster: vocabRows }) };
               await env.PUB_KV.put('pubContentMeta', JSON.stringify(enriched));
-              return json(enriched);
+              return json(enriched, 200, request);
             }
           } catch (_) { /* fall through to the un-enriched meta */ }
-          return json(meta);
+          return json(meta, 200, request);
         }
         const full = await env.PUB_KV.get('pubContent');
         const doc = full ? JSON.parse(full) : { v: 0, at: 0, questions: [] };
-        return json({ v: doc.v || 0, at: doc.at || 0, sig: doc.sig || '', counts: countsOf(doc), categories: categoryCountsOf(doc) });
+        return json({ v: doc.v || 0, at: doc.at || 0, sig: doc.sig || '', counts: countsOf(doc), categories: categoryCountsOf(doc) }, 200, request);
       }
       if (path === '/api/content' && request.method === 'GET') {
         /* P13, optional D1 fast path. Enabled by a flag row in content_meta
@@ -531,17 +552,17 @@ export default {
                       total: meta.counts && meta.counts.questions,
                       page: { limit: pageLimit, offset },
                       source: 'd1'
-                    });
+                    }, 200, request);
                   }
                 }
                 const document = await reader.document();
-                if (document) return json({ v: meta.v || 0, at: meta.at || 0, sig: meta.sig, ...document, source: 'd1' });
+                if (document) return json({ v: meta.v || 0, at: meta.at || 0, sig: meta.sig, ...document, source: 'd1' }, 200, request);
               }
             }
           } catch (_) { /* fall through to KV */ }
         }
         const raw = await env.PUB_KV.get('pubContent');
-        return json(paginateContent(raw ? JSON.parse(raw) : { v: 0, at: 0, questions: [], vocabulary: [], exams: [] }, url.searchParams.get('limit'), url.searchParams.get('offset')));
+        return json(paginateContent(raw ? JSON.parse(raw) : { v: 0, at: 0, questions: [], vocabulary: [], exams: [] }, url.searchParams.get('limit'), url.searchParams.get('offset')), 200, request);
       }
       if (path.startsWith('/api/admin/')) return admin(request, env, path);
       if (path === '/api/ai/status' && request.method === 'GET') {
@@ -560,13 +581,13 @@ export default {
           const viaSky = await forwardWithIdentity(request, env, identity.uid, undefined, headers);
           if (viaSky) {
             const data = await viaSky.json().catch(() => null);
-            if (data) return json(redactAiStatus(data, isOwner), viaSky.status);
+            if (data) return json(redactAiStatus(data, isOwner), viaSky.status, request);
             // A body this Worker cannot parse is not worth showing; fall through.
           }
         }
         const res = await agentStatus(request, env, identity.uid);
         const data = await res.json().catch(() => null);
-        return data ? json(redactAiStatus(data, isOwner), res.status) : res;
+        return data ? json(redactAiStatus(data, isOwner), res.status, request) : res;
       }
       if (path === '/api/ai/prefs' && request.method === 'GET') {
         const identity = await aiRequestIdentity(request, env, false);
@@ -580,7 +601,7 @@ export default {
           const raw = await env.PUB_KV.get('aiprefs:' + identity.uid);
           prefs = raw ? sanitizeAiPrefs(JSON.parse(raw)) : null;
         } catch (_) { prefs = null; }
-        return json({ prefs: prefs || AI_PREFS_DEFAULT });
+        return json({ prefs: prefs || AI_PREFS_DEFAULT }, 200, request);
       }
       /* F0.2 / DV-02: this student's evaluated Sky flags (on/percent/beta/
          killed). Evaluated by sky-ai, which needs the uid admission-gk already
@@ -590,28 +611,28 @@ export default {
         const identity = await aiRequestIdentity(request, env, false);
         const viaSky = identity.uid ? await forwardWithIdentity(request, env, identity.uid) : null;
         if (viaSky) return viaSky;
-        return json({ ok: true, flags: {}, source: 'gk-fallback' });
+        return json({ ok: true, flags: {}, source: 'gk-fallback' }, 200, request);
       }
       if (path === '/api/ai/prefs' && request.method === 'POST') {
         const identity = await aiRequestIdentity(request, env, false);
         // Personalization is saved per ACCOUNT (guest uids are ephemeral by design).
-        if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI Personalization save-এর জন্য login দরকার।' }, 401);
+        if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI Personalization save-এর জন্য login দরকার।' }, 401, request);
         const body = await request.json().catch(() => null);
         const prefs = sanitizeAiPrefs(body);
-        if (!prefs) return json({ error: 'invalid_prefs', message: 'সঠিক preference দাও।' }, 400);
+        if (!prefs) return json({ error: 'invalid_prefs', message: 'সঠিক preference দাও।' }, 400, request);
         try {
           await env.PUB_KV.put('aiprefs:' + identity.uid, JSON.stringify(prefs));
         } catch (_) {
-          return json({ error: 'save_failed', message: 'এখন save করা গেল না, আবার চেষ্টা করো।' }, 500);
+          return json({ error: 'save_failed', message: 'এখন save করা গেল না, আবার চেষ্টা করো।' }, 500, request);
         }
-        return json({ ok: true, prefs });
+        return json({ ok: true, prefs }, 200, request);
       }
       /* Sky custom instructions (owner plan step 3): the student's own short
          note that Sky follows on every answer. Signed-in only; the note is
          checked on save (harmful / cheating / rule-breaking / PII refused). */
       if (path === '/api/ai/instructions' && (request.method === 'GET' || request.method === 'POST' || request.method === 'DELETE')) {
         const identity = await aiRequestIdentity(request, env, false);
-        if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'নির্দেশনা সেভ করতে লগইন করো।' }, 401);
+        if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'নির্দেশনা সেভ করতে লগইন করো।' }, 401, request);
         /* F0.1 step 4e: sky-ai answers this when the route is listed in
            sky-ai-route.mjs. The 401 above stays here because identity is resolved
            here. NOTE the body is read AFTER the forward, never before: reading it
@@ -630,7 +651,7 @@ export default {
          action audit. The daily quota is not reset. */
       if (path === '/api/ai/memory/clear' && request.method === 'POST') {
         const identity = await aiRequestIdentity(request, env, false);
-        if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI মেমরি মুছতে লগইন করো।' }, 401);
+        if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI মেমরি মুছতে লগইন করো।' }, 401, request);
         /* F0.1 step 4f: sky-ai answers this when the route is listed in
            sky-ai-route.mjs. Forwarded BEFORE the local work, and the local work
            is idempotent (deleting the same keys twice is the same as once), so a
@@ -642,16 +663,16 @@ export default {
         try {
           await clearAiEverything(env, identity.uid);
         } catch (_) {
-          return json({ error: 'clear_failed', message: 'এখন মুছে ফেলা গেল না, আবার চেষ্টা করো।' }, 500);
+          return json({ error: 'clear_failed', message: 'এখন মুছে ফেলা গেল না, আবার চেষ্টা করো।' }, 500, request);
         }
-        return json({ ok: true, message: 'তোমার AI মেমরি মুছে ফেলা হয়েছে।' });
+        return json({ ok: true, message: 'তোমার AI মেমরি মুছে ফেলা হয়েছে।' }, 200, request);
       }
       /* M9: write/execute actions. Live by default (action-engine `ENABLED`);
          the kill-switch is the USE_WRITE_ACTIONS = "disabled" secret, which
          reaches this handler through envPub. Confirmation is single-use. */
       if (path === '/api/ai/actions/propose' && request.method === 'POST') {
         const identity = await aiRequestIdentity(request, env, false);
-        if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI action ব্যবহার করতে লগইন করো।' }, 401);
+        if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI action ব্যবহার করতে লগইন করো।' }, 401, request);
         /* F0.1 step 4g: sky-ai answers this when the route is listed in
            sky-ai-route.mjs — but ONLY while write actions are enabled here.
            sky-ai has no USE_WRITE_ACTIONS, so forwarding during a kill-switch
@@ -663,11 +684,11 @@ export default {
         }
         const body = await request.json().catch(() => null);
         const r = await proposeAction(env, identity.uid, body);
-        return json(r.body, r.status);
+        return json(r.body, r.status, request);
       }
       if (path === '/api/ai/actions/confirm' && request.method === 'POST') {
         const identity = await aiRequestIdentity(request, env, false);
-        if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI action ব্যবহার করতে লগইন করো।' }, 401);
+        if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI action ব্যবহার করতে লগইন করো।' }, 401, request);
         /* F0.1 step 4g. Confirming is the one route that CHANGES something on the
            student's behalf, and it is single-use by design: the proposal is
            consumed before the write. That ordering is what makes the fallback
@@ -680,11 +701,11 @@ export default {
         }
         const body = await request.json().catch(() => null);
         const r = await confirmAction(env, identity.uid, body);
-        return json(r.body, r.status);
+        return json(r.body, r.status, request);
       }
       if (path === '/api/ai/actions/audit' && request.method === 'GET') {
         const identity = await aiRequestIdentity(request, env, false);
-        if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI action ব্যবহার করতে লগইন করো।' }, 401);
+        if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI action ব্যবহার করতে লগইন করো।' }, 401, request);
         /* F0.1 step 4c / DV-01: served by sky-ai (same body) only while write
            actions are enabled here (sky-ai has no USE_WRITE_ACTIONS); any sky-ai
            miss or error falls back to the local answer below. */
@@ -692,14 +713,14 @@ export default {
           const viaSky = await forwardWithIdentity(request, env, identity.uid);
           if (viaSky) return viaSky;
         }
-        return json({ ok: true, actionsEnabled: actionsEnabled(env), audit: await readAudit(env, identity.uid) });
+        return json({ ok: true, actionsEnabled: actionsEnabled(env), audit: await readAudit(env, identity.uid) }, 200, request);
       }
       /* Sky recall (owner plan step 2): the reminder shown when the chat opens.
          Signed-in only; a guest or a no-memory session simply gets nothing. */
       if (path === '/api/ai/recall' && request.method === 'POST') {
         const identity = await aiRequestIdentity(request, env, false);
-        if (!identity.authenticated) return json({ error: 'sign_in_required', recall: null }, 401);
-        if (identity.persistMemory === false) return json({ ok: true, recall: null });
+        if (!identity.authenticated) return json({ error: 'sign_in_required', recall: null }, 401, request);
+        if (identity.persistMemory === false) return json({ ok: true, recall: null }, 200, request);
         /* F0.1 step 4d: sky-ai answers this when it is listed in
            SKY_AI_POST_IDENTITY_ROUTES. The two checks above stay here on
            purpose — the 401 and the "this student turned memory off" case are
@@ -716,15 +737,15 @@ export default {
         const identity = await aiRequestIdentity(request, env, false);
         /* M7: AI chat is signed-in only. Refuse the guest here, before the
            public rate-limit counter or any KV write, so a guest leaves no trace. */
-        if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI চ্যাট ব্যবহার করতে লগইন করো।' }, 401);
+        if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI চ্যাট ব্যবহার করতে লগইন করো।' }, 401, request);
         return await chatWithFallback(request, env, identity, { stream: true });
       }
       if (path === '/api/ai' && request.method === 'POST') {
         const identity = await aiRequestIdentity(request, env, false);
-        if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI চ্যাট ব্যবহার করতে লগইন করো।' }, 401);
+        if (!identity.authenticated) return json({ error: 'sign_in_required', message: 'AI চ্যাট ব্যবহার করতে লগইন করো।' }, 401, request);
         return await chatWithFallback(request, env, identity, { stream: false });
       }
-      return json({ error: 'not-found' }, 404);
+      return json({ error: 'not-found' }, 404, request);
     } catch (error) {
       const status = Number(error?.status) || 500;
       /* P19, an uncaught route failure must leave a trace. A 4xx is a caller
@@ -734,7 +755,7 @@ export default {
       if (status >= 500) {
         await recordError(env, { path, method: request.method, status, message: error?.message || String(error) });
       }
-      return json({ error: String(error?.message || error).slice(0, 180) }, status);
+      return json({ error: String(error?.message || error).slice(0, 180) }, status, request);
     }
   }
 };
