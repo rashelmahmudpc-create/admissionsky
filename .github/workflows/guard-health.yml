@@ -122,3 +122,52 @@ jobs:
             --data-urlencode "disable_web_page_preview=true" \
             --data-urlencode "text@guard-health.txt" > /dev/null
           echo "guard alert sent"
+
+  # A1.5 ③ third condition: "staging-এ secret সরালে অ্যালার্ট আসে". Turnstile
+  # fails OPEN when TURNSTILE_SECRET_KEY is absent (turnstile.mjs returns
+  # {enforced:false} so enabling the code before the secret exists cannot lock
+  # students out). That is deliberate, but it means a missing secret is silent.
+  # Probe the live signup endpoint for the enforced signal and alert if it is
+  # gone.
+  #
+  # The probe can never create an account or send mail: it posts a disposable
+  # address with no token, so EITHER Turnstile refuses it (HUMAN_CHECK_FAILED,
+  # the healthy answer) OR the disposable-email guard does (DISPOSABLE_EMAIL,
+  # which is the inert-guard signal we alert on). Anything else is inconclusive
+  # and stays quiet.
+  turnstile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Confirm the Turnstile guard is still enforcing
+        env:
+          TG_TOKEN: ${{ secrets.GUARD_TELEGRAM_BOT_TOKEN || secrets.REPORT_TELEGRAM_BOT_TOKEN }}
+          TG_CHAT: ${{ secrets.GUARD_TELEGRAM_CHAT_ID || secrets.REPORT_TELEGRAM_CHAT_ID }}
+        run: |
+          CODE="$(curl -sS --max-time 15 -X POST "https://admissionsky.pages.dev/api/auth/v1/signup" \
+            -H 'Content-Type: application/json' \
+            -H 'Origin: https://admissionsky.pages.dev' \
+            -H 'X-AH-Auth-UI: auth-premium-v6' \
+            -H 'X-AH-Signup-Flow: pending-v1' \
+            -d '{"email":"turnstile-probe@mailinator.com","password":"Abcd1234!xyz"}' \
+            | python3 -c 'import json,sys; print((json.load(sys.stdin).get("error") or {}).get("code",""))' 2>/dev/null || echo PROBE_ERROR)"
+          echo "signup probe answered: ${CODE:-empty}"
+          case "$CODE" in
+            HUMAN_CHECK_FAILED)
+              echo "Turnstile is enforcing — healthy, staying quiet" ; exit 0 ;;
+            DISPOSABLE_EMAIL)
+              MSG=$'🚨 AdmissionSky · Turnstile বন্ধ\n\nsignup-এ মানব যাচাই আর কাজ করছে না — TURNSTILE_SECRET_KEY সম্ভবত মুছে গেছে বা ভুল। এখন যে কেউ bot চালাতে পারে।\n\nপ্রমাণ: টোকেন ছাড়া signup দিলে HUMAN_CHECK_FAILED-এর বদলে DISPOSABLE_EMAIL এল।' ;;
+            *)
+              echo "inconclusive probe (${CODE:-empty}) — staying quiet" ; exit 0 ;;
+          esac
+          if [ -z "$TG_TOKEN" ] || [ -z "$TG_CHAT" ]; then
+            echo "::warning::no Telegram secret set — Turnstile alert is only in the log" ; exit 0
+          fi
+          BOT_ID="$(curl -sS --fail-with-body "https://api.telegram.org/bot${TG_TOKEN}/getMe" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("result",{}).get("username",""))' 2>/dev/null || true)"
+          if [ "$BOT_ID" = "AdmissionHubVerifyBot" ]; then
+            echo "::error::the alert token belongs to the OTP bot — refusing to send" ; exit 1
+          fi
+          curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TG_CHAT}" \
+            --data-urlencode "text=${MSG}" > /dev/null
+          echo "turnstile alert sent"
