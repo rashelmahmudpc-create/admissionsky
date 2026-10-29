@@ -1,5 +1,6 @@
 name: Cloudflare Native Auth Guard
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
@@ -34,6 +35,7 @@ on:
       - 'index.html'
       - 'admin-passkey.mjs'
       - 'admin-passkey.test.mjs'
+      - '.github/workflows/native-auth-guard.yml'
       - 'notification-command-center.html'
       - 'notification-command-center-*.test.mjs'
       - 'notification-admin-keyboard.test.mjs'
