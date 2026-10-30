@@ -221,3 +221,36 @@ Source of truth: Notion "Sky AI v1.0" → main page section **"🚦 এজেন
   all-off defaults), listed the route in `SKY_AI_IDENTITY_ROUTES`, +2 pins, worker bundle rebuilt,
   sky-ai suites 24/24 · `4b467b3` on `cline/yc69z6y0` · next: deploy (worker creds absent in that
   session) + `SKY_FLAGS` KV binding.
+- 2026-10-30 22:5x · **live check of the daily-audit commit `80cc083`** (SEC-002/004, CI-001,
+  CF-001; run `41090270212`, jobs pages + worker green). Verified from outside, not from the diff:
+  - **SEC-002 ✅ dead on both Pages projects.** `admissionhub.pages.dev` and
+    `admissionsky.pages.dev` both answer **404 (9 B)** for `/auth-worker-bundle.mjs` and
+    `/worker-bundle.mjs`; the home page still answers 200. The new
+    `bundle-asset-coverage` guard is **non-vacuous** — deleting the rsync exclude fails it with
+    `auth-worker-bundle.mjs (would be served as a public asset)`.
+  - **SEC-004 ✅ live.** `Deploy sky-ai` ran in `41090270212` (`/api/ai/prefs` → 200, no
+    `Access-Control-Allow-Origin` at all). sky-ai's own host stays 404 (`workers_dev = false`
+    since `f4a3b1e`) — that 404 is by design, not a regression.
+  - **CI-001 ✅** the live GitHub copy of `visual-guard.yml` is `permissions: contents: read`;
+    the write scope exists only inside the `save-baseline` job. It is the only workflow in the
+    repo that combines `pull_request` with `contents: write`.
+  - **CF-001 ⚠️ unproven live.** `cloudflare-drift.yml` has **zero runs** — the cron is
+    `17 6 * * *`, so the first run is 2026-10-31 06:17Z, and a dispatch from this session's token
+    is 403. Offline half passes (`cloudflare-drift.test.mjs` 6/6). Needs one green scheduled run
+    before it can be called working.
+  - **SEC-003 ❌ still dead — the green run hides it.** Step "Bind the alert-proxy signing secret
+    (SEC-003)" **succeeded only because it exits 0 by design**, and its log says
+    `##[warning]ALERT_PROXY_SECRET is not set, so POST /api/report-error is still rejected 403
+    and browser errors never reach Telegram`. Live probe agrees: `POST /api/report-error` → 403.
+    Adding the repository secret is an owner action; until then the alert channel is off.
+  - **`Guards Health (15 min)` ⚠️ does not hold 15 minutes.** Cron is `*/15 * * * *`, but the real
+    runs today were 04:37Z and 11:02Z only (yesterday: 23:54Z) — GitHub throttles high-frequency
+    schedules, so a red guard can page the owner hours late. Either accept the ~6h worst case or
+    drive the check from an external minuter.
+  - Bumped `SKY_AI_VERSION` 4l → **`4m-no-cors`** in the same session: SEC-004 changed shipped
+    sky-ai behaviour without bumping it, so "Verify the deployed sky-ai build is this commit" was
+    a no-op for that change. **Rule: every sky-ai behaviour change bumps `SKY_AI_VERSION`**, in
+    the same commit as the change.
+  - next: owner adds `ALERT_PROXY_SECRET`; watch the first `cloudflare-drift` scheduled run; then
+    F0.2 `SKY_FLAGS` KV binding (live `GET /api/ai/sky-flags` still reports
+    `{"flags":{},"source":"gk-fallback"}`).

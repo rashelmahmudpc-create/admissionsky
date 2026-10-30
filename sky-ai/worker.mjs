@@ -24,7 +24,16 @@ import { neededProviders, missingProviders } from './parity.mjs';
 import { aiKeyBlobShape } from '../ai-agent.js';
 import { aiStateStore } from '../ai-state-do.mjs';
 
-export const SKY_AI_VERSION = 'sky-ai-f0.1-4l-key-shape';
+/* Bump this on EVERY behaviour change to this Worker, never only on a big one.
+ * `deploy-pages-worker.yml` step "Verify the deployed sky-ai build is this
+ * commit" compares this constant with the version the live Worker reports, so an
+ * unchanged constant makes that check pass while proving nothing — exactly what
+ * happened on 2026-10-30: SEC-004 removed the wildcard Access-Control-Allow-Origin
+ * from six handlers and left the version at 4l, so "the deployed build is this
+ * commit" was unverifiable from outside.
+ *   4l-key-shape   — /health reports the shape of KV secret:AI_KEYS
+ *   4m-no-cors     — SEC-004: no handler emits Access-Control-Allow-Origin: *  */
+export const SKY_AI_VERSION = 'sky-ai-f0.1-4m-no-cors';
 
 /* F0.1 step 4d: what /health reports about this Worker's dependencies.
  *
