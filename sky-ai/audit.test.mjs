@@ -16,7 +16,8 @@ test('valid internal call returns the same body admission-gk builds', async () =
   const env = { PUB_KV: kv({ 'secret:sky-internal': 'K', 'actaudit:account-1': STORED }) };
   const res = await handleAuditGet(req(H()), env);
   assert.equal(res.status, 200);
-  assert.equal(res.headers.get('access-control-allow-origin'), '*');
+  // SEC-004 (2026-10-30): server-to-server only — no CORS origin header.
+  assert.equal(res.headers.get('access-control-allow-origin'), null);
   assert.equal(res.headers.get('x-sky-ai-route'), 'actions-audit');
   const expected = { ok: true, actionsEnabled: actionsEnabled(env), audit: parseAudit(STORED, 'account-1') };
   assert.deepEqual(await res.json(), JSON.parse(JSON.stringify(expected)));

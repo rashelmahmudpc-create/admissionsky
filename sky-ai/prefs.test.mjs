@@ -18,8 +18,23 @@ test('valid internal call returns the stored, sanitized prefs', async () => {
   const env = { PUB_KV: kv({ 'secret:sky-internal': 'K', 'aiprefs:account-1': '{"langStyle":"en","tone":"evil","responseLen":"short"}' }) };
   const res = await handlePrefsGet(req(H()), env);
   assert.equal(res.status, 200);
-  assert.equal(res.headers.get('access-control-allow-origin'), '*');
+  // SEC-004 (2026-10-30): sky-ai is reachable only through admission-gk's
+  // SKY_AI service binding, so no browser is ever the caller and no
+  // Access-Control-Allow-Origin belongs on the response at all. A literal '*'
+  // here would be the latent cross-origin read the audit flagged.
+  assert.equal(res.headers.get('access-control-allow-origin'), null);
   assert.deepEqual(await res.json(), { prefs: { langStyle: 'en', tone: 'friendly', responseLen: 'short' } });
+});
+
+test('no sky-ai handler emits a wildcard Access-Control-Allow-Origin', () => {
+  const handlers = ['prefs', 'actions', 'recall', 'memory-clear', 'audit', 'instructions'];
+  for (const name of handlers) {
+    const src = readFileSync(new URL(`./${name}.mjs`, import.meta.url), 'utf8');
+    assert.ok(
+      !/Access-Control-Allow-Origin['"]?\s*:\s*['"]\*['"]/.test(src),
+      `${name}.mjs must not send Access-Control-Allow-Origin: *`,
+    );
+  }
 });
 
 test('no stored prefs -> defaults', async () => {

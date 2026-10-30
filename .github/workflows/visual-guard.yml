@@ -17,8 +17,14 @@ on:
       update:
         description: 'Make new baseline images (true/false)'
         default: 'false'
+# CI-001 (2026-10-30): the test job below runs PR-controlled content, so it must
+# not hold a write token. It is read-only; the one step that needs to commit a
+# baseline lives in the separate `save-baseline` job, which is gated on a trusted
+# event (push to safety/** or an explicit workflow_dispatch) and never on
+# pull_request. GitHub grants permissions per job, not per step, so the split is
+# what actually removes the write scope from the PR path.
 permissions:
-  contents: write
+  contents: read
 concurrency:
   group: visual-guard-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
@@ -69,17 +75,37 @@ jobs:
         with:
           name: visual-baseline
           path: tests/visual/baseline/*.png
-      - name: Save new baseline to this PR branch (never main)
-        if: steps.base.outputs.made == 'true' && (github.head_ref || github.ref_name) != 'main' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-        run: |
-          git config user.name "visual-guard-bot"
-          git config user.email "visual-guard-bot@users.noreply.github.com"
-          git add tests/visual/baseline/*.png
-          git commit -m "visual-guard: baseline images made on CI Linux" || exit 0
-          git push origin HEAD:${{ github.head_ref || github.ref_name }}
       - name: Upload failed screenshots
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: visual-diff
           path: tests/visual/output/
+
+  # Trusted-ref only: commits a freshly made baseline. No PR ever reaches here,
+  # so PR-controlled content never runs with a write token.
+  save-baseline:
+    needs: visual
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+      - name: Download the baseline the test job produced
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: visual-baseline
+          path: tests/visual/baseline
+      - name: Commit the baseline to this branch (never main)
+        run: |
+          test -n "$(ls tests/visual/baseline/*.png 2>/dev/null)" || { echo "no baseline artifact; nothing to save"; exit 0; }
+          git config user.name "visual-guard-bot"
+          git config user.email "visual-guard-bot@users.noreply.github.com"
+          git add tests/visual/baseline/*.png
+          git commit -m "visual-guard: baseline images made on CI Linux" || exit 0
+          test "${GITHUB_REF_NAME}" != "main" || { echo "refusing to commit a baseline to main"; exit 1; }
+          git push origin HEAD:${{ github.head_ref || github.ref_name }}

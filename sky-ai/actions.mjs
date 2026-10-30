@@ -30,7 +30,6 @@ import { INTERNAL_KEY_NAME, sameKey } from './prefs.mjs';
 
 const HEADERS = {
   'Content-Type': 'application/json',
-  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization,content-type,x-ah-app,x-ah-guest',
   'Access-Control-Allow-Methods': 'POST,OPTIONS',
   'cache-control': 'no-store'

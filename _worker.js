@@ -18,6 +18,11 @@ const RETIRED_ASSETS = new Set([
 const RETIRED_ASSET_PREFIXES = ['/auth-art', '/auth-screens'];
 const SERVER_ONLY_ASSETS = new Set([
   '/gk-agent-worker.js', '/public-worker.js', '/ai-agent.js', '/worker-bundle.mjs',
+  /* SEC-002 (2026-10-30): auth-worker-bundle.mjs is the esbuild output of
+     auth-worker.js and carries ADMIN_TOKEN / TURNSTILE_SECRET_KEY / api.telegram.org
+     references. It was committed at the repo root, so the Pages deploy shipped it
+     and the live site answered 200 with 209,712 bytes of server source. */
+  '/auth-worker-bundle.mjs',
   '/voice-worker.js', '/notification-worker.js', '/fcm-notification.mjs',
   '/p14-abuse-guard.mjs', '/action-engine.js', '/userdata-api.mjs',
   '/wrangler.toml', '/wrangler.staging.toml', '/supabase_sync_schema.sql',

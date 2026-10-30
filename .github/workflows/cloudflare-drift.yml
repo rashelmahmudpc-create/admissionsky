@@ -1,0 +1,45 @@
+name: Cloudflare Drift Check (CF-001)
+
+# CF-001 (2026-10-30 audit): the account holds more Workers and Pages projects
+# than this repo deploys, so untracked resources receive no secret rotation, no
+# dependency updates and no review. This job diffs the live resource list against
+# .github/cloudflare-inventory.json and fails on drift so a new resource cannot
+# appear unannounced.
+#
+# Report-only by design: retiring a resource is an owner decision, so this never
+# deletes or modifies anything.
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-drift
+  cancel-in-progress: false
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: The drift diff itself passes offline
+        run: node --test cloudflare-drift.test.mjs
+      - name: Diff the live Cloudflare inventory against the committed one
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -eu
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo "::notice title=Cloudflare drift check skipped::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID are not set on this repository."
+            exit 0
+          fi
+          node scripts/cloudflare-drift-check.mjs

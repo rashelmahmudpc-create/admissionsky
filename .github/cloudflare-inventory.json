@@ -1,0 +1,38 @@
+{
+  "_comment": "CF-001 (2026-10-30 audit). The Cloudflare account holds more Workers and Pages projects than this repo deploys, so they receive no secret rotation, no dependency updates and no review. This file is the committed inventory the drift check compares against. Every entry must be one of: tracked (a workflow in .github/workflows deploys it) or waived (a deliberate, reviewed exception with a reason). Adding a live resource means adding it here; the drift check fails until you do.",
+  "account": "rashelmahmudpc-create",
+  "last_verified": "2026-10-30",
+  "workers": {
+    "tracked": [
+      "admission-gk",
+      "admission-auth",
+      "admission-hub-ai-proxy",
+      "admission-notify",
+      "sky-ai"
+    ],
+    "waived": [
+      { "name": "mesh-chat", "reason": "Owner-run experiment; no deploy workflow in this repo yet. Confirm keep or delete (CF-001)." },
+      { "name": "opencode-bot-keepalive", "reason": "Keepalive for the opencode bot; untracked. Confirm keep or delete." },
+      { "name": "openclaw-keepalive", "reason": "Keepalive for openclaw; untracked. Confirm keep or delete." },
+      { "name": "oh-bot-guard", "reason": "Untracked guard worker. Confirm keep or delete." },
+      { "name": "permission-test", "reason": "Name suggests privileged functionality with no oversight. Confirm keep or delete." },
+      { "name": "otp-tester", "reason": "Name suggests privileged functionality with no oversight. Confirm keep or delete." },
+      { "name": "mail-vault", "reason": "Holds mail data; untracked. Confirm keep or delete." },
+      { "name": "study-pal", "reason": "Untracked app worker. Confirm keep or delete." },
+      { "name": "sky-control", "reason": "Untracked control worker. Confirm keep or delete." },
+      { "name": "ah-admin", "reason": "Untracked admin worker. Confirm keep or delete." },
+      { "name": "ah-public", "reason": "Untracked public worker. Confirm keep or delete." }
+    ]
+  },
+  "pages_projects": {
+    "tracked": [
+      "admissionhub",
+      "admissionsky"
+    ],
+    "waived": [
+      { "name": "sky-control-preview", "reason": "Stale preview project; retire (BUG-005)." },
+      { "name": "rashel-study-hub", "reason": "Stale preview project; retire (BUG-005)." },
+      { "name": "admission-hub-ai", "reason": "Stale preview project; retire (BUG-005)." }
+    ]
+  }
+}

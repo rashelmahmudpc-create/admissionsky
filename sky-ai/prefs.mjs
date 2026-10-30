@@ -24,10 +24,12 @@ export function sanitizeAiPrefs(value) {
   };
 }
 
-/* Same headers admission-gk's JSONH sends, so the browser sees no difference. */
+/* SEC-004 (2026-10-30): no Access-Control-Allow-Origin here. sky-ai is reachable
+   only through admission-gk's SKY_AI service binding (workers_dev = false), so a
+   browser is never the caller and a wildcard origin would only be a latent
+   cross-origin read if the Worker were ever exposed. */
 const HEADERS = {
   'Content-Type': 'application/json',
-  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization,content-type,x-ah-app,x-ah-guest',
   'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
   'cache-control': 'no-store',
