@@ -16,16 +16,16 @@
     ],
     "waived": [
       {
-        "name": "ah-public",
-        "reason": "Old app (2026-08-31), 401 without login, holds 9 secrets (GEMINI_KEYS, GOOGLE_CLIENT_SECRET, MAIL_HOOK_SECRET). No workflow deploys it. Owner call: retire or re-track."
-      },
-      {
         "name": "ah-admin",
         "reason": "Control Center UI (2026-09-03) opens without login; holds ADMIN_CF_TOKEN + ADMIN_GH_TOKEN + TG_BOT_TOKEN; /api/* returns 404. Highest-risk untracked Worker. Owner call: retire or add auth."
       },
       {
-        "name": "sky-control",
-        "reason": "Control panel (2026-10-17) opens without login; API is 401; holds 11 secrets (CF_API_TOKEN, GITHUB_TOKEN, NOTION_TOKEN, ENCRYPTION_KEY). Owner call: retire or add auth."
+        "name": "ah-public",
+        "reason": "Old app (2026-08-31), 401 without login, holds 9 secrets (GEMINI_KEYS, GOOGLE_CLIENT_SECRET, MAIL_HOOK_SECRET). No workflow deploys it. Owner call: retire or re-track."
+      },
+      {
+        "name": "mesh-chat",
+        "reason": "Chat Worker (2026-10-25, modified 2026-10-30), 200, holds GEMINI/GROQ/OPENROUTER/GITHUB keys. Live sibling-bot tooling."
       },
       {
         "name": "oh-bot-guard",
@@ -36,12 +36,16 @@
         "reason": "Keepalive (2026-10-28), 403, holds OPENHANDS_API_KEY + SANDBOX_ID. Belongs to a sibling bot system."
       },
       {
-        "name": "mesh-chat",
-        "reason": "Chat Worker (2026-10-25, modified 2026-10-30), 200, holds GEMINI/GROQ/OPENROUTER/GITHUB keys. Live sibling-bot tooling."
-      },
-      {
         "name": "opencode-bot-keepalive",
         "reason": "Keepalive (2026-10-27, modified 2026-10-30), 200, holds OPENHANDS_API_KEY + SANDBOX_ID. Live sibling-bot tooling."
+      },
+      {
+        "name": "sky-control",
+        "reason": "Control panel (2026-10-17) opens without login; API is 401; holds 11 secrets (CF_API_TOKEN, GITHUB_TOKEN, NOTION_TOKEN, ENCRYPTION_KEY). Owner call: retire or add auth."
+      },
+      {
+        "name": "study-pal",
+        "reason": "Owner's live app: 'Study Pal / 70-Day Admission Planner' (the '70 days রুটিন' website). Briefly retired 2026-10-30 by mistake, then restored from rashelmahmudpc-create/study-pal and redeployed (run 29, success). Source repo deploys on push to main. Do not retire."
       }
     ]
   },
@@ -57,5 +61,5 @@
       }
     ]
   },
-  "_retired_2026_10_30": "Owner order 2026-10-30: retired 4 Workers (study-pal, otp-tester, mail-vault, permission-test) and 2 Pages projects (sky-control-preview, admission-hub-ai). rashel-study-hub was explicitly kept. Scripts backed up to /workspace/cf-retired-backup-2026-10-30 (outside the repo)."
+  "_retired_2026_10_30": "Owner order 2026-10-30 retired 3 Workers (otp-tester, mail-vault, permission-test) and 2 Pages projects (sky-control-preview, admission-hub-ai). study-pal was retired in the same batch by mistake (it is the owner's 70-Day Admission Planner) and RESTORED the same day from its GitHub repo. rashel-study-hub was kept. Scripts backed up to /workspace/cf-retired-backup-2026-10-30 (outside the repo)."
 }
