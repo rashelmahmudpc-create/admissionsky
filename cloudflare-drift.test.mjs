@@ -60,8 +60,12 @@ test('a Cloudflare API error is raised, never silently read as "no drift"', asyn
 test('the committed inventory covers every resource the audit named', () => {
   const inv = JSON.parse(readFileSync(new URL('./.github/cloudflare-inventory.json', import.meta.url), 'utf8'));
   const waived = new Set(inv.workers.waived.map((w) => w.name));
-  for (const w of ['mesh-chat', 'opencode-bot-keepalive', 'openclaw-keepalive', 'oh-bot-guard', 'permission-test', 'otp-tester', 'mail-vault', 'study-pal', 'sky-control', 'ah-admin', 'ah-public']) {
+  for (const w of ['ah-public', 'ah-admin', 'study-pal', 'otp-tester', 'mail-vault', 'sky-control', 'permission-test', 'oh-bot-guard', 'openclaw-keepalive', 'mesh-chat', 'opencode-bot-keepalive']) {
     assert.ok(waived.has(w), `${w} must be recorded in the inventory so the drift check stays meaningful`);
+  }
+  const tracked = new Set(inv.workers.tracked);
+  for (const w of ['admission-gk', 'admission-gk-staging', 'admission-auth', 'admission-voice', 'admission-notify', 'admission-hub-ai-proxy', 'sky-ai']) {
+    assert.ok(tracked.has(w), `${w} is deployed by a workflow and must stay tracked`);
   }
   const waivedPages = new Set(inv.pages_projects.waived.map((p) => p.name));
   for (const p of ['sky-control-preview', 'rashel-study-hub', 'admission-hub-ai']) {

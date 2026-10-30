@@ -1,27 +1,31 @@
 {
-  "_comment": "CF-001 (2026-10-30 audit). The Cloudflare account holds more Workers and Pages projects than this repo deploys, so they receive no secret rotation, no dependency updates and no review. This file is the committed inventory the drift check compares against. Every entry must be one of: tracked (a workflow in .github/workflows deploys it) or waived (a deliberate, reviewed exception with a reason). Adding a live resource means adding it here; the drift check fails until you do.",
-  "account": "rashelmahmudpc-create",
+  "_comment": "CF-001. Live-verified 2026-10-30 against the Cloudflare API (global key, account abb783e456e51a5d338419de93d5e576). The account holds 18 Workers and 5 Pages projects; this repo's workflows deploy only 7 of the Workers and 2 of the Pages projects. This file is the committed baseline the drift check compares against. Every entry must be either tracked (a workflow in .github/workflows deploys it) or waived (a deliberate, reviewed exception with a reason). Adding a live resource means adding it here; the drift check fails until you do.",
+  "account": "abb783e456e51a5d338419de93d5e576",
+  "account_name": "Rashelzayan213@icloud.com's Account",
+  "worker_subdomain": "admissionhub.workers.dev",
   "last_verified": "2026-10-30",
   "workers": {
     "tracked": [
       "admission-gk",
+      "admission-gk-staging",
       "admission-auth",
-      "admission-hub-ai-proxy",
+      "admission-voice",
       "admission-notify",
+      "admission-hub-ai-proxy",
       "sky-ai"
     ],
     "waived": [
-      { "name": "mesh-chat", "reason": "Owner-run experiment; no deploy workflow in this repo yet. Confirm keep or delete (CF-001)." },
-      { "name": "opencode-bot-keepalive", "reason": "Keepalive for the opencode bot; untracked. Confirm keep or delete." },
-      { "name": "openclaw-keepalive", "reason": "Keepalive for openclaw; untracked. Confirm keep or delete." },
-      { "name": "oh-bot-guard", "reason": "Untracked guard worker. Confirm keep or delete." },
-      { "name": "permission-test", "reason": "Name suggests privileged functionality with no oversight. Confirm keep or delete." },
-      { "name": "otp-tester", "reason": "Name suggests privileged functionality with no oversight. Confirm keep or delete." },
-      { "name": "mail-vault", "reason": "Holds mail data; untracked. Confirm keep or delete." },
-      { "name": "study-pal", "reason": "Untracked app worker. Confirm keep or delete." },
-      { "name": "sky-control", "reason": "Untracked control worker. Confirm keep or delete." },
-      { "name": "ah-admin", "reason": "Untracked admin worker. Confirm keep or delete." },
-      { "name": "ah-public", "reason": "Untracked public worker. Confirm keep or delete." }
+      { "name": "ah-public", "reason": "Old app (2026-08-31), 401 without login, holds 9 secrets (GEMINI_KEYS, GOOGLE_CLIENT_SECRET, MAIL_HOOK_SECRET). No workflow deploys it. Owner call: retire or re-track." },
+      { "name": "ah-admin", "reason": "Control Center UI (2026-09-03) opens without login; holds ADMIN_CF_TOKEN + ADMIN_GH_TOKEN + TG_BOT_TOKEN; /api/* returns 404. Highest-risk untracked Worker. Owner call: retire or add auth." },
+      { "name": "study-pal", "reason": "Old app (2026-10-05), no secrets, no workflow. Owner call: retire." },
+      { "name": "otp-tester", "reason": "Mail tester (2026-10-22), no secrets; /send answers 400 and refuses outside recipients. Owner call: retire." },
+      { "name": "mail-vault", "reason": "Mail vault app (2026-10-24), no secrets, no workflow. Owner call: retire or re-track." },
+      { "name": "sky-control", "reason": "Control panel (2026-10-17) opens without login; API is 401; holds 11 secrets (CF_API_TOKEN, GITHUB_TOKEN, NOTION_TOKEN, ENCRYPTION_KEY). Owner call: retire or add auth." },
+      { "name": "permission-test", "reason": "Test Worker (2026-10-28), 404 (no route), no secrets, no workflow. Likely another agent's scratch. Owner call: retire." },
+      { "name": "oh-bot-guard", "reason": "Bot guard (2026-10-28), 404, holds OPENHANDS_API_KEY + SANDBOX_ID. Belongs to a sibling bot system; do not remove without its owner's yes." },
+      { "name": "openclaw-keepalive", "reason": "Keepalive (2026-10-28), 403, holds OPENHANDS_API_KEY + SANDBOX_ID. Belongs to a sibling bot system." },
+      { "name": "mesh-chat", "reason": "Chat Worker (2026-10-25, modified 2026-10-30), 200, holds GEMINI/GROQ/OPENROUTER/GITHUB keys. Live sibling-bot tooling." },
+      { "name": "opencode-bot-keepalive", "reason": "Keepalive (2026-10-27, modified 2026-10-30), 200, holds OPENHANDS_API_KEY + SANDBOX_ID. Live sibling-bot tooling." }
     ]
   },
   "pages_projects": {
@@ -30,9 +34,9 @@
       "admissionsky"
     ],
     "waived": [
-      { "name": "sky-control-preview", "reason": "Stale preview project; retire (BUG-005)." },
-      { "name": "rashel-study-hub", "reason": "Stale preview project; retire (BUG-005)." },
-      { "name": "admission-hub-ai", "reason": "Stale preview project; retire (BUG-005)." }
+      { "name": "sky-control-preview", "reason": "Preview project (2026-10-17), answers 200. Not deployed by this repo. Owner call: retire." },
+      { "name": "rashel-study-hub", "reason": "Old project (2026-09-17), answers 200. Not deployed by this repo. Owner call: retire." },
+      { "name": "admission-hub-ai", "reason": "Superseded by the admission-hub-ai-proxy Worker (2026-09-01), answers 404. Owner call: retire." }
     ]
   }
 }
