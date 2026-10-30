@@ -32927,7 +32927,8 @@ var NEWS_SCHEMA = {
 var previewOriginsAllowed = false;
 var cors = (request) => {
   const origin = request.headers.get("Origin") || "";
-  const ok2 = /^https:\/\/([a-z0-9-]+\.)?(admissionsky|admissionhub)\.pages\.dev$/.test(origin) || previewOriginsAllowed && /^https:\/\/[a-z0-9-]+\.e2b\.app$/.test(origin);
+  const preview = previewOriginsAllowed && /^https:\/\/[a-z0-9-]+\.e2b\.app$/.test(origin);
+  const ok2 = allowedOrigin(origin) || preview;
   const headers = { "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, X-AH-App", "Access-Control-Max-Age": "86400" };
   if (ok2) headers["Access-Control-Allow-Origin"] = origin;
   return headers;

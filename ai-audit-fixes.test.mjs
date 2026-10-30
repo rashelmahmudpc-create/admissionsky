@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { agentChat, clearAiMemory, CHAT_MEMORY_TTL_MS } from './ai-agent.js';
 import { AiStateObject } from './ai-state-do.mjs';
+import { allowedOrigin } from './cors-policy.mjs';
 
 const enc = new TextEncoder();
 function memKv() {
@@ -128,11 +129,22 @@ test('Pages does not serve the Worker-only AI modules', () => {
 });
 
 test('voice-worker accepts only the app origins', () => {
+  // AU-SEC-05 (2026-10-30): this test used to assert that an arbitrary
+  // subdomain -- `abc123.admissionsky.pages.dev` -- was ACCEPTED. That was the
+  // P20 behaviour, and it was the hole: only the apex hosts are the owner's, so
+  // any other name under pages.dev was treated as the app and handed
+  // `Access-Control-Allow-Origin` with credentials. The 2026-10-22 CORS
+  // decision (D-5) dropped preview subdomains; the shared policy in
+  // cors-policy.mjs now enforces that, and voice-worker.js delegates to it
+  // instead of keeping a copy. The subdomain cases below are the regression.
   const src = readFileSync(new URL('./voice-worker.js', import.meta.url), 'utf8');
-  const m = src.match(/const originAllowed = ([\s\S]*?);\n/);
-  const originAllowed = new Function('return ' + m[1])();
+  assert.match(src, /const originAllowed = allowedOrigin;/,
+    'voice-worker.js must delegate to the shared policy, not restate it');
+  const originAllowed = allowedOrigin;
   assert.equal(originAllowed('https://admissionsky.pages.dev'), true);
-  assert.equal(originAllowed('https://abc123.admissionsky.pages.dev'), true);
+  assert.equal(originAllowed('https://admissionhub.pages.dev'), true);
+  assert.equal(originAllowed('https://abc123.admissionsky.pages.dev'), false);
+  assert.equal(originAllowed('https://evil.admissionsky.pages.dev'), false);
   assert.equal(originAllowed('https://evil.pages.dev'), false);
   assert.equal(originAllowed('https://evil.github.io'), false);
 });

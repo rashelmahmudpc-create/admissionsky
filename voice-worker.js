@@ -22,6 +22,8 @@
  * app-header + per-IP rate limit, যেন অচেনা কেউ তোমার quota পোড়াতে না পারে।
  */
 
+import { allowedOrigin } from './cors-policy.mjs';
+
 const DEFAULT_VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'; // Sarah, clear American, free-plan API-allowed
 const DEFAULT_MODEL_ID = 'eleven_flash_v2_5';    // low-latency + cost-efficient
 const DEFAULT_FORMAT = 'mp3_22050_32';           // ছোট ফাইল, দ্রুত লোড
@@ -50,9 +52,11 @@ const rateBuckets = new Map(); // per-isolate best effort (KV ছাড়াই
    BUG-002 (2026-10-26 audit): localhost / 127.0.0.1 were still accepted here.
    A page served on a developer machine could then make credentialed
    cross-origin calls and read the response with a signed-in student's session.
-   Production dropped those on 2026-10-22 (cors-policy.mjs); this copy did not. */
-const originAllowed = origin => /^https:\/\/([a-z0-9-]+\.)?(admissionsky|admissionhub)\.pages\.dev$/.test(origin);
+   Production dropped those on 2026-10-22 (cors-policy.mjs); this copy did not.
 
+   AU-SEC-05 (2026-10-30 audit): the copy still accepted any subdomain of the
+   two Pages hosts. The rule now comes from cors-policy.mjs so it cannot drift. */
+const originAllowed = allowedOrigin;
 const corsHeaders = request => {
   const origin = request.headers.get('Origin') || '';
   /* P20 (v204): pages.dev-ও-অনুমোদিত, আগে ছিল শুধু github.io+localhost, তাই pages.dev-পেজ থেকে

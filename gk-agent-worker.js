@@ -1,5 +1,6 @@
 // v133b: public-product module
 import pubHandler, { publishGlobal } from './public-worker.js';
+import { allowedOrigin } from './cors-policy.mjs';
 import { tryRouteToSkyAi } from './sky-ai-route.mjs';
 import { providerReadiness, readyProviderNames } from './ai-agent.js';
 import { syncProviderKeysToKv } from './ai-key-sync.mjs';
@@ -104,12 +105,18 @@ const NEWS_SCHEMA = {
    machine make credentialed cross-origin calls and read the response with the
    signed-in student's session. Production stopped accepting those on
    2026-10-22 in cors-policy.mjs, but this handler kept its own copy. The
-   preview origin is now opt-in via ALLOW_PREVIEW_ORIGINS, unset in production. */
+   preview origin is now opt-in via ALLOW_PREVIEW_ORIGINS, unset in production.
+
+   AU-SEC-05 (2026-10-30 audit). The copy that stayed behind had a second hole:
+   `([a-z0-9-]+\.)?` accepted ANY subdomain, so `evil.admissionsky.pages.dev`
+   passed the check even though only the apex is ours. cors-policy.mjs matches
+   hostnames exactly; this now calls it instead of restating the rule, so the
+   two cannot drift apart again. */
 let previewOriginsAllowed = false;
 const cors = request => {
   const origin = request.headers.get('Origin') || '';
-  const ok = /^https:\/\/([a-z0-9-]+\.)?(admissionsky|admissionhub)\.pages\.dev$/.test(origin)
-    || (previewOriginsAllowed && /^https:\/\/[a-z0-9-]+\.e2b\.app$/.test(origin));
+  const preview = previewOriginsAllowed && /^https:\/\/[a-z0-9-]+\.e2b\.app$/.test(origin);
+  const ok = allowedOrigin(origin) || preview;
   const headers = { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, X-AH-App', 'Access-Control-Max-Age': '86400' };
   if (ok) headers['Access-Control-Allow-Origin'] = origin;
   return headers;

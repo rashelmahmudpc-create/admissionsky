@@ -20,7 +20,7 @@ const SW = readFileSync('sw.js', 'utf8');
 t('১. _worker.js: /api/voice → voice-worker, /api/voice/agent|login|session → মূল-worker (অটুট)', WK.includes("url.pathname.startsWith('/api/voice') ? VOICE_ORIGIN : ORIGIN") && WK.includes("const VOICE_ORIGIN = 'https://admission-voice.admissionhub.workers.dev'") && WK.includes('AGENT_API.test(url.pathname) ? ORIGIN'));
 t('২. ক্লায়েন্ট-ডিফল্ট same-origin ("" → /api/voice) + voiceOff-পৃথক', VE.includes("const DEFAULT_ENDPOINT = '';") && VE.includes('fetch(proxyUrl + \'/api/voice\',') && VE.includes('const configured = () => !voiceOff;'));
 t('৩. মাইগ্রেশন: পুরনো workers.dev সেভ-ভ্যালু → same-origin', VE.includes("if (saved && saved.includes('.workers.dev')) saved = '';"));
-t('৪. voice-worker-allowlist-এ pages.dev (CORS-ফাঁক-বন্ধ)', VW.includes('(admissionsky|admissionhub)\\.pages\\.dev$/.test(origin)') && VW.includes('P20 (v204)') && !VW.includes("([a-z0-9-]+\\.)?pages\\.dev$/"));
+t('৪. voice-worker-allowlist-এ pages.dev (CORS-ফাঁক-বন্ধ)', VW.includes('const originAllowed = allowedOrigin;') && VW.includes('P20 (v204)') && VW.includes("from './cors-policy.mjs'") && !VW.includes("([a-z0-9-]+\\.)?pages\\.dev$/"));
 t('৫. Pages proxy preserves method, headers and request body', WK.includes('new Headers(request.headers)') && WK.includes('method: request.method') && WK.includes('init.body = request.body'));
 
 /* ── ২. ভার্সন-অখণ্ডতা v204 ── */
