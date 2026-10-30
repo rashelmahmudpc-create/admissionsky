@@ -28,8 +28,21 @@ advanced-mode Pages worker that proxies `/api/*` and gates asset serving.
 - **Manual deploy workflow:** `.github/workflows/deploy-pages-worker.yml`
   (`confirmation: DEPLOY`) publishes both the Worker bundle and the Pages UI from
   `main` using repository secrets. It is deploy-only — no Firebase, mailbox or
-  secret mutation. Merging to `main` does **not** deploy on its own; run this
-  workflow (or dispatch it via the API) whenever `main` must reach production.
+  secret mutation. It is **also push-triggered**: `push` to `main` on a listed
+  path (including this workflow file itself and `package.json`) publishes
+  immediately, which is why a merge can reach production without anyone pressing
+  the button. Docs-only merges are skipped by that path filter.
+- **A secret a step only *reads* is a channel that can be dead while every run is
+  green.** `SEC-003` (2026-10-30) was exactly that: `_worker.js` signed
+  `POST /api/report-error` and `admission-gk` verified it, both failing closed,
+  and no deploy ever bound `ALERT_PROXY_SECRET` — so every real browser error got
+  403 while the step that should have bound it echoed a `::warning` and exited 0.
+  `scripts/bind-alert-proxy-secret.mjs` now provisions it (generating the value
+  when the repository secret is absent), binds the signers before the verifier so
+  a half-finished run converges on the next one, and proves the chain with an
+  empty-message probe carrying a deliberately invalid signature — only a Pages
+  worker that holds the secret re-signs it, and `400 empty` is a signed answer
+  delivered to nobody. A missing binding must fail the run, never warn and pass.
 - Local deploy without `rsync` (not installed here): replicate the exclude list
   in Python, then run wrangler via `npx --yes wrangler@3 pages deploy dist ...`.
 
