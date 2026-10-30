@@ -15,17 +15,34 @@
       "sky-ai"
     ],
     "waived": [
-      { "name": "ah-public", "reason": "Old app (2026-08-31), 401 without login, holds 9 secrets (GEMINI_KEYS, GOOGLE_CLIENT_SECRET, MAIL_HOOK_SECRET). No workflow deploys it. Owner call: retire or re-track." },
-      { "name": "ah-admin", "reason": "Control Center UI (2026-09-03) opens without login; holds ADMIN_CF_TOKEN + ADMIN_GH_TOKEN + TG_BOT_TOKEN; /api/* returns 404. Highest-risk untracked Worker. Owner call: retire or add auth." },
-      { "name": "study-pal", "reason": "Old app (2026-10-05), no secrets, no workflow. Owner call: retire." },
-      { "name": "otp-tester", "reason": "Mail tester (2026-10-22), no secrets; /send answers 400 and refuses outside recipients. Owner call: retire." },
-      { "name": "mail-vault", "reason": "Mail vault app (2026-10-24), no secrets, no workflow. Owner call: retire or re-track." },
-      { "name": "sky-control", "reason": "Control panel (2026-10-17) opens without login; API is 401; holds 11 secrets (CF_API_TOKEN, GITHUB_TOKEN, NOTION_TOKEN, ENCRYPTION_KEY). Owner call: retire or add auth." },
-      { "name": "permission-test", "reason": "Test Worker (2026-10-28), 404 (no route), no secrets, no workflow. Likely another agent's scratch. Owner call: retire." },
-      { "name": "oh-bot-guard", "reason": "Bot guard (2026-10-28), 404, holds OPENHANDS_API_KEY + SANDBOX_ID. Belongs to a sibling bot system; do not remove without its owner's yes." },
-      { "name": "openclaw-keepalive", "reason": "Keepalive (2026-10-28), 403, holds OPENHANDS_API_KEY + SANDBOX_ID. Belongs to a sibling bot system." },
-      { "name": "mesh-chat", "reason": "Chat Worker (2026-10-25, modified 2026-10-30), 200, holds GEMINI/GROQ/OPENROUTER/GITHUB keys. Live sibling-bot tooling." },
-      { "name": "opencode-bot-keepalive", "reason": "Keepalive (2026-10-27, modified 2026-10-30), 200, holds OPENHANDS_API_KEY + SANDBOX_ID. Live sibling-bot tooling." }
+      {
+        "name": "ah-public",
+        "reason": "Old app (2026-08-31), 401 without login, holds 9 secrets (GEMINI_KEYS, GOOGLE_CLIENT_SECRET, MAIL_HOOK_SECRET). No workflow deploys it. Owner call: retire or re-track."
+      },
+      {
+        "name": "ah-admin",
+        "reason": "Control Center UI (2026-09-03) opens without login; holds ADMIN_CF_TOKEN + ADMIN_GH_TOKEN + TG_BOT_TOKEN; /api/* returns 404. Highest-risk untracked Worker. Owner call: retire or add auth."
+      },
+      {
+        "name": "sky-control",
+        "reason": "Control panel (2026-10-17) opens without login; API is 401; holds 11 secrets (CF_API_TOKEN, GITHUB_TOKEN, NOTION_TOKEN, ENCRYPTION_KEY). Owner call: retire or add auth."
+      },
+      {
+        "name": "oh-bot-guard",
+        "reason": "Bot guard (2026-10-28), 404, holds OPENHANDS_API_KEY + SANDBOX_ID. Belongs to a sibling bot system; do not remove without its owner's yes."
+      },
+      {
+        "name": "openclaw-keepalive",
+        "reason": "Keepalive (2026-10-28), 403, holds OPENHANDS_API_KEY + SANDBOX_ID. Belongs to a sibling bot system."
+      },
+      {
+        "name": "mesh-chat",
+        "reason": "Chat Worker (2026-10-25, modified 2026-10-30), 200, holds GEMINI/GROQ/OPENROUTER/GITHUB keys. Live sibling-bot tooling."
+      },
+      {
+        "name": "opencode-bot-keepalive",
+        "reason": "Keepalive (2026-10-27, modified 2026-10-30), 200, holds OPENHANDS_API_KEY + SANDBOX_ID. Live sibling-bot tooling."
+      }
     ]
   },
   "pages_projects": {
@@ -34,9 +51,11 @@
       "admissionsky"
     ],
     "waived": [
-      { "name": "sky-control-preview", "reason": "Preview project (2026-10-17), answers 200. Not deployed by this repo. Owner call: retire." },
-      { "name": "rashel-study-hub", "reason": "Old project (2026-09-17), answers 200. Not deployed by this repo. Owner call: retire." },
-      { "name": "admission-hub-ai", "reason": "Superseded by the admission-hub-ai-proxy Worker (2026-09-01), answers 404. Owner call: retire." }
+      {
+        "name": "rashel-study-hub",
+        "reason": "Old project (2026-09-17), answers 200. Not deployed by this repo. Owner call: retire."
+      }
     ]
-  }
+  },
+  "_retired_2026_10_30": "Owner order 2026-10-30: retired 4 Workers (study-pal, otp-tester, mail-vault, permission-test) and 2 Pages projects (sky-control-preview, admission-hub-ai). rashel-study-hub was explicitly kept. Scripts backed up to /workspace/cf-retired-backup-2026-10-30 (outside the repo)."
 }

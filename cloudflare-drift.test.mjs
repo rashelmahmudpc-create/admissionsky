@@ -60,15 +60,23 @@ test('a Cloudflare API error is raised, never silently read as "no drift"', asyn
 test('the committed inventory covers every resource the audit named', () => {
   const inv = JSON.parse(readFileSync(new URL('./.github/cloudflare-inventory.json', import.meta.url), 'utf8'));
   const waived = new Set(inv.workers.waived.map((w) => w.name));
-  for (const w of ['ah-public', 'ah-admin', 'study-pal', 'otp-tester', 'mail-vault', 'sky-control', 'permission-test', 'oh-bot-guard', 'openclaw-keepalive', 'mesh-chat', 'opencode-bot-keepalive']) {
+  for (const w of ['ah-public', 'ah-admin', 'sky-control', 'oh-bot-guard', 'openclaw-keepalive', 'mesh-chat', 'opencode-bot-keepalive']) {
     assert.ok(waived.has(w), `${w} must be recorded in the inventory so the drift check stays meaningful`);
   }
   const tracked = new Set(inv.workers.tracked);
   for (const w of ['admission-gk', 'admission-gk-staging', 'admission-auth', 'admission-voice', 'admission-notify', 'admission-hub-ai-proxy', 'sky-ai']) {
     assert.ok(tracked.has(w), `${w} is deployed by a workflow and must stay tracked`);
   }
+  // Retired on 2026-10-30 by owner order: they must not be listed, or the drift
+  // check would keep treating a deleted resource as an expected one.
+  const retired = new Set([...inv.workers.tracked, ...waived]);
+  for (const w of ['study-pal', 'otp-tester', 'mail-vault', 'permission-test']) {
+    assert.ok(!retired.has(w), `${w} was retired and must not remain in the inventory`);
+  }
   const waivedPages = new Set(inv.pages_projects.waived.map((p) => p.name));
-  for (const p of ['sky-control-preview', 'rashel-study-hub', 'admission-hub-ai']) {
-    assert.ok(waivedPages.has(p), `${p} must be recorded in the inventory`);
+  assert.ok(waivedPages.has('rashel-study-hub'), 'rashel-study-hub was explicitly kept by the owner');
+  const allPages = new Set([...inv.pages_projects.tracked, ...waivedPages]);
+  for (const p of ['sky-control-preview', 'admission-hub-ai']) {
+    assert.ok(!allPages.has(p), `${p} was retired and must not remain in the inventory`);
   }
 });
