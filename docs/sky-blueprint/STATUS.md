@@ -270,18 +270,27 @@ Source of truth: Notion "Sky AI v1.0" → main page section **"🚦 এজেন
     the deploy and names the remedy. It runs in the `pages` job AFTER the deploy, because that is
     what makes a Pages project secret reach the running deployment; provisioning lives in the same
     job (two parallel provisioners could generate two different values).
-  - **CF-001 — the check can now run.** `cloudflare-drift.yml` gained a `push` trigger filtered to
+  - **CF-001 — the check can now run.** `cloudflare-drift.yml` gains a `push` trigger filtered to
     its own inputs (inventory, diff module, script, the workflow), so it runs on the next push
     instead of waiting for 06:17Z.
-  - **A1.5 ③ — the alert no longer waits for a throttled cron.** `guard-health.yml` gained
+  - **A1.5 ③ — the alert no longer waits for a throttled cron.** `guard-health.yml` gains
     `workflow_run` on the same eight guards, so a completed red run is delivered in seconds; the
     `*/15` cron stays as the safety net for a missed delivery.
-  - New tests, all green: `alert-proxy-secret.test.mjs` 12 (provisioning order, convergence,
-    no-secret-in-argv/log, WebCrypto-identical signature, probe semantics, workflow wiring),
-    `guard-health-triggers.test.mjs` 3 (GUARDS ↔ real workflow names ↔ workflow_run filter) and
-    one added case in `cloudflare-drift.test.mjs`. Both new files are wired into
-    `npm run test:shell-guards`. Non-vacuity proven by mutation: renaming one trigger fails
-    A1.5-৩b with the guard name.
-  - Still owner-side / next deploy: the first main push after this merge is the first live run of
-    the drift check and of the alert-chain verification; `scripts/` stays 404 publicly
-    (`SERVER_ONLY_PREFIXES`), so the provisioning script is not served.
+  - New tests: `alert-proxy-secret.test.mjs` (provisioning order, convergence,
+    no-secret-in-argv/log, WebCrypto-identical signature, probe semantics) and
+    `guard-health-triggers.test.mjs` 3 (GUARDS ↔ real workflow names ↔ workflow_run filter) plus
+    one added case in `cloudflare-drift.test.mjs`. Non-vacuity proven by mutation: renaming one
+    trigger fails A1.5-৩b with the guard name.
+  - **THE WORKFLOW HALF COULD NOT BE PUSHED FROM THAT SESSION.** The injected credential is a
+    GitHub App without the `workflows` permission, so `.github/workflows/*.yml` is refused
+    ("refusing to allow a GitHub App to create or update workflow … without `workflows`
+    permission"). Everything a token may write is on `cline/dwyksdfm` (`8d7636f`); the three
+    workflow edits and the four test/wiring lines that assert them are committed as
+    `docs/sky-blueprint/SEC-003-workflow-changes.patch` — 7 files, verified to apply to a pristine
+    worktree of that commit, where all 21 of those tests pass. Apply with
+    `git apply docs/sky-blueprint/SEC-003-workflow-changes.patch` from a token that has
+    `workflows`, then push `main`: the push itself runs the drift check, provisions the alert
+    secret and proves the chain.
+  - Still owner-side: nothing needs a new repository secret any more — the deploy generates one if
+    `ALERT_PROXY_SECRET` is absent. Setting it remains the way to *rotate* the value. `scripts/`
+    stays 404 publicly (`SERVER_ONLY_PREFIXES`), so the provisioning script is not served.

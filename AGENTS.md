@@ -43,6 +43,10 @@ advanced-mode Pages worker that proxies `/api/*` and gates asset serving.
   empty-message probe carrying a deliberately invalid signature — only a Pages
   worker that holds the secret re-signs it, and `400 empty` is a signed answer
   delivered to nobody. A missing binding must fail the run, never warn and pass.
+  The deploy step that calls it ships as
+  `docs/sky-blueprint/SEC-003-workflow-changes.patch` (apply it, then delete the
+  file): the session that wrote it held a GitHub App token without the
+  `workflows` permission, which cannot push `.github/workflows/*.yml` at all.
 - Local deploy without `rsync` (not installed here): replicate the exclude list
   in Python, then run wrangler via `npx --yes wrangler@3 pages deploy dist ...`.
 

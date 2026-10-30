@@ -1,0 +1,263 @@
+diff --git a/.github/workflows/cloudflare-drift.yml b/.github/workflows/cloudflare-drift.yml
+index ef869da..0119ae7 100644
+--- a/.github/workflows/cloudflare-drift.yml
++++ b/.github/workflows/cloudflare-drift.yml
+@@ -12,6 +12,16 @@ name: Cloudflare Drift Check (CF-001)
+ on:
+   schedule:
+     - cron: '17 6 * * *'
++  # CF-001 shipped with a cron only, and its first scheduled run was a day away,
++  # so nothing proved the check could run at all. The inventory and the diff are
++  # its only inputs, so a change to either runs it immediately.
++  push:
++    paths:
++      - '.github/cloudflare-inventory.json'
++      - 'cloudflare-drift.mjs'
++      - 'cloudflare-drift.test.mjs'
++      - 'scripts/cloudflare-drift-check.mjs'
++      - '.github/workflows/cloudflare-drift.yml'
+   workflow_dispatch:
+ 
+ permissions:
+diff --git a/.github/workflows/deploy-pages-worker.yml b/.github/workflows/deploy-pages-worker.yml
+index b2c3289..7036b72 100644
+--- a/.github/workflows/deploy-pages-worker.yml
++++ b/.github/workflows/deploy-pages-worker.yml
+@@ -427,31 +427,6 @@ jobs:
+           fi
+           printf '%s' "$TURNSTILE_SECRET_KEY" | npx --yes wrangler@4.35.0 secret put TURNSTILE_SECRET_KEY --name admission-gk
+ 
+-      # SEC-003 (2026-10-30 audit): _worker.js signs POST /api/report-error with
+-      # ALERT_PROXY_SECRET and gk-agent-worker.js verifies it, but no deploy step
+-      # ever bound the secret, so the gate failed closed on BOTH sides and every
+-      # real browser error was rejected with 403 — the alert channel was dead
+-      # while everyone believed it worked. This binds one value to both holders:
+-      # the gk Worker (the verifier) and the two Pages projects (the signer,
+-      # which run _worker.js). Gated exactly like the Turnstile step above: a
+-      # missing repository secret is a loud notice, never a silent pass and never
+-      # a failed deploy.
+-      - name: Bind the alert-proxy signing secret (SEC-003)
+-        env:
+-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+-          ALERT_PROXY_SECRET: ${{ secrets.ALERT_PROXY_SECRET }}
+-        run: |
+-          set -eu
+-          if [ -z "${ALERT_PROXY_SECRET:-}" ]; then
+-            echo "::warning title=Error alerting stays dead::ALERT_PROXY_SECRET is not set, so POST /api/report-error is still rejected 403 and browser errors never reach Telegram (SEC-003)."
+-            exit 0
+-          fi
+-          printf '%s' "$ALERT_PROXY_SECRET" | npx --yes wrangler@4.35.0 secret put ALERT_PROXY_SECRET --name admission-gk
+-          for project in admissionhub admissionsky; do
+-            printf '%s' "$ALERT_PROXY_SECRET" | npx --yes wrangler@4.35.0 pages secret put ALERT_PROXY_SECRET --project-name "$project"
+-          done
+-          echo "::notice title=Alert proxy wired::ALERT_PROXY_SECRET is bound to admission-gk and both Pages projects."
+ 
+       # The sender name is a provider-account value, not Worker code, so a secret
+       # left over from the old brand keeps showing "Admission Hub" even after the
+@@ -502,6 +477,29 @@ jobs:
+           cache: npm
+       - name: Install locked dependencies
+         run: npm ci
++
++      # SEC-003 (2026-10-30 audit): _worker.js signs POST /api/report-error with
++      # ALERT_PROXY_SECRET and gk-agent-worker.js verifies it, so both sides fail
++      # closed — and because no deploy ever bound the secret, every real browser
++      # error was answered 403 and the alert channel was dead while the deploy
++      # looked green. The old step bound it ONLY when a repository secret existed
++      # and otherwise printed a warning and exited 0, so green meant "we did not
++      # try". This now provisions: with no repository secret it generates one
++      # value and binds the two signers (both Pages projects) and the verifier
++      # (admission-gk). A failure is a red run.
++      #
++      # It lives in THIS job, immediately before the deploy, on purpose. Binding
++      # a Pages project secret reaches the running deployment through a deploy, and
++      # two parallel provisioners could each generate a different value and leave
++      # the holders disagreeing. One job, one value: provision -> deploy -> verify.
++      - name: Provision the alert-proxy signing secret (SEC-003)
++        env:
++          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
++          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
++          # Optional: an owner-set value wins and rotates all three holders.
++          ALERT_PROXY_SECRET: ${{ secrets.ALERT_PROXY_SECRET }}
++        run: node scripts/bind-alert-proxy-secret.mjs provision
++
+       - name: Confirm the service-worker manifest is in sync
+         run: npm run check:sw-manifest
+       - name: Build sanitized Pages bundle
+@@ -598,3 +596,14 @@ jobs:
+               sleep 6
+             done
+           done
++
++      # SEC-003 (2026-10-30): provisioning is not proof. This posts an EMPTY-message
++      # probe through the LIVE origin with a deliberately invalid signature: only a
++      # Pages worker that holds the secret re-signs it, and only a verifier holding
++      # the same value accepts it (400 `empty`, delivered to nobody). A 403 means
++      # the channel is still dead, and the run now says so instead of going green.
++      - name: Verify the browser-error alert chain end to end
++        run: |
++          set -eu
++          node scripts/bind-alert-proxy-secret.mjs verify --pages https://admissionhub.pages.dev
++
+diff --git a/.github/workflows/guard-health.yml b/.github/workflows/guard-health.yml
+index 312701e..3dbb08a 100644
+--- a/.github/workflows/guard-health.yml
++++ b/.github/workflows/guard-health.yml
+@@ -16,6 +16,23 @@ name: Guards Health (15 min)
+ on:
+   schedule:
+     - cron: '*/15 * * * *'
++  # A1.5 ③ could not keep its own promise: GitHub throttles high-frequency
++  # schedules, and the live run history showed 2 runs in a day instead of 96 —
++  # so a guard that went red at 12:00 was still unannounced at 18:00. A completed
++  # run of a guard is the event that actually matters, and workflow_run is
++  # delivered within seconds. The cron above stays as the safety net for a
++  # delivery that never arrives; it is no longer the only path.
++  workflow_run:
++    workflows:
++      - App Shell Guard
++      - Cloudflare Native Auth Guard
++      - Auth Foundation Guard
++      - Auth Identity Guard
++      - Email Gateway Guard
++      - Account Retirement Guard
++      - Voice Agent Guard
++      - visual-guard
++    types: [completed]
+   workflow_dispatch:
+ 
+ permissions:
+diff --git a/alert-proxy-secret.test.mjs b/alert-proxy-secret.test.mjs
+index 616de82..fccb064 100644
+--- a/alert-proxy-secret.test.mjs
++++ b/alert-proxy-secret.test.mjs
+@@ -165,3 +165,16 @@ test('SEC-003-১১: a network error is retried and then reported, never swallo
+   );
+   assert.equal(calls, 2);
+ });
++
++test('SEC-003-১২: the deploy provisions instead of warning, and verifies after deploying', () => {
++  assert.match(WORKFLOW, /node scripts\/bind-alert-proxy-secret\.mjs provision/,
++    'the deploy must provision, not merely warn');
++  assert.equal(
++    /::warning title=Error alerting stays dead/.test(WORKFLOW), false,
++    'the old exit-0 warning is what let a dead channel look green',
++  );
++  const deployAt = WORKFLOW.indexOf('name: Deploy Pages UI\n');
++  const verifyAt = WORKFLOW.indexOf('bind-alert-proxy-secret.mjs verify --pages');
++  assert.ok(deployAt > 0 && verifyAt > deployAt,
++    'the chain check must run AFTER the Pages deploy, against the deployment that carries the secret');
++});
+diff --git a/cloudflare-drift.test.mjs b/cloudflare-drift.test.mjs
+index 63dbdd7..00ce45e 100644
+--- a/cloudflare-drift.test.mjs
++++ b/cloudflare-drift.test.mjs
+@@ -68,3 +68,19 @@ test('the committed inventory covers every resource the audit named', () => {
+     assert.ok(waivedPages.has(p), `${p} must be recorded in the inventory`);
+   }
+ });
++
++test('the drift check runs on a change to its own inputs, not only on the daily cron', () => {
++  /* CF-001 shipped with a cron whose first run was a day away, and a dispatch from
++   * a non-admin token is refused — so for a day the only evidence the check
++   * worked was the offline half. Waiting for a schedule is what makes a new guard
++   * unproven; a push that changes the inventory or the diff must run it. */
++  const wf = readFileSync(new URL('./.github/workflows/cloudflare-drift.yml', import.meta.url), 'utf8');
++  assert.match(wf, /^on:/m);
++  assert.match(wf, /\n  push:\n/, 'the workflow must run on push, not only on schedule');
++  for (const path of ['.github/cloudflare-inventory.json', 'cloudflare-drift.mjs', 'scripts/cloudflare-drift-check.mjs']) {
++    assert.ok(wf.includes(`- '${path}'`) || wf.includes(`- ${path}`), `push must be filtered on ${path}`);
++  }
++  assert.match(wf, /cron:\s*'17 6 \* \* \*'/, 'the daily cron stays as the safety net');
++  assert.match(wf, /node scripts\/cloudflare-drift-check\.mjs/, 'the job must actually run the diff');
++});
++
+diff --git a/guard-health-triggers.test.mjs b/guard-health-triggers.test.mjs
+new file mode 100644
+index 0000000..faee52c
+--- /dev/null
++++ b/guard-health-triggers.test.mjs
+@@ -0,0 +1,69 @@
++/* A1.5 ③ (owner order 2026-10-29) promised a guard health check every 15
++ * minutes. GitHub throttles that cron — the live history showed 2 runs in a day
++ * — so a red guard could sit unannounced for hours. The fix is an event trigger,
++ * and an event trigger is exactly the kind of config that fails SILENTLY: a name
++ * that does not match a workflow means the workflow_run event never fires and
++ * nothing anywhere says so. These tests compare the three lists that must agree
++ * — the GUARDS the job watches, the workflow names that exist, and the
++ * workflow_run filter — so a rename cannot quietly unhook the alert. */
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import { readFileSync, readdirSync } from 'node:fs';
++import { fileURLToPath } from 'node:url';
++
++const ROOT = new URL('./.github/workflows/', import.meta.url);
++const HEALTH = readFileSync(new URL('guard-health.yml', ROOT), 'utf8');
++
++function workflowName(file) {
++  const src = readFileSync(new URL(file, ROOT), 'utf8');
++  const match = src.match(/^name:\s*(.+)$/m);
++  if (!match) return '';
++  return match[1].replace(/\s+#.*$/, '').trim().replace(/^['"]|['"]$/g, '');
++}
++
++const WORKFLOW_NAMES = readdirSync(fileURLToPath(ROOT))
++  .filter((file) => file.endsWith('.yml') || file.endsWith('.yaml'))
++  .map(workflowName)
++  .filter(Boolean);
++
++function guardsWatched() {
++  const start = HEALTH.indexOf('const GUARDS = [');
++  assert.ok(start > 0, 'the job no longer declares GUARDS');
++  const end = HEALTH.indexOf('];', start);
++  return [...HEALTH.slice(start, end).matchAll(/'([^']+)'/g)].map((m) => m[1]);
++}
++
++function workflowRunNames() {
++  const start = HEALTH.indexOf('workflow_run:');
++  assert.ok(start > 0, 'guard-health.yml must declare a workflow_run trigger');
++  const end = HEALTH.indexOf('workflow_dispatch:', start);
++  const block = HEALTH.slice(start, end === -1 ? undefined : end);
++  return [...block.matchAll(/^\s{6}- (.+)$/gm)].map((m) => m[1].trim().replace(/^['"]|['"]$/g, ''));
++}
++
++test('A1.5-৩a: every guard the job watches is a real workflow', () => {
++  const guards = guardsWatched();
++  assert.ok(guards.length >= 8, `expected the full guard list, got ${guards.length}`);
++  for (const guard of guards) {
++    assert.ok(
++      WORKFLOW_NAMES.includes(guard),
++      `"${guard}" is watched by guard-health but no workflow is named that — the check would report it as never run`,
++    );
++  }
++});
++
++test('A1.5-৩b: a completed guard run triggers the check, not only the throttled cron', () => {
++  const guards = guardsWatched();
++  const triggers = workflowRunNames();
++  for (const guard of guards) {
++    assert.ok(
++      triggers.includes(guard),
++      `"${guard}" has no workflow_run trigger, so a red run of it waits for the next delivered cron`,
++    );
++  }
++});
++
++test('A1.5-৩c: the cron stays as the safety net for a missed delivery', () => {
++  assert.match(HEALTH, /cron:\s*'\*\/15 \* \* \* \*'/);
++  assert.match(HEALTH, /types:\s*\[completed\]/, 'workflow_run must fire on completion, not on every phase');
++});
+diff --git a/package.json b/package.json
+index b44858e..ba4ff23 100644
+--- a/package.json
++++ b/package.json
+@@ -24,7 +24,7 @@
+     "test:sync": "node --test --test-concurrency=1 userdata-api.test.mjs student-data-sync.test.mjs student-data-sync-chaos.test.mjs",
+     "test:personalized": "node --test --test-concurrency=1 personalized-notification.test.mjs",
+     "test:ui-guards": "node --test --test-concurrency=1 dead-handler-guard.test.mjs",
+-    "test:shell-guards": "node --test --test-concurrency=1 ai-chat-history.test.mjs honesty-guard.test.mjs i18n-guard.test.mjs intro.test.mjs canonical-coverage.test.mjs secret-scan.test.mjs test-wiring-guard.test.mjs google-return-recovery.test.mjs google-redirect-login.test.mjs bundle-asset-coverage.test.mjs cloudflare-drift.test.mjs alert-proxy-secret.test.mjs crash-pill.test.mjs idb-hardening.test.mjs startup-ai-regression.test.mjs academic-catalog.test.mjs files-storage.test.mjs phase23-core.test.mjs profile-crop-flow.test.mjs profile-sheets.test.mjs profile-v2-core.test.mjs p08-exam-ac3.test.mjs p08-state-preserve.test.mjs p08-adaptive.test.mjs p09-analytics.test.mjs p10-mistake-engine.test.mjs p11-adaptive-engine.test.mjs p17-prepare-me.test.mjs p17-prepare-me-runtime.test.mjs admission-intel-engine.test.mjs question-pattern.test.mjs p18-admission-intel.test.mjs p10-mistakes.test.mjs p11-dashboard-v2.test.mjs p13-dashboard-cache-guard.test.mjs p13-performance-core.test.mjs p13-performance-wiring.test.mjs p13-completion.test.mjs p13-d1-backfill.test.mjs p16-dashboard-single.test.mjs p18-legacy-dashboard-kill.test.mjs p20-voice-sameorigin.test.mjs p22-voice-cartesia.test.mjs p21-ai-agent-ui.test.mjs vocabulary-a-seed.test.mjs sky-onboarding.test.mjs panel-fullscreen.test.mjs ai-audit-fixes.test.mjs ai-state-do.test.mjs ai-key-sync.test.mjs notification-worker-auth.test.mjs bug001-write-auth.test.mjs cloud-content-visibility.test.mjs descope-magiclink.test.mjs email-policy.test.mjs google-fast-redirect.test.mjs idp-otp.test.mjs legal-page-routing.test.mjs login-facts.test.mjs nav-dock.test.mjs otp-alert.test.mjs otp-delivery-log.test.mjs p24-vocab-erase.test.mjs p25-chat-cache.test.mjs p27-error-alert-worker.test.mjs p27-history-trim.test.mjs p29-ai-status-privacy.test.mjs p32-size-budget.test.mjs password-guard.test.mjs pool-providers.test.mjs pr2-fast-start.test.mjs pr3-shared-answers.test.mjs security-alerts.test.mjs sentry-report.test.mjs server-only-assets.test.mjs shadow-guard.test.mjs sky-agent-tools.test.mjs sky-ai-route.test.mjs sky-contact.test.mjs sky-core-memory.test.mjs sky-daily-report.test.mjs sky-goal.test.mjs sky-instructions.test.mjs sky-memory-weak-recall.test.mjs sky-recall.test.mjs sky-time-memory.test.mjs sky-web-search.test.mjs telegram-login.test.mjs turnstile-endpoints.test.mjs turnstile.test.mjs vocabulary-card-layout.test.mjs vocabulary-d1-rows.test.mjs vocabulary-srs-engine.test.mjs vocabulary-srs-tool.test.mjs && node --test voice-cache-storage.test.mjs",
++    "test:shell-guards": "node --test --test-concurrency=1 ai-chat-history.test.mjs honesty-guard.test.mjs i18n-guard.test.mjs intro.test.mjs canonical-coverage.test.mjs secret-scan.test.mjs test-wiring-guard.test.mjs google-return-recovery.test.mjs google-redirect-login.test.mjs bundle-asset-coverage.test.mjs cloudflare-drift.test.mjs alert-proxy-secret.test.mjs guard-health-triggers.test.mjs crash-pill.test.mjs idb-hardening.test.mjs startup-ai-regression.test.mjs academic-catalog.test.mjs files-storage.test.mjs phase23-core.test.mjs profile-crop-flow.test.mjs profile-sheets.test.mjs profile-v2-core.test.mjs p08-exam-ac3.test.mjs p08-state-preserve.test.mjs p08-adaptive.test.mjs p09-analytics.test.mjs p10-mistake-engine.test.mjs p11-adaptive-engine.test.mjs p17-prepare-me.test.mjs p17-prepare-me-runtime.test.mjs admission-intel-engine.test.mjs question-pattern.test.mjs p18-admission-intel.test.mjs p10-mistakes.test.mjs p11-dashboard-v2.test.mjs p13-dashboard-cache-guard.test.mjs p13-performance-core.test.mjs p13-performance-wiring.test.mjs p13-completion.test.mjs p13-d1-backfill.test.mjs p16-dashboard-single.test.mjs p18-legacy-dashboard-kill.test.mjs p20-voice-sameorigin.test.mjs p22-voice-cartesia.test.mjs p21-ai-agent-ui.test.mjs vocabulary-a-seed.test.mjs sky-onboarding.test.mjs panel-fullscreen.test.mjs ai-audit-fixes.test.mjs ai-state-do.test.mjs ai-key-sync.test.mjs notification-worker-auth.test.mjs bug001-write-auth.test.mjs cloud-content-visibility.test.mjs descope-magiclink.test.mjs email-policy.test.mjs google-fast-redirect.test.mjs idp-otp.test.mjs legal-page-routing.test.mjs login-facts.test.mjs nav-dock.test.mjs otp-alert.test.mjs otp-delivery-log.test.mjs p24-vocab-erase.test.mjs p25-chat-cache.test.mjs p27-error-alert-worker.test.mjs p27-history-trim.test.mjs p29-ai-status-privacy.test.mjs p32-size-budget.test.mjs password-guard.test.mjs pool-providers.test.mjs pr2-fast-start.test.mjs pr3-shared-answers.test.mjs security-alerts.test.mjs sentry-report.test.mjs server-only-assets.test.mjs shadow-guard.test.mjs sky-agent-tools.test.mjs sky-ai-route.test.mjs sky-contact.test.mjs sky-core-memory.test.mjs sky-daily-report.test.mjs sky-goal.test.mjs sky-instructions.test.mjs sky-memory-weak-recall.test.mjs sky-recall.test.mjs sky-time-memory.test.mjs sky-web-search.test.mjs telegram-login.test.mjs turnstile-endpoints.test.mjs turnstile.test.mjs vocabulary-card-layout.test.mjs vocabulary-d1-rows.test.mjs vocabulary-srs-engine.test.mjs vocabulary-srs-tool.test.mjs && node --test voice-cache-storage.test.mjs",
+     "test:legacy-adoption": "node --test --test-concurrency=1 legacy-adoption.test.mjs legacy-adoption.integration.test.mjs legacy-adoption.e2e.test.mjs",
+     "test:ai-analytics": "node --test --test-concurrency=1 ai-analytics-intelligence.test.mjs ai-analytics-policy.test.mjs ai-analytics-store.test.mjs ai-analytics-provider.test.mjs ai-analytics-routes-worker.test.mjs",
+     "test:p13": "node --test --test-concurrency=1 p13-performance-core.test.mjs p13-performance-wiring.test.mjs p13-completion.test.mjs p13-d1-backfill.test.mjs",
