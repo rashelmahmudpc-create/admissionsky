@@ -4,9 +4,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { allowedOrigin } from './cors-policy.mjs';
 
 const src = readFileSync(new URL('./voice-worker.js', import.meta.url), 'utf8');
-const build = () => new Function(`${src.replace('export default', 'return')}`)();
+// AU-SEC-05: voice-worker.js now imports the shared CORS policy instead of
+// keeping its own copy. This harness evaluates the file as a function body, so
+// the import is rewritten to a local binding of the same function -- the worker
+// still runs the real policy, it is just handed to it rather than imported.
+const build = () => new Function(
+  'allowedOrigin',
+  `${src
+    .replace("import { allowedOrigin } from './cors-policy.mjs';", '')
+    .replace('export default', 'return')}`
+)(allowedOrigin);
 
 const MP3 = new Uint8Array([0x49, 0x44, 0x33, 1, 2, 3, 4, 5]); // "ID3" + junk
 

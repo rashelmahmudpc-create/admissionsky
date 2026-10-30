@@ -109,3 +109,26 @@
   4. `main` এ `apply-pending-signup-wire-20261018.yml` রয়ে গেছে — A8 এ সরাতে হবে।
 - **যাচাই বাকি:** production `admission-gk` এ `VERIFICATION_AUTH_ACTIVATION` চালু কিনা (Cloudflare)।
 - **পরের কাজ:** ধাপ ১ (ব্লুপ্রিন্ট A1) — branch `auth/A1-AU-UX-02-pending-signup-default`, রাত ১১–১২টা: PR ① handler শর্ত + একই উত্তর (AU-SEC-06), PR ② frontend `/signup` এ হেডার, PR ③ test + CI bundle; তারপর staging → মালিকের "হ্যাঁ" → merge।
+
+## 📝 অবস্থা হালনাগাদ — ৩০ অক্টোবর ২০২৬ (AU-SEC-05, CORS-এর বাকি অংশ)
+
+- **A1.5 ② এখন শেষ।** চারটা ফাইলে হাতে লেখা allowlist বাকি ছিল; তিনটাই একই ফাঁদ বহন করছিল:
+  `gk-agent-worker.js`, `voice-worker.js`, `notification-worker.js`।
+- **ফাঁদটা কী ছিল:** `([a-z0-9-]+\.)?` যেকোনো subdomain গ্রহণ করত, তাই
+  `evil.admissionsky.pages.dev` (যে নাম মালিকের নয়) অ্যাপের নিজের origin হিসেবে পাস করত
+  আর `Access-Control-Allow-Origin` + credentials পেত। ২২ অক্টোবরের D-5 সিদ্ধান্তে preview
+  subdomain বাদ পড়েছিল, কিন্তু কপিগুলো পিছিয়ে ছিল।
+- **লাইভ কখনো খোলা ছিল না** — request path handler দিয়ে যায়, সে `cors-policy.mjs` ব্যবহার করে।
+  ফাঁদটা পরের refactor-এর জন্য অপেক্ষা করছিল।
+- **ফিক্স:** তিনটা ফাইল এখন `cors-policy.mjs`-এর `allowedOrigin()` ডাকে; নিয়ম আর দুই জায়গায় থাকবে না।
+  `auth-native/core/auth-engine.mjs` আগেই তাই করত।
+- **সঙ্গে যা লাগল:** `voice-worker.js` আর `notification-worker.js` এক-ফাইল হিসেবে deploy হয়,
+  তাই import কাজ করবে কিনা যাচাই করা হলো — `wrangler deploy --dry-run` চালিয়ে দেখা গেল wrangler
+  নিজেই `cors-policy.mjs` upload-এ ঢুকিয়ে দেয়, তাই workflow বদলানোর দরকার নেই। ভবিষ্যতে কেউ
+  `--no-bundle` দিলে যেন নীরবে না ভাঙে, সেই assertion টেস্টে রাখা হলো।
+- **টেস্ট:** নতুন `cors-drift.test.mjs` (৩টা) — খারাপ host reject হয়, আর কোনো ফাইল হাতে নিয়ম
+  লিখলে আটকে যায়। `p20` ও `ai-audit-fixes`-এর পুরোনো assertion (যা subdomain গ্রহণ করাকেই
+  সঠিক বলত) উল্টে দেওয়া হলো। `p22`-র harness এখন shared policy ইনজেক্ট করে।
+- **প্রমাণ:** পুরো suite ২৬১৫ টেস্ট · ২৬১০ পাস · ০ ফেল · ৫ skip; worker bundle ও sw-manifest সোর্সের সাথে মিলছে।
+- **লাইভ deploy বাকি** — মালিকের "হ্যাঁ" পেলে `deploy-pages-worker.yml`, `voice-worker-deploy.yml`
+  ও `notify-worker-deploy.yml` চালাতে হবে।

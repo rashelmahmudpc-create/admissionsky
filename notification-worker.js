@@ -10,6 +10,8 @@
  * KV binding: NOTIFY_KV  (subs + state + dispatch dates)
  */
 
+import { allowedOrigin } from './cors-policy.mjs';
+
 const APP_HEADER = 'admission-hub';
 const TG_API = token => `https://api.telegram.org/bot${token}`;
 
@@ -63,8 +65,12 @@ const cors = request => {
      and any localhost / 127.0.0.1 page. With credentials attached that lets a
      stranger's page, or any script on a developer machine, call this Worker as
      the signed-in student and read the response. Only the app's own origins
-     remain, matching cors-policy.mjs. */
-  const ok = /^https:\/\/([a-z0-9-]+\.)?(admissionsky|admissionhub)\.pages\.dev$/.test(origin);
+     remain, matching cors-policy.mjs.
+
+     AU-SEC-05 (2026-10-30 audit): the copy still accepted any subdomain of the
+     two Pages hosts, so a host nobody controls passed as the app. The rule now
+     comes from cors-policy.mjs so the two cannot drift apart again. */
+  const ok = allowedOrigin(origin);
   const headers = {
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, X-AH-App',
