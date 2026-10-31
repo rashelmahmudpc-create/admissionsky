@@ -16,6 +16,7 @@
  * env/fetch পরীক্ষায় mock করা যায় (ai-agent-f1.test.mjs)।
  */
 import { corsHeaders } from './cors-policy.mjs';
+import { skyStream, skySse, SKY_STREAM_VERSION } from './sky-stream.mjs';
 import { buildContext, renderContext, describeContext, CONTEXT_VERSION } from './context-engine.js';
 import { getPromptText, BASE_PROMPT_ID } from './prompt-registry.js';
 import { listTools, TOOL_REGISTRY_VERSION } from './tool-registry.js';
@@ -1178,11 +1179,16 @@ export async function agentChat(request, env, uid, opts = {}) {
   /* PR-2: from here on, in streaming mode the work runs inside an already-open
      stream, so the student sees the first byte at once and each stage is sent
      the moment that work really happens (not all together at the end). */
-  const early = { sent: new Set(), push: null };
+  const early = { sent: new Set(), push: null, seq: { n: 0 } };
+  /* F0.4: the early stages and the model's text are written by two different
+     stream controllers but are one answer, so they share one `seq` counter.
+     Without that, the inner stream would restart at 0 mid-answer and a client
+     checking sequence continuity would see a gap in every single reply. */
+  const earlyStream = skyStream((chunk) => { if (early.push) early.push(chunk); }, early.seq);
   const prepStage = (id, label) => {
     if (!early.push || early.sent.has(id)) return;
     early.sent.add(id);
-    early.push(`event: stage\ndata: ${JSON.stringify({ stage: id, label })}\n\n`);
+    earlyStream.stage(id, label);
   };
   const core = async () => {
 
@@ -1566,10 +1572,13 @@ export async function agentChat(request, env, uid, opts = {}) {
   const streamOut = new ReadableStream({
     async start(controller) {
       const push = (s) => { try { controller.enqueue(encoder.encode(s)); } catch (_) {} };
+      /* F0.4: the v1 writer, sharing the early half's sequence so the two halves
+         of this answer number as one stream. `hello` is the first frame. */
+      const s = skyStream(push, early.seq);
       /* Live progress: each stage is sent only when that work really happens.
          Provider / model switching is deliberately never surfaced. */
       const sentStages = early.sent;
-      const stage = (id, label) => { if (sentStages.has(id)) return; sentStages.add(id); push(`event: stage\ndata: ${JSON.stringify({ stage: id, label })}\n\n`); };
+      const stage = (id, label) => { if (sentStages.has(id)) return; sentStages.add(id); s.stage(id, label); };
       try {
         stage('understand', STAGE_UNDERSTAND[intent] || STAGE_UNDERSTAND.GENERAL_CHAT);
         if (appFeatureHit) stage('app-features', 'টুল চালাচ্ছি, অ্যাপের ফিচার তালিকা দেখছি');
@@ -1613,7 +1622,7 @@ export async function agentChat(request, env, uid, opts = {}) {
               full += t;
               if (/```(chart|flow)/i.test(full)) stage('visual', 'চার্ট / ডায়াগ্রাম আঁকছি');
               if (/\n\s*\|?\s*:?-{3,}/.test(full)) stage('table', 'টেবিল সাজাচ্ছি');
-              push(`data: ${JSON.stringify({ text: t })}\n\n`);
+              s.text(t);
               streamedAny = true;
             }
             if (full.trim()) {
@@ -1625,7 +1634,7 @@ export async function agentChat(request, env, uid, opts = {}) {
                  Only high-precision classes fire here, so a normal answer is never
                  rewritten mid-stream. */
               const check = validateResponse(full, validationCtx);
-              if (check.enforced) push(`event: replace\ndata: ${JSON.stringify({ text: check.text })}\n\n`);
+              if (check.enforced) s.replace(check.text);
               /* P25: store only the validated text, so a later cache hit returns
                  exactly what the live caller received. Fire-and-forget: a cache
                  write must never delay or fail the answer the student is reading. */
@@ -1636,7 +1645,7 @@ export async function agentChat(request, env, uid, opts = {}) {
               /* P30 (খ): `done` goes out first, so the student's answer is complete on
                  screen right away; the memory save finishes afterwards, still inside
                  this request (the stream closes only after it lands). */
-              push(`event: done\ndata: ${JSON.stringify({ model: c.model, provider: c.provider, intent, quiz: quizMode, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt, structured: check.structured })}\n\n`);
+              s.done({ model: c.model, provider: c.provider, intent, quiz: quizMode, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt, structured: check.structured });
               later(() => finalize(c.model, c.provider, full));
               await settleBackground();
               emitTrace({ provider: c.provider, model: c.model, text: full, responseType: check.structured?.type, validated: !check.enforced });
@@ -1645,7 +1654,7 @@ export async function agentChat(request, env, uid, opts = {}) {
             }
             lastErr = 'empty-' + c.model;
           } catch (e) {
-            if (streamedAny) push(`event: replace\ndata: ${JSON.stringify({ text: '' })}\n\n`);
+            if (streamedAny) s.replace('');
             if (e instanceof ProviderError) {
               lastErr = e.message;
               /* P31: count the failure against the MODEL. A 5xx/429 is the model
@@ -1666,11 +1675,11 @@ export async function agentChat(request, env, uid, opts = {}) {
           await refundQuota();
           emitTrace({ fallbackReason: FALLBACK.PROVIDER_ERROR, validated: false });
           emitTiming({ failed: true });
-          push(`event: error\ndata: ${JSON.stringify({ error: 'provider_failed', message: 'AI একটু ব্যস্ত, কয়েক সেকেন্ড পরে আবার চেষ্টা করো।', retryable: true })}\n\n`);
+          s.error({ error: 'provider_failed', message: 'AI একটু ব্যস্ত, কয়েক সেকেন্ড পরে আবার চেষ্টা করো।', retryable: true });
         }
       } catch (e) {
         await settleBackground();
-        push(`event: error\ndata: ${JSON.stringify({ error: 'stream_failed', message: 'সংযোগ বিচ্ছিন্ন হয়েছে, আবার চেষ্টা করো।', retryable: true })}\n\n`);
+        s.error({ error: 'stream_failed', message: 'সংযোগ বিচ্ছিন্ন হয়েছে, আবার চেষ্টা করো।', retryable: true });
       } finally {
         try { controller.close(); } catch (_) {}
       }
@@ -1703,6 +1712,10 @@ function openEarly(run, early, first, request = null) {
   const write = (chunk) => { try { ctl.enqueue(typeof chunk === 'string' ? enc.encode(chunk) : chunk); } catch (_) {} };
   early.push = write;
   write(': open\n\n');
+  /* F0.4: the version is announced before anything else. Emitting it from the
+     inner stream put it after the first early stage, so a client could not know
+     the protocol until frame two. `early.seq` is shared with the inner writer. */
+  skyStream(write, early.seq).hello();
   if (first) first();
   (async () => {
     try {
@@ -1710,7 +1723,7 @@ function openEarly(run, early, first, request = null) {
       const reader = resp && resp.body ? resp.body.getReader() : null;
       if (reader) { for (;;) { const step = await reader.read(); if (step.done) break; write(step.value); } }
     } catch (e) {
-      write(`event: error\ndata: ${JSON.stringify({ error: 'stream_failed', message: 'যুক্তি-বিচ্ছেদ ঘটেছে।', detail: String((e && e.message) || e), retryable: true })}\n\n`);
+      write(skySse('error', Object.assign({ seq: early.seq.n++ }, { error: 'stream_failed', message: 'যুক্তি-বিচ্ছেদ ঘটেছে।', detail: String((e && e.message) || e), retryable: true })));
     } finally {
       early.push = null;
       try { ctl.close(); } catch (_) {}
@@ -1900,8 +1913,13 @@ function sseCached(text, intent, startedAt, model, request = null) {
   return new Response(new ReadableStream({
     start(controller) {
       const push = (s) => { try { controller.enqueue(enc.encode(s)); } catch (_) {} };
-      push(`data: ${JSON.stringify({ text })}\n\n`);
-      push(`event: done\ndata: ${JSON.stringify({ model: model || null, provider: 'cache', intent, cached: true, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt })}\n\n`);
+      /* F0.4: the cached answer is a whole stream of its own, so it gets its own
+         v1 writer and its own hello. An old client ignores the hello (no text,
+         no error, no model) and reads the text and done exactly as before. */
+      const s = skyStream(push);
+      s.hello();
+      s.text(text);
+      s.done({ model: model || null, provider: 'cache', intent, cached: true, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt });
       try { controller.close(); } catch (_) {}
     }
   }), { status: 200, headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache', ...corsHeaders(request) } });

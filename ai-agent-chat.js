@@ -470,6 +470,11 @@
     const reader = r.body.getReader();
     const dec = new TextDecoder();
     let buf = '', full = '', meta = null, failed = null;
+    /* F0.4: sky-stream-v1 numbers every frame. `seq` lets a v1 client notice a
+       gap, and `sawDone` tells a complete answer from one the network cut. An
+       older server sends neither, so both stay null/false and behaviour is
+       exactly what it was before — the version is additive. */
+    let seq = -1, seqGap = false, sawDone = false, streamV = null;
     while (true) {
       let step;
       try { step = await reader.read(); } catch (_) { break; }
@@ -484,17 +489,25 @@
           if (t.startsWith('event:')) { evt = t.slice(6).trim(); continue; }
           if (!t.startsWith('data:')) continue;
           let j = null; try { j = JSON.parse(t.slice(5).trim()); } catch (_) { continue; }
+          if (typeof j.seq === 'number') { if (seq >= 0 && j.seq !== seq + 1) seqGap = true; seq = j.seq; }
+          if (evt === 'stream') { streamV = j.v || null; continue; }
           if (evt === 'stage') { if (j.label && opts.onStage) { try { opts.onStage(String(j.label)); } catch (_) {} } continue; }
+          if (evt === 'done') { sawDone = true; }
           if (evt === 'replace' && typeof j.text === 'string') { full = j.text; if (onReplace) onReplace(full); else onChunk(full, true); }
           else if (j.text) { full += j.text; onChunk(full, false); }
           else if (j.error) failed = { message: j.message, retryable: j.retryable };
-          else if (j.model || j.provider || j.intent) meta = { model: j.model, provider: j.provider, intent: j.intent };
+          if (j.model || j.provider || j.intent) meta = { model: j.model, provider: j.provider, intent: j.intent };
         }
       }
     }
     activeReq = null;
     if (failed && !full) return { ok: false, code: 'ai', meta: failed };
-    return { ok: true, text: full, meta: meta };
+    /* F0.4: a v1 stream that never said `done` was cut. Returning it as ok:true
+       is what let a truncated answer look like a short one, so it is reported
+       as incomplete. `truncated` is new, so callers that ignore it are no worse
+       off than before. */
+    if (streamV && !sawDone) return { ok: true, text: full, meta: meta, truncated: true, stream: streamV };
+    return { ok: true, text: full, meta: meta, stream: streamV || undefined };
   }
 
   /* The server may correct text that already streamed (event: replace). A
