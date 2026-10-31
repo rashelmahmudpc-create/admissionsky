@@ -1,0 +1,187 @@
+{
+  "probedAt": "2026-10-31T18:01:01.751Z",
+  "sampleSize": 24,
+  "goldenSet": "golden-v1",
+  "providers": {
+    "gemini": {
+      "keyName": "GEMINI_KEYS",
+      "keyPresent": true,
+      "adapter": "gemini",
+      "model": "gemini-3.1-flash-lite",
+      "keyEnv": "GEMINI_API_KEY",
+      "reachable": true,
+      "httpStatus": 200,
+      "latencyMs": 3897,
+      "banglaScore": {
+        "correct": 7,
+        "total": 24,
+        "accuracy": 0.2917,
+        "answered": 16
+      }
+    },
+    "groq": {
+      "keyName": "GROQ_API_KEY",
+      "keyPresent": true,
+      "adapter": "groq",
+      "model": "openai/gpt-oss-120b",
+      "keyEnv": "GROQ_NEW_API_KEY",
+      "reachable": true,
+      "httpStatus": 200,
+      "latencyMs": 255,
+      "banglaScore": {
+        "correct": 10,
+        "total": 24,
+        "accuracy": 0.4167,
+        "answered": 21
+      }
+    },
+    "cloudflare": {
+      "keyName": "CLOUDFLARE_AI_API_KEY",
+      "keyPresent": false,
+      "adapter": "cloudflare",
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "reachable": null,
+      "note": "no credential in this environment"
+    },
+    "openrouter": {
+      "keyName": "OPENROUTER_API_KEYS",
+      "keyPresent": true,
+      "adapter": "openai-compat",
+      "model": "google/gemma-4-31b-it:free",
+      "keyEnv": "OPENROUTER_API_KEY",
+      "reachable": false,
+      "httpStatus": 429,
+      "latencyMs": 217,
+      "errorSample": "__error__:Provider returned error",
+      "transient": true
+    },
+    "vercel-ai-gateway": {
+      "keyName": "VERCEL_AI_GATEWAY_KEY",
+      "keyPresent": false,
+      "adapter": "openai-compat",
+      "model": "openai/gpt-4o-mini",
+      "reachable": null,
+      "note": "no credential in this environment"
+    },
+    "github-models": {
+      "keyName": "GITHUB_MODELS_TOKEN",
+      "keyPresent": false,
+      "adapter": "openai-compat",
+      "model": "openai/gpt-4o-mini",
+      "reachable": null,
+      "note": "no credential in this environment"
+    },
+    "mistral": {
+      "keyName": "MISTRAL_API_KEYS",
+      "keyPresent": true,
+      "adapter": "openai-compat",
+      "model": "ministral-14b-latest",
+      "keyEnv": "MISTARAL_NEW_API_KEY",
+      "reachable": true,
+      "httpStatus": 200,
+      "latencyMs": 502,
+      "banglaScore": {
+        "correct": 14,
+        "total": 24,
+        "accuracy": 0.5833,
+        "answered": 24
+      }
+    },
+    "cerebras": {
+      "keyName": "CEREBRAS_API_KEYS",
+      "keyPresent": false,
+      "adapter": "openai-compat",
+      "model": "llama-3.3-70b",
+      "reachable": null,
+      "note": "no credential in this environment"
+    },
+    "sambanova": {
+      "keyName": "SAMBANOVA_API_KEYS",
+      "keyPresent": false,
+      "adapter": "openai-compat",
+      "model": "Meta-Llama-3.3-70B-Instruct",
+      "reachable": null,
+      "note": "no credential in this environment"
+    },
+    "cohere": {
+      "keyName": "COHERE_API_KEYS",
+      "keyPresent": false,
+      "adapter": "openai-compat",
+      "model": "command-r7b-12-2024",
+      "reachable": null,
+      "note": "no credential in this environment"
+    },
+    "huggingface": {
+      "keyName": "HUGGINGFACE_API_KEYS",
+      "keyPresent": false,
+      "adapter": "openai-compat",
+      "model": "meta-llama/Llama-3.3-70B-Instruct",
+      "reachable": null,
+      "note": "no credential in this environment"
+    },
+    "deepinfra": {
+      "keyName": "DEEPINFRA_API_KEYS",
+      "keyPresent": false,
+      "adapter": "openai-compat",
+      "model": "meta-llama/Meta-Llama-3.1-70B-Instruct",
+      "reachable": null,
+      "note": "no credential in this environment"
+    },
+    "together": {
+      "keyName": "TOGETHER_API_KEYS",
+      "keyPresent": false,
+      "adapter": "openai-compat",
+      "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+      "reachable": null,
+      "note": "no credential in this environment"
+    },
+    "kimi": {
+      "keyName": "KIMI_API_KEYS",
+      "keyPresent": false,
+      "adapter": "openai-compat",
+      "model": "moonshot-v1-8k",
+      "reachable": null,
+      "note": "no credential in this environment"
+    },
+    "aimlapi": {
+      "keyName": "AIML_API_KEYS",
+      "keyPresent": false,
+      "adapter": "openai-compat",
+      "model": "gpt-4o-mini",
+      "reachable": null,
+      "note": "no credential in this environment"
+    },
+    "llm7": {
+      "keyName": "LLM7_API_KEYS",
+      "keyPresent": false,
+      "adapter": "openai-compat",
+      "model": "gpt-4o-mini",
+      "reachable": null,
+      "note": "no credential in this environment"
+    },
+    "siliconflow": {
+      "keyName": "SILICONFLOW_API_KEYS",
+      "keyPresent": false,
+      "adapter": "openai-compat",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "reachable": null,
+      "note": "no credential in this environment"
+    },
+    "stepfun": {
+      "keyName": "STEPFUN_API_KEYS",
+      "keyPresent": false,
+      "adapter": "openai-compat",
+      "model": "step-1-8k",
+      "reachable": null,
+      "note": "no credential in this environment"
+    },
+    "minimax": {
+      "keyName": "MINIMAX_API_KEYS",
+      "keyPresent": false,
+      "adapter": "openai-compat",
+      "model": "abab6.5s-chat",
+      "reachable": null,
+      "note": "no credential in this environment"
+    }
+  }
+}

@@ -29,10 +29,17 @@
  *   models      default model ids, in the order the chain tries them
  *   tiers       optional FAST/SMART mapping for a tier-aware adapter
  *   capability  what the model can do — the set F1.3 will filter on
- *   limits      { rpm, rpd, tpm } free-tier limits, or null until ML-06 verifies
+ *   limits      { rpm, rpd, tpm, source } free-tier limits, or null. `source` is
+ *               the provider's own page the numbers came from, so a limit is
+ *               auditable rather than remembered. A provider that publishes no
+ *               free tier keeps null here — that is a finding, not a gap to fill.
  *   tos         free-text ToS note (commercial use, training-on-data), or null
- *   banglaScore golden-set score for Bangla, or null until measured
- *   verifiedAt  ISO date the entry was last checked against the provider, or null
+ *   banglaScore { accuracy, correct, sample, set } measured on the F0.6 golden
+ *               set, or null. The sample size is kept because a score from 24
+ *               items is weak evidence and must not read like a full run.
+ *   verifiedAt  ISO date the entry was last checked against the provider, or
+ *               null. Set only when at least one real field was verified, so
+ *               'verified' never counts an entry nothing was learned about.
  *
  * Regenerating research is a separate, deliberate step (ML-06), never a guess.
  */
@@ -65,9 +72,9 @@ export const CATALOG = Object.freeze([
     tiers: { FAST: 'gemini-3.1-flash-lite', SMART: 'gemini-3-flash-preview' },
     capability: [CAPABILITY.CHAT, CAPABILITY.REASONING, CAPABILITY.VISION, CAPABILITY.TOOLS],
     limits: null,
-    tos: null,
-    banglaScore: null,
-    verifiedAt: null,
+    tos: 'Free tier: inputs and outputs are used to improve Google\'s products and human reviewers may read API input/output; the paid tier is not. Source: https://ai.google.dev/gemini-api/docs/pricing',
+    banglaScore: { accuracy: 0.2917, correct: 7, sample: 24, set: 'golden-v1' },
+    verifiedAt: '2026-10-31',
   },
   {
     id: 'groq',
@@ -77,10 +84,10 @@ export const CATALOG = Object.freeze([
     url: null,
     models: ['openai/gpt-oss-120b', 'openai/gpt-oss-20b'],
     capability: [CAPABILITY.CHAT, CAPABILITY.REASONING],
-    limits: null,
+    limits: { rpm: 30, rpd: 1000, tpm: 8000, source: 'https://console.groq.com/docs/rate-limits' },
     tos: null,
-    banglaScore: null,
-    verifiedAt: null,
+    banglaScore: { accuracy: 0.4167, correct: 10, sample: 24, set: 'golden-v1' },
+    verifiedAt: '2026-10-31',
   },
   {
     id: 'cloudflare',
@@ -90,10 +97,10 @@ export const CATALOG = Object.freeze([
     url: null,
     models: ['@cf/meta/llama-3.3-70b-instruct-fp8-fast'],
     capability: [CAPABILITY.CHAT],
-    limits: null,
+    limits: { neuronsPerDay: 10000, source: 'https://developers.cloudflare.com/workers-ai/platform/pricing' },
     tos: null,
     banglaScore: null,
-    verifiedAt: null,
+    verifiedAt: '2026-10-31',
   },
   {
     id: 'openrouter',
@@ -103,10 +110,10 @@ export const CATALOG = Object.freeze([
     url: 'https://openrouter.ai/api/v1/chat/completions',
     models: ['google/gemma-4-31b-it:free'],
     capability: [CAPABILITY.CHAT],
-    limits: null,
-    tos: null,
+    limits: { rpd: 50, source: 'https://openrouter.ai/docs/api-reference/limits' },
+    tos: 'Free \':free\' model variants are capped and may be logged by the upstream provider; check each provider\'s policy. Source: https://openrouter.ai/docs/features/privacy-and-logging',
     banglaScore: null,
-    verifiedAt: null,
+    verifiedAt: '2026-10-31',
   },
   {
     id: 'vercel-ai-gateway',
@@ -144,8 +151,8 @@ export const CATALOG = Object.freeze([
     capability: [CAPABILITY.CHAT],
     limits: null,
     tos: null,
-    banglaScore: null,
-    verifiedAt: null,
+    banglaScore: { accuracy: 0.5833, correct: 14, sample: 24, set: 'golden-v1' },
+    verifiedAt: '2026-10-31',
   },
   {
     id: 'cerebras',
@@ -155,10 +162,10 @@ export const CATALOG = Object.freeze([
     url: 'https://api.cerebras.ai/v1/chat/completions',
     models: ['llama-3.3-70b'],
     capability: [CAPABILITY.CHAT],
-    limits: null,
+    limits: { rpm: 5, tpm: 30000, tpd: 1000000, source: 'https://inference-docs.cerebras.ai/support/rate-limits' },
     tos: null,
     banglaScore: null,
-    verifiedAt: null,
+    verifiedAt: '2026-10-31',
   },
   {
     id: 'sambanova',
