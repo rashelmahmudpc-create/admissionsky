@@ -34,8 +34,8 @@
     "test:p17": "node --test --test-concurrency=1 study-plan-engine.test.mjs p17-prepare-me.test.mjs p17-prepare-me-runtime.test.mjs",
     "test:p18": "node --test --test-concurrency=1 admission-intel-engine.test.mjs question-pattern.test.mjs p18-admission-intel.test.mjs",
     "test:p23": "node voice-agent-core.test.mjs && node voice-agent.test.mjs && node voice-agent-client-core.test.mjs",
-    "test:p19": "node --test --test-concurrency=1 p19-error-monitor.test.mjs p19-backup.test.mjs p19-backup-routes-worker.test.mjs p19-perf-budget.test.mjs p19-staging-isolation.test.mjs",
-    "check:staging-isolation": "node scripts/check-staging-isolation.mjs wrangler.staging.toml",
+    "test:p19": "node --test --test-concurrency=1 p19-error-monitor.test.mjs p19-backup.test.mjs p19-backup-routes-worker.test.mjs p19-perf-budget.test.mjs p19-staging-isolation.test.mjs sky-ai-staging-path.test.mjs",
+    "check:staging-isolation": "node scripts/check-staging-isolation.mjs wrangler.staging.toml sky-ai/wrangler.staging.toml",
     "test:descope": "node --test --test-concurrency=1 descope-otp.test.mjs"
   },
   "dependencies": {

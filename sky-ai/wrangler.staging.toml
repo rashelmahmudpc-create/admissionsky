@@ -1,0 +1,45 @@
+# 🧪 F0.3 — staging twin of the sky-ai Worker (`sky-ai-staging`).
+#
+# Why a second script instead of binding staging to production sky-ai: sky-ai
+# reads PUB_KV (student prefs and the internal key) and writes chat quota and
+# memory into the AI_STATE Durable Object. A staging test pointed at the
+# production sky-ai would read live prefs and spend live chat quota — exactly
+# the accident the P19 isolation guard exists to prevent. So staging gets its
+# own script, its own KV and its own state object, and shares nothing with live.
+#
+# Deploy (from sky-ai/):
+#   npx wrangler deploy --config wrangler.staging.toml
+#
+# admission-gk-staging binds this script as SKY_AI (see wrangler.staging.toml),
+# which is the hop a staging AI test actually travels.
+name = "sky-ai-staging"
+main = "worker.mjs"
+compatibility_date = "2024-11-01"
+# A test surface: unlike production this keeps a workers.dev URL, so a test can
+# curl it directly as well as through the binding.
+workers_dev = true
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+# Staging KV only — the twin of production PUB_KV (fd9a455d…).
+[[kv_namespaces]]
+binding = "PUB_KV"
+id = "2827bff9b9974101a305102e1fbd1214"
+
+# F0.2 flags in a staging namespace: flipping one here cannot reach a student.
+[[kv_namespaces]]
+binding = "SKY_FLAGS"
+id = "36d6cb09f9104693b7d58e1fde07b40c"
+
+# The staging Durable Object admission-gk-staging declares. `script_name` points
+# at that script so the id resolves to the staging object, never the production
+# one — a DO id is scoped to the script that declares the class.
+[[durable_objects.bindings]]
+name = "AI_STATE"
+class_name = "AiStateObject"
+script_name = "admission-gk-staging"
+
+# No [[migrations]] block on purpose: the class is declared by
+# admission-gk-staging, and redeclaring it here would create a second store.

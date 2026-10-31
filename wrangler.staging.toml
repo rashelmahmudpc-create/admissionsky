@@ -89,6 +89,20 @@ class_name = "AdmissionAuthAuthority"
 name = "VOICE_AGENT"
 class_name = "VoiceAgentSession"
 
+# F0.3: the AI test path needs the same state object the production AI routes
+# use (chat quota and per-student memory). Declared here so `script_name` on the
+# sky-ai-staging binding resolves to THIS script's object and never production's.
+[[durable_objects.bindings]]
+name = "AI_STATE"
+class_name = "AiStateObject"
+
+# F0.3: the hop an AI test actually travels — staging's public handler forwards
+# to the staging sky-ai twin, not to the live sky-ai Worker. Pointing this at
+# "sky-ai" would make a staging test read live prefs and spend live chat quota.
+[[services]]
+binding = "SKY_AI"
+service = "sky-ai-staging"
+
 # This script is new, so its own migration history starts at tag v1.
 [[migrations]]
 tag = "v1-email-gateway-coordinator"
@@ -101,6 +115,10 @@ new_sqlite_classes = ["AdmissionAuthAuthority"]
 [[migrations]]
 tag = "v3-voice-agent"
 new_sqlite_classes = ["VoiceAgentSession"]
+
+[[migrations]]
+tag = "v4-ai-state"
+new_sqlite_classes = ["AiStateObject"]
 
 # AUTH-ROADMAP step 0: staging keeps Workers Logs on too, so every test is visible.
 [observability]
