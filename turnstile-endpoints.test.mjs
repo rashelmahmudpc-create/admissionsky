@@ -2,8 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-// A1.5 / AU-SEC-01 L4: every public endpoint that can send an email/OTP or
-// try a password must check Turnstile on the server before doing any work.
+// A1.5 / AU-SEC-01 L4 (+ L3, L5): every public endpoint that can send an
+// email/OTP or try a password must clear the bot gate — honeypot and form
+// speed first, then Turnstile — before doing any work of its own.
+//
+// The routes used to each call verifyTurnstile() inline. They now call the one
+// shared `guardSend`, which runs the L5 gate and then the L4 human check with
+// the L3 strictness flag. Asserting on the shared call is the stronger test:
+// it proves the gate ran, not merely that a token was checked, and it keeps a
+// new route from copying half the sequence.
 const HANDLER = readFileSync(new URL('./auth-native/worker/public-auth-handler.mjs', import.meta.url), 'utf8');
 const CLIENT = readFileSync(new URL('./account-access.js', import.meta.url), 'utf8');
 
@@ -17,17 +24,38 @@ const routeBlock = path => {
   return HANDLER.slice(start, next > 0 ? next : undefined);
 };
 
+test('the shared bot gate really is honeypot-then-human-check, in that order', () => {
+  const gate = HANDLER.slice(HANDLER.indexOf('const guardSend ='), HANDLER.indexOf('const shadowGuardStore'));
+  assert.ok(gate.includes('botGate('), 'the L5 honeypot/speed gate runs');
+  assert.ok(gate.includes('verifyTurnstile('), 'the L4 human check runs');
+  assert.ok(gate.indexOf('botGate(') < gate.indexOf('verifyTurnstile('),
+    'a submission already known to be automated must not pay for a siteverify round trip');
+  assert.match(gate, /required = requiresHardHumanCheck\(context\)/,
+    'L3: a hosting ASN forces the strict human check');
+  assert.match(gate, /\(await fuzzBandNow\(env\)\) === 'hard'/,
+    'L8: a nearly-exhausted provider quota forces the same strict check');
+});
+
 for (const path of ENDPOINTS) {
-  test(`server checks Turnstile on ${path} before any provider/authority call`, () => {
+  test(`server runs the bot gate on ${path} before any provider/authority call`, () => {
     const block = routeBlock(path);
-    const check = block.indexOf('await verifyTurnstile({ env, token:');
-    assert.ok(check > 0, `${path} calls verifyTurnstile`);
+    const check = block.indexOf('await guardSend(');
+    assert.ok(check > 0, `${path} calls the shared bot gate`);
     for (const work of ['callAuthority(', 'provider.signUp(', 'provider.signIn(', 'provider.sendPasswordResetEmail(', 'firebaseReadySession(']) {
       const at = block.indexOf(work);
-      if (at > 0) assert.ok(check < at, `${path}: Turnstile runs before ${work}`);
+      if (at > 0) assert.ok(check < at, `${path}: the gate runs before ${work}`);
     }
   });
 }
+
+test('every guarded route answers the gate short-circuit instead of falling through', () => {
+  // A gate whose 202 was ignored would be worse than none: the request would
+  // continue and the OTP would still be sent.
+  const guarded = HANDLER.split('await guardSend(').length - 1;
+  const handled = HANDLER.split('if (denied) return denied;').length - 1;
+  assert.equal(guarded, ENDPOINTS.length, 'one gate call per guarded endpoint');
+  assert.equal(handled, ENDPOINTS.length, 'every gate call is checked');
+});
 
 test('client sends a fresh Turnstile token on every guarded call', () => {
   for (const path of ['/signup', '/login', '/password-reset', '/email-ownership/start', '/verification/resend', '/telegram/verification/start', '/backup/request']) {

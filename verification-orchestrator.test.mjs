@@ -330,9 +330,11 @@ test('backup sends enforce independent Firebase-user, IP, and device limits', as
   await t.test('device limit across Firebase users', async () => {
     const provider = new MockProvider({ id: 'otp-a', remaining: 100 });
     const app = setup({ providers: [provider] });
-    for (let index = 0; index < 10; index += 1) await app.orchestrator.requestVerification(scopedIdentity(index + 10), context);
+    // AU-SEC-01 L6 tightened this from 10/hour to 5/day: one browser cannot
+    // spend more than five codes a day no matter how many accounts it opens.
+    for (let index = 0; index < 5; index += 1) await app.orchestrator.requestVerification(scopedIdentity(index + 10), context);
     await expectCode(() => app.orchestrator.requestVerification(scopedIdentity(20), context), AUTH_ERROR_CODES.RATE_LIMITED);
-    assert.equal(provider.sends.length, 10);
+    assert.equal(provider.sends.length, 5);
   });
 
   await t.test('IP limit across Firebase users and devices', async () => {

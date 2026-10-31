@@ -1,4 +1,5 @@
 import { AuthHmac, normalizeAuthEmail, randomSixDigitOtp, randomToken } from '../core/crypto.mjs';
+import { FUZZ_ALERT_RATIO, FUZZ_HARD_RATIO, networkPrefix, worstFuzzBand } from '../core/abuse-signals.mjs';
 import { AUTH_ERROR_CODES, errorFromRepository, failAuth, NativeAuthError } from '../core/errors.mjs';
 import { AuthSecretVault } from '../core/secret-vault.mjs';
 import { verificationConfig } from './config.mjs';
@@ -24,6 +25,45 @@ const SEND_LIMITS = Object.freeze([
 // 3 per address per day, counted per email, on top of the hourly windows above.
 const DAY_MS = 24 * HOUR_MS;
 const EMAIL_DAILY_LIMIT = 3;
+
+// AU-SEC-01 L7 (destination quota). The daily cap above stops a slow burn
+// against one address, but nothing stopped a burst: three codes inside four
+// seconds is not a student waiting for a mail that has not arrived, it is a
+// script. The hourly window is the tighter of the two in practice.
+//
+// The blueprint's L7 reads "≤3/hour, ≤8/day". The daily half is deliberately
+// NOT raised to 8: the owner's own 2026-10-16 rule above is 3/day, and a
+// looser ceiling here would quietly undo it. Both windows are keyed on the
+// destination hash, never on the address itself.
+const EMAIL_HOURLY_LIMIT = 3;
+
+// AU-SEC-01 L6 (device quota): "one device (signed cookie + IP/64 + ASN) ≤ 5
+// OTP a day". Two keys, because either one alone is free to forge. The cookie
+// key catches a single browser being reused; the /64 key catches the same
+// machine (or the same script host) cycling cookies. Neither is a hard refusal
+// on its own — a campus uplink shares a /64 with hundreds of students, which is
+// why the network ceiling is far above the device one and why the ASN half of
+// the blueprint's rule lands as a harder human check in the handler rather than
+// as a block here.
+const DEVICE_DAILY_OTP_LIMIT = 5;
+
+// The network ceiling is a backstop, not a quota. Its only job is to stop the
+// one evasion the device key cannot see: a script that throws its cookie away
+// between requests and moves to a new address inside the same prefix. It must
+// never be the reason a real student is refused, and the prefix it keys on
+// means very different things on the two families: an IPv6 /64 is one
+// household, while an IPv4 /24 is whatever the ISP put behind it — a campus, a
+// hostel, or a carrier-grade NAT pool shared by thousands.
+//
+// So it is set ABOVE what a single address could ever spend in a day. The
+// per-IP window is 20/hour, so one address tops out at 480/day; a ceiling of
+// 500 therefore cannot fire on one caller however persistent, and can only
+// fire on rotation. That is the point: the tight per-caller controls (5/device,
+// 20/IP/hour) do the real work, and the spend ceiling is the provider quota
+// plus the L8 fuzz band, which tightens everyone's check at 80% and forces a
+// hard human check at 95%. This layer just removes the free lunch of "cycle
+// the cookie, keep the machine".
+const NETWORK_DAILY_OTP_LIMIT = 500;
 
 const validText = (value, min, max) => typeof value === 'string' && value.length >= min && value.length <= max && !/[\r\n\u0000]/.test(value);
 
@@ -56,6 +96,9 @@ function contextOf(input = {}) {
   return Object.freeze({
     deviceId,
     ip: String(input.ip || 'unknown').slice(0, 96),
+    // AU-SEC-01 L6: the /64 (v6) or /24 (v4) the caller sits in, so a device
+    // that throws its cookie away and comes back is still the same caller.
+    network: networkPrefix(input.ip),
     userAgent: String(input.userAgent || '').slice(0, 300),
     origin: String(input.origin || '').slice(0, 256)
   });
@@ -189,12 +232,13 @@ export class VerificationOrchestrator {
       if (purpose === 'email-ownership' && !ownershipEmail) failAuth(AUTH_ERROR_CODES.INVALID_INPUT);
       this.#assertDeliverable(ownershipEmail);
       const recipientName = purpose === 'email-ownership' ? cleanRecipientName(trusted.recipientName) : '';
-      const [ipRef, deviceRef, destinationRef] = await Promise.all([
+      const [ipRef, deviceRef, destinationRef, networkRef] = await Promise.all([
         this.hmac.hex('network-ref-v1', context.ip),
         this.hmac.hex('device-ref-v1', context.deviceId),
         this.hmac.hex('verification-destination-v1', purpose === 'email-ownership'
           ? `email-ownership:${ownershipEmail}`
-          : 'telegram-account-verification')
+          : 'telegram-account-verification'),
+        context.network ? this.hmac.hex('netblock-ref-v1', context.network) : ''
       ]);
       return Object.freeze({
         sessionToken: '', subject: '', userId, email: ownershipEmail, purpose, recipientName,
@@ -203,7 +247,7 @@ export class VerificationOrchestrator {
           whatsapp: '',
           telegram: purpose === 'email-ownership' ? '' : 'user-initiated-link'
         }),
-        context, sessionRef, subjectRef, emailRef, ipRef, deviceRef, destinationRef
+        context, sessionRef, subjectRef, emailRef, ipRef, deviceRef, destinationRef, networkRef
       });
     }
     const sessionToken = String(input?.sessionToken || '').trim();
@@ -221,15 +265,16 @@ export class VerificationOrchestrator {
     const telegram = linkedTelegram || (input?.allowTelegramLink === true ? 'user-initiated-link' : '');
     const destinations = Object.freeze({ otp: email, whatsapp, telegram });
     const recipientName = cleanRecipientName(input?.recipientName);
-    const [sessionRef, subjectRef, emailRef, ipRef, deviceRef, destinationRef] = await Promise.all([
+    const [sessionRef, subjectRef, emailRef, ipRef, deviceRef, destinationRef, networkRef] = await Promise.all([
       this.hmac.hex('session-ref-v1', sessionToken),
       this.hmac.hex('firebase-subject-v1', subject),
       this.hmac.hex('email-ref-v1', email),
       this.hmac.hex('network-ref-v1', context.ip),
       this.hmac.hex('device-ref-v1', context.deviceId),
-      this.hmac.hex('verification-destination-v1', `${email}|${whatsapp}|${telegram}`)
+      this.hmac.hex('verification-destination-v1', `${email}|${whatsapp}|${telegram}`),
+      context.network ? this.hmac.hex('netblock-ref-v1', context.network) : ''
     ]);
-    return Object.freeze({ sessionToken, subject, userId, email, purpose, recipientName, destinations, context, sessionRef, subjectRef, emailRef, ipRef, deviceRef, destinationRef });
+    return Object.freeze({ sessionToken, subject, userId, email, purpose, recipientName, destinations, context, sessionRef, subjectRef, emailRef, ipRef, deviceRef, destinationRef, networkRef });
   }
 
   // Email-ownership only. The other purposes carry no real address in tests or
@@ -254,8 +299,21 @@ export class VerificationOrchestrator {
       limit: limit.limit,
       windowMs: limit.windowMs
     }));
+    // AU-SEC-01 L6: the per-day device ceiling the blueprint asks for. The
+    // hourly window above is deliberately more generous than this one, because
+    // an hourly cap cannot tell a burst from a long day; the daily cap is what
+    // bounds the total a single device can spend.
+    limits.push(Object.freeze({ scope: 'device-otp-day', key: identity.deviceRef, limit: DEVICE_DAILY_OTP_LIMIT, windowMs: DAY_MS }));
+    // The network ceiling only exists when the edge actually reported an
+    // address. An empty networkRef is "no signal", not a shared bucket.
+    if (identity.networkRef) {
+      limits.push(Object.freeze({ scope: 'netblock-otp-day', key: identity.networkRef, limit: NETWORK_DAILY_OTP_LIMIT, windowMs: DAY_MS }));
+    }
     if (identity.purpose === 'email-ownership' && identity.emailRef) {
       limits.push(Object.freeze({ scope: 'ownership-email-day', key: identity.emailRef, limit: EMAIL_DAILY_LIMIT, windowMs: DAY_MS }));
+      // AU-SEC-01 L7: the burst window. Separate scope, so the two windows
+      // count independently and neither resets the other.
+      limits.push(Object.freeze({ scope: 'ownership-email-hour', key: identity.emailRef, limit: EMAIL_HOURLY_LIMIT, windowMs: HOUR_MS }));
     }
     return limits;
   }
@@ -458,6 +516,25 @@ export class VerificationOrchestrator {
           logDelivery({ ...logBase, provider: entry.id, rank, try: currentTry + 1, outcome: 'quota_exhausted' });
           break;
         }
+        // AU-SEC-01 L8 (global fuzz). The reservation above is the only place
+        // that knows how much of today's capacity is gone, so the band is read
+        // here and emitted as a delivery event. The owner's sink throttles and
+        // turns `alert` into a Telegram message; the handler reads the same
+        // band on the signup path to force the strict human check at `hard`.
+        // Best-effort: a failure to measure pressure must never fail a send.
+        try {
+          if (quota.limit > 0 && quota.used / quota.limit >= FUZZ_ALERT_RATIO) {
+            logDelivery({
+              ...logBase,
+              provider: entry.id,
+              rank,
+              try: currentTry + 1,
+              outcome: 'quota_pressure',
+              band: quota.used / quota.limit >= FUZZ_HARD_RATIO ? 'hard' : 'alert',
+              ratio: Math.round((quota.used / quota.limit) * 1000) / 1000
+            });
+          }
+        } catch { /* pressure measurement is advisory */ }
         const started = Date.now();
         let providerAccepted = false;
         try {
@@ -883,6 +960,28 @@ export class VerificationOrchestrator {
       providers: Object.freeze(providers),
       recentEvents: Object.freeze((stored.recentEvents || []).slice(-100))
     });
+  }
+
+  /**
+   * AU-SEC-01 L8 (global fuzz). How much of today's provider quota is gone,
+   * as one band the caller can act on. Reads only the local reservation
+   * counters, so it is cheap enough to call on a request path and cannot be
+   * influenced by a caller.
+   *
+   * @returns {Promise<{band: 'normal'|'alert'|'hard', ratio: number, used: number, limit: number}>}
+   */
+  async fuzzPressure() {
+    const now = Number(this.now());
+    const enabled = this.config.providers.filter(entry => entry.enabled && entry.dailyQuota > 0);
+    if (!enabled.length) return Object.freeze({ band: 'normal', ratio: 0, used: 0, limit: 0 });
+    const snapshots = await Promise.all(enabled.map(entry =>
+      this.repository.dailyQuotaSnapshot({ providerId: entry.id, dailyQuota: entry.dailyQuota, now })
+        .catch(() => ({ used: 0, limit: 0 }))
+    ));
+    const worst = worstFuzzBand(snapshots);
+    const spent = snapshots.reduce((total, row) => total + Number(row?.used || 0), 0);
+    const capacity = snapshots.reduce((total, row) => total + Number(row?.limit || 0), 0);
+    return Object.freeze({ band: worst.band, ratio: worst.ratio, used: spent, limit: capacity });
   }
 
   async updateConfig(input) {

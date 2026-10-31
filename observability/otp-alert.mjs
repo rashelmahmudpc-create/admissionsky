@@ -24,6 +24,15 @@ export function otpAlertFor(record) {
   if (ms > OTP_SLOW_MS && (record.evt === 'otp_request' || record.outcome === 'accepted')) {
     return { kind: 'slow', key: `slow:${record.provider || 'request'}`, title: `🐢 OTP পাঠাতে ${Math.round(ms / 1000)} সেকেন্ড লেগেছে`, ms };
   }
+  // AU-SEC-01 L8 (global fuzz): the day's provider quota is nearly gone. The
+  // key is the band, not the provider, so a run working through the list
+  // produces one message per escalation rather than one per slot.
+  if (record.evt === 'otp_delivery' && record.outcome === 'quota_pressure') {
+    const pct = Math.round((Number(record.ratio) || 0) * 100);
+    return record.band === 'hard'
+      ? { kind: 'fuzz_hard', key: 'fuzz_hard', title: `🛑 OTP কোটা ${pct}% শেষ — নতুন সাইনআপে কঠিন যাচাই চালু`, ms }
+      : { kind: 'fuzz_alert', key: 'fuzz_alert', title: `⚠️ OTP কোটা ${pct}% শেষ (${record.provider || ''})`, ms };
+  }
   return null;
 }
 

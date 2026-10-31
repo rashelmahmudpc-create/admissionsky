@@ -1128,9 +1128,12 @@ var __verificationConfigTest = Object.freeze({ SLOT_DEFINITIONS, DEFAULT_POLICY,
 
 // auth-native/verification/turnstile.mjs
 var SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
-async function verifyTurnstile({ env, token, ip, fetchImpl = fetch, timeoutMs = 8e3 } = {}) {
+async function verifyTurnstile({ env, token, ip, fetchImpl = fetch, timeoutMs = 8e3, required = false } = {}) {
   const secret = String(env?.TURNSTILE_SECRET_KEY || "").trim();
-  if (!secret) return { enforced: false };
+  if (!secret) {
+    if (required) throw new NativeAuthError(AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
+    return { enforced: false };
+  }
   const value = String(token ?? "");
   if (!value || value.length > 4096) throw new NativeAuthError(AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
   const form = new URLSearchParams({ secret, response: value });
@@ -1147,6 +1150,194 @@ async function verifyTurnstile({ env, token, ip, fetchImpl = fetch, timeoutMs = 
   }
   throw new NativeAuthError(AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
 }
+
+// auth-native/core/abuse-signals.mjs
+var DATACENTER_ASNS = Object.freeze(/* @__PURE__ */ new Set([
+  14061,
+  // DigitalOcean
+  16509,
+  // Amazon AWS
+  14618,
+  // Amazon AES
+  8075,
+  // Microsoft Azure
+  24940,
+  // Hetzner
+  63949,
+  // Akamai / Linode
+  20473,
+  // Vultr / Choopa
+  16276,
+  // OVH
+  51167,
+  // Contabo
+  12876,
+  // Scaleway / Online SAS
+  197540,
+  // netcup
+  9009,
+  // M247
+  212238,
+  // Datacamp / CDN77
+  45102,
+  // Alibaba Cloud (intl)
+  37963,
+  // Alibaba Cloud (cn)
+  132203,
+  // Tencent Cloud
+  36351,
+  // IBM SoftLayer
+  53667,
+  // FranTech / BuyVM
+  26496,
+  // GoDaddy
+  32244,
+  // Liquid Web
+  28753,
+  // LeaseWeb
+  49981,
+  // WorldStream
+  200651,
+  // Flokinet
+  49505,
+  // Selectel
+  9123,
+  // Timeweb
+  29802,
+  // Hivelocity
+  63018,
+  // ColoCrossing
+  40021,
+  // ColoCrossing
+  3223,
+  // Voxility
+  202425,
+  // IP Volume
+  209854,
+  // Stark Industries
+  62240,
+  // Clouvider
+  215925,
+  // Neterra
+  197695,
+  // Reg.ru
+  48096,
+  // Itldc
+  198610,
+  // Beget
+  210644,
+  // Aeza
+  401120,
+  // Zenlayer
+  55990,
+  // Huawei Cloud
+  136907,
+  // Huawei Cloud
+  55967,
+  // Baidu
+  55020,
+  // Hostinger
+  47583,
+  // Hostinger
+  22612,
+  // Namecheap hosting
+  54290,
+  // Hostwinds
+  30083,
+  // GoDaddy / ASCIO
+  8560,
+  // IONOS
+  34011,
+  // IONOS
+  6724,
+  // Strato
+  31898,
+  // Oracle Cloud
+  14413,
+  // Linode legacy
+  40676,
+  // Psychz
+  53755,
+  // IOFlood
+  19969,
+  // Joe's Datacenter
+  15003,
+  // Nobis
+  32475,
+  // SingleHop
+  21859,
+  // Zenlayer
+  62567,
+  // DigitalOcean legacy
+  393406,
+  // DigitalOcean
+  152900,
+  // Sharktech
+  26347,
+  // Dreamhost
+  30148,
+  // Sucuri
+  32400,
+  // Linode
+  54540,
+  // HostUS
+  199524,
+  // G-Core
+  205544,
+  // G-Core
+  202422
+  // G-Core
+]));
+function isDatacenterAsn(asn) {
+  const value = Number(asn);
+  return Number.isFinite(value) && value > 0 && DATACENTER_ASNS.has(value);
+}
+function networkPrefix(ip) {
+  const value = String(ip || "").trim().toLowerCase();
+  if (!value || value === "unknown") return "";
+  const bare = value.split("%")[0];
+  if (bare.includes(":")) {
+    const [head, tail = ""] = bare.split("::");
+    const headGroups = head ? head.split(":").filter(Boolean) : [];
+    const tailGroups = tail ? tail.split(":").filter(Boolean) : [];
+    if (!headGroups.length && !tailGroups.length) return "";
+    const groups = bare.includes("::") ? [...headGroups, ...Array(Math.max(0, 8 - headGroups.length - tailGroups.length)).fill("0"), ...tailGroups] : headGroups;
+    if (groups.length !== 8 || groups.some((group) => !/^[0-9a-f]{1,4}$/.test(group))) return "";
+    return groups.slice(0, 4).map((group) => group.padStart(4, "0")).join(":");
+  }
+  const parts = bare.split(".");
+  if (parts.length !== 4) return "";
+  if (parts.some((part) => !/^\d{1,3}$/.test(part) || Number(part) > 255)) return "";
+  return `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
+}
+var HONEYPOT_FIELD = "ah_contact_website";
+var MIN_FORM_MS = 2e3;
+var MAX_FORM_MS = 2 * 60 * 60 * 1e3;
+function looksAutomated(input = {}) {
+  const honeypot = input.honeypot;
+  if (typeof honeypot === "string" && honeypot.trim() !== "") return { automated: true, reason: "HONEYPOT_FILLED" };
+  if (typeof honeypot === "number" && Number.isFinite(honeypot)) return { automated: true, reason: "HONEYPOT_FILLED" };
+  if (input.elapsedMs === void 0 || input.elapsedMs === null || input.elapsedMs === "") {
+    return { automated: false, reason: "NO_TIMING_SIGNAL" };
+  }
+  const elapsed = Number(input.elapsedMs);
+  if (!Number.isFinite(elapsed) || elapsed < 0 || elapsed > MAX_FORM_MS) {
+    return { automated: true, reason: "FORM_TIMING_IMPLAUSIBLE" };
+  }
+  if (elapsed < MIN_FORM_MS) return { automated: true, reason: "FORM_TOO_FAST" };
+  return { automated: false, reason: "CLEAN" };
+}
+var FUZZ_ALERT_RATIO = 0.8;
+var FUZZ_HARD_RATIO = 0.95;
+var __abuseSignalsTest = Object.freeze({
+  DATACENTER_ASNS,
+  HONEYPOT_FIELD,
+  MIN_FORM_MS,
+  MAX_FORM_MS,
+  FUZZ_ALERT_RATIO,
+  FUZZ_HARD_RATIO,
+  networkPrefix
+});
 
 // auth-native/verification/telegram-security.mjs
 var WEBHOOK_CONTEXT = "admission-hub-telegram-webhook-v1";
@@ -1803,7 +1994,16 @@ function createKvIpBreadth(store, options = {}) {
 var SECURITY_ALERT_EVENTS = Object.freeze({
   CANARY_HIT: "canary-hit",
   SHADOW_BAN: "shadow-ban",
-  NEW_DEVICE: "new-device"
+  NEW_DEVICE: "new-device",
+  // AU-SEC-01 L8: today's provider quota has been eaten past the alert
+  // threshold. This is the earliest signal that a run is in progress, because
+  // it is measured on our own counters rather than on anything the caller says.
+  PROVIDER_QUOTA_PRESSURE: "provider-quota-pressure",
+  // AU-SEC-01 L5: a submission tripped the honeypot or the form-speed floor and
+  // was dropped silently. Reported rather than logged because the auth runtime
+  // has no console (native-auth-protection.test.mjs), and throttled per event so
+  // a flood of drops cannot become a way to page the owner on demand.
+  BOT_GATE_DROP: "bot-gate-drop"
 });
 var MAX_FIELD = 200;
 var field = (value, max = MAX_FIELD) => typeof value === "string" ? value.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "").trim().slice(0, max) : "";
@@ -1819,7 +2019,9 @@ function maskAlertEmail(value) {
 var LABELS = Object.freeze({
   [SECURITY_ALERT_EVENTS.CANARY_HIT]: "🍯 ক্যানারি অ্যাকাউন্টে চেষ্টা",
   [SECURITY_ALERT_EVENTS.SHADOW_BAN]: "👻 ছায়া-ব্যান হয়েছে",
-  [SECURITY_ALERT_EVENTS.NEW_DEVICE]: "📱 নতুন ডিভাইসে লগইন"
+  [SECURITY_ALERT_EVENTS.NEW_DEVICE]: "📱 নতুন ডিভাইসে লগইন",
+  [SECURITY_ALERT_EVENTS.PROVIDER_QUOTA_PRESSURE]: "🔥 OTP কোটা প্রায় শেষ",
+  [SECURITY_ALERT_EVENTS.BOT_GATE_DROP]: "🤖 বট-ফাঁদে পড়েছে (চুপচাপ বাতিল)"
 });
 function renderSecurityAlert(input = {}) {
   const event = String(input.event || "");
@@ -1834,6 +2036,11 @@ function renderSecurityAlert(input = {}) {
   if (band) lines.push(`ঝুঁকি: ${band}`);
   const reasons = Array.isArray(input.reasons) ? input.reasons.map((value) => field(value, 40)).filter(Boolean).slice(0, 5) : [];
   if (reasons.length) lines.push(`কারণ: ${reasons.join(", ")}`);
+  const used = Number(input.used);
+  const limit = Number(input.limit);
+  if (Number.isFinite(used) && Number.isFinite(limit) && limit > 0) {
+    lines.push(`কোটা: ${Math.round(used)} / ${Math.round(limit)} (${Math.round(used / limit * 100)}%)`);
+  }
   const at = Number(input.at);
   if (Number.isFinite(at) && at > 0) lines.push(`সময়: ${new Date(at).toISOString()}`);
   return Object.freeze({ event, text: lines.join("\n") });
@@ -1994,6 +2201,51 @@ var clientContext = (request, existingDeviceId = "") => {
   });
 };
 var shadowGuardMode = (env) => resolveGuardMode(env?.SHADOW_GUARD_ACTIVATION);
+var botGate = (request, env, context, body) => {
+  const verdict = looksAutomated({
+    honeypot: body?.[HONEYPOT_FIELD],
+    elapsedMs: body?.formElapsedMs
+  });
+  if (verdict.automated) {
+    sendThrottledSecurityAlert(env, shadowGuardStore(env), {
+      event: SECURITY_ALERT_EVENTS.BOT_GATE_DROP,
+      // `reasons` is the field the renderer reads; the path is added to it so
+      // the owner can see which endpoint is being hit without a second field.
+      reasons: [verdict.reason, new URL(request.url).pathname.slice(0, 40)],
+      at: Date.now()
+    });
+    return json(request, 202, { ok: true, accepted: true, deliveryDisclosed: false });
+  }
+  return null;
+};
+var requiresHardHumanCheck = (context) => isDatacenterAsn(context.asn);
+var FUZZ_CACHE_MS = 6e4;
+var fuzzCache = { band: "normal", expiresAt: 0 };
+var fuzzBandNow = async (env) => {
+  const now = Date.now();
+  if (fuzzCache.expiresAt > now) return fuzzCache.band;
+  try {
+    const result = await callAuthority(env, "/internal/verification/fuzz", {});
+    const band = ["normal", "alert", "hard"].includes(result?.band) ? result.band : "normal";
+    fuzzCache = { band, expiresAt: now + FUZZ_CACHE_MS };
+    return band;
+  } catch {
+    return "normal";
+  }
+};
+var guardSend = async ({ request, env, context, body, fetchImpl }) => {
+  const gate = botGate(request, env, context, body);
+  if (gate) return gate;
+  const required = requiresHardHumanCheck(context) || await fuzzBandNow(env) === "hard";
+  await verifyTurnstile({
+    env,
+    token: body?.turnstileToken,
+    ip: context.ip,
+    fetchImpl,
+    required
+  });
+  return null;
+};
 var shadowGuardStore = (env) => env?.GK_KV || env?.PUB_KV || null;
 var flagCanaryHit = (env, email, context) => {
   const list = parseCanaryEmails(env?.CANARY_EMAILS);
@@ -2606,7 +2858,10 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
           throw new NativeAuthError(AUTH_ERROR_CODES.CLIENT_UPDATE_REQUIRED);
         }
         const turnstileBody = await readJson(request);
-        await verifyTurnstile({ env, token: turnstileBody?.turnstileToken, ip: context.ip, fetchImpl });
+        {
+          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl });
+          if (denied) return denied;
+        }
         const input = credentials(turnstileBody);
         if (isDisposableEmail(input.email)) throw new NativeAuthError(AUTH_ERROR_CODES.DISPOSABLE_EMAIL);
         if (reservedTelegramLoginEmail(input.email)) throw new NativeAuthError(AUTH_ERROR_CODES.DISPOSABLE_EMAIL);
@@ -2683,7 +2938,10 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
       if (request.method === "POST" && url.pathname === `${AUTH_API_PREFIX}/password-reset`) {
         if (!provider.configured) throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
         const body = await readJson(request);
-        await verifyTurnstile({ env, token: body?.turnstileToken, ip: context.ip, fetchImpl });
+        {
+          const denied = await guardSend({ request, env, context, body, fetchImpl });
+          if (denied) return denied;
+        }
         const email = normalizeAuthEmail(body?.email);
         if (isDisposableEmail(email)) throw new NativeAuthError(AUTH_ERROR_CODES.DISPOSABLE_EMAIL);
         const prepared = await callAuthority(env, "/internal/firebase/rate", {
@@ -2706,7 +2964,10 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
       if (request.method === "POST" && url.pathname === `${AUTH_API_PREFIX}/verification/resend`) {
         if (!provider.configured) throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
         const turnstileBody = await readJson(request);
-        await verifyTurnstile({ env, token: turnstileBody?.turnstileToken, ip: context.ip, fetchImpl });
+        {
+          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl });
+          if (denied) return denied;
+        }
         const input = credentials(turnstileBody);
         const prepared = await callAuthority(env, "/internal/firebase/rate", { input: { operation: "verification-resend", email: input.email }, context });
         let signed;
@@ -2738,7 +2999,10 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
       if (request.method === "POST" && url.pathname === `${AUTH_API_PREFIX}/login`) {
         if (!provider.configured) throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
         const turnstileBody = await readJson(request);
-        await verifyTurnstile({ env, token: turnstileBody?.turnstileToken, ip: context.ip, fetchImpl });
+        {
+          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl });
+          if (denied) return denied;
+        }
         const input = credentials(turnstileBody);
         const prepared = await callAuthority(env, "/internal/firebase/rate", { input: { operation: "login", email: input.email }, context });
         if (Number(prepared?.retryAfter) > 0) {
@@ -3267,7 +3531,10 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         if (!verificationTicket) throw new NativeAuthError(AUTH_ERROR_CODES.TELEGRAM_VERIFICATION_INVALID);
         const startBody = await readJson(request);
         const magicLink = startBody?.method === "magic-link";
-        await verifyTurnstile({ env, token: startBody?.turnstileToken, ip: context.ip, fetchImpl });
+        {
+          const denied = await guardSend({ request, env, context, body: startBody, fetchImpl });
+          if (denied) return denied;
+        }
         if (isPendingSignupTicket(verificationTicket)) return startPendingSignupCode({ request, env, provider, context, ticket: verificationTicket, magicLink, deps: pendingDeps() });
         const material = await callAuthority(env, "/internal/firebase/account-verification/material", {
           verificationTicket,
@@ -3427,7 +3694,10 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         const verificationTicket = jar[AUTH_VERIFICATION_COOKIE];
         if (!verificationTicket) throw new NativeAuthError(AUTH_ERROR_CODES.TELEGRAM_VERIFICATION_INVALID);
         const turnstileBody = await readJson(request);
-        await verifyTurnstile({ env, token: turnstileBody?.turnstileToken, ip: context.ip, fetchImpl });
+        {
+          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl });
+          if (denied) return denied;
+        }
         const result = await callAuthority(env, "/internal/verification/preauth/request", {
           input: { verificationTicket },
           context
@@ -3913,7 +4183,10 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
           throw new NativeAuthError(AUTH_ERROR_CODES.BACKUP_UNAVAILABLE);
         }
         const body = await readJson(request);
-        await verifyTurnstile({ env, token: body?.turnstileToken, ip: context.ip, fetchImpl });
+        {
+          const denied = await guardSend({ request, env, context, body, fetchImpl });
+          if (denied) return denied;
+        }
         const contact = String(body.contact || "").trim();
         if (contact && !/^\+[1-9]\d{7,14}$/.test(contact)) throw new NativeAuthError(AUTH_ERROR_CODES.INVALID_INPUT);
         const current = await firebaseReadySession({ provider, jar, env, context, allowTelegram: telegramVerificationRequested(env, url) });

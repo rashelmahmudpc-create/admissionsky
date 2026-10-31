@@ -111,8 +111,13 @@ test('signup UI collects Email and Password, clears passwords, and waits for sta
   await waitFor(() => app.document.querySelector('[data-view="verify"]').hidden === false);
 
   const signupCall = app.calls.find(call => call.path.endsWith('/signup'));
-  const { turnstileToken, ...signupCredentials } = signupCall.body;
+  // AU-SEC-01 L5: the call also carries the honeypot field and the form timing.
+  // Both are destructured out here because this test is about the credentials;
+  // the bot signals have their own assertions in au-sec-01-layers.test.mjs.
+  const { turnstileToken, ah_contact_website, formElapsedMs, ...signupCredentials } = signupCall.body;
   assert.deepEqual(signupCredentials, { email: 'student@example.com', password: 'Secure-password-44' });
+  assert.equal(ah_contact_website, '', 'the honeypot is shipped empty by a real form');
+  assert.equal(typeof formElapsedMs, 'number');
   // F-03: the signup call carries a Turnstile token field; it is empty only when
   // the widget did not load, and the server decides whether that is acceptable.
   assert.equal(typeof turnstileToken, 'string');

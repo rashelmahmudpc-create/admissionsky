@@ -5,6 +5,7 @@ import { AUTH_ERROR_CODES, asNativeAuthError, NativeAuthError } from '../core/er
 import { FirebaseEmailPasswordProvider, FirebaseRequestError } from '../providers/firebase-auth.mjs';
 import { verificationConfig } from '../verification/config.mjs';
 import { verifyTurnstile } from '../verification/turnstile.mjs';
+import { HONEYPOT_FIELD, isDatacenterAsn, looksAutomated } from '../core/abuse-signals.mjs';
 import { resolveTelegramWebhookSecret, validTelegramWebhookSecret } from '../verification/telegram-security.mjs';
 import { isTelegramLoginEmail, reservedTelegramLoginEmail, telegramLoginBotId, telegramLoginCredentials, telegramLoginReady, verifyTelegramLogin } from '../verification/telegram-login.mjs';
 import { isPendingSignupTicket } from './pending-signup.mjs';
@@ -135,6 +136,100 @@ const clientContext = (request, existingDeviceId = '') => {
 // carries no variable for this: the Worker sits on Cloudflare's 64-variable
 // free-tier ceiling, so a 65th is rejected at deploy time.
 const shadowGuardMode = env => resolveGuardMode(env?.SHADOW_GUARD_ACTIVATION);
+
+/* AU-SEC-01 L3 + L5. The bot gate that runs before any of the seven send or
+ * password endpoints does its work.
+ *
+ * Returns a Response to short-circuit with, or null to continue.
+ *
+ * L5 (honeypot + speed) answers 202 with a body identical in shape to the
+ * success path. That is the point: the bot is told it worked, so it does not
+ * retry and does not learn which signal caught it, while no account is created
+ * and no OTP leaves. Answering 400 would have been a free hint.
+ *
+ * L3 (ASN) never refuses. A hosting ASN only forces the human check to run
+ * even where no Turnstile secret is bound, and is reported to the caller so
+ * the routes below can tighten their quotas. Blocking a datacenter ASN would
+ * eventually block a student on a VPN, which the owner's rules forbid. */
+const botGate = (request, env, context, body) => {
+  const verdict = looksAutomated({
+    honeypot: body?.[HONEYPOT_FIELD],
+    elapsedMs: body?.formElapsedMs
+  });
+  if (verdict.automated) {
+    // The bot is told nothing. The owner is told, once an hour at most: the
+    // throttle key is the event itself, so a flood of drops collapses into one
+    // Telegram message instead of becoming a way to page him on demand. The
+    // auth runtime is held to a no-console rule
+    // (native-auth-protection.test.mjs), so the shared alert sink is the only
+    // channel available here — and the one the security dashboard already reads.
+    sendThrottledSecurityAlert(env, shadowGuardStore(env), {
+      event: SECURITY_ALERT_EVENTS.BOT_GATE_DROP,
+      // `reasons` is the field the renderer reads; the path is added to it so
+      // the owner can see which endpoint is being hit without a second field.
+      reasons: [verdict.reason, new URL(request.url).pathname.slice(0, 40)],
+      at: Date.now()
+    });
+    return json(request, 202, { ok: true, accepted: true, deliveryDisclosed: false });
+  }
+  return null;
+};
+
+/** L3: true when the caller arrived from a hosting network, so the human check
+ *  must run even with no secret bound. */
+const requiresHardHumanCheck = context => isDatacenterAsn(context.asn);
+
+/* L8 (global fuzz). The band is a property of the deployment, not of the
+ * caller, so it is read once and cached per isolate for a minute rather than
+ * asked of the Durable Object on every signup. A stale band is harmless in the
+ * safe direction: the worst case is that the strict check stays on for up to a
+ * minute after the pressure passed, never that it stays off while pressure is
+ * high. A failure to read returns 'normal' and never blocks a request — a
+ * fuzz signal is an escalation, and an escalation must not become an outage. */
+const FUZZ_CACHE_MS = 60_000;
+let fuzzCache = { band: 'normal', expiresAt: 0 };
+const fuzzBandNow = async env => {
+  const now = Date.now();
+  if (fuzzCache.expiresAt > now) return fuzzCache.band;
+  try {
+    const result = await callAuthority(env, '/internal/verification/fuzz', {});
+    const band = ['normal', 'alert', 'hard'].includes(result?.band) ? result.band : 'normal';
+    fuzzCache = { band, expiresAt: now + FUZZ_CACHE_MS };
+    return band;
+  } catch {
+    // Not cached on failure: the next request should try again rather than
+    // hold a wrong 'normal' for a minute.
+    return 'normal';
+  }
+};
+
+/* L4 + L3 + L5 in the order they must run, as one call every send/password
+ * route makes before it does any work of its own.
+ *
+ * The honeypot/speed check comes FIRST, and its 202 short-circuit means the
+ * Turnstile round trip is never paid for a submission already known to be
+ * automated. The ASN test then decides whether the human check is allowed to
+ * fall back to inert, which is the whole of L3's effect on this path: a
+ * hosting caller gets the strict version.
+ *
+ * Returns a Response to answer with, or null to continue. */
+const guardSend = async ({ request, env, context, body, fetchImpl }) => {
+  const gate = botGate(request, env, context, body);
+  if (gate) return gate;
+  // L8: at the hard band every caller gets the strict human check, not just
+  // the ones the edge already distrusts. The band read is cached per isolate
+  // for a minute, so a normal day costs at most one extra DO round trip per
+  // isolate per minute rather than one per signup.
+  const required = requiresHardHumanCheck(context) || (await fuzzBandNow(env)) === 'hard';
+  await verifyTurnstile({
+    env,
+    token: body?.turnstileToken,
+    ip: context.ip,
+    fetchImpl,
+    required
+  });
+  return null;
+};
 
 // The KV namespace the guard records into. Absent binding means the guard
 // cannot record, and a guard that cannot record must not silently pretend
@@ -796,8 +891,12 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
           throw new NativeAuthError(AUTH_ERROR_CODES.CLIENT_UPDATE_REQUIRED);
         }
         const turnstileBody = await readJson(request);
-        // A1.5 / AU-SEC-01 L4: human check before any Firebase or OTP work.
-        await verifyTurnstile({ env, token: turnstileBody?.turnstileToken, ip: context.ip, fetchImpl });
+        // A1.5 / AU-SEC-01 L4+L3+L5: bot gate, then human check, before any
+        // Firebase or OTP work.
+        {
+          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl });
+          if (denied) return denied;
+        }
         const input = credentials(turnstileBody);
         // Owner order 2026-10-16: refuse a throwaway inbox before any account is
         // created or any OTP is sent. Server-side so a patched client cannot skip it.
@@ -876,8 +975,11 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
       if (request.method === 'POST' && url.pathname === `${AUTH_API_PREFIX}/password-reset`) {
         if (!provider.configured) throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
         const body = await readJson(request);
-        // A1.5 / AU-SEC-01 L4: human check before any send.
-        await verifyTurnstile({ env, token: body?.turnstileToken, ip: context.ip, fetchImpl });
+        // A1.5 / AU-SEC-01 L4+L3+L5: bot gate, then human check, before any send.
+        {
+          const denied = await guardSend({ request, env, context, body, fetchImpl });
+          if (denied) return denied;
+        }
         const email = normalizeAuthEmail(body?.email);
         if (isDisposableEmail(email)) throw new NativeAuthError(AUTH_ERROR_CODES.DISPOSABLE_EMAIL);
         const prepared = await callAuthority(env, '/internal/firebase/rate', {
@@ -902,8 +1004,11 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
       if (request.method === 'POST' && url.pathname === `${AUTH_API_PREFIX}/verification/resend`) {
         if (!provider.configured) throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
         const turnstileBody = await readJson(request);
-        // A1.5 / AU-SEC-01 L4: human check before any Firebase or OTP work.
-        await verifyTurnstile({ env, token: turnstileBody?.turnstileToken, ip: context.ip, fetchImpl });
+        // A1.5 / AU-SEC-01 L4+L3+L5: bot gate, then human check, before any work.
+        {
+          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl });
+          if (denied) return denied;
+        }
         const input = credentials(turnstileBody);
         const prepared = await callAuthority(env, '/internal/firebase/rate', { input: { operation: 'verification-resend', email: input.email }, context });
         let signed;
@@ -924,8 +1029,11 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
       if (request.method === 'POST' && url.pathname === `${AUTH_API_PREFIX}/login`) {
         if (!provider.configured) throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
         const turnstileBody = await readJson(request);
-        // A1.5 / AU-SEC-01 L4: human check before any Firebase or OTP work.
-        await verifyTurnstile({ env, token: turnstileBody?.turnstileToken, ip: context.ip, fetchImpl });
+        // A1.5 / AU-SEC-01 L4+L3+L5: bot gate, then human check, before any work.
+        {
+          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl });
+          if (denied) return denied;
+        }
         const input = credentials(turnstileBody);
         const prepared = await callAuthority(env, '/internal/firebase/rate', { input: { operation: 'login', email: input.email }, context });
         // Phase 6, escalating cooldown after repeated failed logins (§14):
@@ -1446,7 +1554,11 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         if (!verificationTicket) throw new NativeAuthError(AUTH_ERROR_CODES.TELEGRAM_VERIFICATION_INVALID);
         const startBody = await readJson(request);
         const magicLink = startBody?.method === 'magic-link';
-        await verifyTurnstile({ env, token: startBody?.turnstileToken, ip: context.ip, fetchImpl });
+        // A1.5 / AU-SEC-01 L4+L3+L5: bot gate, then human check, before any send.
+        {
+          const denied = await guardSend({ request, env, context, body: startBody, fetchImpl });
+          if (denied) return denied;
+        }
         if (isPendingSignupTicket(verificationTicket)) return pendingSignup.startPendingSignupCode({ request, env, provider, context, ticket: verificationTicket, magicLink, deps: pendingDeps() });
         const material = await callAuthority(env, '/internal/firebase/account-verification/material', {
           verificationTicket,
@@ -1589,7 +1701,11 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         if (!verificationTicket) throw new NativeAuthError(AUTH_ERROR_CODES.TELEGRAM_VERIFICATION_INVALID);
         const turnstileBody = await readJson(request);
         // A1.5 / AU-SEC-01 L4: human check before a Telegram code is issued.
-        await verifyTurnstile({ env, token: turnstileBody?.turnstileToken, ip: context.ip, fetchImpl });
+        // A1.5 / AU-SEC-01 L4+L3+L5: bot gate, then human check, before any send.
+        {
+          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl });
+          if (denied) return denied;
+        }
         const result = await callAuthority(env, '/internal/verification/preauth/request', {
           input: { verificationTicket },
           context
@@ -2046,7 +2162,11 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         }
         const body = await readJson(request);
         // A1.5 / AU-SEC-01 L4: human check before any send.
-        await verifyTurnstile({ env, token: body?.turnstileToken, ip: context.ip, fetchImpl });
+        // A1.5 / AU-SEC-01 L4+L3+L5: bot gate, then human check, before any send.
+        {
+          const denied = await guardSend({ request, env, context, body, fetchImpl });
+          if (denied) return denied;
+        }
         const contact = String(body.contact || '').trim();
         if (contact && !/^\+[1-9]\d{7,14}$/.test(contact)) throw new NativeAuthError(AUTH_ERROR_CODES.INVALID_INPUT);
         const current = await firebaseReadySession({ provider, jar, env, context, allowTelegram: telegramVerificationRequested(env, url) });

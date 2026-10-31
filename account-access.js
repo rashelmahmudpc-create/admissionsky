@@ -115,6 +115,7 @@
         </div>
 
         <form class="ah-account-view ah-login-view" data-view="login" data-login-contract="reference-login-v1" novalidate>
+          <div class="ah-honeypot" aria-hidden="true"><label for="ah-contact-website">Website</label><input id="ah-contact-website" name="website" type="text" tabindex="-1" autocomplete="off" value=""></div>
           <div class="ah-login-hero" aria-hidden="true"><span class="ah-login-orb"><svg viewBox="0 0 24 24" fill="none"><path d="m6.5 12.4 4 4L17.6 8.6"/></svg></span><i class="ah-login-spark one">✦</i><i class="ah-login-spark two">✦</i><i class="ah-login-spark three">✦</i></div>
           <h3 class="ah-login-title">আবার দেখা হলো <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 10.5a11 11 0 0 1 16 0"/><path d="M7 13.8a6.5 6.5 0 0 1 10 0"/><circle cx="12" cy="17.2" r="1.6"/></svg></h3>
           <p class="ah-login-sub">তোমার preparation যেখানে থেমেছিল, সেখান থেকেই শুরু করো।</p><button class="ah-account-link ah-calm-back" type="button" data-role="login-back" data-bn="← পেছনে" data-en="← Back">← পেছনে</button>
@@ -143,6 +144,7 @@
         </form>
 
         <form class="ah-account-view ah-signup-view" data-view="signup" data-personal-visual-contract="interactive-native-personal-v1" data-media-contract="zero-raster-entry-v1" data-signup-current-step="personal" hidden novalidate>
+          <div class="ah-honeypot" aria-hidden="true"><label for="ah-contact-website-signup">Website</label><input id="ah-contact-website-signup" name="website" type="text" tabindex="-1" autocomplete="off" value=""></div>
           <header class="ah-signup-topbar">
             <div class="ah-signup-brand" aria-label="Admission Hub">
               <span class="ah-signup-brand-mark" aria-hidden="true"><svg viewBox="0 0 44 34" fill="none"><path d="m3 12 19-9 19 9-19 9L3 12Z"/><path d="M10 16v8c7 5 17 5 24 0v-8l-12 6-12-6Z"/><path d="M38 14v9"/><circle cx="38" cy="25" r="2"/></svg></span>
@@ -1237,6 +1239,11 @@
   };
   const renderView = (name, keepMessage = false) => {
     state.currentView = name;
+    // AU-SEC-01 L5: remember when this view appeared. The Worker refuses a
+    // submission that arrives faster than a person can type, so the clock has
+    // to start when the form is actually put in front of somebody, not when
+    // the page loaded (a student may open the app and come back minutes later).
+    formOpenedAt[name] = Date.now();
     const shell = $('.ah-account-shell');
     pageHost.dataset.currentView = name;
     if (shell) shell.dataset.currentView = name;
@@ -1386,6 +1393,49 @@
       const current = new URL(location.href);
       return current.searchParams.get('telegramCanary') === '1' ? `${path}?telegramCanary=1` : path;
     } catch (_) { return path; }
+  };
+
+  /* AU-SEC-01 L5. Two signals, both sent on the guarded calls, both read by the
+     Worker before it does any work.
+
+     The honeypot is a real input with a name a scraper finds attractive, hidden
+     from people three ways: off-screen positioning, `aria-hidden` and
+     `tabindex="-1"` so neither a screen reader nor the Tab key reaches it. A
+     person cannot fill it; a bot that walks the DOM and fills every field will.
+
+     `formElapsedMs` is how long the view was on screen. Absent is not a signal
+     — an older cached bundle sends nothing, and the Worker treats missing
+     timing as clean — so this can only ever add evidence, never remove it. */
+  const formOpenedAt = Object.create(null);
+  /* Every honeypot on the page, not just one: login and signup are separate
+     forms and only one is visible at a time, but both live in the document, so
+     reading a single id would silently miss whichever form the student used.
+     The first non-empty value wins — one trip is enough. The field name
+     (`ah_contact_website`) must equal HONEYPOT_FIELD in
+     auth-native/core/abuse-signals.mjs; this is a plain browser script with no
+     module system, so it cannot import the constant, and
+     bot-defense.test.mjs pins the two literals together instead. */
+  const honeypotValue = () => {
+    const fields = pageHost.querySelectorAll('.ah-honeypot input');
+    for (const field of fields) {
+      if (field && typeof field.value === 'string' && field.value.trim() !== '') return field.value.slice(0, 200);
+    }
+    return '';
+  };
+  const formElapsedMs = view => {
+    const opened = formOpenedAt[view];
+    if (!Number.isFinite(opened)) return undefined;
+    const elapsed = Date.now() - opened;
+    return elapsed >= 0 && elapsed < 24 * 60 * 60 * 1000 ? elapsed : undefined;
+  };
+  /* Spread into any guarded call's body. Kept as one helper so a new endpoint
+     cannot accidentally ship with the honeypot but without the timing. */
+  const botSignals = view => {
+    const elapsed = formElapsedMs(view);
+    return {
+      ah_contact_website: honeypotValue(),
+      ...(elapsed === undefined ? {} : { formElapsedMs: elapsed })
+    };
   };
 
   // Owner 2026-10-16: an ownership OTP is only sent after a human check. The
@@ -2959,7 +3009,7 @@
     setBusy(true);
     try {
       if (state.pendingProfile && state.profileBound && !state.profileSynced) await syncPendingProfile({ pending: true });
-      const result = await api('/telegram/verification/start', { method: 'POST', body: { turnstileToken: await humanToken() } });
+      const result = await api('/telegram/verification/start', { method: 'POST', body: { turnstileToken: await humanToken(), ...botSignals('telegram') } });
       if (!setTelegramChallenge(result)) throw new Error('Telegram যাচাই এখন পাওয়া যাচ্ছে না।');
       if (state.signupJourney || pendingSignup()) rememberPendingSignup(true, 'telegram');
       showView('telegram');
@@ -2974,7 +3024,7 @@
     setBusy(true);
     try {
       if (state.pendingProfile && state.profileBound && !state.profileSynced) await syncPendingProfile({ pending: true });
-      const result = await api('/email-ownership/start', { method: 'POST', body: { turnstileToken: await humanToken() } });
+      const result = await api('/email-ownership/start', { method: 'POST', body: { turnstileToken: await humanToken(), ...botSignals('email-ownership') } });
       if (result.alreadyVerified) {
         setBusy(false);
         await checkEmailVerification();
@@ -3022,7 +3072,7 @@
     setBusy(true);
     try {
       if (state.pendingProfile && state.profileBound && !state.profileSynced) await syncPendingProfile({ pending: true });
-      const result = await api('/email-ownership/start', { method: 'POST', body: { turnstileToken: await humanToken(), method: 'magic-link' } });
+      const result = await api('/email-ownership/start', { method: 'POST', body: { turnstileToken: await humanToken(), method: 'magic-link', ...botSignals('email-ownership') } });
       if (result.alreadyVerified) { setBusy(false); await checkEmailVerification(); return; }
       if (result.delivery?.method !== 'email-magic-link' || !result.ownership?.attemptId) throw new Error('Login link এখন পাঠানো যাচ্ছে না। Email OTP ব্যবহার করো।');
       if (state.signupJourney || pendingSignup()) rememberPendingSignup(true, 'select');
@@ -3093,7 +3143,7 @@
     try {
       const result = await api(backupApiPath('/backup/request'), {
         method: 'POST',
-        body: { purpose: 'account-backup', ...(contact ? { contact } : {}), turnstileToken: await humanToken() }
+        body: { purpose: 'account-backup', ...(contact ? { contact } : {}), turnstileToken: await humanToken(), ...botSignals('backup-prepare') }
       });
       state.backup = { attemptId: result.attemptId, purpose: 'account-backup', interaction: result.interaction || null };
       $('#ah-backup-code').value = '';
@@ -3230,7 +3280,7 @@
       if (!email || !$('#ah-forgot-email').checkValidity()) return message('সঠিক Email address লিখো।', 'error');
       setBusy(true);
       try {
-        await api('/password-reset', { method: 'POST', body: { email, turnstileToken: await humanToken() } });
+        await api('/password-reset', { method: 'POST', body: { email, turnstileToken: await humanToken(), ...botSignals('forgot') } });
         message('এই Email-এ অ্যাকাউন্ট থাকলে reset link পাঠানোর অনুরোধ নেওয়া হয়েছে। কিছুক্ষণ পর Inbox, Spam ও Promotions দেখো।', 'success');
       } catch (error) { message(friendlyError(error), 'error'); }
       finally { setBusy(false); }
@@ -3304,7 +3354,14 @@
       state.signupJourney = true;
       setBusy(true);
       try {
-        const result = await api('/signup', { method: 'POST', signupFlow: true, body: { email, password, turnstileToken: await humanToken() } });
+        // AU-SEC-01 L5: the honeypot value and the time this view has been on
+        // screen travel with the request, via the one shared helper so a new
+        // endpoint cannot ship with the honeypot but without the timing.
+        const result = await api('/signup', {
+          method: 'POST',
+          signupFlow: true,
+          body: { email, password, turnstileToken: await humanToken(), ...botSignals('signup') }
+        });
         const selectionRequired = result.verification?.selectionRequired === true;
         const emailSent = result.verification?.sent === true;
         if (!selectionRequired && !emailSent) throw Object.assign(new Error('delivery-not-confirmed'), { code: 'VERIFICATION_UNAVAILABLE' });
@@ -3360,7 +3417,7 @@
       rememberedEmail = $('#ah-login-remember')?.checked ? email : '';
       setBusy(true);
       try {
-        const result = await api('/login', { method: 'POST', body: { email, password, remember: $('#ah-login-remember')?.checked === true, turnstileToken: await humanToken() } });
+        const result = await api('/login', { method: 'POST', body: { email, password, remember: $('#ah-login-remember')?.checked === true, turnstileToken: await humanToken(), ...botSignals('login') } });
         if (result.authenticated === true) {
           await establishSession(result, 'যাচাইকৃত অ্যাকাউন্টে লগইন হয়েছে।');
         } else if (result.verification?.reason === 'new-device') {
@@ -3435,7 +3492,7 @@
       if (state.busy || Date.now() < Number(state.ownership?.resendUntil || 0)) return;
       setBusy(true);
       try {
-        const result = await api('/email-ownership/start', { method: 'POST', body: { turnstileToken: await humanToken() } });
+        const result = await api('/email-ownership/start', { method: 'POST', body: { turnstileToken: await humanToken(), ...botSignals('email-ownership') } });
         if (result.delivery?.method === 'firebase-link') {
           state.verification.emailSent = true;
           state.verification.mode = 'email';
@@ -3555,7 +3612,7 @@
       if (!email || !$('#ah-resend-email').checkValidity() || password.length < 8) return message('ইমেইল ও পাসওয়ার্ড সঠিকভাবে লিখুন।', 'error');
       setBusy(true);
       try {
-        const result = await api('/verification/resend', { method: 'POST', body: { email, password, turnstileToken: await humanToken() } });
+        const result = await api('/verification/resend', { method: 'POST', body: { email, password, turnstileToken: await humanToken(), ...botSignals('created') } });
         if (result.alreadyVerified) {
           clearResendCooldown(); state.verification = null; prefillLogin(email); showView('login');
           message('ইমেইল ইতিমধ্যে যাচাইকৃত, এখন লগইন করুন।', 'success');
@@ -3785,7 +3842,7 @@
   };
   const startEmailChallenge = async () => {
     await bindPendingProfile();
-    const result = await skyApi('/email-ownership/start', { method: 'POST', body: { turnstileToken: await humanToken() } });
+    const result = await skyApi('/email-ownership/start', { method: 'POST', body: { turnstileToken: await humanToken(), ...botSignals('email-ownership') } });
     if (result.alreadyVerified) { await checkEmailVerification(); return { resendAfter: 0, alreadyVerified: true }; }
     if (result.delivery?.method === 'firebase-link') {
       // Every OTP provider is out of quota: the Worker sent a Firebase link
@@ -3812,7 +3869,7 @@
   };
   const startTelegramChallenge = async () => {
     await bindPendingProfile();
-    const result = await skyApi('/telegram/verification/start', { method: 'POST', body: { turnstileToken: await humanToken() } });
+    const result = await skyApi('/telegram/verification/start', { method: 'POST', body: { turnstileToken: await humanToken(), ...botSignals('telegram') } });
     if (!setTelegramChallenge(result)) throw new Error('Telegram যাচাই এখন পাওয়া যাচ্ছে না।');
     if (state.signupJourney || pendingSignup()) rememberPendingSignup(true, 'telegram');
     return { resendAfter: telegramResendRemaining() || state.telegram?.resendAfter || 45 };
@@ -3893,7 +3950,7 @@
       const result = await skyApi('/signup', {
         method: 'POST',
         signupFlow: true,
-        body: { email, password, remember: true, turnstileToken: await humanToken() }
+        body: { email, password, remember: true, turnstileToken: await humanToken(), ...botSignals('signup') }
       });
       state.verification = state.verification || {};
       state.verification.email = email;
@@ -3915,7 +3972,7 @@
       return result;
     },
     login: async (email, password) => {
-      const result = await skyApi('/login', { method: 'POST', body: { email, password, remember: true, turnstileToken: await humanToken() } });
+      const result = await skyApi('/login', { method: 'POST', body: { email, password, remember: true, turnstileToken: await humanToken(), ...botSignals('login') } });
       if (result.authenticated === true) {
         await establishSession(result, 'তোমার account-এ প্রবেশ হয়েছে।');
         return result;
@@ -3968,7 +4025,7 @@
         return true;
       } catch (_) { return false; }
     },
-    forgot: async email => skyApi('/password-reset', { method: 'POST', body: { email, turnstileToken: await humanToken() } }),
+    forgot: async email => skyApi('/password-reset', { method: 'POST', body: { email, turnstileToken: await humanToken(), ...botSignals('forgot') } }),
     startEmail: startEmailChallenge,
     checkEmail: () => checkEmailVerification({ silent: true }),
     verifyEmail: verifyEmailChallenge,

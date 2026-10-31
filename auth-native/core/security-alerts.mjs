@@ -13,7 +13,16 @@ export const SECURITY_ALERT_POLICY_VERSION = 'security-alert-v1';
 export const SECURITY_ALERT_EVENTS = Object.freeze({
   CANARY_HIT: 'canary-hit',
   SHADOW_BAN: 'shadow-ban',
-  NEW_DEVICE: 'new-device'
+  NEW_DEVICE: 'new-device',
+  // AU-SEC-01 L8: today's provider quota has been eaten past the alert
+  // threshold. This is the earliest signal that a run is in progress, because
+  // it is measured on our own counters rather than on anything the caller says.
+  PROVIDER_QUOTA_PRESSURE: 'provider-quota-pressure',
+  // AU-SEC-01 L5: a submission tripped the honeypot or the form-speed floor and
+  // was dropped silently. Reported rather than logged because the auth runtime
+  // has no console (native-auth-protection.test.mjs), and throttled per event so
+  // a flood of drops cannot become a way to page the owner on demand.
+  BOT_GATE_DROP: 'bot-gate-drop'
 });
 
 const MAX_FIELD = 200;
@@ -42,7 +51,9 @@ export function maskAlertEmail(value) {
 const LABELS = Object.freeze({
   [SECURITY_ALERT_EVENTS.CANARY_HIT]: '🍯 ক্যানারি অ্যাকাউন্টে চেষ্টা',
   [SECURITY_ALERT_EVENTS.SHADOW_BAN]: '👻 ছায়া-ব্যান হয়েছে',
-  [SECURITY_ALERT_EVENTS.NEW_DEVICE]: '📱 নতুন ডিভাইসে লগইন'
+  [SECURITY_ALERT_EVENTS.NEW_DEVICE]: '📱 নতুন ডিভাইসে লগইন',
+  [SECURITY_ALERT_EVENTS.PROVIDER_QUOTA_PRESSURE]: '🔥 OTP কোটা প্রায় শেষ',
+  [SECURITY_ALERT_EVENTS.BOT_GATE_DROP]: '🤖 বট-ফাঁদে পড়েছে (চুপচাপ বাতিল)'
 });
 
 /**
@@ -65,6 +76,13 @@ export function renderSecurityAlert(input = {}) {
     ? input.reasons.map(value => field(value, 40)).filter(Boolean).slice(0, 5)
     : [];
   if (reasons.length) lines.push(`কারণ: ${reasons.join(', ')}`);
+  // AU-SEC-01 L8: the quota numbers are the whole point of this alert, so they
+  // are rendered as plain integers. Nothing here is caller-supplied.
+  const used = Number(input.used);
+  const limit = Number(input.limit);
+  if (Number.isFinite(used) && Number.isFinite(limit) && limit > 0) {
+    lines.push(`কোটা: ${Math.round(used)} / ${Math.round(limit)} (${Math.round((used / limit) * 100)}%)`);
+  }
   const at = Number(input.at);
   if (Number.isFinite(at) && at > 0) lines.push(`সময়: ${new Date(at).toISOString()}`);
 
