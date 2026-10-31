@@ -34,16 +34,30 @@ Gmail's DMARC record. That is why SMTP2GO rejects it. Brevo accepts it and deliv
 
 ## Active slots
 
-| Slot | Provider | Daily cap | Notes |
-|---|---|---|---|
-| `otp-a` | Brevo | 300 | primary |
-| `otp-b` | Google Apps Script (Gmail) | 100 | needs the full 20s timeout; cold start measured at ~11s |
-| `otp-c` | Mailjet | 200 | disabled: freemail sender never reaches delivered |
-| `otp-d` | Resend | 100 | needs a verified domain; dormant without one |
-| `otp-e` | AgentMail | 100 | needs neither a domain nor a from-address |
-| `otp-f` | MailerSend | 100 | sends from MailerSend's own verified trial domain |
-| `otp-g` | Dead Simple Email | 150 | **last resort**: inbox lives on a shared domain, so Gmail filters it to spam. Use only after every earlier slot is exhausted |
-| `telegram` | Telegram bot | 172,800 | unchanged |
+The **priority** column is the live order from `VERIFICATION_ORCHESTRATOR_CONFIG`. A4 ③ / D-3
+(owner order 2026-10-31, option "ক") put the six senders whose delivery has actually been
+measured at 10–35, so the first slot a student reaches always delivers. The remaining 20 slots
+are **not disabled** — they keep their rows, quotas and circuits at priority 38, behind all six
+and ahead of the locked last-resort pair. Failover is therefore unchanged; only the first choice
+is.
+
+| Priority | Slot | Provider | Daily cap | Notes |
+|---|---|---|---|---|
+| 10 | `otp-a` | Brevo | 300 | primary |
+| 15 | `otp-h` | Logto | 1500 | mails and checks its own code; lands in Yahoo within seconds |
+| 20 | `otp-i` | Appwrite | 1000 | mails its own code; the slot that reaches iCloud/Yahoo/Outlook |
+| 25 | `otp-b` | Google Apps Script (Gmail) | 100 | needs the full 20s timeout; cold start measured at ~11s |
+| 30 | `otp-e` | AgentMail | 100 | needs neither a domain nor a from-address |
+| 35 | `otp-f` | MailerSend | 16 | sends from MailerSend's own verified trial domain |
+| 38 | `otp-d` | Resend | 100 | needs a verified domain; owner-only until one exists |
+| 38 | `otp-j`…`otp-za` | Ory, Hanko, Descope, pool mailers, hosted IdPs | varies | unproven for student delivery; reachable only after the six |
+| 39 | `otp-g` | Dead Simple Email | 165 | **last resort**: inbox lives on a shared domain, so Gmail filters it to spam |
+| 45 | `otp-c` | Mailjet | 200 | **last resort** (locked pair with `otp-g`): enabled by owner order, but a freemail sender never reaches delivered |
+| 50 | `telegram` | Telegram bot | 172,800 | unchanged |
+
+`otp-g` and `otp-c` are the owner-locked last-resort pair (instruction of 2026-10-14): both must
+stay enabled, and no reliable mailer may sit behind them. That is why the unproven group stops at
+38 rather than moving further back.
 
 ## Senders that reach arbitrary recipients without a custom domain
 

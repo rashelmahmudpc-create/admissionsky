@@ -651,7 +651,9 @@ test('owner 2026-10-16: a misconfigured Appwrite falls through instead of starvi
 
 const liveOrderConfig = list => {
   const base = rawConfig(list);
-  const live = { 'otp-a': 10, 'otp-h': 15, 'otp-i': 38 };
+  // A4 ③ / D-3 (owner order 2026-10-31): otp-i moved 38 -> 20 when the six measured
+  // senders were moved to the front, so this fixture tracks the live order again.
+  const live = { 'otp-a': 10, 'otp-h': 15, 'otp-i': 20 };
   return { ...base, allowedDomains: ['gmail.com', 'yahoo.com', 'icloud.com', 'outlook.com'], providers: base.providers.map(row => ({ ...row, priority: live[row.id] })) };
 };
 

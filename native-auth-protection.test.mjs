@@ -118,13 +118,19 @@ test('Google, Passkey, and the explicit Email-or-Telegram selector are public wi
   // those two keys is not the contract, the slots below are.
   assert.match(wrangler, /VERIFICATION_ORCHESTRATOR_CONFIG = '\{"enabled":true,("policy":\{[^}]*\},)?"providers":\[\{"id":"otp-a","enabled":true,"priority":10,"dailyQuota":300/);
   assert.match(wrangler, /"deliveryBudgetMs":25000/);
-  assert.match(wrangler, /\{"id":"otp-b","enabled":true,"priority":20,"dailyQuota":100/);
+  assert.match(wrangler, /\{"id":"otp-b","enabled":true,"priority":25,"dailyQuota":100/);
   assert.match(wrangler, /\{"id":"otp-c","enabled":true,"priority":45,"dailyQuota":200/);
-  assert.match(wrangler, /\{"id":"otp-d","enabled":true,"priority":35,"dailyQuota":100/);
-  assert.match(wrangler, /\{"id":"otp-e","enabled":true,"priority":37,"dailyQuota":100/);
-  assert.match(wrangler, /\{"id":"otp-f","enabled":true,"priority":38,"dailyQuota":16/);
+  assert.match(wrangler, /\{"id":"otp-d","enabled":true,"priority":38,"dailyQuota":100/);
+  assert.match(wrangler, /\{"id":"otp-e","enabled":true,"priority":30,"dailyQuota":100/);
+  assert.match(wrangler, /\{"id":"otp-f","enabled":true,"priority":35,"dailyQuota":16/);
   assert.match(wrangler, /\{"id":"otp-g","enabled":true,"priority":39,"dailyQuota":165/);
   assert.match(wrangler, /\{"id":"telegram","enabled":true,"priority":50/);
+  // A4 ③ / D-3 (owner order 2026-10-31, option "ক"): the six senders whose delivery
+  // to a real student inbox was measured hold 10..35, in the order the owner approved.
+  // otp-h and otp-i joined the front group; otp-d left it (Resend only ever delivered
+  // to the owner's own address, never to a student).
+  assert.match(wrangler, /\{"id":"otp-h","enabled":true,"priority":15,"dailyQuota":1500/);
+  assert.match(wrangler, /\{"id":"otp-i","enabled":true,"priority":20,"dailyQuota":1000/);
   // LOCKED LAST-RESORT PAIR (owner order 2026-10-14): Dead Simple (otp-g) and
   // Mailjet (otp-c) are the two last-resort slots and must stay enabled with
   // nothing reliable behind them. Their relative order is free, so this asserts

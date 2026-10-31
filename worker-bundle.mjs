@@ -26149,7 +26149,7 @@ var SLOW_SLOT_RATIO = 2;
 var PROBE_TIMEOUT_MS2 = 5e3;
 var STATUS_PROBE_TIMEOUT_MS = 2500;
 var NON_GMAIL_FREEMAIL = /* @__PURE__ */ new Set(["icloud.com", "me.com", "mac.com", "yahoo.com", "yahoo.co.uk", "yahoo.co.in", "ymail.com", "rocketmail.com", "outlook.com", "hotmail.com", "live.com", "msn.com", "aol.com"]);
-var NON_GMAIL_PREFERENCE = Object.freeze({ "otp-h": -30, "otp-i": -40, "otp-b": -15, "otp-e": -30 });
+var NON_GMAIL_PREFERENCE = Object.freeze({ "otp-h": -30, "otp-i": -22, "otp-b": -20, "otp-e": -23 });
 function mergeRuntimeConfig(input, current) {
   const raw = input && typeof input === "object" && !Array.isArray(input) ? input : {};
   const prior = new Map((current?.providers || []).map((row) => [row.id, row]));
