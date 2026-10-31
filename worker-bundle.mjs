@@ -31527,6 +31527,10 @@ var SqliteVerificationRepository = class {
         next.lastSuccessAt = input.now;
       } else if (input.failureClass === VERIFICATION_FAILURE_CLASS.USER) {
         next.userErrorCount = Number(next.userErrorCount) + 1;
+        if (next.circuit === "half-open") {
+          next.circuit = "open";
+          next.cooldownUntil = input.now + input.cooldownMs;
+        }
       } else {
         next.failureCount = Number(next.failureCount) + 1;
         next.consecutiveFailures = Number(next.consecutiveFailures) + 1;
