@@ -14507,6 +14507,10 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
       if (request.method === "POST" && url.pathname === `${AUTH_API_PREFIX}/google/link`) {
         if (!provider.configured || !googleEndpointReady(env)) throw new NativeAuthError(AUTH_ERROR_CODES.GOOGLE_UNAVAILABLE);
         const body = await readJson(request);
+        {
+          const denied = await guardSend({ request, env, context, body, fetchImpl });
+          if (denied) return denied;
+        }
         const input = credentials(body);
         const credential = googleCredential2(body);
         if (!credential.accessToken) throw new NativeAuthError(AUTH_ERROR_CODES.INVALID_INPUT);
@@ -14614,7 +14618,12 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         } catch (cause) {
           throw providerError(cause, "facebook-config");
         }
-        const credential = facebookCredential(await readJson(request));
+        const body = await readJson(request);
+        {
+          const denied = await guardSend({ request, env, context, body, fetchImpl });
+          if (denied) return denied;
+        }
+        const credential = facebookCredential(body);
         await callAuthority(env, "/internal/firebase/rate", { input: { operation: "facebook" }, context });
         let signed;
         let user;

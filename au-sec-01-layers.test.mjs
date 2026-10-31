@@ -153,11 +153,16 @@ test('L3: an ordinary caller on a normal day pays nothing for the ASN test', () 
   assert.match(helper, /return 'normal';/);
 });
 
-/* ── L4 — Turnstile on all seven endpoints ────────────────────────────────── */
+/* ── L4 — Turnstile on all nine endpoints ─────────────────────────────────── */
 
-test('L4: all seven endpoints pass through the shared gate, which checks Turnstile', () => {
+test('L4: all nine endpoints pass through the shared gate, which checks Turnstile', () => {
+  // AUTH V2.0 (owner 2026-10-31): seven became nine when /google/link and
+  // /facebook were brought under the gate. Both take credentials — the first an
+  // email AND a password — so guessing there had leaned on the rate limiter
+  // alone. The client sends the token on both now; without that half the guard
+  // would fail closed and lock students out of social sign-in.
   const guarded = HANDLER.split('await guardSend(').length - 1;
-  assert.equal(guarded, 7, 'seven guarded endpoints');
+  assert.equal(guarded, 9, 'nine guarded endpoints');
   const gate = HANDLER.slice(HANDLER.indexOf('const guardSend ='), HANDLER.indexOf('const shadowGuardStore'));
   assert.match(gate, /await verifyTurnstile\(/);
 });
