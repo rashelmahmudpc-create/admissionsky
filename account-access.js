@@ -24,6 +24,10 @@
     stepUp: null,
     passkeys: [],
     busy: false,
+    // A5 step 5: 'unknown' is a pass, so the screen can never be blocked by a
+    // breach-API outage — only a positive 'breached' answer stops the submit.
+    resetBreach: 'unknown',
+    resetEmail: '',
     initialized: false,
     available: null,
     resendTimer: null,
@@ -143,6 +147,17 @@
           <button class="ah-account-secondary" type="button" data-role="forgot-back">Login-এ ফিরুন</button>
         </form>
 
+        <form class="ah-account-view ah-forgot-view" data-view="reset" hidden novalidate>
+          <div class="ah-view-intro"><span class="ah-mini-orb" aria-hidden="true">🔑</span><div><h3>নতুন Password দাও</h3><p>Email-এ পাঠানো link খুলে এখানে নতুন Password সেট করো।</p></div></div>
+          <div class="ah-account-field"><label class="ah-account-label" for="ah-reset-email">Email address</label><input class="ah-account-input" id="ah-reset-email" type="email" autocomplete="email" maxlength="254" placeholder="you@email.com" required></div>
+          <div class="ah-account-field"><label class="ah-account-label" for="ah-reset-password">নতুন Password</label><div class="ah-password-wrap"><input class="ah-account-input" id="ah-reset-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="কমপক্ষে ৮ অক্ষর" required><button class="ah-password-toggle" type="button" data-password-target="ah-reset-password" aria-label="Password দেখুন"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 12S6 6.8 12 6.8 20.5 12 20.5 12 18 17.2 12 17.2 3.5 12 3.5 12Z"/><circle cx="12" cy="12" r="2.6"/></svg></button></div><div class="ah-password-meter"><i data-password-meter="reset"></i></div><p class="ah-field-feedback" data-role="reset-password-strength">Password strength</p></div>
+          <div class="ah-account-field"><label class="ah-account-label" for="ah-reset-confirm">Confirm Password</label><div class="ah-password-wrap"><input class="ah-account-input" id="ah-reset-confirm" name="confirm" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="একই Password আবার লিখো" required><button class="ah-password-toggle" type="button" data-password-target="ah-reset-confirm" aria-label="Password দেখুন"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 12S6 6.8 12 6.8 20.5 12 20.5 12 18 17.2 12 17.2 3.5 12 3.5 12Z"/><circle cx="12" cy="12" r="2.6"/></svg></button></div><p class="ah-field-feedback" data-role="reset-password-match"></p></div>
+          <ul class="ah-password-rules" aria-label="Password requirements"><li data-password-rule="length" data-password-scope="reset">কমপক্ষে ৮ অক্ষর</li><li data-password-rule="uppercase" data-password-scope="reset">একটি বড় অক্ষর</li><li data-password-rule="number" data-password-scope="reset">একটি সংখ্যা</li></ul>
+          <p class="ah-field-feedback" data-role="reset-breach-warning" hidden></p>
+          <button class="ah-account-primary" type="submit">Password বদলাও</button>
+          <button class="ah-account-secondary" type="button" data-role="reset-back">Login-এ ফিরুন</button>
+        </form>
+
         <form class="ah-account-view ah-signup-view" data-view="signup" data-personal-visual-contract="interactive-native-personal-v1" data-media-contract="zero-raster-entry-v1" data-signup-current-step="personal" hidden novalidate>
           <div class="ah-honeypot" aria-hidden="true"><label for="ah-contact-website-signup">Website</label><input id="ah-contact-website-signup" name="website" type="text" tabindex="-1" autocomplete="off" value=""></div>
           <header class="ah-signup-topbar">
@@ -260,9 +275,9 @@
           <section class="ah-signup-panel ah-security-panel" data-signup-panel="security" hidden>
             <div class="ah-standalone-heading"><h3>Account নিরাপদ করো</h3><p>Email ও শক্তিশালী Password দিয়ে account তৈরি করো</p></div>
             <div class="ah-account-field"><label class="ah-account-label" for="ah-signup-email">তোমার Email</label><input class="ah-account-input" id="ah-signup-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="254" placeholder="you@email.com" required><p class="ah-field-feedback">Verification method বাছার আগে কোনো message পাঠানো হবে না।</p></div>
-            <div class="ah-account-field"><label class="ah-account-label" for="ah-signup-password">Password</label><div class="ah-password-wrap"><input class="ah-account-input" id="ah-signup-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="কমপক্ষে ৮ অক্ষর" required><button class="ah-password-toggle" type="button" data-password-target="ah-signup-password" aria-label="Password দেখুন"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 12S6 6.8 12 6.8 20.5 12 20.5 12 18 17.2 12 17.2 3.5 12 3.5 12Z"/><circle cx="12" cy="12" r="2.6"/></svg></button></div><div class="ah-password-meter"><i data-role="password-meter"></i></div><p class="ah-field-feedback" data-role="password-strength">Password strength</p></div>
-            <div class="ah-account-field"><label class="ah-account-label" for="ah-signup-confirm">Confirm Password</label><div class="ah-password-wrap"><input class="ah-account-input" id="ah-signup-confirm" name="confirm" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="একই Password আবার লিখো" required><button class="ah-password-toggle" type="button" data-password-target="ah-signup-confirm" aria-label="Password দেখুন"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 12S6 6.8 12 6.8 20.5 12 20.5 12 18 17.2 12 17.2 3.5 12 3.5 12Z"/><circle cx="12" cy="12" r="2.6"/></svg></button></div><p class="ah-field-feedback" data-role="password-match"></p></div>
-            <ul class="ah-password-rules" aria-label="Password requirements"><li data-password-rule="length">কমপক্ষে ৮ অক্ষর</li><li data-password-rule="uppercase">একটি বড় অক্ষর</li><li data-password-rule="number">একটি সংখ্যা</li></ul>
+            <div class="ah-account-field"><label class="ah-account-label" for="ah-signup-password">Password</label><div class="ah-password-wrap"><input class="ah-account-input" id="ah-signup-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="কমপক্ষে ৮ অক্ষর" required><button class="ah-password-toggle" type="button" data-password-target="ah-signup-password" aria-label="Password দেখুন"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 12S6 6.8 12 6.8 20.5 12 20.5 12 18 17.2 12 17.2 3.5 12 3.5 12Z"/><circle cx="12" cy="12" r="2.6"/></svg></button></div><div class="ah-password-meter"><i data-password-meter="signup"></i></div><p class="ah-field-feedback" data-role="signup-password-strength">Password strength</p></div>
+            <div class="ah-account-field"><label class="ah-account-label" for="ah-signup-confirm">Confirm Password</label><div class="ah-password-wrap"><input class="ah-account-input" id="ah-signup-confirm" name="confirm" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="একই Password আবার লিখো" required><button class="ah-password-toggle" type="button" data-password-target="ah-signup-confirm" aria-label="Password দেখুন"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 12S6 6.8 12 6.8 20.5 12 20.5 12 18 17.2 12 17.2 3.5 12 3.5 12Z"/><circle cx="12" cy="12" r="2.6"/></svg></button></div><p class="ah-field-feedback" data-role="signup-password-match"></p></div>
+            <ul class="ah-password-rules" aria-label="Password requirements"><li data-password-rule="length" data-password-scope="signup">কমপক্ষে ৮ অক্ষর</li><li data-password-rule="uppercase" data-password-scope="signup">একটি বড় অক্ষর</li><li data-password-rule="number" data-password-scope="signup">একটি সংখ্যা</li></ul>
             <div class="ah-panel-actions ah-bottom-actions"><button class="ah-account-secondary" type="button" data-role="signup-back-education">← Back</button><button class="ah-account-primary" type="submit">Create Account →</button></div>
           </section>
           <p class="ah-account-switch">আগে থেকেই account আছে? <button class="ah-account-link" type="button" data-role="show-login">Log In</button></p>
@@ -696,6 +711,7 @@
     if (typeof error?.userMessage === 'string' && error.userMessage.trim()) return error.userMessage.trim();
     if (!error?.code && typeof error?.message === 'string' && /[\u0980-\u09FF]/.test(error.message)) return error.message;
     const known = {
+      PASSWORD_RESET_EXPIRED: 'Reset link-এর সময় শেষ বা এটি আগেই ব্যবহার হয়ে গেছে। Login থেকে আবার "Password ভুলে গেছি" চাপো।',
       ACCOUNT_LINK_REQUIRED: 'এই ইমেইলে আগে ইমেইল-পাসওয়ার্ড দিয়ে অ্যাকাউন্ট খোলা হয়েছে, ইমেইল ও পাসওয়ার্ড দিয়ে সাইন ইন করো।',
       CLIENT_UPDATE_REQUIRED: 'Admission Hub-এর নতুন সংস্করণ এসেছে, পেজটি একবার refresh করে আবার চেষ্টা করো।',
       INVALID_CREDENTIALS: 'Email বা Password সঠিক নয়। আবার দেখে লিখো।',
@@ -1033,9 +1049,9 @@
     node.classList.toggle('error', kind === 'error');
   };
 
-  const updatePasswordFeedback = () => {
-    const password = $('#ah-signup-password')?.value || '';
-    const confirm = $('#ah-signup-confirm')?.value || '';
+  const updatePasswordFeedback = (field = 'signup') => {
+    const password = $(`#ah-${field}-password`)?.value || '';
+    const confirm = $(`#ah-${field}-confirm`)?.value || '';
     let score = 0;
     if (password.length >= 8) score += 1;
     if (password.length >= 12) score += 1;
@@ -1043,7 +1059,7 @@
     if (/\d/.test(password)) score += 1;
     if (/[^\p{L}\p{N}\s]/u.test(password)) score += 1;
     const labels = ['আরও কিছু অক্ষর দাও','শুরু হয়েছে','মোটামুটি','ভালো','শক্তিশালী','খুব শক্তিশালী'];
-    const meter = $('[data-role="password-meter"]');
+    const meter = pageHost.querySelector(`[data-password-meter="${field}"]`);
     if (meter) {
       meter.style.width = `${Math.min(100, score * 20)}%`;
       meter.style.background = score >= 4 ? '#14a879' : score >= 2 ? '#e4a620' : '#d45a49';
@@ -1053,9 +1069,50 @@
       uppercase: /[A-Z]/.test(password),
       number: /\d/.test(password)
     };
-    pageHost.querySelectorAll('[data-password-rule]').forEach(rule => rule.classList.toggle('met', Boolean(ruleState[rule.dataset.passwordRule])));
-    showFieldFeedback('password-strength', password ? `Strength: ${labels[score]}` : 'কমপক্ষে ৮ অক্ষর ব্যবহার করো', score >= 4 ? 'valid' : '');
-    showFieldFeedback('password-match', !confirm ? '' : password === confirm ? '✓ দুইটি Password মিলেছে' : 'Password দুইটি মিলছে না', password === confirm && confirm ? 'valid' : confirm ? 'error' : '');
+    pageHost.querySelectorAll(`[data-password-rule][data-password-scope="${field}"]`).forEach(rule => rule.classList.toggle('met', Boolean(ruleState[rule.dataset.passwordRule])));
+    showFieldFeedback(`${field}-password-strength`, password ? `Strength: ${labels[score]}` : 'কমপক্ষে ৮ অক্ষর ব্যবহার করো', score >= 4 ? 'valid' : '');
+    showFieldFeedback(`${field}-password-match`, !confirm ? '' : password === confirm ? '✓ দুইটি Password মিলেছে' : 'Password দুইটি মিলছে না', password === confirm && confirm ? 'valid' : confirm ? 'error' : '');
+  };
+
+  /* The one composition rule with evidence behind it: a password that already
+   * appears in a public breach corpus is not a secret any more, however long it
+   * is. Checked here for the reset screen because Firebase's own page — where
+   * the password is actually set — runs no such check. k-anonymity only: the
+   * first five characters of the SHA-1 go out, never the password. Any network
+   * or shape problem passes, because a breach API outage must never stop a
+   * student from recovering an account. */
+  const breachedPassword = async password => {
+    try {
+      if (!crypto?.subtle) return 'unknown';
+      const bytes = new TextEncoder().encode(String(password));
+      const digest = await crypto.subtle.digest('SHA-1', bytes);
+      const hash = [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('').toUpperCase();
+      const response = await fetch(`https://api.pwnedpasswords.com/range/${hash.slice(0, 5)}`, {
+        method: 'GET', headers: { 'Add-Padding': 'true' }
+      });
+      if (!response.ok) return 'unknown';
+      const body = await response.text();
+      return body.split('\n').map(line => line.trim().split(':')[0]?.toUpperCase()).some(value => value === hash.slice(5))
+        ? 'breached' : 'clean';
+    } catch (_) { return 'unknown'; }
+  };
+
+  let breachProbe = 0;
+  const updateBreachWarning = async () => {
+    const node = $('[data-role="reset-breach-warning"]');
+    const password = $('#ah-reset-password')?.value || '';
+    state.resetBreach = 'unknown';
+    if (!node) return;
+    if (password.length < 8) { node.hidden = true; node.textContent = ''; return; }
+    const probe = ++breachProbe;
+    const verdict = await breachedPassword(password);
+    // A later keystroke owns the field now; this answer is about a password
+    // the student has already moved on from.
+    if (probe !== breachProbe) return;
+    state.resetBreach = verdict;
+    node.hidden = verdict !== 'breached';
+    node.textContent = verdict === 'breached' ? '⚠️ এই Password আগের কোনো ফাঁসের তালিকায় আছে — অন্য একটি দাও।' : '';
+    node.classList.toggle('error', verdict === 'breached');
   };
 
   const validateDob = () => {
@@ -1240,7 +1297,7 @@
   };
 
   let skyRouteHook = null;
-  const SKY_ROUTED_VIEWS = new Set(['login', 'signup', 'forgot', 'verify', 'telegram', 'email-ownership', 'email-intro', 'telegram-intro', 'created', 'google-link', 'whatsapp-info']);
+  const SKY_ROUTED_VIEWS = new Set(['login', 'signup', 'forgot', 'reset', 'verify', 'telegram', 'email-ownership', 'email-intro', 'telegram-intro', 'created', 'google-link', 'whatsapp-info']);
   /* Owner 2026-10-16: the old sign-in / sign-up screens are retired. Every entry
    * view opens the Admission Sky flow; renderView only draws them in the bare
    * test harness, where sky-onboarding.js is not on the page. */
@@ -2592,6 +2649,20 @@
     } finally { setBusy(false); }
   };
 
+  /* Step 5 (owner 2026-10-31): the reset link hands the student back to the
+   * login screen holding a session that Firebase has already invalidated.
+   * Nothing tells the app that, so the dead cookie sits in the browser until
+   * something happens to notice. /session/logout is the one place allowed to
+   * clear auth cookies — they are HttpOnly, so client code cannot, and must
+   * not, write them. It needs no live session: with a dead token it simply
+   * answers and clears. */
+  const dropStaleResetCookies = () => {
+    clearAuthLocalState();
+    setSessionState('UNAUTHENTICATED');
+    updateLauncher();
+    return api('/session/logout', { method: 'POST', body: {} }).catch(() => {});
+  };
+
   const completeLogoutAll = result => {
     clearAuthLocalState();
     setSessionState('UNAUTHENTICATED');
@@ -2877,6 +2948,24 @@
     close();
   };
   const prefillLogin = email => { if (email) $('#ah-login-email').value = email; };
+
+  /* A5 step 5: our own reset screen. The address is deliberately NOT cached —
+   * the tab-storage invariant allows only fixed OAuth flags there, and an
+   * address is neither fixed nor a flag. The student types it, and the server
+   * checks that Firebase will actually issue a link for it before anything is
+   * accepted. */
+  const showResetView = () => {
+    $('#ah-reset-email').value = '';
+    $('#ah-reset-password').value = '';
+    $('#ah-reset-confirm').value = '';
+    state.resetBreach = 'unknown';
+    breachProbe += 1;
+    const warning = $('[data-role="reset-breach-warning"]');
+    if (warning) { warning.hidden = true; warning.textContent = ''; }
+    updatePasswordFeedback('reset');
+    showView('reset');
+    focusWhenUnclaimed(() => $('#ah-reset-password'), 30);
+  };
   const unavailableHint = () => {
     try {
       if (typeof location !== 'undefined' && !/(^|\.)admissionhub\.pages\.dev$/i.test(location.hostname || '')) {
@@ -3227,8 +3316,8 @@
       const name = normalizedName();
       showFieldFeedback('name-feedback', !name ? '' : validName(name) ? '✓ Looks good, your name is set' : 'Please enter at least 2 characters.', validName(name) ? 'valid' : name ? 'error' : '');
     });
-    $('#ah-signup-password').addEventListener('input', updatePasswordFeedback);
-    $('#ah-signup-confirm').addEventListener('input', updatePasswordFeedback);
+    $('#ah-signup-password').addEventListener('input', () => updatePasswordFeedback('signup'));
+    $('#ah-signup-confirm').addEventListener('input', () => updatePasswordFeedback('signup'));
     const EYE_OPEN = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 12S6 6.8 12 6.8 20.5 12 20.5 12 18 17.2 12 17.2 3.5 12 3.5 12Z"/><circle cx="12" cy="12" r="2.6"/></svg>';
     const EYE_OFF = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4.5 20 19.5"/><path d="M9.9 7.1A8.6 8.6 0 0 1 12 6.8c6 0 8.5 5.2 8.5 5.2a17 17 0 0 1-3.3 3.7M6 8.6A16 16 0 0 0 3.5 12S6 17.2 12 17.2c1 0 1.9-.2 2.7-.4"/></svg>';
     pageHost.querySelectorAll('[data-password-target]').forEach(button => button.addEventListener('click', () => {
@@ -3293,6 +3382,45 @@
       try {
         await api('/password-reset', { method: 'POST', body: { email, turnstileToken: await humanToken(), ...botSignals('forgot') } });
         message('এই Email-এ অ্যাকাউন্ট থাকলে reset link পাঠানোর অনুরোধ নেওয়া হয়েছে। কিছুক্ষণ পর Inbox, Spam ও Promotions দেখো।', 'success');
+      } catch (error) { message(friendlyError(error), 'error'); }
+      finally { setBusy(false); }
+    });
+
+    /* ===== A5 step 5 (owner 2026-10-31): our own /reset screen =====
+     * The reset link Firebase mails still points at firebaseapp.com, and the
+     * password is still set there. What was missing is everything after it:
+     * the strength rules, the breach warning, and a session that is actually
+     * gone rather than merely dead. The student lands here with ?passwordReset=1
+     * and the email pre-filled, so the link itself is what proves the address —
+     * nothing on this screen lets anyone set a password without it. */
+    $('[data-role="reset-back"]').addEventListener('click', () => { if (!state.busy) { prefillLogin($('#ah-reset-email').value); showView('login'); } });
+    $('#ah-reset-password').addEventListener('input', () => { updatePasswordFeedback('reset'); void updateBreachWarning(); });
+    $('#ah-reset-confirm').addEventListener('input', () => updatePasswordFeedback('reset'));
+    $('[data-view="reset"]').addEventListener('submit', async event => {
+      event.preventDefault();
+      if (state.busy || !ensureAvailable()) return;
+      const email = $('#ah-reset-email').value.trim();
+      const password = $('#ah-reset-password').value;
+      const confirm = $('#ah-reset-confirm').value;
+      if (!email || !$('#ah-reset-email').checkValidity()) return message('সঠিক Email address লিখো।', 'error');
+      if (password.length < 8) return message('কমপক্ষে ৮ অক্ষরের Password দাও।', 'error');
+      if (password !== confirm) return message('দুইটি Password মিলছে না।', 'error');
+      if (state.resetBreach === 'breached') return message('এই Password আগে ফাঁস হয়েছে, অন্য একটি দাও।', 'error');
+      setBusy(true);
+      try {
+        await api('/password-reset/complete', {
+          method: 'POST',
+          body: { email, password, turnstileToken: await humanToken(), ...botSignals('reset') }
+        });
+        // The password is set on Firebase's page and our session was killed by
+        // Firebase the moment it changed, so this screen never tries to keep a
+        // session alive: it drops the cookies and sends the student to login.
+        dropStaleResetCookies();
+        $('#ah-reset-password').value = '';
+        $('#ah-reset-confirm').value = '';
+        prefillLogin(email);
+        showView('login');
+        message('নতুন Password সেট হয়েছে। এখন নতুন Password দিয়ে Log In করো।', 'success');
       } catch (error) { message(friendlyError(error), 'error'); }
       finally { setBusy(false); }
     });
@@ -3771,9 +3899,9 @@
 
     // Welcome and callback screens must never wait for a slow account-status request.
     if (returnedFromPasswordReset) {
+      dropStaleResetCookies();
       open();
-      showView('login');
-      message('Password বদলানো শেষ করে থাকলে নতুন Password দিয়ে Log In করো।', 'info');
+      showResetView();
     } else if (returnedFromEmail) {
       state.signupJourney = pendingSignup();
       state.verification = { email: '', emailMasked: 'তোমার Email-এ', emailSent: true, mode: 'email', resendUntil: 0 };
@@ -3803,9 +3931,9 @@
       if (magicToken) { const t = magicToken; magicToken = ''; await consumeMagicLink(t); return; }
       if (googleHandoff) { signInWithGoogle(); return; }
       if (returnedFromPasswordReset) {
+        dropStaleResetCookies();
         open();
-        showView('login');
-        message('Password বদলানো শেষ করে থাকলে নতুন Password দিয়ে Log In করো।', 'info');
+        showResetView();
         return;
       }
       await recoverPendingTelegram();

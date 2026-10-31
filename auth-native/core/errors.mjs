@@ -27,6 +27,10 @@ export const AUTH_ERROR_CODES = Object.freeze({
   PASSKEY_REGISTRATION_REQUIRED: 'PASSKEY_REGISTRATION_REQUIRED',
   EMAIL_NOT_VERIFIED: 'EMAIL_NOT_VERIFIED',
   WEAK_PASSWORD: 'WEAK_PASSWORD',
+  // A5 step 5: the emailed reset link is single-use and it is the only thing
+  // that proves the address. Asking for a new one is how the flow re-arms;
+  // this code is what the student sees when Firebase will not issue one.
+  PASSWORD_RESET_EXPIRED: 'PASSWORD_RESET_EXPIRED',
   ACCOUNT_DISABLED: 'ACCOUNT_DISABLED',
   ACCOUNT_STATE_INVALID: 'ACCOUNT_STATE_INVALID',
   ACCOUNT_NOT_FOUND: 'ACCOUNT_NOT_FOUND',
@@ -69,6 +73,7 @@ const DEFAULTS = Object.freeze({
   [AUTH_ERROR_CODES.PASSKEY_REGISTRATION_REQUIRED]: Object.freeze({ status: 409, message: 'আগে অ্যাকাউন্টে ঢুকে এই ডিভাইসে Passkey যোগ করুন।' }),
   [AUTH_ERROR_CODES.EMAIL_NOT_VERIFIED]: Object.freeze({ status: 403, message: 'ইমেইলে পাঠানো যাচাইয়ের লিংকে ক্লিক করে তারপর লগইন করুন।' }),
   [AUTH_ERROR_CODES.WEAK_PASSWORD]: Object.freeze({ status: 400, message: 'কমপক্ষে ৮ অক্ষরের শক্তিশালী পাসওয়ার্ড দিন।' }),
+  [AUTH_ERROR_CODES.PASSWORD_RESET_EXPIRED]: Object.freeze({ status: 403, message: 'Reset link-এর সময় শেষ বা এটি আগেই ব্যবহার হয়ে গেছে। Login থেকে আবার "Password ভুলে গেছি" চাপুন।' }),
   [AUTH_ERROR_CODES.ACCOUNT_DISABLED]: Object.freeze({ status: 403, message: 'এই অ্যাকাউন্টটি এখন ব্যবহার করা যাচ্ছে না।' }),
   [AUTH_ERROR_CODES.ACCOUNT_STATE_INVALID]: Object.freeze({ status: 409, message: 'অ্যাকাউন্টের অবস্থা পরিবর্তন করা যায়নি, আবার চেষ্টা করুন।' }),
   [AUTH_ERROR_CODES.ACCOUNT_NOT_FOUND]: Object.freeze({ status: 404, message: 'অ্যাকাউন্টটি খুঁজে পাওয়া যায়নি।' }),

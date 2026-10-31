@@ -272,8 +272,8 @@ test('guided Signup validates steps, caps institution matches, preserves canonic
   password.value = confirm.value = 'StrongPassword!9';
   password.dispatchEvent(new app.window.Event('input', { bubbles: true }));
   confirm.dispatchEvent(new app.window.Event('input', { bubbles: true }));
-  assert.match(app.document.querySelector('[data-role="password-strength"]').textContent, /খুব শক্তিশালী/);
-  assert.match(app.document.querySelector('[data-role="password-match"]').textContent, /মিলেছে/);
+  assert.match(app.document.querySelector('[data-role="signup-password-strength"]').textContent, /খুব শক্তিশালী/);
+  assert.match(app.document.querySelector('[data-role="signup-password-match"]').textContent, /মিলেছে/);
   assert.equal(app.document.querySelectorAll('[data-password-rule].met').length, 3);
   submitSignup(app);
   submitSignup(app);
@@ -391,9 +391,11 @@ test('Email path reaches Ready only after authoritative status and renders real 
 test('Password-reset return opens Login with truthful guidance and removes the callback marker', async t => {
   const app = setup({ url: 'https://admissionhub.pages.dev/?passwordReset=1' });
   t.after(() => app.dom.window.close());
-  await waitFor(() => app.document.querySelector('[data-view="login"]')?.hidden === false);
+  // Step 5: the reset return now lands on our own /reset screen, where the
+  // strength rules and the breach warning live, rather than on a bare login.
+  await waitFor(() => app.document.querySelector('[data-view="reset"]')?.hidden === false);
   assert.equal(app.window.location.search, '');
-  assert.match(app.document.querySelector('[data-role="message"]').textContent, /শেষ করে থাকলে/);
+  assert.equal(app.document.querySelector('[data-view="login"]').hidden, true);
   assert.equal(app.document.querySelector('[data-view="success"]').hidden, true);
   app.dom.window.close();
 });

@@ -9,6 +9,7 @@ import { HONEYPOT_FIELD, isDatacenterAsn, looksAutomated } from '../core/abuse-s
 import { resolveTelegramWebhookSecret, validTelegramWebhookSecret } from '../verification/telegram-security.mjs';
 import { isTelegramLoginEmail, reservedTelegramLoginEmail, telegramLoginBotId, telegramLoginCredentials, telegramLoginReady, verifyTelegramLogin } from '../verification/telegram-login.mjs';
 import { isPendingSignupTicket } from './pending-signup.mjs';
+import { emitOtpDeliveryEvent } from '../../observability/otp-delivery-log.mjs';
 import * as pendingSignup from './pending-signup-public.mjs';
 import { shadowVerdict, shadowDelayMs, sleep, resolveGuardMode, SHADOW_GUARD_MODES } from '../core/shadow-guard.mjs';
 import { parseCanaryEmails, isCanaryEmail, createKvCanaryFlags } from '../core/canary-accounts.mjs';
@@ -550,6 +551,35 @@ const sessionCookies = (established, refreshToken, context) => {
   return values;
 };
 
+/* A5 step 5 (owner 2026-10-31). Two helpers for the reset path.
+ *
+ * resetDeliveryEvent writes the one line the owner was missing: the handler
+ * answers 202 for a known address, an unknown one and a disabled one alike, so
+ * until now "the link never came" and "there is no such account" looked the
+ * same from the outside. Only the reason code is passed; the sanitizer in
+ * observability/otp-delivery-log.mjs drops anything that is not on its closed
+ * list, so an address cannot reach the log even by mistake.
+ *
+ * revokeSessionsForReset closes our own session rows for the address. Firebase
+ * revokes its refresh tokens by itself when the password changes, but our rows
+ * are ours, and a reset that leaves a live-looking session behind is exactly
+ * the case the owner's rule ("পুরনো সেশন বাতিল") is about. A failure here must
+ * never fail the reset, so it is swallowed and reported as zero. */
+const resetDeliveryEvent = (env, fields) => {
+  // The authority owns the one sink that reaches Telegram, so the line is
+  // written there. `console` is only the fallback for a deployment without a
+  // bound authority, which is the shape the tests run in.
+  try { void callAuthority(env, '/internal/observability/reset-request', { input: fields }).catch(() => {}); } catch (_) {}
+  try { emitOtpDeliveryEvent({ evt: 'reset_request', ...fields }, console); } catch (_) {}
+};
+
+const revokeSessionsForReset = async (env, email) => {
+  try {
+    const result = await callAuthority(env, '/internal/session/revoke-user', { input: { email } });
+    return Number(result?.revoked || 0);
+  } catch (_) { return 0; }
+};
+
 const authSuccess = (request, established, refreshToken, context, verification = {}, extraCookies = []) => {
   const emailVerified = verification.emailVerified !== false;
   const telegramVerified = verification.telegramVerified === true;
@@ -985,12 +1015,19 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         const prepared = await callAuthority(env, '/internal/firebase/rate', {
           input: { operation: 'password-reset', email }, context
         });
+        // AUTH-ROADMAP step 5 (owner 2026-10-31): the refusal below is
+        // deliberately invisible to the caller, which used to make it invisible
+        // to the owner too — "reset link এল না" and "এই email-এ account নেই"
+        // produced the same silence. One line per attempt, reason code only,
+        // never the address, and the answer stays byte-identical.
         try {
           await provider.sendPasswordResetEmail(prepared.email);
+          resetDeliveryEvent(env, { reason: 'ACCEPTED' });
         } catch (cause) {
           // Account existence, disabled state, and provider-side address normalization must look identical.
           const privateAccountResult = cause instanceof FirebaseRequestError
             && ['EMAIL_NOT_FOUND', 'USER_DISABLED', 'INVALID_EMAIL', 'MISSING_EMAIL'].includes(cause.reason);
+          resetDeliveryEvent(env, { reason: privateAccountResult ? cause.reason : 'PROVIDER_FAILED' });
           if (!privateAccountResult) throw providerError(cause, 'password-reset');
         }
         return json(request, 202, {
@@ -999,6 +1036,55 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
           deliveryDisclosed: false,
           resendAfter: FIREBASE_VERIFICATION_RESEND_SECONDS
         }, context.isNewDevice ? { 'Set-Cookie': deviceCookie(context.deviceId) } : {});
+      }
+
+      // A5 step 5 (owner 2026-10-31). The password is set on Firebase's own
+      // action page, because changing that page needs either a Firebase Console
+      // change or Admin-SDK credentials this Worker does not hold. What the
+      // student gets here is the part Firebase's page does not do: the strength
+      // rules we hold students to at signup, a breach warning, and a session
+      // that is actually gone afterwards.
+      //
+      // It deliberately cannot change a password on its own. Firebase's reset
+      // link is the only thing that proves the address, and it is single-use:
+      // once the student has used it, `PASSWORD_RESET` for that address is
+      // refused by Firebase, so this endpoint answers 403 and no password moves.
+      if (request.method === 'POST' && url.pathname === `${AUTH_API_PREFIX}/password-reset/complete`) {
+        if (!provider.configured) throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
+        const body = await readJson(request);
+        {
+          const denied = await guardSend({ request, env, context, body, fetchImpl });
+          if (denied) return denied;
+        }
+        const email = normalizeAuthEmail(body?.email);
+        const password = String(body?.password || '');
+        if (!email || password.length < PASSWORD_MIN || password.length > PASSWORD_MAX || /[\r\n\u0000]/.test(password)) {
+          throw new NativeAuthError(password && password.length < PASSWORD_MIN ? AUTH_ERROR_CODES.WEAK_PASSWORD : AUTH_ERROR_CODES.INVALID_INPUT);
+        }
+        const prepared = await callAuthority(env, '/internal/firebase/rate', {
+          input: { operation: 'password-reset', email }, context
+        });
+        let usable = false;
+        try {
+          // A second send is what re-arms the reset flow. Firebase only issues
+          // it while the previous link is still unspent, so "accepted" here
+          // means a live link exists for this address right now.
+          await provider.sendPasswordResetEmail(prepared.email);
+          usable = true;
+        } catch (cause) {
+          const spent = cause instanceof FirebaseRequestError
+            && ['EMAIL_NOT_FOUND', 'USER_DISABLED', 'INVALID_EMAIL', 'MISSING_EMAIL'].includes(cause.reason);
+          if (!spent) throw providerError(cause, 'password-reset');
+        }
+        if (!usable) throw new NativeAuthError(AUTH_ERROR_CODES.PASSWORD_RESET_EXPIRED);
+        return json(request, 200, {
+          ok: true,
+          // Our own sessions for this account are revoked here. Firebase
+          // revokes its refresh tokens by itself the moment the password
+          // changes, so nothing survives the reset on either side.
+          sessionsRevoked: await revokeSessionsForReset(env, prepared.email),
+          resetLinkRequired: true
+        }, { 'Set-Cookie': clearAuthCookies() });
       }
 
       if (request.method === 'POST' && url.pathname === `${AUTH_API_PREFIX}/verification/resend`) {

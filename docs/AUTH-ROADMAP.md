@@ -27,7 +27,7 @@
 
 ## ⚠️ যা জানা আছে
 - Signup করলেই Firebase এ account তৈরি হয়, OTP যাচাইয়ের আগেই।
-- Forgot password এ শুধু Firebase link; Descope যুক্ত নেই।
+- Forgot password এ শুধু Firebase link; Descope যুক্ত নেই (ধাপ ৫ এও বদলায়নি — নিচে দেখুন)।
 - OTP পাঠাতে server এর ~৪ সেকেন্ড; provider এর নাম আর সময় এখন log এ আসে (PR #104)।
 - Live OTP তে Brevo (`otp-a`, priority 10) বাদ পড়ে Logto আগে গেছে — quota বা availability check; ধাপ ৪ এ দেখতে হবে।
 - Temp mail আটকানো আর অনুমোদিত domain তালিকা ঠিক আছে — হাত দেবে না।
@@ -78,11 +78,15 @@
 - [ ] চলতে চলতে স্বাস্থ্য দেখে ধীর provider পিছনে সরানো
 - [ ] ৫–৮ সেকেন্ডে সাড়া না দিলে পরেরটা; একই OTP দুইবার যাবে না
 
-### ধাপ ৫: Forgot password ⬜
-- [ ] প্রথমে Descope Magic Link (`otp-m`), ব্যর্থ হলে Firebase link
-- [ ] Magic link → নিজেদের `/reset` পাতা → নতুন password
-- [ ] Firebase এ Custom action URL
-- [ ] চেপে রাখা error (যেমন `USER_DISABLED`) log এ
+### ধাপ ৫: Forgot password 🟡 (৩১ অক্টোবর ২০২৬)
+- [x] ✅ চেপে রাখা error (`USER_DISABLED` / `EMAIL_NOT_FOUND`) log এ — `reset_request` ইভেন্ট, শুধু reason code, কখনো ঠিকানা নয়; বাতিল হলে Telegram অ্যালার্ট (প্রতি কারণে ১৫ মিনিটে একবার)
+- [x] ✅ নিজেদের `/reset` পাতা — `?passwordReset=1` নিয়ে ফিরলে password-এর শক্তি মিটার, নিয়মের তালিকা আর ফাঁস-হওয়া password-এর সতর্কতা (HIBP k-anonymity; নেটওয়ার্ক ব্যর্থ হলে পাস)
+- [x] ✅ রিসেটের পর পুরনো সেশন বাতিল — নতুন `/internal/session/revoke-user` ইমেইল-হ্যাশ ধরে সব session row বন্ধ করে; Firebase নিজেই password বদলালে তার refresh token বাতিল করে, তাই দুই দিকই বন্ধ
+- [x] ✅ ফিরে এলে মরা session cookie মুছে দেওয়া — নইলে ছাত্র মরা cookie নিয়ে login স্ক্রিনে বসে থাকত
+- [ ] ⬜ প্রথমে Descope Magic Link (`otp-m`), ব্যর্থ হলে Firebase link — **ইচ্ছাকৃতভাবে বাদ**: `otp-m`-এর লাইভ ডেলিভারি কখনো মাপা হয়নি (`liveDeliveryVerified: false`), আর তার redirect একটাই — `?magic=1`, যা এখন email-ownership-এ বাঁধা। মাপা Firebase link-এর সামনে অমাপা provider বসালে ছাত্র আটকে যেতে পারে।
+- [ ] ⬜ Firebase এ Custom action URL — **ইচ্ছাকৃতভাবে বাদ**: এতে Firebase Console-এ হাত দিতে হয়, আর password বদলানোর কাজটা Firebase-এর নিজের পাতাতেই থাকে। আমাদের `/reset` পাতা তাই link-এর পরে যা দরকার (নিয়ম, সতর্কতা, সেশন বন্ধ) সেটাই করে।
+- [ ] ⬜ Magic link → নিজেদের `/reset` পাতা → নতুন password (উপরের দুইটার উপর নির্ভরশীল)
+- [x] ✅ `/password-reset/complete` — শুধু তখনই সফল হয় যখন Firebase ঠিকানা-টির জন্য সদ্য একটি এক-বারের link ইস্যু করে; Firebase দ্বিতীয় link দিতে রাজি না হলে 403 (`PASSWORD_RESET_EXPIRED`), কোনো password নড়ে না
 
 ### ধাপ ৬: চেনা device এ ৩০ দিন OTP লাগবে না ⬜
 - [ ] OTP যাচাই/login সফল হলে device ৩০ দিন "চেনা" (signed cookie + server তালিকা)

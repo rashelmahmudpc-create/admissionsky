@@ -1577,6 +1577,25 @@ export class SqliteAuthRepository {
     });
   }
 
+  /* A5 step 5 (owner 2026-10-31): a password reset must end every session the
+   * account still holds. Firebase already kills its own refresh tokens the
+   * moment the password changes, but our session rows are ours to close, and
+   * leaving them open meant the reset screen came back to a session that
+   * claimed to be live. No step-up gate here on purpose: the caller has just
+   * proved the address with a single-use reset link, which is a stronger proof
+   * than the step-up challenge the manual logout-all asks for. */
+  async revokeSessionsForEmailRef({ emailRef, now }) {
+    return this.#transaction(() => {
+      const user = this.#one('SELECT user_id AS id FROM auth_users WHERE email_ref=?', emailRef);
+      if (!user) return { revoked: 0, found: false };
+      const open = this.#one('SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id=? AND revoked_at IS NULL', user.id);
+      const count = Number(open?.count || 0);
+      if (count > 0) this.sql.exec('UPDATE auth_sessions SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL', now, user.id);
+      this.#event('password-reset', null, user.id, now);
+      return { revoked: count, found: true };
+    });
+  }
+
   async ping() {
     const row = this.#one("SELECT value FROM auth_meta WHERE key='schema_version'");
     const schema = Number(row?.value || 0);

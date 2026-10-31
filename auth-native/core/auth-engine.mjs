@@ -159,7 +159,7 @@ const FIREBASE_OPERATION_LIMITS = Object.freeze({
 
 const requiredRepositoryMethods = Object.freeze([
   'consumeLimits', 'establishExternalSession',
-  'getExternalSession', 'getSession', 'revokeSession', 'revokeUserSessions',
+  'getExternalSession', 'getSession', 'revokeSession', 'revokeUserSessions', 'revokeSessionsForEmailRef',
   'getAccountState', 'setAccountState',
   'identitySnapshot', 'listLinkedIdentities',
   'beginFirebaseAccountVerification', 'getFirebaseAccountVerification',
@@ -1680,6 +1680,18 @@ export class CloudflareNativeAuthEngine {
       emailMasked: session.user.emailMask,
       browserClass: identity.context.userAgent || null
     });
+  }
+
+  /* A5 step 5 (owner 2026-10-31). Called from the reset path, where the caller
+   * has just proved the address with a single-use reset link instead of a
+   * step-up challenge — so, unlike revokeAllSessions above, there is no
+   * #assertStepUp here. It also has to work with no session at all: the whole
+   * point is that the sessions it closes are ones the caller cannot see. */
+  async revokeSessionsAfterPasswordReset({ emailRef, now }) {
+    const result = errorFromRepository(await this.repository.revokeSessionsForEmailRef({
+      emailRef, now: Number(now || this.now())
+    }));
+    return Object.freeze({ revoked: Number(result?.revoked || 0), found: result?.found === true });
   }
 
   ping() { return this.repository.ping(); }

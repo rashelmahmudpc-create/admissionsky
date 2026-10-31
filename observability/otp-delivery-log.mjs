@@ -15,12 +15,25 @@ export const OTP_PROVIDER_NAMES = Object.freeze({
   'otp-y': 'Authgear', 'otp-z': 'Stack Auth', 'otp-za': 'SuperTokens', telegram: 'Telegram'
 });
 
-const EVENTS = new Set(['otp_delivery', 'otp_request']);
+// AUTH-ROADMAP step 5 (owner 2026-10-31): the password-reset path used to be
+// silent. Firebase answers USER_DISABLED / EMAIL_NOT_FOUND and the handler
+// deliberately swallows it so a stranger cannot probe for accounts — correct
+// for the student, but it left the owner with no way to tell "the mail went
+// out" from "we refused it". `reset_request` records the refusal reason code
+// (never the address) in the same allow-listed shape as the OTP events.
+const EVENTS = new Set(['otp_delivery', 'otp_request', 'reset_request']);
 // `tried` and `skipped` are comma-joined provider lists, so they get room for a
 // whole run (26 slots); every other string field is a short label.
 const LONG_STRING_FIELDS = new Set(['tried', 'skipped']);
 const STRING_FIELDS = new Set(['attempt', 'purpose', 'method', 'provider', 'label', 'outcome', 'reason', 'failureClass', 'tried', 'skipped']);
 const NUMBER_FIELDS = new Set(['candidates', 'rank', 'try', 'latencyMs', 'totalMs']);
+// reset_request only ever carries the Firebase reason code, which is a fixed
+// token from a closed list. An allow-list keeps a caller that passes an address
+// by mistake from ever reaching the log.
+const RESET_REASONS = new Set([
+  'EMAIL_NOT_FOUND', 'USER_DISABLED', 'INVALID_EMAIL', 'MISSING_EMAIL',
+  'TOO_MANY_ATTEMPTS_TRY_LATER', 'TOO_MANY_ATTEMPTS', 'QUOTA_EXCEEDED', 'ACCEPTED'
+]);
 
 export function sanitizeOtpDeliveryEvent(event) {
   if (!event || !EVENTS.has(event.evt)) return null;
@@ -30,6 +43,18 @@ export function sanitizeOtpDeliveryEvent(event) {
     else if (NUMBER_FIELDS.has(key) && Number.isFinite(Number(value))) out[key] = Math.round(Number(value));
   }
   if (out.attempt) out.attempt = out.attempt.slice(0, 8);
+  // A reset line carries a reason code and nothing else. Anything not on the
+  // closed list is dropped rather than printed, so no free-form string (an
+  // address, a provider message) can ride along on this event.
+  if (out.evt === 'reset_request') {
+    if (!RESET_REASONS.has(out.reason)) delete out.reason;
+    delete out.provider;
+    delete out.label;
+    delete out.method;
+    delete out.failureClass;
+    delete out.purpose;
+    return out;
+  }
   if (out.provider) out.name = OTP_PROVIDER_NAMES[out.provider] || out.provider;
   return out;
 }
