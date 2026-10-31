@@ -13427,6 +13427,11 @@ var telegramVerificationAvailable = async (env, allowed2) => {
     return false;
   }
 };
+var telegramVerificationAvailabilityCode = ({ env, verificationRequested, telegramAvailable, backup }) => {
+  if (!verificationRequested) return verificationEndpointReady(env) ? "LIVE_E2E_PENDING" : "NOT_ACTIVATED";
+  if (telegramAvailable) return String(backup?.availabilityCode || "READY");
+  return backup?.availabilityCode === "READY" ? "NO_TELEGRAM_CHANNEL" : String(backup?.availabilityCode || "STATUS_UNAVAILABLE");
+};
 var emailOwnershipProven = async ({ env, user, context, allowed: allowed2 }) => {
   if (!allowed2) return false;
   try {
@@ -13722,7 +13727,7 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         };
         const telegramVerification = {
           available: verificationRequested && telegramAvailable,
-          availabilityCode: verificationRequested ? String(backup?.availabilityCode || "STATUS_UNAVAILABLE") : verificationEndpointReady(env) ? "LIVE_E2E_PENDING" : "NOT_ACTIVATED",
+          availabilityCode: telegramVerificationAvailabilityCode({ env, verificationRequested, telegramAvailable, backup }),
           optional: true,
           codeLength: 6,
           expiresInSeconds: Number(backup?.expiresInSeconds || 300),
@@ -24212,6 +24217,147 @@ async function compressResponse(request, response3, threshold = MIN_COMPRESS_BYT
   }
 }
 
+// auth-native/verification/authgear-liveness.mjs
+var AUTHGEAR_LIVENESS_ENDPOINT = "https://admissionsky.authgear.cloud";
+var AUTHGEAR_LIVENESS_ADDRESS = "otp-liveness@admissionsky-probe.invalid";
+var AUTHGEAR_LIVENESS_CODES = Object.freeze({
+  READY: "READY",
+  NETWORK_ERROR: "NETWORK_ERROR",
+  FLOW_CREATE_FAILED: "FLOW_CREATE_FAILED",
+  IDENTIFY_REJECTED: "IDENTIFY_REJECTED",
+  NO_EMAIL_OTP: "NO_EMAIL_OTP",
+  NOT_DELIVERING: "NOT_DELIVERING",
+  INVALID_PROVIDER_RESPONSE: "INVALID_PROVIDER_RESPONSE"
+});
+var bounded2 = (value, max = 40) => String(value || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, max);
+var isEndpoint = (value) => {
+  try {
+    const url = new URL(String(value || ""));
+    return url.protocol === "https:" && /^[a-z0-9-]{2,63}\.authgear\.cloud$/.test(url.hostname) && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+};
+async function probeAuthgearLiveness({
+  fetchImpl = globalThis.fetch,
+  endpoint = AUTHGEAR_LIVENESS_ENDPOINT,
+  address = AUTHGEAR_LIVENESS_ADDRESS,
+  timeoutMs = 12e3,
+  now = Date.now
+} = {}) {
+  const started = Number(now());
+  const done = (ok2, code, deliveryStatus = "") => Object.freeze({
+    ok: ok2,
+    code,
+    deliveryStatus: bounded2(deliveryStatus, 20),
+    latencyMs: Math.max(0, Number(now()) - started)
+  });
+  if (typeof fetchImpl !== "function" || !isEndpoint(endpoint)) {
+    return done(false, AUTHGEAR_LIVENESS_CODES.INVALID_PROVIDER_RESPONSE);
+  }
+  const step = async (path, body) => {
+    const response3 = await fetchImpl(`${new URL(endpoint).origin}${path}`, {
+      method: "POST",
+      redirect: "manual",
+      credentials: "omit",
+      headers: { Accept: "application/json", "Content-Type": "application/json", "Cache-Control": "no-store" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs)
+    });
+    let payload = {};
+    try {
+      payload = await response3.json();
+    } catch {
+      payload = {};
+    }
+    return { response: response3, payload: payload && typeof payload === "object" ? payload : {} };
+  };
+  let created;
+  try {
+    created = await step("/api/v1/authentication_flows", { type: "signup_login", name: "default" });
+  } catch {
+    return done(false, AUTHGEAR_LIVENESS_CODES.NETWORK_ERROR);
+  }
+  const stateToken = String(created.payload?.result?.state_token || "");
+  if (!created.response?.ok || !/^[A-Za-z0-9_-]{16,128}$/.test(stateToken)) {
+    return done(false, AUTHGEAR_LIVENESS_CODES.FLOW_CREATE_FAILED);
+  }
+  let identified;
+  try {
+    identified = await step("/api/v1/authentication_flows/states/input", {
+      state_token: stateToken,
+      input: { identification: "email", login_id: address }
+    });
+  } catch {
+    return done(false, AUTHGEAR_LIVENESS_CODES.NETWORK_ERROR);
+  }
+  if (!identified.response?.ok) return done(false, AUTHGEAR_LIVENESS_CODES.IDENTIFY_REJECTED);
+  const action = identified.payload?.result?.action || {};
+  const data = action.data || {};
+  const reachedEmailOtp = action.type === "verify" && data.type === "verify_oob_otp_data" && data.channel === "email" && Number(data.code_length) === 6;
+  if (!reachedEmailOtp) return done(false, AUTHGEAR_LIVENESS_CODES.NO_EMAIL_OTP, data.delivery_status);
+  const status = String(data.delivery_status || "").toLowerCase();
+  if (!["sending", "sent", "delivered"].includes(status)) {
+    return done(false, AUTHGEAR_LIVENESS_CODES.NOT_DELIVERING, status);
+  }
+  return done(true, AUTHGEAR_LIVENESS_CODES.READY, status);
+}
+
+// auth-native/operations/otp-liveness-daily.mjs
+var OTP_LIVENESS_MARKER_PREFIX = "otpLivenessDay:";
+var dhakaDay2 = (now = Date.now()) => new Date(now + 6 * 36e5).toISOString().slice(0, 10);
+function renderOtpLivenessAlert(result, day) {
+  const failed = !result?.ok;
+  const head = failed ? `🔴 OTP লাইভ probe ব্যর্থ — ${day}` : `🟢 OTP লাইভ probe ঠিক আছে — ${day}`;
+  const lines = [
+    head,
+    `slot: otp-y (Authgear)`,
+    `code: ${String(result?.code || "UNKNOWN")}`,
+    `latency: ${Number(result?.latencyMs || 0)} ms`
+  ];
+  if (failed) {
+    lines.push("", "এই slot এখন কোড পাঠাতে পারছে না। chain-এ এটা দ্বিতীয়, তাই ছাত্র আটকাবে না — তবে ঠিক করা দরকার।");
+  }
+  return lines.join("\n");
+}
+async function runDailyOtpLiveness({
+  env,
+  now = Date.now(),
+  probe = probeAuthgearLiveness,
+  alert = null,
+  alwaysAlert = false
+} = {}) {
+  const day = dhakaDay2(now);
+  const marker = `${OTP_LIVENESS_MARKER_PREFIX}${day}`;
+  const kv2 = env?.PUB_KV;
+  if (!kv2) return { ran: false, day, code: "NO_KV" };
+  try {
+    if (await kv2.get(marker) === "done") return { ran: false, day };
+  } catch {
+    return { ran: false, day, code: "KV_READ_FAILED" };
+  }
+  try {
+    await kv2.put(marker, "done");
+  } catch {
+    return { ran: false, day, code: "KV_WRITE_FAILED" };
+  }
+  let result;
+  try {
+    result = await probe({});
+  } catch (cause) {
+    result = { ok: false, code: AUTHGEAR_LIVENESS_CODES.NETWORK_ERROR, latencyMs: 0, detail: String(cause?.name || "ERROR") };
+  }
+  let alerted = false;
+  if (typeof alert === "function" && (!result.ok || alwaysAlert)) {
+    try {
+      alerted = await alert(renderOtpLivenessAlert(result, day)) !== false;
+    } catch {
+      alerted = false;
+    }
+  }
+  return { ran: true, day, ok: result.ok === true, code: String(result.code || "UNKNOWN"), alerted };
+}
+
 // email-gateway/worker/email-coordinator.mjs
 var response = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -26292,7 +26438,7 @@ function recipientBias(providerId, email) {
 var INSTITUTIONAL_SUFFIXES = Object.freeze([]);
 var matchesDomain = (domain, list2) => list2.some((entry) => domain === entry || entry.startsWith(".") && domain.endsWith(entry));
 var MAGIC_LINK_PROVIDER_ID2 = "otp-m";
-async function bounded2(action, milliseconds) {
+async function bounded3(action, milliseconds) {
   let timer;
   try {
     return await Promise.race([
@@ -26495,8 +26641,8 @@ var VerificationOrchestrator = class {
           // Readiness probes run for every slot before a single send, so a slow
           // probe delayed the whole OTP past the browser's patience. Probes get
           // a short ceiling; the send itself keeps the slot's full timeoutMs.
-          bounded2(() => provider.checkAvailability({ purpose: identity.purpose }), Math.min(entry.timeoutMs, probeCeiling)),
-          bounded2(() => provider.getRemainingQuota({ now }), Math.min(entry.timeoutMs, probeCeiling)),
+          bounded3(() => provider.checkAvailability({ purpose: identity.purpose }), Math.min(entry.timeoutMs, probeCeiling)),
+          bounded3(() => provider.getRemainingQuota({ now }), Math.min(entry.timeoutMs, probeCeiling)),
           this.repository.dailyQuotaSnapshot({ providerId: entry.id, dailyQuota: entry.dailyQuota, now }),
           this.repository.providerSnapshot({ providerId: entry.id, now })
         ]);
@@ -26660,7 +26806,7 @@ var VerificationOrchestrator = class {
         const started = Date.now();
         let providerAccepted = false;
         try {
-          const result = await bounded2(() => provider.sendVerification({
+          const result = await bounded3(() => provider.sendVerification({
             attemptId,
             purpose: identity.purpose,
             destination: destinations[entry.channel],
@@ -26799,7 +26945,7 @@ var VerificationOrchestrator = class {
       }
       const started = Date.now();
       try {
-        const result = await bounded2(() => provider.verifyCode({
+        const result = await bounded3(() => provider.verifyCode({
           attemptId,
           evidence: evidence2,
           // Only this adapter needs the address at verification time. Resolve it
@@ -26930,7 +27076,7 @@ var VerificationOrchestrator = class {
     if (!this.config.enabled || !entry || !provider || typeof provider.sendTelegramCode !== "function") {
       throw new NativeAuthError(AUTH_ERROR_CODES.BACKUP_UNAVAILABLE);
     }
-    const status = await bounded2(() => provider.getProviderStatus({ now: Number(this.now()) }), entry.timeoutMs);
+    const status = await bounded3(() => provider.getProviderStatus({ now: Number(this.now()) }), entry.timeoutMs);
     if (status?.configured !== true) throw new NativeAuthError(AUTH_ERROR_CODES.BACKUP_UNAVAILABLE);
     const now = Number(this.now());
     const [linkTokenMac, externalIdentityRef] = await Promise.all([
@@ -26946,7 +27092,7 @@ var VerificationOrchestrator = class {
       const packedCode = await this.vault.open(claimed.codeCipher, `telegram-verification-code:${claimed.attemptId}`);
       const code = /^telegram-otp-v1:(\d{6})$/.exec(packedCode)?.[1] || "";
       if (!code) throw new NativeAuthError(AUTH_ERROR_CODES.STORAGE_UNAVAILABLE);
-      const delivered = await bounded2(() => provider.sendTelegramCode({
+      const delivered = await bounded3(() => provider.sendTelegramCode({
         chatId,
         code,
         expiresInSeconds: Math.max(1, Math.ceil((Number(claimed.expiresAt) - Number(this.now())) / 1e3))
@@ -26965,7 +27111,7 @@ var VerificationOrchestrator = class {
       throw new NativeAuthError(AUTH_ERROR_CODES.BACKUP_UNAVAILABLE);
     }
     try {
-      const result = await bounded2(() => provider.configureWebhook(), entry.timeoutMs);
+      const result = await bounded3(() => provider.configureWebhook(), entry.timeoutMs);
       if (result?.ready !== true || result?.identityReady !== true || result?.webhookReady !== true || result?.endpointAccepted !== true) {
         throw new VerificationProviderError("WEBHOOK_NOT_READY", VERIFICATION_FAILURE_CLASS.HARD);
       }
@@ -26987,7 +27133,7 @@ var VerificationOrchestrator = class {
       throw new NativeAuthError(AUTH_ERROR_CODES.BACKUP_UNAVAILABLE);
     }
     try {
-      const result = await bounded2(() => provider.removeConfiguredWebhook(), entry.timeoutMs);
+      const result = await bounded3(() => provider.removeConfiguredWebhook(), entry.timeoutMs);
       return Object.freeze({ removed: result?.removed === true });
     } catch {
       throw new NativeAuthError(AUTH_ERROR_CODES.BACKUP_UNAVAILABLE);
@@ -27031,9 +27177,9 @@ var VerificationOrchestrator = class {
       let remoteQuota = { remaining: 0, limit: 0, resetAt: 0 };
       let remoteStatus = { status: "unknown", configured: false };
       const probes = await Promise.allSettled([
-        bounded2(() => provider.checkAvailability({ purpose: "status" }), Math.min(entry.timeoutMs, STATUS_PROBE_TIMEOUT_MS)),
-        bounded2(() => provider.getRemainingQuota({ now }), Math.min(entry.timeoutMs, STATUS_PROBE_TIMEOUT_MS)),
-        bounded2(() => provider.getProviderStatus({ now }), Math.min(entry.timeoutMs, STATUS_PROBE_TIMEOUT_MS))
+        bounded3(() => provider.checkAvailability({ purpose: "status" }), Math.min(entry.timeoutMs, STATUS_PROBE_TIMEOUT_MS)),
+        bounded3(() => provider.getRemainingQuota({ now }), Math.min(entry.timeoutMs, STATUS_PROBE_TIMEOUT_MS)),
+        bounded3(() => provider.getProviderStatus({ now }), Math.min(entry.timeoutMs, STATUS_PROBE_TIMEOUT_MS))
       ]);
       if (probes[0].status === "fulfilled") availability = probes[0].value;
       else availability = { available: false, code: providerFailure2(probes[0].reason).code };
@@ -34156,6 +34302,10 @@ var gk_agent_worker_default = {
         await new AiAnalyticsStore(env.PROFILE_DB).sweepCache();
         await env.PUB_KV.put(sweepDay, "done");
       }
+    } catch (_) {
+    }
+    try {
+      await runDailyOtpLiveness({ env, alert: (text) => sendTelegramAlert(env, text) });
     } catch (_) {
     }
     if (!env.GK_KV || !keys(env).length) return;

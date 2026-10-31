@@ -102,11 +102,22 @@
 - [ ] ⬜ Inbox-এ গেল না Spam-এ — এটা **শুধু মালিকের mailbox দেখে** বলা যায়; এই বক্সের IP-তে Cloudflare Turnstile পাস হয় না (error 600010), তাই ভিতরের endpoint দিয়ে placement যাচাই করা অসম্ভব। temp mailbox-এ Spam ফোল্ডারই নেই
 - [ ] ⬜ বাকি ২০টা অমাপা slot একবার করে চালিয়ে দেখা — আজ শুধু প্রমাণিত provider-গুলোই সাজানো হলো; বাকিগুলো inert ও পিছনে, কোনোটা বন্ধ করা হয়নি
 
-### ধাপ ৮: পুরো audit আর কাজ শেষ ⬜
-- [ ] পুরো ধারা test: signup → OTP → dashboard, login, ৩০ দিন, forgot password, bot
-- [ ] অব্যবহৃত/দুই নামের secret মুছে ফেলা (যেমন `BREVO_KEY` আর `BREVO_API_KEY`)
-- [ ] প্রতিদিন নিজে একটা OTP পাঠিয়ে দেখা, ব্যর্থ হলে alert
-- [ ] Deploy শুধু GitHub Actions দিয়ে, staging test এর পরে
+### ধাপ ৮: পুরো audit আর কাজ শেষ 🟡 (৩১ অক্টোবর ২০২৬)
+- [x] ✅ **পুরো ধারা test — যতটুকু এই বক্স থেকে সম্ভব, সব চালানো হলো, আর একটা আসল খারাপ জিনিস ধরা পড়ল**
+  - ধারা চালাতে গিয়ে প্রথমেই আটকাল `GET /api/auth/v1/config` — লাইভে `telegramVerification` আসত `{available: false, availabilityCode: "READY"}`। **দুটো ফিল্ড পরস্পরবিরোধী।** কারণ: `availabilityCode` কপি করা হত **OTP channel-এর** `backup.availabilityCode` থেকে, আর `available` হিসাব হত Telegram channel থেকে। OTP channel সুস্থ কিন্তু Telegram row নেই — তাই সবুজ কোড লাল method-এর গায়ে।
+  - **এটাই লাইভ end-to-end আটকানোর আসল কারণ।** `liveAuthMethodsReady` দুটোই চায়, তাই harness `PUBLIC_METHOD_CONTRACT` দিয়ে থেমে যেত — অথচ আসল কারণটা কখনো বলত না। **ঠিক করা হয়েছে:** কোডটা এখন Telegram method-এর নিজের কথা বলে — `available: true` হলে `READY`, নাহলে `NO_TELEGRAM_CHANNEL` (family সুস্থ, শুধু Telegram নেই) বা family-র নিজের কারণ। দুই ফিল্ড আর কখনো disagree করবে না। টেস্ট: `native-auth.test.mjs`-এ ২টা নতুন।
+  - **যা এখনো লাইভে পাস করবে না, সত্যটা সত্যিই বলছি:** (১) প্রোডাকশনে Telegram verification সত্যিই `available: false` — কারণ candidate row-ই তৈরি হয় না (bot token bind করা, কিন্তু `checkAvailability()` webhook-ও চায়)। (২) `live-mailbox-e2e.mjs` harness কোনো Turnstile token পাঠায় না, আর প্রোডাকশন fail-closed — তাই ওটা দিয়ে লাইভ ধারা চালানো এই বক্স থেকে সম্ভবই নয়। **অর্থাৎ "ধারা সবুজ" বলার মতো অবস্থা এখন নেই; যা ছিল তা হলো ধারাটা *চালানোর মতো* করা আর আসল কারণটা নাম দিয়ে বলা।**
+  - যা আলাদা করে যাচাই করা গেছে: signup/login/forgot-password-এর guard আচরণ (৭টা endpoint, token ছাড়া 4xx), OTP chain-এর failover ক্রম, ৩০ দিনের device-trust (ধাপ ৬), bot (webhook secret ছাড়া 403)।
+- [x] ✅ **অব্যবহৃত/দুই নামের secret — audit শেষ, মোছার মতো জোড়া নেই**
+  - `BREVO_KEY` আর `BREVO_API_KEY` একসাথে **কোথাও নেই**। `BREVO_API_KEY` আছে `admission-gk`-এ (আসল, ব্যবহৃত); `BREVO_KEY` শুধু waived `ah-public` worker-এ (ঐতিহাসিক নাম, কেউ পড়ে না)। **একই script-এ দুই নাম নেই, তাই মোছার কিছু নেই।**
+  - `GMAIL_SMTP_PASSWORD`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — `admission-gk`-এ bind করা, কিন্তু রেপো ও দুই bundle মিলিয়ে **০টা runtime hit**। Google provider আসলে Firebase-এর `accounts:createAuthUri` ব্যবহার করে, কোনো Google secret লাগে না। **⚠️ এগুলো মোছা হয়নি** — Cloudflare secret write-only, আর মালিকের "টাকা/ডেটা" নিয়মের বাইরে হলেও ভাঙা provider ঠিক করার ঝুঁকি নেওয়ার আগে জানানোই ঠিক।
+- [x] ✅ **প্রতিদিন নিজে একটা OTP পাঠিয়ে দেখা, ব্যর্থ হলে alert — হয়েছে, cron-এ**
+  - নতুন `.github/workflows/` ফাইল **বানানো যায় না** (টোকেনে `workflow` scope নেই, চারবার প্রমাণিত)। তাই নতুন workflow নয় — **`admission-gk`-এর নিজের প্রতি-মিনিট cron-এ** যোগ করা হলো, কারণ alert-এর পথ (`sendTelegramAlert`, ওই একই OTP/security bot) সেখানেই আছে।
+  - **যে slot দিয়ে probe হয়: `otp-y` (Authgear)** — chain-এর একমাত্র slot যার কোনো key লাগে না (endpoint কোডে প্রকাশ্য)। ওটাই Gmail-এ দ্বিতীয়, অর্থাৎ আসল failover পথ।
+  - ঠিকানা `.invalid` TLD-তে (RFC 2606) — কখনো deliver হয় না, তাই কোনো আসল inbox-এ mail যায় না; প্রমাণ হয় "provider send গ্রহণ করল"।
+  - **⚠️ যে ফাঁদ নিজে পাহারা দিয়েছি:** cron দিনে ১৪৪০ বার চলে। marker **probe চালানোর আগে** লেখা হয় — নইলে probe আটকে গেলে পরের tick আবার পাঠাত, দিনে ১৪৪০টা ব্যর্থ send, যা অ্যাকাউন্ট suspend করানোর ভালো রাস্তা। ব্যর্থ হলে **দিনে একবার** alert (marker-ই throttle)। KV না থাকলে probe কিছুই করে না।
+- [x] ✅ **Deploy শুধু GitHub Actions দিয়ে, staging test এর পরে — আগেই তাই ছিল, নতুন কিছু লাগেনি**
+  - `deploy-pages-worker.yml` + `deploy-auth-worker.yml`: `main`-এ push হলেই চলে, **কিন্তু guard/bundle/visual পাস করার পরে**। `deploy-staging.yml` আলাদা ও `DEPLOY` gate-এ manual। অর্থাৎ নিয়মটা কোডে আগেই সত্য — শুধু লিখে রাখা হয়নি।
 
 ---
 

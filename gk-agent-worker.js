@@ -30,6 +30,8 @@ import { compressResponse } from './p13-api-compression.mjs';
 import { createSnapshot } from './p19-backup.mjs';
 /* P25, the daily cache sweep needs the store class here as well. */
 import { AiAnalyticsStore } from './ai-analytics-store.mjs';
+/* AUTH-ROADMAP step 8, the daily live OTP probe that rides this Worker's cron. */
+import { runDailyOtpLiveness } from './auth-native/operations/otp-liveness-daily.mjs';
 export { EmailGatewayCoordinator } from './email-gateway/worker/email-coordinator.mjs';
 export { AdmissionAuthAuthority } from './auth-native/worker/auth-authority-do.mjs';
 /* P23, live voice agent. One Durable Object per owner holds the socket and the
@@ -931,6 +933,15 @@ export default {
         await env.PUB_KV.put(sweepDay, 'done');
       }
     } catch (_) {}
+    /* AUTH-ROADMAP step 8, the daily "send one OTP and see". Every OTP slot is
+       otherwise probed only when a student asks for a code, so a slot that has
+       silently stopped accepting sends stays invisible until someone reports a
+       missing code. otp-y (Authgear) is the one slot that can be driven with no
+       credential at all — its endpoint is public in idp-providers.mjs — so it is
+       the slot this probe can measure from inside the Worker. Self-guarded to
+       once per Dhaka day, like the snapshot and the sweep above; the marker is
+       written before the probe so a hang cannot become 1,440 sends a day. */
+    try { await runDailyOtpLiveness({ env, alert: text => sendTelegramAlert(env, text) }); } catch (_) {}
     if (!env.GK_KV || !keys(env).length) return;
     const date = dhakaToday();
     try { if ((await env.GK_KV.get('gkDay')) === date) return; } catch (_) {}

@@ -2573,6 +2573,11 @@ var telegramVerificationAvailable = async (env, allowed) => {
     return false;
   }
 };
+var telegramVerificationAvailabilityCode = ({ env, verificationRequested, telegramAvailable, backup }) => {
+  if (!verificationRequested) return verificationEndpointReady(env) ? "LIVE_E2E_PENDING" : "NOT_ACTIVATED";
+  if (telegramAvailable) return String(backup?.availabilityCode || "READY");
+  return backup?.availabilityCode === "READY" ? "NO_TELEGRAM_CHANNEL" : String(backup?.availabilityCode || "STATUS_UNAVAILABLE");
+};
 var emailOwnershipProven = async ({ env, user, context, allowed }) => {
   if (!allowed) return false;
   try {
@@ -2868,7 +2873,7 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         };
         const telegramVerification = {
           available: verificationRequested && telegramAvailable,
-          availabilityCode: verificationRequested ? String(backup?.availabilityCode || "STATUS_UNAVAILABLE") : verificationEndpointReady(env) ? "LIVE_E2E_PENDING" : "NOT_ACTIVATED",
+          availabilityCode: telegramVerificationAvailabilityCode({ env, verificationRequested, telegramAvailable, backup }),
           optional: true,
           codeLength: 6,
           expiresInSeconds: Number(backup?.expiresInSeconds || 300),
