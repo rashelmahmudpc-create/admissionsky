@@ -50,7 +50,7 @@ jobs:
           grep -Fq "v340-sky-rich-live" index.html
           grep -Fq "ai-agent-chat.js?v=agent-f1-ui-skyv3" index.html
       - name: Tests
-        run: node --test ai-live-stages.test.mjs ai-chat-history.test.mjs p21-ai-agent-ui.test.mjs ai-agent-f1.test.mjs phase9-m5-prompt-registry.test.mjs phase9-m6-tool-registry.test.mjs phase9-m7-memory-engine.test.mjs phase9-m10-observability.test.mjs fcm-global-contract.test.mjs idb-hardening.test.mjs account-retirement.test.mjs
+        run: node --test ai-live-stages.test.mjs sky-stream-v1.test.mjs ai-chat-history.test.mjs p21-ai-agent-ui.test.mjs ai-agent-f1.test.mjs phase9-m5-prompt-registry.test.mjs phase9-m6-tool-registry.test.mjs phase9-m7-memory-engine.test.mjs phase9-m10-observability.test.mjs fcm-global-contract.test.mjs idb-hardening.test.mjs account-retirement.test.mjs
       - name: Commit fix to main
         run: |
           set -eu

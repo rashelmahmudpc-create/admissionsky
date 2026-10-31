@@ -261,6 +261,36 @@ var corsHeaders = (request) => {
   };
 };
 
+// sky-stream.mjs
+var SKY_STREAM_VERSION = "sky-stream-v1";
+function skySse(event, payload) {
+  const data = JSON.stringify(payload);
+  return event ? `event: ${event}
+data: ${data}
+
+` : `data: ${data}
+
+`;
+}
+function skyStream(push, counter = { n: 0 }) {
+  const send2 = (event, payload) => push(skySse(event, Object.assign({ seq: counter.n++ }, payload)));
+  return {
+    version: SKY_STREAM_VERSION,
+    /** Announce the protocol. First frame, always. */
+    hello: () => send2("stream", { v: SKY_STREAM_VERSION, ev: "hello" }),
+    stage: (id, label) => send2("stage", { stage: id, label }),
+    text: (text) => send2("", { text }),
+    replace: (text) => send2("replace", { text }),
+    /** Last frame of a successful stream; carries the version for the record. */
+    done: (payload = {}) => send2("done", Object.assign({ stream: SKY_STREAM_VERSION }, payload)),
+    error: (payload = {}) => send2("error", payload),
+    /** Frames emitted so far — the next `seq`. */
+    get count() {
+      return counter.n;
+    }
+  };
+}
+
 // context-engine.js
 var CONTEXT_VERSION = "ctx-v1";
 var CATEGORY = Object.freeze({
@@ -1275,17 +1305,11 @@ async function simpleToolResponse(plan, stream, meta = {}, request = null) {
         } catch (_) {
         }
       };
-      for (const s of stages) push(`event: stage
-data: ${JSON.stringify(s)}
-
-`);
-      push(`data: ${JSON.stringify({ text })}
-
-`);
-      push(`event: done
-data: ${JSON.stringify(done)}
-
-`);
+      const w = skyStream(push);
+      w.hello();
+      for (const st of stages) w.stage(st.stage, st.label);
+      w.text(text);
+      w.done(done);
       try {
         c.close();
       } catch (_) {
@@ -4230,14 +4254,14 @@ async function agentChat(request, env, uid, opts = {}) {
     const msg = { error: "mock_refused", message: safety.message };
     return stream ? sseError(msg, 403, request) : jsonResp(msg, 403, request);
   }
-  const early = { sent: /* @__PURE__ */ new Set(), push: null };
+  const early = { sent: /* @__PURE__ */ new Set(), push: null, seq: { n: 0 } };
+  const earlyStream = skyStream((chunk) => {
+    if (early.push) early.push(chunk);
+  }, early.seq);
   const prepStage = (id, label) => {
     if (!early.push || early.sent.has(id)) return;
     early.sent.add(id);
-    early.push(`event: stage
-data: ${JSON.stringify({ stage: id, label })}
-
-`);
+    earlyStream.stage(id, label);
   };
   const core = async () => {
     const appFeatureHit = !quizMode && !v.messages.some((m) => m.image) && isAppFeatureQuestion((v.messages[v.messages.length - 1] || {}).content);
@@ -4544,20 +4568,18 @@ data: ${JSON.stringify({ stage: id, label })}
     const encoder8 = new TextEncoder();
     const streamOut = new ReadableStream({
       async start(controller) {
-        const push = (s) => {
+        const push = (s2) => {
           try {
-            controller.enqueue(encoder8.encode(s));
+            controller.enqueue(encoder8.encode(s2));
           } catch (_) {
           }
         };
+        const s = skyStream(push, early.seq);
         const sentStages = early.sent;
         const stage = (id, label) => {
           if (sentStages.has(id)) return;
           sentStages.add(id);
-          push(`event: stage
-data: ${JSON.stringify({ stage: id, label })}
-
-`);
+          s.stage(id, label);
         };
         try {
           stage("understand", STAGE_UNDERSTAND[intent] || STAGE_UNDERSTAND.GENERAL_CHAT);
@@ -4589,9 +4611,7 @@ data: ${JSON.stringify({ stage: id, label })}
                 full += t;
                 if (/```(chart|flow)/i.test(full)) stage("visual", "চার্ট / ডায়াগ্রাম আঁকছি");
                 if (/\n\s*\|?\s*:?-{3,}/.test(full)) stage("table", "টেবিল সাজাচ্ছি");
-                push(`data: ${JSON.stringify({ text: t })}
-
-`);
+                s.text(t);
                 streamedAny = true;
               }
               if (full.trim()) {
@@ -4599,18 +4619,12 @@ data: ${JSON.stringify({ stage: id, label })}
                 mark("modelDone");
                 stage("verify", "উত্তর যাচাই করছি");
                 const check = validateResponse(full, validationCtx);
-                if (check.enforced) push(`event: replace
-data: ${JSON.stringify({ text: check.text })}
-
-`);
+                if (check.enforced) s.replace(check.text);
                 if (cacheMode && chatStore) {
                   const toStore = check.text || full;
                   later(() => chatStore.putCache(cacheKey, "summary", { text: toStore, structured: check.structured ?? null, model: c.model, intent }, { ttlMs: chatCacheTtl(intent), model: c.model }));
                 }
-                push(`event: done
-data: ${JSON.stringify({ model: c.model, provider: c.provider, intent, quiz: quizMode, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt, structured: check.structured })}
-
-`);
+                s.done({ model: c.model, provider: c.provider, intent, quiz: quizMode, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt, structured: check.structured });
                 later(() => finalize2(c.model, c.provider, full));
                 await settleBackground();
                 emitTrace({ provider: c.provider, model: c.model, text: full, responseType: check.structured?.type, validated: !check.enforced });
@@ -4619,10 +4633,7 @@ data: ${JSON.stringify({ model: c.model, provider: c.provider, intent, quiz: qui
               }
               lastErr = "empty-" + c.model;
             } catch (e) {
-              if (streamedAny) push(`event: replace
-data: ${JSON.stringify({ text: "" })}
-
-`);
+              if (streamedAny) s.replace("");
               if (e instanceof ProviderError) {
                 lastErr = e.message;
                 const st = Number(e.status) || 0;
@@ -4636,17 +4647,11 @@ data: ${JSON.stringify({ text: "" })}
             await refundQuota();
             emitTrace({ fallbackReason: FALLBACK.PROVIDER_ERROR, validated: false });
             emitTiming({ failed: true });
-            push(`event: error
-data: ${JSON.stringify({ error: "provider_failed", message: "AI একটু ব্যস্ত, কয়েক সেকেন্ড পরে আবার চেষ্টা করো।", retryable: true })}
-
-`);
+            s.error({ error: "provider_failed", message: "AI একটু ব্যস্ত, কয়েক সেকেন্ড পরে আবার চেষ্টা করো।", retryable: true });
           }
         } catch (e) {
           await settleBackground();
-          push(`event: error
-data: ${JSON.stringify({ error: "stream_failed", message: "সংযোগ বিচ্ছিন্ন হয়েছে, আবার চেষ্টা করো।", retryable: true })}
-
-`);
+          s.error({ error: "stream_failed", message: "সংযোগ বিচ্ছিন্ন হয়েছে, আবার চেষ্টা করো।", retryable: true });
         } finally {
           try {
             controller.close();
@@ -4684,6 +4689,7 @@ function openEarly(run, early, first, request = null) {
   };
   early.push = write;
   write(": open\n\n");
+  skyStream(write, early.seq).hello();
   if (first) first();
   (async () => {
     try {
@@ -4697,10 +4703,7 @@ function openEarly(run, early, first, request = null) {
         }
       }
     } catch (e) {
-      write(`event: error
-data: ${JSON.stringify({ error: "stream_failed", message: "যুক্তি-বিচ্ছেদ ঘটেছে।", detail: String(e && e.message || e), retryable: true })}
-
-`);
+      write(skySse("error", Object.assign({ seq: early.seq.n++ }, { error: "stream_failed", message: "যুক্তি-বিচ্ছেদ ঘটেছে।", detail: String(e && e.message || e), retryable: true })));
     } finally {
       early.push = null;
       try {
@@ -4899,19 +4902,16 @@ function sseCached(text, intent, startedAt, model, request = null) {
   const enc = new TextEncoder();
   return new Response(new ReadableStream({
     start(controller) {
-      const push = (s) => {
+      const push = (s2) => {
         try {
-          controller.enqueue(enc.encode(s));
+          controller.enqueue(enc.encode(s2));
         } catch (_) {
         }
       };
-      push(`data: ${JSON.stringify({ text })}
-
-`);
-      push(`event: done
-data: ${JSON.stringify({ model: model || null, provider: "cache", intent, cached: true, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt })}
-
-`);
+      const s = skyStream(push);
+      s.hello();
+      s.text(text);
+      s.done({ model: model || null, provider: "cache", intent, cached: true, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt });
       try {
         controller.close();
       } catch (_) {

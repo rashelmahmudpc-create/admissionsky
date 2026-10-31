@@ -19,6 +19,7 @@
  * and the answer must cite the source links. Off: PUB_KV 'sky:web-search' = "off".
  */
 import { corsHeaders } from './cors-policy.mjs';
+import { skyStream } from './sky-stream.mjs';
 import { loadAppFeatures, renderAppFeatures, isAppFeatureQuestion } from './sky-app-features.mjs';
 import { isNewsQuestion, cleanSearchQuery, webSearch, renderSearchContext } from './sky-web-search.mjs';
 import { searchQueryFor, renderSearchFailure } from './sky-web-search.mjs';
@@ -317,9 +318,14 @@ export async function simpleToolResponse(plan, stream, meta = {}, request = null
   return new Response(new ReadableStream({
     start(c) {
       const push = (s) => { try { c.enqueue(enc.encode(s)); } catch (_) {} };
-      for (const s of stages) push(`event: stage\ndata: ${JSON.stringify(s)}\n\n`);
-      push(`data: ${JSON.stringify({ text })}\n\n`);
-      push(`event: done\ndata: ${JSON.stringify(done)}\n\n`);
+      /* F0.4: this tool-only answer is a whole sky-stream-v1 stream, so it gets
+         a hello like every other. The stage/text/done names are unchanged, so a
+         client that predates v1 reads it exactly as it did. */
+      const w = skyStream(push);
+      w.hello();
+      for (const st of stages) w.stage(st.stage, st.label);
+      w.text(text);
+      w.done(done);
       try { c.close(); } catch (_) {}
     }
   }), { status: 200, headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', ...corsHeaders(request) } });
