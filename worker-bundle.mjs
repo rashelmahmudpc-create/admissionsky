@@ -1497,6 +1497,273 @@ async function listReports(kv2, days = 7) {
   return { version: DAILY_REPORT_VERSION, reports };
 }
 
+// sky-ai/catalog/models.mjs
+var CAPABILITY = Object.freeze({
+  CHAT: "chat",
+  REASONING: "reasoning",
+  VISION: "vision",
+  EMBEDDING: "embedding",
+  STT: "stt",
+  TTS: "tts",
+  TOOLS: "tools"
+});
+var ADAPTERS = Object.freeze(["gemini", "groq", "cloudflare", "openai-compat"]);
+var CATALOG = Object.freeze([
+  {
+    id: "gemini",
+    label: "Google AI Studio (Gemini)",
+    adapter: "gemini",
+    key: "GEMINI_KEYS",
+    url: null,
+    models: ["gemini-3.1-flash-lite", "gemini-3-flash-preview"],
+    tiers: { FAST: "gemini-3.1-flash-lite", SMART: "gemini-3-flash-preview" },
+    capability: [CAPABILITY.CHAT, CAPABILITY.REASONING, CAPABILITY.VISION, CAPABILITY.TOOLS],
+    limits: null,
+    tos: null,
+    banglaScore: null,
+    verifiedAt: null
+  },
+  {
+    id: "groq",
+    label: "Groq",
+    adapter: "groq",
+    key: "GROQ_API_KEY",
+    url: null,
+    models: ["openai/gpt-oss-120b", "openai/gpt-oss-20b"],
+    capability: [CAPABILITY.CHAT, CAPABILITY.REASONING],
+    limits: null,
+    tos: null,
+    banglaScore: null,
+    verifiedAt: null
+  },
+  {
+    id: "cloudflare",
+    label: "Cloudflare Workers AI",
+    adapter: "cloudflare",
+    key: "CLOUDFLARE_AI_API_KEY",
+    url: null,
+    models: ["@cf/meta/llama-3.3-70b-instruct-fp8-fast"],
+    capability: [CAPABILITY.CHAT],
+    limits: null,
+    tos: null,
+    banglaScore: null,
+    verifiedAt: null
+  },
+  {
+    id: "openrouter",
+    label: "OpenRouter",
+    adapter: "openai-compat",
+    key: "OPENROUTER_API_KEYS",
+    url: "https://openrouter.ai/api/v1/chat/completions",
+    models: ["google/gemma-4-31b-it:free"],
+    capability: [CAPABILITY.CHAT],
+    limits: null,
+    tos: null,
+    banglaScore: null,
+    verifiedAt: null
+  },
+  {
+    id: "vercel-ai-gateway",
+    label: "Vercel AI Gateway",
+    adapter: "openai-compat",
+    key: "VERCEL_AI_GATEWAY_KEY",
+    url: "https://ai-gateway.vercel.sh/v1/chat/completions",
+    models: ["openai/gpt-4o-mini"],
+    capability: [CAPABILITY.CHAT],
+    limits: null,
+    tos: null,
+    banglaScore: null,
+    verifiedAt: null
+  },
+  {
+    id: "github-models",
+    label: "GitHub Models",
+    adapter: "openai-compat",
+    key: "GITHUB_MODELS_TOKEN",
+    url: "https://models.github.ai/inference/chat/completions",
+    models: ["openai/gpt-4o-mini"],
+    capability: [CAPABILITY.CHAT],
+    limits: null,
+    tos: null,
+    banglaScore: null,
+    verifiedAt: null
+  },
+  {
+    id: "mistral",
+    label: "Mistral AI",
+    adapter: "openai-compat",
+    key: "MISTRAL_API_KEYS",
+    url: "https://api.mistral.ai/v1/chat/completions",
+    models: ["ministral-14b-latest"],
+    capability: [CAPABILITY.CHAT],
+    limits: null,
+    tos: null,
+    banglaScore: null,
+    verifiedAt: null
+  },
+  {
+    id: "cerebras",
+    label: "Cerebras",
+    adapter: "openai-compat",
+    key: "CEREBRAS_API_KEYS",
+    url: "https://api.cerebras.ai/v1/chat/completions",
+    models: ["llama-3.3-70b"],
+    capability: [CAPABILITY.CHAT],
+    limits: null,
+    tos: null,
+    banglaScore: null,
+    verifiedAt: null
+  },
+  {
+    id: "sambanova",
+    label: "SambaNova",
+    adapter: "openai-compat",
+    key: "SAMBANOVA_API_KEYS",
+    url: "https://api.sambanova.ai/v1/chat/completions",
+    models: ["Meta-Llama-3.3-70B-Instruct"],
+    capability: [CAPABILITY.CHAT],
+    limits: null,
+    tos: null,
+    banglaScore: null,
+    verifiedAt: null
+  },
+  {
+    id: "cohere",
+    label: "Cohere",
+    adapter: "openai-compat",
+    key: "COHERE_API_KEYS",
+    url: "https://api.cohere.ai/compatibility/v1/chat/completions",
+    models: ["command-r7b-12-2024"],
+    capability: [CAPABILITY.CHAT],
+    limits: null,
+    tos: null,
+    banglaScore: null,
+    verifiedAt: null
+  },
+  {
+    id: "huggingface",
+    label: "Hugging Face Inference",
+    adapter: "openai-compat",
+    key: "HUGGINGFACE_API_KEYS",
+    url: "https://router.huggingface.co/v1/chat/completions",
+    models: ["meta-llama/Llama-3.3-70B-Instruct"],
+    capability: [CAPABILITY.CHAT],
+    limits: null,
+    tos: null,
+    banglaScore: null,
+    verifiedAt: null
+  },
+  {
+    id: "deepinfra",
+    label: "DeepInfra",
+    adapter: "openai-compat",
+    key: "DEEPINFRA_API_KEYS",
+    url: "https://api.deepinfra.com/v1/openai/chat/completions",
+    models: ["meta-llama/Meta-Llama-3.1-70B-Instruct"],
+    capability: [CAPABILITY.CHAT],
+    limits: null,
+    tos: null,
+    banglaScore: null,
+    verifiedAt: null
+  },
+  {
+    id: "together",
+    label: "Together AI",
+    adapter: "openai-compat",
+    key: "TOGETHER_API_KEYS",
+    url: "https://api.together.xyz/v1/chat/completions",
+    models: ["meta-llama/Llama-3.3-70B-Instruct-Turbo"],
+    capability: [CAPABILITY.CHAT],
+    limits: null,
+    tos: null,
+    banglaScore: null,
+    verifiedAt: null
+  },
+  {
+    id: "kimi",
+    label: "Moonshot (Kimi)",
+    adapter: "openai-compat",
+    key: "KIMI_API_KEYS",
+    url: "https://api.moonshot.ai/v1/chat/completions",
+    models: ["moonshot-v1-8k"],
+    capability: [CAPABILITY.CHAT],
+    limits: null,
+    tos: null,
+    banglaScore: null,
+    verifiedAt: null
+  },
+  {
+    id: "aimlapi",
+    label: "AI/ML API",
+    adapter: "openai-compat",
+    key: "AIML_API_KEYS",
+    url: "https://api.aimlapi.com/v1/chat/completions",
+    models: ["gpt-4o-mini"],
+    capability: [CAPABILITY.CHAT],
+    limits: null,
+    tos: null,
+    banglaScore: null,
+    verifiedAt: null
+  },
+  {
+    id: "llm7",
+    label: "LLM7",
+    adapter: "openai-compat",
+    key: "LLM7_API_KEYS",
+    url: "https://api.llm7.io/v1/chat/completions",
+    models: ["gpt-4o-mini"],
+    capability: [CAPABILITY.CHAT],
+    limits: null,
+    tos: null,
+    banglaScore: null,
+    verifiedAt: null
+  },
+  {
+    id: "siliconflow",
+    label: "SiliconFlow",
+    adapter: "openai-compat",
+    key: "SILICONFLOW_API_KEYS",
+    url: "https://api.siliconflow.cn/v1/chat/completions",
+    models: ["Qwen/Qwen2.5-7B-Instruct"],
+    capability: [CAPABILITY.CHAT],
+    limits: null,
+    tos: null,
+    banglaScore: null,
+    verifiedAt: null
+  },
+  {
+    id: "stepfun",
+    label: "StepFun",
+    adapter: "openai-compat",
+    key: "STEPFUN_API_KEYS",
+    url: "https://api.stepfun.ai/v1/chat/completions",
+    models: ["step-1-8k"],
+    capability: [CAPABILITY.CHAT],
+    limits: null,
+    tos: null,
+    banglaScore: null,
+    verifiedAt: null
+  },
+  {
+    id: "minimax",
+    label: "MiniMax",
+    adapter: "openai-compat",
+    key: "MINIMAX_API_KEYS",
+    url: "https://api.minimax.chat/v1/text/chatcompletion_v2",
+    models: ["abab6.5s-chat"],
+    capability: [CAPABILITY.CHAT],
+    limits: null,
+    tos: null,
+    banglaScore: null,
+    verifiedAt: null
+  }
+]);
+var COMPAT_PROVIDERS = CATALOG.filter((c) => c.adapter === "openai-compat").map((c) => ({ key: c.key, url: c.url, models: c.models }));
+function tierModels(id) {
+  const entry = CATALOG.find((c) => c.id === id);
+  return entry && entry.tiers ? entry.tiers : null;
+}
+
 // memory-engine.js
 var MEMORY_VERSION = "mem-v1";
 var KIND = Object.freeze({
@@ -3700,10 +3967,7 @@ var ProviderError = class extends Error {
     this.status = Number(opts.status) || 0;
   }
 };
-var GEMINI_MODELS = {
-  FAST: "gemini-3.1-flash-lite",
-  SMART: "gemini-3-flash-preview"
-};
+var GEMINI_MODELS = Object.freeze(tierModels("gemini"));
 function sseParse(raw) {
   const out = [];
   for (const line of String(raw || "").split("\n")) {
@@ -3905,34 +4169,7 @@ function providerChain(env, tier = "FAST", badSet = /* @__PURE__ */ new Set(), k
     return Boolean(adapter) && adapter.oneShot === true;
   });
 }
-var COMPAT_PROVIDERS = [
-  /* openai/gpt-4o-mini is a PAID OpenRouter model ($0.15/M input, checked
-     2026-10-16): with no credit it answers 402, with credit it spends money.
-     Default to free (`:free`) models; OPENROUTER_API_KEYS_MODELS overrides. */
-  { key: "OPENROUTER_API_KEYS", url: "https://openrouter.ai/api/v1/chat/completions", models: ["google/gemma-4-31b-it:free"] },
-  /* Vercel AI Gateway is an OpenAI-compatible front door to many models; the
-   * free tier serves openai/gpt-4o-mini. Its 400 floor on max_output_tokens is
-   * satisfied by the agent core's normal token budget. */
-  { key: "VERCEL_AI_GATEWAY_KEY", url: "https://ai-gateway.vercel.sh/v1/chat/completions", models: ["openai/gpt-4o-mini"] },
-  { key: "GITHUB_MODELS_TOKEN", url: "https://models.github.ai/inference/chat/completions", models: ["openai/gpt-4o-mini"] },
-  /* mistral-small-latest is a paid-plan model and answers 429 on the free tier;
-   * ministral-14b-latest is served to free accounts. */
-  { key: "MISTRAL_API_KEYS", url: "https://api.mistral.ai/v1/chat/completions", models: ["ministral-14b-latest"] },
-  { key: "CEREBRAS_API_KEYS", url: "https://api.cerebras.ai/v1/chat/completions", models: ["llama-3.3-70b"] },
-  { key: "SAMBANOVA_API_KEYS", url: "https://api.sambanova.ai/v1/chat/completions", models: ["Meta-Llama-3.3-70B-Instruct"] },
-  { key: "COHERE_API_KEYS", url: "https://api.cohere.ai/compatibility/v1/chat/completions", models: ["command-r7b-12-2024"] },
-  { key: "HUGGINGFACE_API_KEYS", url: "https://router.huggingface.co/v1/chat/completions", models: ["meta-llama/Llama-3.3-70B-Instruct"] },
-  { key: "DEEPINFRA_API_KEYS", url: "https://api.deepinfra.com/v1/openai/chat/completions", models: ["meta-llama/Meta-Llama-3.1-70B-Instruct"] },
-  { key: "TOGETHER_API_KEYS", url: "https://api.together.xyz/v1/chat/completions", models: ["meta-llama/Llama-3.3-70B-Instruct-Turbo"] },
-  { key: "KIMI_API_KEYS", url: "https://api.moonshot.ai/v1/chat/completions", models: ["moonshot-v1-8k"] },
-  { key: "AIML_API_KEYS", url: "https://api.aimlapi.com/v1/chat/completions", models: ["gpt-4o-mini"] },
-  { key: "LLM7_API_KEYS", url: "https://api.llm7.io/v1/chat/completions", models: ["gpt-4o-mini"] },
-  { key: "SILICONFLOW_API_KEYS", url: "https://api.siliconflow.cn/v1/chat/completions", models: ["Qwen/Qwen2.5-7B-Instruct"] },
-  { key: "STEPFUN_API_KEYS", url: "https://api.stepfun.ai/v1/chat/completions", models: ["step-1-8k"] },
-  /* MiniMax does not expose /chat/completions; its OpenAI-shaped path is
-     /text/chatcompletion_v2, which this adapter can drive unchanged. */
-  { key: "MINIMAX_API_KEYS", url: "https://api.minimax.chat/v1/text/chatcompletion_v2", models: ["abab6.5s-chat"] }
-];
+var COMPAT_PROVIDERS2 = COMPAT_PROVIDERS;
 var AI_KV_JSON_KEY = "secret:AI_KEYS";
 var AI_KV_NAME_DEFAULTS = ["GROQ_API_KEY"];
 async function aiKeyOverlay(env) {
@@ -3962,7 +4199,7 @@ var PROVIDER_KEY_NAMES = Object.freeze([
   "GROQ_API_KEY",
   "CLOUDFLARE_ACCOUNT_ID",
   "CLOUDFLARE_AI_API_KEY",
-  ...COMPAT_PROVIDERS.map((p) => p.key)
+  ...COMPAT_PROVIDERS2.map((p) => p.key)
 ]);
 async function providerReadiness(env) {
   const kv2 = await aiKeyOverlay(env);
@@ -3972,7 +4209,7 @@ async function providerReadiness(env) {
     groq: has2("GROQ_API_KEY"),
     cloudflare: has2("CLOUDFLARE_ACCOUNT_ID") && has2("CLOUDFLARE_AI_API_KEY")
   };
-  for (const p of COMPAT_PROVIDERS) {
+  for (const p of COMPAT_PROVIDERS2) {
     out[p.key.toLowerCase().replace(/_api_keys?$|_key$|_token$/, "")] = has2(p.key);
   }
   return out;
@@ -4013,7 +4250,7 @@ function routerChain(env, tier, badSet = /* @__PURE__ */ new Set(), kv2 = {}) {
     const list2 = cfModels.length ? cfModels : ["@cf/meta/llama-3.3-70b-instruct-fp8-fast"];
     for (const m of list2) chain.push({ provider: "cloudflare", key: cfKey, model: m });
   }
-  for (const p of COMPAT_PROVIDERS) {
+  for (const p of COMPAT_PROVIDERS2) {
     const keys2 = String(pickKey(env, kv2, p.key) || "").split(",").map((s) => s.trim()).filter(Boolean);
     if (!keys2.length) continue;
     const models = String(env && env[p.key + "_MODELS"] || kv2[p.key + "_MODELS"] || "").split(",").map((s) => s.trim()).filter(Boolean);

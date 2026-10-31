@@ -149,8 +149,22 @@ test('voice-worker accepts only the app origins', () => {
   assert.equal(originAllowed('https://evil.github.io'), false);
 });
 
-test('OpenRouter defaults to free models only', () => {
+test('OpenRouter defaults to free models only', async () => {
+  /* F1.1 moved the provider data into the catalog, so the check follows it
+     there rather than reading a literal out of ai-agent.js. The intent is
+     unchanged and still enforced: a paid model must not become the default.
+     openai/gpt-4o-mini is the paid trap this guards against ($0.15/M input —
+     with no credit it answers 402, with credit it spends money). */
+  const { CATALOG } = await import('./sky-ai/catalog/models.mjs');
+  const entry = CATALOG.find((c) => c.key === 'OPENROUTER_API_KEYS');
+  assert.ok(entry, 'OpenRouter must be in the catalog');
+  assert.ok(entry.models.length > 0, 'OpenRouter must have a default model');
+  for (const m of entry.models) {
+    assert.ok(m.includes(':free'), `OpenRouter default must be a free model, got ${m}`);
+    assert.ok(!m.includes('gpt-4o-mini'), `OpenRouter default must not be the paid model, got ${m}`);
+  }
+  /* And the router must actually read that list, not a private copy. */
   const src = readFileSync(new URL('./ai-agent.js', import.meta.url), 'utf8');
-  const line = src.split('\n').find((l) => l.includes("key: 'OPENROUTER_API_KEYS'"));
-  assert.ok(line && !line.includes('gpt-4o-mini') && line.includes(':free'));
+  assert.match(src, /COMPAT_PROVIDERS\s*=\s*CATALOG_COMPAT/,
+    'the router must derive its compat providers from the catalog');
 });
