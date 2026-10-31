@@ -1675,8 +1675,21 @@ export class CloudflareNativeAuthEngine {
     const session = errorFromRepository(await this.repository.getSession({ sessionRef: identity.sessionRef, now }));
     await this.#assertStepUp(input, identity, session, now);
     const result = errorFromRepository(await this.repository.revokeUserSessions({ userId: session.user.id, now }));
+    /* A5 step 6 (owner 2026-10-31): ending every session must also end every
+     * device's trust. The two are one decision — a student who taps this
+     * because their phone was stolen is asking for that phone to stop being
+     * able to sign in, and trust is exactly what would let it skip the OTP.
+     * Leaving the rows behind meant the stolen device came back through the
+     * trusted fast path for the rest of the 30 days, which is the opposite of
+     * what the button says. A failure here is reported, never swallowed: the
+     * sessions are already gone, and the caller has to know the trust is not.
+     */
+    const devices = errorFromRepository(await this.repository.revokeTrustedDevice({
+      userId: session.user.id, now, policyVersion: this.securityConfig.policyVersion
+    }));
     return Object.freeze({
       revoked: Number(result.revoked || 0),
+      devicesRevoked: Number(devices?.revoked || 0),
       emailMasked: session.user.emailMask,
       browserClass: identity.context.userAgent || null
     });

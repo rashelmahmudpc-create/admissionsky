@@ -2598,7 +2598,12 @@
     broadcastAuthEvent('logout-all');
     updateLauncher();
     showView('login');
-    message('সব device থেকে লগ আউট হয়েছে (' + (result.revoked ?? 0) + 'টি active session)। এখানে পুনরায় লগইন করতে হবে।', 'success');
+    /* A5 step 6 (owner 2026-10-31): this button now ends device trust as well as
+     * sessions, and the student is told both — the trust count is the part that
+     * matters to someone logging out because their phone was stolen. */
+    const devices = Number(result.devicesRevoked || 0);
+    message('সব device থেকে লগ আউট হয়েছে (' + (result.revoked ?? 0) + 'টি active session'
+      + (devices ? ', ' + devices + 'টি trusted device বাতিল' : '') + ')। এখানে পুনরায় লগইন করতে হবে।', 'success');
   };
 
   // Single logout path for the account card AND the Profile v2 frame (which

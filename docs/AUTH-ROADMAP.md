@@ -86,10 +86,13 @@
 - [ ] ⬜ Magic link → নিজেদের `/reset` পাতা → নতুন password (উপরের দুইটার উপর নির্ভরশীল)
 - [ ] ⬜ Firebase এ Custom action URL — **ইচ্ছাকৃতভাবে বাদ**: এতে Firebase Console-এ হাত দিতে হয়, আর password বদলানোর কাজটা Firebase-এর নিজের পাতাতেই থাকে।
 
-### ধাপ ৬: চেনা device এ ৩০ দিন OTP লাগবে না ⬜
-- [ ] OTP যাচাই/login সফল হলে device ৩০ দিন "চেনা" (signed cookie + server তালিকা)
-- [ ] চেনা device এ সঠিক password → OTP ছাড়া login; নতুন device এ OTP
-- [ ] আগে কিছু বানানো থাকলে শুধু ঘাটতি পূরণ
+### ধাপ ৬: চেনা device এ ৩০ দিন OTP লাগবে না 🟡 (৩১ অক্টোবর ২০২৬)
+- [x] ✅ OTP যাচাই/login সফল হলে device ৩০ দিন "চেনা" — signed device cookie + server-এ `auth_trusted_devices` তালিকা (Phase 6-এ আগেই ছিল, এখানে যাচাই করা হলো)
+- [x] ✅ চেনা device এ সঠিক password → OTP ছাড়া login; নতুন device এ OTP — trusted fast path `#loginRiskDecision`-এ `trusted` হলে challenge মুছে যায়
+- [x] ✅ **যে ঘাটতিটা ধরা পড়ল**: "সব device থেকে Log Out" শুধু session বাতিল করত, **device trust বাতিল করত না**। ছাত্র ফোন চুরি হলে ওই বোতামটাই চাপে — কিন্তু trust row জীবিত থাকায় চুরি-যাওয়া ফোন বাকি ৩০ দিন OTP ছাড়াই ঢুকত। এখন `revokeAllSessions` একই সিদ্ধান্তে trust-ও বাতিল করে, আর উত্তর `devicesRevoked` ফেরত দেয়
+- [x] ✅ মেয়াদ নিজে থেকেই শেষ হয় — ৩০ দিন পরে ওই device আবার challenge পায়
+- [x] ✅ CRITICAL account (suspended) trusted device-এও আটকায় — trust কখনো authority-র উপরে নয়
+- [ ] ⬜ নিজে থেকে trust করার সুবিধা ছাত্রকে দেখানো (device তালিকা + আলাদা করে বাতিল) — এই মুহূর্তে `/security/state` ও `/security/devices/revoke` server-এ আছে কিন্তু কোনো স্ক্রিন ওগুলো ডাকে না; trust আসে challenge শেষ করলে বা "Trust করি" চাপলে
 
 ### ধাপ ৭: নতুন ফ্রি provider খোঁজা ⬜
 - [ ] নিজের domain লাগে না এমন ফ্রি email/OTP সেবা খোঁজা
