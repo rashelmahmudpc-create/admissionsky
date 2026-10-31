@@ -94,7 +94,9 @@ const setup = ({ down = false } = {}) => {
     deviceCookie: token => `__Host-ah_device=${token}`,
     providerError: cause => cause
   };
-  const request = new Request('https://admissionsky.pages.dev/api/auth/v1/signup', { headers: { [flow.PENDING_SIGNUP_HEADER]: flow.PENDING_SIGNUP_FLOW } });
+  // AUTH V2.0: no opt-in header any more — the plain signup request is the one
+  // that has to hold the credentials, or the 409/202 split comes back.
+  const request = new Request('https://admissionsky.pages.dev/api/auth/v1/signup');
   return { authority, provider, sql, calls, firebase, deps, request, env: {} };
 };
 
@@ -106,8 +108,6 @@ const begin = async app => {
 
 test('signup holds the credentials: no Firebase call, p. ticket, telegram off, no password in the response', async () => {
   const app = setup();
-  assert.equal(flow.pendingSignupRequested(app.request), true);
-  assert.equal(flow.pendingSignupRequested(new Request('https://x.test/')), false);
   const { response, ticket } = await begin(app);
   assert.equal(response.status, 202);
   assert.equal(response.body.accountCreated, false);
