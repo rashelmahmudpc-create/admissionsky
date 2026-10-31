@@ -48,3 +48,18 @@ test('missing Telegram secrets (staging) and Telegram errors never break the sen
   await Promise.all(jobs);
   assert.ok(warns.some(l => JSON.parse(l).evt === 'otp_alert_failed'));
 });
+
+/* A4 / AU-OB-02 (owner 2026-10-31): a slow or failed send is only actionable if
+   the owner can see which faster slots never got a turn. The alert carries the
+   same skip reasons the delivery log does, in one short line. */
+test('a slow-send alert names the slots that were passed over and why', async () => {
+  const { onEvent, sent, jobs } = setup();
+  onEvent({
+    evt: 'otp_request', outcome: 'sent', provider: 'otp-y', totalMs: 31000,
+    candidates: 1, tried: 'otp-y:ok', skipped: 'otp-a:provider-quota,otp-b:unavailable'
+  });
+  await Promise.all(jobs);
+  assert.equal(sent.length, 1);
+  assert.match(sent[0].message, /বাদ পড়েছে: otp-a:provider-quota,otp-b:unavailable/);
+  assert.match(sent[0].message, /চেষ্টা: otp-y:ok/);
+});

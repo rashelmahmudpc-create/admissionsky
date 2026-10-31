@@ -504,6 +504,17 @@
     node.hidden = !text;
   };
 
+  /* A4 / AU-UX-04 (owner 2026-10-31): every OTP wait shows the same shape — a live
+     mm:ss countdown in Bengali numerals, and a disabled button that says how long
+     is left. The three OTP views had three different countdowns before this: a
+     spelled-out "নিরাপত্তার জন্য ৪৫ সেকেন্ড পর", a bare "আবার পাঠান (45s)", and
+     "নতুন কোড (৪৫ সেকেন্ড পর)". */
+  const countdownText = remaining => {
+    const total = Math.max(0, Math.ceil(Number(remaining) || 0));
+    const mm = String(Math.floor(total / 60)).padStart(2, '0');
+    const ss = String(total % 60).padStart(2, '0');
+    return (mm + ':' + ss).replace(/\d/g, digit => '০১২৩৪৫৬৭৮৯'[Number(digit)]);
+  };
   const resendSecondsRemaining = () => Math.max(0, Math.ceil((Number(state.verification?.resendUntil || 0) - Date.now()) / 1000));
   const updateResendCooldown = () => {
     const button = $('[data-role="resend-submit"]');
@@ -511,8 +522,8 @@
     if (!button || !status) return;
     const remaining = resendSecondsRemaining();
     button.disabled = state.busy || remaining > 0;
-    button.textContent = remaining > 0 ? `আবার পাঠানো যাবে (${remaining.toLocaleString('bn-BD')} সেকেন্ড)` : 'যাচাইয়ের ইমেইল আবার পাঠান';
-    status.textContent = remaining > 0 ? `নিরাপত্তার জন্য ${remaining.toLocaleString('bn-BD')} সেকেন্ড পর আবার পাঠাতে পারবেন।` : 'প্রয়োজনে এখন আবার পাঠাতে পারেন।';
+    button.textContent = remaining > 0 ? `আবার পাঠানো যাবে (${countdownText(remaining)} পরে)` : 'যাচাইয়ের ইমেইল আবার পাঠান';
+    status.textContent = remaining > 0 ? `নিরাপত্তার জন্য ${countdownText(remaining)} অপেক্ষা করতে হবে।` : 'প্রয়োজনে এখন আবার পাঠাতে পারেন।';
     if (remaining === 0 && state.resendTimer) { clearInterval(state.resendTimer); state.resendTimer = null; }
   };
   const startResendCooldown = seconds => {
@@ -576,7 +587,7 @@
     status.textContent = labels[nextMode] || labels.waiting;
     resend.disabled = state.busy || remaining > 0;
     resend.textContent = remaining > 0
-      ? `নতুন কোড (${remaining.toLocaleString('bn-BD')} সেকেন্ড পর)`
+      ? `নতুন কোড (${countdownText(remaining)} পরে)`
       : 'নতুন কোড নিন';
     verify.disabled = state.busy || ['expired', 'locked', 'conflict', 'unavailable', 'success'].includes(nextMode);
   };
@@ -3129,7 +3140,7 @@
     const remaining = Math.max(0, Math.ceil((until - Date.now()) / 1000));
     button.disabled = state.busy || remaining > 0;
     if (remaining > 0) {
-      button.textContent = `আবার পাঠান (${remaining}s)`;
+      button.textContent = `নতুন code (${countdownText(remaining)} পরে)`;
       if (!state.ownershipTimer) state.ownershipTimer = setInterval(updateOwnershipResend, 1000);
     } else {
       button.textContent = 'নতুন code নিন';

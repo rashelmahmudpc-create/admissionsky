@@ -120,6 +120,13 @@ const SLOW_SLOT_FLOOR_MS = 1_500;
 const SLOW_SLOT_RATIO = 2;
 
 const PROBE_TIMEOUT_MS = 5000;
+// A4 done-when (owner 2026-10-31): the provider dashboard has to answer within
+// three seconds. `adminStatus` probes all 26 slots at once, so its ceiling is the
+// slowest single probe, not their sum — but one slot that has stopped answering
+// would otherwise hold the page for its own timeoutMs (up to 20s for Apps Script
+// and Telegram). A dashboard is a status read, never a send: a slot that misses
+// this window is reported as unproven rather than waited for.
+const STATUS_PROBE_TIMEOUT_MS = 2500;
 
 // Owner 2026-10-16: iCloud / Yahoo / Outlook mailboxes did not receive codes that
 // Brevo (top slot) accepted. Owner 2026-10-16 (later): route those recipients
@@ -343,9 +350,19 @@ export class VerificationOrchestrator {
     // otp-m (magic link) is never part of the code failover, and a magic-link
     // request never falls back to a code provider the student is not expecting.
     const magicLink = identity.deliveryMethod === 'magic-link';
-    const eligible = this.config.enabled
-      ? this.config.providers.filter(entry => entry.enabled && destinations[entry.channel] && ((entry.id === MAGIC_LINK_PROVIDER_ID) === magicLink))
-      : [];
+    const enabled = this.config.enabled ? this.config.providers.filter(entry => entry.enabled) : [];
+    // A4 / AU-OB-02: say why a slot never entered the run. Without this the
+    // delivery log shows only the slots that were tried, so "the OTP went out
+    // through otp-y" and "every fast slot was exhausted and otp-y was all that
+    // was left" look identical — which is exactly the question the owner asks
+    // when a student says the code took a minute to arrive.
+    const skipped = [];
+    const eligible = [];
+    for (const entry of enabled) {
+      if (!destinations[entry.channel]) { skipped.push(`${entry.id}:no-${entry.channel}-destination`); continue; }
+      if ((entry.id === MAGIC_LINK_PROVIDER_ID) !== magicLink) { skipped.push(`${entry.id}:${magicLink ? 'code-slot' : 'magic-link-only'}`); continue; }
+      eligible.push(entry);
+    }
     // Probes read live health from every enabled slot, so they are part of the
     // student's wait and must come out of the same budget as the sends.
     const probeCeiling = Math.min(PROBE_TIMEOUT_MS, Math.max(250, deadline - Date.now()));
@@ -362,7 +379,16 @@ export class VerificationOrchestrator {
           this.repository.dailyQuotaSnapshot({ providerId: entry.id, dailyQuota: entry.dailyQuota, now }),
           this.repository.providerSnapshot({ providerId: entry.id, now })
         ]);
-        if (availability?.available !== true || state.circuit === 'open' || Number(remoteQuota?.remaining || 0) <= 0 || localQuota.remaining <= 0) return null;
+        if (availability?.available !== true || state.circuit === 'open' || Number(remoteQuota?.remaining || 0) <= 0 || localQuota.remaining <= 0) {
+          // A4 / AU-OB-02: the reason, not just the fact. One slot can be out of
+          // the run for four different reasons and only two of them are the
+          // owner's to fix, so the log has to name which.
+          skipped.push(`${entry.id}:${availability?.available !== true ? 'unavailable'
+            : state.circuit === 'open' ? 'circuit-open'
+              : Number(remoteQuota?.remaining || 0) <= 0 ? 'provider-quota'
+                : 'local-quota'}`);
+          return null;
+        }
         const lowestRatio = Math.min(ratio(remoteQuota), ratio(localQuota));
         const lowPenalty = lowestRatio <= this.config.policy.lowQuotaRatio ? 10_000 : (1 - lowestRatio) * 100;
         // Priority is the operator's explicit ordering and the gap between
@@ -429,7 +455,12 @@ export class VerificationOrchestrator {
         row.slow = true;
       }
     }
-    return candidates.sort((left, right) => left.score - right.score || (Number(right.probe) - Number(left.probe)) || left.health - right.health || left.entry.priority - right.entry.priority);
+    // A4 / AU-OB-02: hand the reasons back alongside the rows, sorted so two
+    // runs of the same configuration produce the same log line.
+    return Object.freeze({
+      rows: candidates.sort((left, right) => left.score - right.score || (Number(right.probe) - Number(left.probe)) || left.health - right.health || left.entry.priority - right.entry.priority),
+      skipped: Object.freeze(skipped.sort())
+    });
   }
 
   async requestVerification(input = {}, requestContext = {}) {
@@ -484,12 +515,15 @@ export class VerificationOrchestrator {
     } catch {}
     const destinations = identity.destinations;
     const deliveryMethod = input?.deliveryMethod === 'magic-link' && identity.purpose === 'email-ownership' ? 'magic-link' : '';
-    const candidates = await this.#candidateRows({ ...identity, attemptId, previousProviderId, deliveryMethod }, destinations, now, deliveryDeadline);
+    const { rows: candidates, skipped } = await this.#candidateRows({ ...identity, attemptId, previousProviderId, deliveryMethod }, destinations, now, deliveryDeadline);
     const attemptRef = String(attemptId).slice(0, 8);
     // Visible in the delivery log: which slots the latency rule moved back.
     const demoted = candidates.filter(candidate => candidate.slow).map(candidate => candidate.entry.id).join(',');
     const tried = [];
-    const logBase = { attempt: attemptRef, purpose: identity.purpose, method: deliveryMethod || 'code', candidates: candidates.length };
+    // `skipped` is the list of slots that never entered the run and why; it is
+    // attached to the request-level event, so one log line explains the whole
+    // attempt rather than leaving the reader to infer it from what is absent.
+    const logBase = { attempt: attemptRef, purpose: identity.purpose, method: deliveryMethod || 'code', candidates: candidates.length, ...(skipped.length ? { skipped: skipped.join(',') } : {}) };
     const emit = (evt, fields) => { try { this.onDeliveryEvent?.({ evt, ...fields }); } catch {} };
     const logDelivery = fields => emit('otp_delivery', fields);
     const logRequest = fields => emit('otp_request', fields);
@@ -873,7 +907,7 @@ export class VerificationOrchestrator {
     const now = Number(this.now());
     if (this.capabilityCache?.expiresAt > now) return this.capabilityCache.value || this.capabilityCache.promise;
     const promise = (async () => {
-      const rows = await this.#candidateRows(
+      const { rows } = await this.#candidateRows(
         { purpose: 'account-backup', attemptId: '', userId: '', subjectRef: '' },
         { otp: 'configured', whatsapp: 'configured', telegram: 'user-initiated-link' },
         now
@@ -910,9 +944,9 @@ export class VerificationOrchestrator {
       let remoteQuota = { remaining: 0, limit: 0, resetAt: 0 };
       let remoteStatus = { status: 'unknown', configured: false };
       const probes = await Promise.allSettled([
-        bounded(() => provider.checkAvailability({ purpose: 'status' }), entry.timeoutMs),
-        bounded(() => provider.getRemainingQuota({ now }), entry.timeoutMs),
-        bounded(() => provider.getProviderStatus({ now }), entry.timeoutMs)
+        bounded(() => provider.checkAvailability({ purpose: 'status' }), Math.min(entry.timeoutMs, STATUS_PROBE_TIMEOUT_MS)),
+        bounded(() => provider.getRemainingQuota({ now }), Math.min(entry.timeoutMs, STATUS_PROBE_TIMEOUT_MS)),
+        bounded(() => provider.getProviderStatus({ now }), Math.min(entry.timeoutMs, STATUS_PROBE_TIMEOUT_MS))
       ]);
       if (probes[0].status === 'fulfilled') availability = probes[0].value;
       else availability = { available: false, code: providerFailure(probes[0].reason).code };

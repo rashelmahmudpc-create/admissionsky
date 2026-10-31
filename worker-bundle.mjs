@@ -12104,11 +12104,24 @@ var PendingSignupStore = class {
 };
 async function signupCandidates(orchestrator, now) {
   const config = orchestrator?.config;
-  if (!config?.enabled) return [];
-  const eligible = config.providers.filter((entry) => entry.enabled && entry.channel === VERIFICATION_CHANNELS.OTP && entry.id !== MAGIC_LINK_PROVIDER_ID);
+  if (!config?.enabled) return { rows: [], skipped: [] };
+  const skipped = [];
+  const eligible = [];
+  for (const entry of config.providers) {
+    if (!entry.enabled) continue;
+    if (entry.channel !== VERIFICATION_CHANNELS.OTP) continue;
+    if (entry.id === MAGIC_LINK_PROVIDER_ID) {
+      skipped.push(`${entry.id}:magic-link-only`);
+      continue;
+    }
+    eligible.push(entry);
+  }
   const rows4 = await Promise.all(eligible.map(async (entry) => {
     const provider = orchestrator.providers.get(entry.id);
-    if (!provider) return null;
+    if (!provider) {
+      skipped.push(`${entry.id}:unavailable`);
+      return null;
+    }
     try {
       const [availability, remoteQuota, localQuota, state] = await Promise.all([
         bounded(() => provider.checkAvailability({ purpose: "email-ownership" }), Math.min(entry.timeoutMs, PROBE_TIMEOUT_MS)),
@@ -12116,13 +12129,20 @@ async function signupCandidates(orchestrator, now) {
         orchestrator.repository.dailyQuotaSnapshot({ providerId: entry.id, dailyQuota: entry.dailyQuota, now }),
         orchestrator.repository.providerSnapshot({ providerId: entry.id, now })
       ]);
-      if (availability?.available !== true || state.circuit === "open" || Number(remoteQuota?.remaining || 0) <= 0 || localQuota.remaining <= 0) return null;
+      if (availability?.available !== true || state.circuit === "open" || Number(remoteQuota?.remaining || 0) <= 0 || localQuota.remaining <= 0) {
+        skipped.push(`${entry.id}:${availability?.available !== true ? "unavailable" : state.circuit === "open" ? "circuit-open" : Number(remoteQuota?.remaining || 0) <= 0 ? "provider-quota" : "local-quota"}`);
+        return null;
+      }
       return { entry, provider, probe: state.circuit === "half-open" };
     } catch {
+      skipped.push(`${entry.id}:unavailable`);
       return null;
     }
   }));
-  return rows4.filter(Boolean).sort((a, b) => a.entry.priority - b.entry.priority || Number(b.probe) - Number(a.probe));
+  return {
+    rows: rows4.filter(Boolean).sort((a, b) => a.entry.priority - b.entry.priority || Number(b.probe) - Number(a.probe)),
+    skipped: skipped.sort()
+  };
 }
 var recordResult = (orchestrator, entry, fields) => orchestrator.repository.recordProviderResult({
   providerId: entry.id,
@@ -12149,14 +12169,14 @@ async function requestPendingSignupCode({ store, orchestrator, ticket, context =
   const attemptId = randomToken(24, store.crypto);
   const code = randomSixDigitOtp(store.crypto);
   const codeTtlMs = Math.min(policy.codeTtlSeconds * 1e3, Math.max(1e3, material.expiresAt - now));
-  const candidates = await signupCandidates(orchestrator, now);
+  const { rows: candidates, skipped } = await signupCandidates(orchestrator, now);
   const emit = (evt, fields) => {
     try {
       orchestrator.onDeliveryEvent?.({ evt, ...fields });
     } catch {
     }
   };
-  const logBase = { attempt: attemptId.slice(0, 8), purpose: "signup", method: "code", candidates: candidates.length };
+  const logBase = { attempt: attemptId.slice(0, 8), purpose: "signup", method: "code", candidates: candidates.length, ...skipped.length ? { skipped: skipped.join(",") } : {} };
   const started = Date.now();
   const tried = [];
   let rank2 = 0;
@@ -26127,6 +26147,7 @@ var SLOW_SLOT_MIN_SAMPLES = 3;
 var SLOW_SLOT_FLOOR_MS = 1500;
 var SLOW_SLOT_RATIO = 2;
 var PROBE_TIMEOUT_MS2 = 5e3;
+var STATUS_PROBE_TIMEOUT_MS = 2500;
 var NON_GMAIL_FREEMAIL = /* @__PURE__ */ new Set(["icloud.com", "me.com", "mac.com", "yahoo.com", "yahoo.co.uk", "yahoo.co.in", "ymail.com", "rocketmail.com", "outlook.com", "hotmail.com", "live.com", "msn.com", "aol.com"]);
 var NON_GMAIL_PREFERENCE = Object.freeze({ "otp-h": -30, "otp-i": -40, "otp-b": -15, "otp-e": -30 });
 function mergeRuntimeConfig(input, current) {
@@ -26327,7 +26348,20 @@ var VerificationOrchestrator = class {
   }
   async #candidateRows(identity, destinations, now, deadline = 0) {
     const magicLink = identity.deliveryMethod === "magic-link";
-    const eligible = this.config.enabled ? this.config.providers.filter((entry) => entry.enabled && destinations[entry.channel] && entry.id === MAGIC_LINK_PROVIDER_ID2 === magicLink) : [];
+    const enabled = this.config.enabled ? this.config.providers.filter((entry) => entry.enabled) : [];
+    const skipped = [];
+    const eligible = [];
+    for (const entry of enabled) {
+      if (!destinations[entry.channel]) {
+        skipped.push(`${entry.id}:no-${entry.channel}-destination`);
+        continue;
+      }
+      if (entry.id === MAGIC_LINK_PROVIDER_ID2 !== magicLink) {
+        skipped.push(`${entry.id}:${magicLink ? "code-slot" : "magic-link-only"}`);
+        continue;
+      }
+      eligible.push(entry);
+    }
     const probeCeiling = Math.min(PROBE_TIMEOUT_MS2, Math.max(250, deadline - Date.now()));
     const rows4 = await Promise.all(eligible.map(async (entry) => {
       const provider = this.providers.get(entry.id);
@@ -26342,7 +26376,10 @@ var VerificationOrchestrator = class {
           this.repository.dailyQuotaSnapshot({ providerId: entry.id, dailyQuota: entry.dailyQuota, now }),
           this.repository.providerSnapshot({ providerId: entry.id, now })
         ]);
-        if (availability?.available !== true || state.circuit === "open" || Number(remoteQuota?.remaining || 0) <= 0 || localQuota.remaining <= 0) return null;
+        if (availability?.available !== true || state.circuit === "open" || Number(remoteQuota?.remaining || 0) <= 0 || localQuota.remaining <= 0) {
+          skipped.push(`${entry.id}:${availability?.available !== true ? "unavailable" : state.circuit === "open" ? "circuit-open" : Number(remoteQuota?.remaining || 0) <= 0 ? "provider-quota" : "local-quota"}`);
+          return null;
+        }
         const lowestRatio = Math.min(ratio3(remoteQuota), ratio3(localQuota));
         const lowPenalty = lowestRatio <= this.config.policy.lowQuotaRatio ? 1e4 : (1 - lowestRatio) * 100;
         const failureTotal = Number(state.successCount || 0) + Number(state.failureCount || 0);
@@ -26390,7 +26427,10 @@ var VerificationOrchestrator = class {
         row.slow = true;
       }
     }
-    return candidates.sort((left, right) => left.score - right.score || Number(right.probe) - Number(left.probe) || left.health - right.health || left.entry.priority - right.entry.priority);
+    return Object.freeze({
+      rows: candidates.sort((left, right) => left.score - right.score || Number(right.probe) - Number(left.probe) || left.health - right.health || left.entry.priority - right.entry.priority),
+      skipped: Object.freeze(skipped.sort())
+    });
   }
   async requestVerification(input = {}, requestContext = {}) {
     const identity = await this.#identity(input, requestContext);
@@ -26448,11 +26488,11 @@ var VerificationOrchestrator = class {
     }
     const destinations = identity.destinations;
     const deliveryMethod = input?.deliveryMethod === "magic-link" && identity.purpose === "email-ownership" ? "magic-link" : "";
-    const candidates = await this.#candidateRows({ ...identity, attemptId, previousProviderId, deliveryMethod }, destinations, now, deliveryDeadline);
+    const { rows: candidates, skipped } = await this.#candidateRows({ ...identity, attemptId, previousProviderId, deliveryMethod }, destinations, now, deliveryDeadline);
     const attemptRef = String(attemptId).slice(0, 8);
     const demoted = candidates.filter((candidate) => candidate.slow).map((candidate) => candidate.entry.id).join(",");
     const tried = [];
-    const logBase = { attempt: attemptRef, purpose: identity.purpose, method: deliveryMethod || "code", candidates: candidates.length };
+    const logBase = { attempt: attemptRef, purpose: identity.purpose, method: deliveryMethod || "code", candidates: candidates.length, ...skipped.length ? { skipped: skipped.join(",") } : {} };
     const emit = (evt, fields) => {
       try {
         this.onDeliveryEvent?.({ evt, ...fields });
@@ -26833,7 +26873,7 @@ var VerificationOrchestrator = class {
     const now = Number(this.now());
     if (this.capabilityCache?.expiresAt > now) return this.capabilityCache.value || this.capabilityCache.promise;
     const promise = (async () => {
-      const rows4 = await this.#candidateRows(
+      const { rows: rows4 } = await this.#candidateRows(
         { purpose: "account-backup", attemptId: "", userId: "", subjectRef: "" },
         { otp: "configured", whatsapp: "configured", telegram: "user-initiated-link" },
         now
@@ -26867,9 +26907,9 @@ var VerificationOrchestrator = class {
       let remoteQuota = { remaining: 0, limit: 0, resetAt: 0 };
       let remoteStatus = { status: "unknown", configured: false };
       const probes = await Promise.allSettled([
-        bounded2(() => provider.checkAvailability({ purpose: "status" }), entry.timeoutMs),
-        bounded2(() => provider.getRemainingQuota({ now }), entry.timeoutMs),
-        bounded2(() => provider.getProviderStatus({ now }), entry.timeoutMs)
+        bounded2(() => provider.checkAvailability({ purpose: "status" }), Math.min(entry.timeoutMs, STATUS_PROBE_TIMEOUT_MS)),
+        bounded2(() => provider.getRemainingQuota({ now }), Math.min(entry.timeoutMs, STATUS_PROBE_TIMEOUT_MS)),
+        bounded2(() => provider.getProviderStatus({ now }), Math.min(entry.timeoutMs, STATUS_PROBE_TIMEOUT_MS))
       ]);
       if (probes[0].status === "fulfilled") availability = probes[0].value;
       else availability = { available: false, code: providerFailure2(probes[0].reason).code };
@@ -26986,13 +27026,14 @@ var OTP_PROVIDER_NAMES = Object.freeze({
   telegram: "Telegram"
 });
 var EVENTS = /* @__PURE__ */ new Set(["otp_delivery", "otp_request"]);
-var STRING_FIELDS = /* @__PURE__ */ new Set(["attempt", "purpose", "method", "provider", "label", "outcome", "reason", "failureClass", "tried"]);
+var LONG_STRING_FIELDS = /* @__PURE__ */ new Set(["tried", "skipped"]);
+var STRING_FIELDS = /* @__PURE__ */ new Set(["attempt", "purpose", "method", "provider", "label", "outcome", "reason", "failureClass", "tried", "skipped"]);
 var NUMBER_FIELDS = /* @__PURE__ */ new Set(["candidates", "rank", "try", "latencyMs", "totalMs"]);
 function sanitizeOtpDeliveryEvent(event) {
   if (!event || !EVENTS.has(event.evt)) return null;
   const out = { evt: event.evt };
   for (const [key, value] of Object.entries(event)) {
-    if (STRING_FIELDS.has(key) && value != null && typeof value !== "object") out[key] = String(value).slice(0, key === "tried" ? 400 : 64);
+    if (STRING_FIELDS.has(key) && value != null && typeof value !== "object") out[key] = String(value).slice(0, LONG_STRING_FIELDS.has(key) ? 400 : 64);
     else if (NUMBER_FIELDS.has(key) && Number.isFinite(Number(value))) out[key] = Math.round(Number(value));
   }
   if (out.attempt) out.attempt = out.attempt.slice(0, 8);
@@ -27133,6 +27174,7 @@ function formatOtpAlert(alert, record, at) {
   if (alert.ms) lines.push(`সময়: ${alert.ms} ms`);
   if (record.purpose) lines.push(`purpose: ${record.purpose}${record.method ? ` · ${record.method}` : ""}`);
   if (record.tried) lines.push(`চেষ্টা: ${record.tried}`);
+  if (record.skipped) lines.push(`বাদ পড়েছে: ${record.skipped}`);
   if (record.attempt) lines.push(`ref: ${record.attempt}`);
   lines.push(`সময় (UTC): ${new Date(at).toISOString()}`);
   return lines.join("\n");

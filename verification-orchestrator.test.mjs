@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { AUTH_ERROR_CODES } from './auth-native/core/errors.mjs';
 import { VerificationOrchestrator } from './auth-native/verification/orchestrator.mjs';
 import { MemoryVerificationRepository } from './auth-native/verification/memory-verification-repository.mjs';
+import { __verificationConfigTest } from './auth-native/verification/config.mjs';
+const SLOT_DEFINITIONS = __verificationConfigTest.SLOT_DEFINITIONS;
 import {
   VERIFICATION_CHANNELS,
   VERIFICATION_FAILURE_CLASS,
@@ -936,4 +938,151 @@ test('a slow reading is not trusted until the slot has a few successes', async (
   await app.orchestrator.requestVerification(identity, context);
   assert.equal(unproven.sends.length, 1, 'two samples are not enough to demote an operator-ordered slot');
   assert.equal(fast.sends.length, 0);
+});
+
+/* A4 / AU-OB-02 (owner 2026-10-31): a slot that never entered the run has to
+   say why. Otherwise "otp-y carried it" and "every fast slot was exhausted"
+   read the same in the delivery log — the exact question the owner asks when a
+   student reports that the code took a minute. */
+test('a slot that never entered the run is named with the reason it was passed over', async () => {
+  const outOfQuota = new MockProvider({ id: 'otp-a', remaining: 0 });
+  const broken = new MockProvider({ id: 'otp-b' });
+  broken.checkAvailability = async () => ({ available: false, code: 'DOWN' });
+  const working = new MockProvider({ id: 'otp-c' });
+  const events = [];
+  const app = setup({ providers: [outOfQuota, broken, working] });
+  app.orchestrator.onDeliveryEvent = event => events.push(event);
+
+  const result = await app.orchestrator.requestVerification(identity, context);
+  assert.equal(result.accepted, true);
+  assert.equal(working.sends.length, 1, 'only the healthy slot is tried');
+
+  const request = events.find(event => event.evt === 'otp_request' && event.outcome === 'sent');
+  assert.equal(request.candidates, 1, 'one slot entered the run');
+  assert.equal(request.skipped, 'otp-a:provider-quota,otp-b:unavailable', 'both silent slots are named, with the reason');
+  assert.equal(request.provider, 'otp-c');
+});
+
+test('a magic-link request never falls back to a code slot, and the log says so', async () => {
+  const code = new MockProvider({ id: 'otp-a' });
+  const link = new MockProvider({ id: 'otp-m', verificationMode: VERIFICATION_MODES.PROVIDER_EVIDENCE });
+  const events = [];
+  const app = setup({ providers: [code, link] });
+  app.orchestrator.onDeliveryEvent = event => events.push(event);
+
+  await app.orchestrator.requestVerification({ ...ownershipIdentity('student@gmail.com'), deliveryMethod: 'magic-link' }, context);
+  assert.equal(link.sends.length, 1);
+  assert.equal(code.sends.length, 0, 'the student is waiting for a link, not a code');
+
+  const request = events.find(event => event.evt === 'otp_request' && event.outcome === 'sent');
+  assert.equal(request.method, 'magic-link');
+  assert.match(request.skipped, /otp-a:code-slot/, 'the code slot is named as deliberately excluded');
+});
+
+/* A4 done-when (owner 2026-10-31), first half: the whole chain — every enabled
+   production slot hanging — must still end inside the configured budget. The
+   budget is read from wrangler.toml, not written here, so the number the test
+   proves is the number production runs with. 26 slots with their real timeouts
+   would hold a student for minutes without it. */
+test('A4 chaos: every production slot hanging still ends inside the delivery budget', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const config = JSON.parse((await readFile(new URL('./wrangler.toml', import.meta.url), 'utf8'))
+    .match(/VERIFICATION_ORCHESTRATOR_CONFIG = '(.*)'/)[1]);
+  const budgetMs = config.policy.deliveryBudgetMs;
+  assert.equal(budgetMs, 25_000, 'the budget this test proves is the one production runs with');
+
+  // The wrangler rows carry no channel; it comes from SLOT_DEFINITIONS when the
+  // config is parsed. Telegram is a separate channel and would need a destination
+  // the backup purpose does not have, so it is left out of this chain.
+  const rows = config.providers.filter(row => row.enabled && row.id !== 'telegram');
+  const providers = rows.map(row => {
+    const provider = new MockProvider({ id: row.id, verificationMode: SLOT_DEFINITIONS[row.id].verificationMode });
+    provider.sendVerification = input => { provider.sends.push(input); return new Promise(() => {}); };
+    return provider;
+  });
+  const app = setup({
+    providers,
+    config: { ...config, policy: { ...config.policy, maxProviderRetries: 0 }, providers: rows.map(row => ({ ...row, dailyQuota: 100_000 })) }
+  });
+
+  const started = Date.now();
+  await expectCode(() => app.orchestrator.requestVerification(identity, context), AUTH_ERROR_CODES.BACKUP_UNAVAILABLE);
+  const elapsed = Date.now() - started;
+  const sends = providers.reduce((sum, provider) => sum + provider.sends.length, 0);
+
+  assert.ok(elapsed <= budgetMs + 2_000, `the budget is a hard wall; the request took ${elapsed}ms`);
+  assert.ok(sends < rows.length, `only ${sends} of ${rows.length} slots were reached before the wall`);
+  assert.ok(sends <= 4, `a hanging chain must give up after a few slots, not walk all ${rows.length}; it tried ${sends}`);
+});
+
+/* A4 done-when, second half: provider acceptance p95 ≤ 5 seconds. Measured over
+   a modelled mix — one fast slot that answers, plus a failover to a slower slot
+   when the fast one's probe fails — because the real provider latencies are not
+   reachable from CI. What is measured is the orchestrator's own behaviour: with
+   a healthy fast slot first, the student is accepted in that slot's time. */
+test('A4: acceptance p95 stays under five seconds across a failover mix', async () => {
+  const fast = new MockProvider({ id: 'otp-a' });
+  const slow = new MockProvider({ id: 'otp-h', verificationMode: SLOT_DEFINITIONS['otp-h'].verificationMode });
+  const answer = (provider, delayMs) => {
+    provider.sendVerification = input => {
+      provider.sends.push(input);
+      return new Promise(resolve => setTimeout(() => resolve({ accepted: true }), delayMs));
+    };
+  };
+  answer(fast, 200);
+  answer(slow, 800);
+  const app = setup({ providers: [fast, slow], config: rawConfig([fast, slow], { deliveryBudgetMs: 25_000 }) });
+
+  const samples = [];
+  for (let index = 0; index < 12; index += 1) {
+    // Every sixth request finds the fast slot unready, so the chain has to fall
+    // through to the slower one — the failover path is part of the percentile.
+    const unavailable = index % 6 === 5;
+    fast.checkAvailability = async () => (unavailable ? { available: false, code: 'DOWN' } : { available: true, code: 'READY' });
+    // A fresh user, session and device per request: the hourly anti-abuse windows
+    // (5/user, 10/device) are not what this test measures, and one student never
+    // asks twelve times in a row.
+    const who = {
+      ...identity,
+      userId: `usr_p95_${index}`,
+      sessionToken: `session-${String(index).padStart(2, '0')}${'s'.repeat(46)}`,
+      subject: `firebase-uid-p95-${index}`
+    };
+    const started = Date.now();
+    const result = await app.orchestrator.requestVerification(who, {
+      ...context,
+      ip: `203.0.113.${index + 10}`,
+      deviceId: `device-p95-${String(index).padStart(4, '0')}-0123456789`
+    });
+    assert.equal(result.accepted, true);
+    samples.push(Date.now() - started);
+  }
+
+  samples.sort((left, right) => left - right);
+  const p95 = samples[Math.min(samples.length - 1, Math.ceil(0.95 * samples.length) - 1)];
+  assert.ok(p95 <= 5_000, `acceptance p95 must stay under five seconds; it was ${p95}ms (samples ${samples.join(',')})`);
+  assert.equal(slow.sends.length, 2, 'the slow slot carried exactly the requests the fast one could not');
+});
+
+/* A4 done-when, third part: the provider dashboard p95 ≤ 3 seconds. The status
+   page probes every enabled slot at once, so its ceiling is the slowest probe.
+   Without a ceiling of its own, one slot that has stopped answering held the page
+   for that slot's own timeoutMs — 20s for Apps Script and Telegram. */
+test('A4: the provider dashboard answers within three seconds even when a slot is hung', async () => {
+  const hung = new MockProvider({ id: 'otp-a' });
+  hung.checkAvailability = () => new Promise(() => {});
+  hung.getRemainingQuota = () => new Promise(() => {});
+  hung.getProviderStatus = () => new Promise(() => {});
+  const healthy = new MockProvider({ id: 'otp-b' });
+  const app = setup({ providers: [hung, healthy], config: rawConfig([hung, healthy], {}) });
+
+  const started = Date.now();
+  const status = await app.orchestrator.adminStatus();
+  const elapsed = Date.now() - started;
+
+  assert.ok(elapsed <= 3_000, `the dashboard must answer within three seconds; it took ${elapsed}ms`);
+  const row = status.providers.find(item => item.id === 'otp-a');
+  assert.equal(row.availability, false, 'a slot that missed the window is reported unproven, not waited for');
+  assert.equal(row.configured, false);
+  assert.equal(status.providers.find(item => item.id === 'otp-b').availability, true, 'the healthy slot is still reported accurately');
 });
