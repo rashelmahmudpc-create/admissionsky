@@ -1,0 +1,272 @@
+{
+  "version": "routing-holdout-v1",
+  "built": "2026-10-31",
+  "count": 36,
+  "bar": 0.9,
+  "byIntent": {
+    "GENERAL_CHAT": 8,
+    "QUIZ_REQUEST": 4,
+    "PERFORMANCE_REQUEST": 4,
+    "SEARCH_REQUEST": 4,
+    "IMAGE_REQUEST": 4,
+    "ACADEMIC_EXPLAIN": 12
+  },
+  "byTier": {
+    "FAST": 25,
+    "SMART": 11
+  },
+  "items": [
+    {
+      "id": "h001",
+      "q": "কেমন আছো?",
+      "intent": "GENERAL_CHAT",
+      "tier": "FAST",
+      "why": "small talk"
+    },
+    {
+      "id": "h002",
+      "q": "আপনি কে?",
+      "intent": "GENERAL_CHAT",
+      "tier": "FAST",
+      "why": "about the assistant (আপনি form)"
+    },
+    {
+      "id": "h003",
+      "q": "তোমার কাজ কী?",
+      "intent": "GENERAL_CHAT",
+      "tier": "FAST",
+      "why": "about the assistant"
+    },
+    {
+      "id": "h004",
+      "q": "তুমি কি বাস্তব?",
+      "intent": "GENERAL_CHAT",
+      "tier": "FAST",
+      "why": "small talk"
+    },
+    {
+      "id": "h005",
+      "q": "শুভ রাত্রি",
+      "intent": "GENERAL_CHAT",
+      "tier": "FAST",
+      "why": "greeting"
+    },
+    {
+      "id": "h006",
+      "q": "তোমার নাম বলো",
+      "intent": "GENERAL_CHAT",
+      "tier": "FAST",
+      "why": "about the assistant"
+    },
+    {
+      "id": "h007",
+      "q": "good morning",
+      "intent": "GENERAL_CHAT",
+      "tier": "FAST",
+      "why": "english greeting"
+    },
+    {
+      "id": "h008",
+      "q": "আপনার সম্পর্কে বলুন",
+      "intent": "GENERAL_CHAT",
+      "tier": "FAST",
+      "why": "about the assistant (আপনি form)"
+    },
+    {
+      "id": "h009",
+      "q": "১৫টা প্রশ্ন বানাও ইতিহাস থেকে",
+      "intent": "QUIZ_REQUEST",
+      "tier": "FAST",
+      "why": "count + generate"
+    },
+    {
+      "id": "h010",
+      "q": "কুইজ দাও",
+      "intent": "QUIZ_REQUEST",
+      "tier": "FAST",
+      "why": "quiz ask"
+    },
+    {
+      "id": "h011",
+      "q": "আমাকে ৫টা MCQ দাও",
+      "intent": "QUIZ_REQUEST",
+      "tier": "FAST",
+      "why": "count + mcq"
+    },
+    {
+      "id": "h012",
+      "q": "generate 20 questions",
+      "intent": "QUIZ_REQUEST",
+      "tier": "FAST",
+      "why": "english generate"
+    },
+    {
+      "id": "h013",
+      "q": "আমার ফলাফল কেমন?",
+      "intent": "PERFORMANCE_REQUEST",
+      "tier": "SMART",
+      "why": "own result"
+    },
+    {
+      "id": "h014",
+      "q": "আমি ভালো করছি কি?",
+      "intent": "PERFORMANCE_REQUEST",
+      "tier": "SMART",
+      "why": "own standing"
+    },
+    {
+      "id": "h015",
+      "q": "আমার অগ্রগতি জানাও",
+      "intent": "PERFORMANCE_REQUEST",
+      "tier": "SMART",
+      "why": "own progress (synonym)"
+    },
+    {
+      "id": "h016",
+      "q": "আমার মার্কস কত?",
+      "intent": "PERFORMANCE_REQUEST",
+      "tier": "SMART",
+      "why": "own marks"
+    },
+    {
+      "id": "h017",
+      "q": "ভর্তি নোটিশ কবে?",
+      "intent": "SEARCH_REQUEST",
+      "tier": "FAST",
+      "why": "notice date"
+    },
+    {
+      "id": "h018",
+      "q": "সর্বশেষ খবর কী?",
+      "intent": "SEARCH_REQUEST",
+      "tier": "FAST",
+      "why": "latest news"
+    },
+    {
+      "id": "h019",
+      "q": "আবেদনের শেষ তারিখ কত?",
+      "intent": "SEARCH_REQUEST",
+      "tier": "FAST",
+      "why": "deadline"
+    },
+    {
+      "id": "h020",
+      "q": "any new update?",
+      "intent": "SEARCH_REQUEST",
+      "tier": "FAST",
+      "why": "english update"
+    },
+    {
+      "id": "h021",
+      "q": "এই ছবিটা দেখো",
+      "intent": "IMAGE_REQUEST",
+      "tier": "FAST",
+      "why": "image input"
+    },
+    {
+      "id": "h022",
+      "q": "হাতে লেখা নোটটা পড়ো",
+      "intent": "IMAGE_REQUEST",
+      "tier": "FAST",
+      "why": "handwritten note"
+    },
+    {
+      "id": "h023",
+      "q": "ছবির প্রশ্নটার উত্তর দাও",
+      "intent": "IMAGE_REQUEST",
+      "tier": "FAST",
+      "why": "image question"
+    },
+    {
+      "id": "h024",
+      "q": "photo থেকে পড়ে দাও",
+      "intent": "IMAGE_REQUEST",
+      "tier": "FAST",
+      "why": "banglish photo"
+    },
+    {
+      "id": "h025",
+      "q": "পৃথিবীর ব্যাসার্ধ কত?",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "FAST",
+      "why": "single fact"
+    },
+    {
+      "id": "h026",
+      "q": "জল কত ডিগ্রিতে ফোটে?",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "FAST",
+      "why": "single fact"
+    },
+    {
+      "id": "h027",
+      "q": "বাংলা বর্ণমালায় স্বরবর্ণ কয়টি?",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "FAST",
+      "why": "single fact"
+    },
+    {
+      "id": "h028",
+      "q": "কোষ কী?",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "FAST",
+      "why": "short definition"
+    },
+    {
+      "id": "h029",
+      "q": "define gravity",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "FAST",
+      "why": "english definition"
+    },
+    {
+      "id": "h030",
+      "q": "গ্রিনহাউস প্রভাব কেন বাড়ছে?",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "SMART",
+      "why": "\"কেন\""
+    },
+    {
+      "id": "h031",
+      "q": "আবহাওয়া ও জলবায়ুর পার্থক্য কী?",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "SMART",
+      "why": "compare"
+    },
+    {
+      "id": "h032",
+      "q": "সমীকরণটি ধাপে ধাপে সমাধান করো",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "SMART",
+      "why": "step by step"
+    },
+    {
+      "id": "h033",
+      "q": "প্রমাণ করো যে বৃত্তের কেন্দ্রে কোণ পরিধির দ্বিগুণ",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "SMART",
+      "why": "proof"
+    },
+    {
+      "id": "h034",
+      "q": "শ্বসন ও সালোকসংশ্লেষণের তুলনা করো",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "SMART",
+      "why": "comparison"
+    },
+    {
+      "id": "h035",
+      "q": "why does ice float on water",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "SMART",
+      "why": "english why"
+    },
+    {
+      "id": "h036",
+      "q": "গড় বের করো এই সংখ্যাগুলোর",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "SMART",
+      "why": "calculate"
+    }
+  ]
+}
