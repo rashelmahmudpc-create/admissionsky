@@ -663,17 +663,6 @@ export class MemoryAuthRepository {
     return { revoked };
   }
 
-  async revokeSessionsForEmailRef({ emailRef, now }) {
-    const user = [...this.users.values()].find(candidate => candidate.emailRef === emailRef);
-    if (!user) return { revoked: 0, found: false };
-    let revoked = 0;
-    for (const session of this.sessions.values()) {
-      if (session.userId === user.id && !session.revokedAt) { session.revokedAt = now; revoked += 1; }
-    }
-    this.events.push({ type: 'password-reset', userId: user.id, at: now });
-    return { revoked, found: true };
-  }
-
   async isDeviceTrusted({ userId, deviceRef, now }) {
     const row = this.trustedDevices.get(`${userId}|${deviceRef}`);
     return Object.freeze({ trusted: Boolean(row && !row.revokedAt && row.expiresAt > now) });

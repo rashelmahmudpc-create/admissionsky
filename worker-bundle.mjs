@@ -8516,10 +8516,6 @@ var AUTH_ERROR_CODES = Object.freeze({
   PASSKEY_REGISTRATION_REQUIRED: "PASSKEY_REGISTRATION_REQUIRED",
   EMAIL_NOT_VERIFIED: "EMAIL_NOT_VERIFIED",
   WEAK_PASSWORD: "WEAK_PASSWORD",
-  // A5 step 5: the emailed reset link is single-use and it is the only thing
-  // that proves the address. Asking for a new one is how the flow re-arms;
-  // this code is what the student sees when Firebase will not issue one.
-  PASSWORD_RESET_EXPIRED: "PASSWORD_RESET_EXPIRED",
   ACCOUNT_DISABLED: "ACCOUNT_DISABLED",
   ACCOUNT_STATE_INVALID: "ACCOUNT_STATE_INVALID",
   ACCOUNT_NOT_FOUND: "ACCOUNT_NOT_FOUND",
@@ -8561,7 +8557,6 @@ var DEFAULTS2 = Object.freeze({
   [AUTH_ERROR_CODES.PASSKEY_REGISTRATION_REQUIRED]: Object.freeze({ status: 409, message: "আগে অ্যাকাউন্টে ঢুকে এই ডিভাইসে Passkey যোগ করুন।" }),
   [AUTH_ERROR_CODES.EMAIL_NOT_VERIFIED]: Object.freeze({ status: 403, message: "ইমেইলে পাঠানো যাচাইয়ের লিংকে ক্লিক করে তারপর লগইন করুন।" }),
   [AUTH_ERROR_CODES.WEAK_PASSWORD]: Object.freeze({ status: 400, message: "কমপক্ষে ৮ অক্ষরের শক্তিশালী পাসওয়ার্ড দিন।" }),
-  [AUTH_ERROR_CODES.PASSWORD_RESET_EXPIRED]: Object.freeze({ status: 403, message: 'Reset link-এর সময় শেষ বা এটি আগেই ব্যবহার হয়ে গেছে। Login থেকে আবার "Password ভুলে গেছি" চাপুন।' }),
   [AUTH_ERROR_CODES.ACCOUNT_DISABLED]: Object.freeze({ status: 403, message: "এই অ্যাকাউন্টটি এখন ব্যবহার করা যাচ্ছে না।" }),
   [AUTH_ERROR_CODES.ACCOUNT_STATE_INVALID]: Object.freeze({ status: 409, message: "অ্যাকাউন্টের অবস্থা পরিবর্তন করা যায়নি, আবার চেষ্টা করুন।" }),
   [AUTH_ERROR_CODES.ACCOUNT_NOT_FOUND]: Object.freeze({ status: 404, message: "অ্যাকাউন্টটি খুঁজে পাওয়া যায়নি।" }),
@@ -9383,7 +9378,6 @@ var requiredRepositoryMethods = Object.freeze([
   "getSession",
   "revokeSession",
   "revokeUserSessions",
-  "revokeSessionsForEmailRef",
   "getAccountState",
   "setAccountState",
   "identitySnapshot",
@@ -10835,18 +10829,6 @@ var CloudflareNativeAuthEngine = class {
       emailMasked: session.user.emailMask,
       browserClass: identity.context.userAgent || null
     });
-  }
-  /* A5 step 5 (owner 2026-10-31). Called from the reset path, where the caller
-   * has just proved the address with a single-use reset link instead of a
-   * step-up challenge — so, unlike revokeAllSessions above, there is no
-   * #assertStepUp here. It also has to work with no session at all: the whole
-   * point is that the sessions it closes are ones the caller cannot see. */
-  async revokeSessionsAfterPasswordReset({ emailRef, now }) {
-    const result = errorFromRepository(await this.repository.revokeSessionsForEmailRef({
-      emailRef,
-      now: Number(now || this.now())
-    }));
-    return Object.freeze({ revoked: Number(result?.revoked || 0), found: result?.found === true });
   }
   ping() {
     return this.repository.ping();
@@ -12305,81 +12287,6 @@ async function verifyPendingSignupCode({ store, orchestrator, ticket, context = 
   return Object.freeze({ verified: true, email: material.email, password: material.password, profile: material.profile, emailMask: material.emailMask });
 }
 
-// observability/otp-delivery-log.mjs
-var OTP_PROVIDER_NAMES = Object.freeze({
-  "otp-a": "Brevo",
-  "otp-b": "AppsScript",
-  "otp-c": "Mailjet",
-  "otp-d": "Resend",
-  "otp-e": "AgentMail",
-  "otp-f": "MailerSend",
-  "otp-g": "DeadSimple",
-  "otp-h": "Logto",
-  "otp-i": "Appwrite",
-  "otp-j": "Ory",
-  "otp-k": "Hanko",
-  "otp-l": "Descope-OTP",
-  "otp-m": "Descope-MagicLink",
-  "otp-n": "Maileroo",
-  "otp-o": "ElasticEmail",
-  "otp-q": "Mailgun",
-  "otp-r": "AlibabaDirectMail",
-  "otp-s": "SparkPost",
-  "otp-t": "Plunk",
-  "otp-u": "Loops",
-  "otp-v": "Stytch",
-  "otp-w": "WorkOS",
-  "otp-x": "MojoAuth",
-  "otp-y": "Authgear",
-  "otp-z": "Stack Auth",
-  "otp-za": "SuperTokens",
-  telegram: "Telegram"
-});
-var EVENTS = /* @__PURE__ */ new Set(["otp_delivery", "otp_request", "reset_request"]);
-var LONG_STRING_FIELDS = /* @__PURE__ */ new Set(["tried", "skipped"]);
-var STRING_FIELDS = /* @__PURE__ */ new Set(["attempt", "purpose", "method", "provider", "label", "outcome", "reason", "failureClass", "tried", "skipped"]);
-var NUMBER_FIELDS = /* @__PURE__ */ new Set(["candidates", "rank", "try", "latencyMs", "totalMs"]);
-var RESET_REASONS = /* @__PURE__ */ new Set([
-  "EMAIL_NOT_FOUND",
-  "USER_DISABLED",
-  "INVALID_EMAIL",
-  "MISSING_EMAIL",
-  "TOO_MANY_ATTEMPTS_TRY_LATER",
-  "TOO_MANY_ATTEMPTS",
-  "QUOTA_EXCEEDED",
-  "ACCEPTED"
-]);
-function sanitizeOtpDeliveryEvent(event) {
-  if (!event || !EVENTS.has(event.evt)) return null;
-  const out = { evt: event.evt };
-  for (const [key, value] of Object.entries(event)) {
-    if (STRING_FIELDS.has(key) && value != null && typeof value !== "object") out[key] = String(value).slice(0, LONG_STRING_FIELDS.has(key) ? 400 : 64);
-    else if (NUMBER_FIELDS.has(key) && Number.isFinite(Number(value))) out[key] = Math.round(Number(value));
-  }
-  if (out.attempt) out.attempt = out.attempt.slice(0, 8);
-  if (out.evt === "reset_request") {
-    if (!RESET_REASONS.has(out.reason)) delete out.reason;
-    delete out.provider;
-    delete out.label;
-    delete out.method;
-    delete out.failureClass;
-    delete out.purpose;
-    return out;
-  }
-  if (out.provider) out.name = OTP_PROVIDER_NAMES[out.provider] || out.provider;
-  return out;
-}
-function emitOtpDeliveryEvent(event, sink = console) {
-  const record = sanitizeOtpDeliveryEvent(event);
-  if (!record) return null;
-  try {
-    const failed = record.outcome === "failed" || record.outcome === "all_failed";
-    (failed ? sink.warn : sink.log).call(sink, JSON.stringify(record));
-  } catch {
-  }
-  return record;
-}
-
 // auth-native/worker/pending-signup-public.mjs
 var PENDING = "/internal/signup/pending";
 var PENDING_SIGNUP_HEADER = "X-AH-Signup-Flow";
@@ -13014,6 +12921,81 @@ function sendThrottledSecurityAlert(env, store, input = {}, options = {}) {
   }).catch(() => "failed");
 }
 
+// observability/otp-delivery-log.mjs
+var OTP_PROVIDER_NAMES = Object.freeze({
+  "otp-a": "Brevo",
+  "otp-b": "AppsScript",
+  "otp-c": "Mailjet",
+  "otp-d": "Resend",
+  "otp-e": "AgentMail",
+  "otp-f": "MailerSend",
+  "otp-g": "DeadSimple",
+  "otp-h": "Logto",
+  "otp-i": "Appwrite",
+  "otp-j": "Ory",
+  "otp-k": "Hanko",
+  "otp-l": "Descope-OTP",
+  "otp-m": "Descope-MagicLink",
+  "otp-n": "Maileroo",
+  "otp-o": "ElasticEmail",
+  "otp-q": "Mailgun",
+  "otp-r": "AlibabaDirectMail",
+  "otp-s": "SparkPost",
+  "otp-t": "Plunk",
+  "otp-u": "Loops",
+  "otp-v": "Stytch",
+  "otp-w": "WorkOS",
+  "otp-x": "MojoAuth",
+  "otp-y": "Authgear",
+  "otp-z": "Stack Auth",
+  "otp-za": "SuperTokens",
+  telegram: "Telegram"
+});
+var EVENTS = /* @__PURE__ */ new Set(["otp_delivery", "otp_request", "reset_request"]);
+var LONG_STRING_FIELDS = /* @__PURE__ */ new Set(["tried", "skipped"]);
+var STRING_FIELDS = /* @__PURE__ */ new Set(["attempt", "purpose", "method", "provider", "label", "outcome", "reason", "failureClass", "tried", "skipped"]);
+var NUMBER_FIELDS = /* @__PURE__ */ new Set(["candidates", "rank", "try", "latencyMs", "totalMs"]);
+var RESET_REASONS = /* @__PURE__ */ new Set([
+  "EMAIL_NOT_FOUND",
+  "USER_DISABLED",
+  "INVALID_EMAIL",
+  "MISSING_EMAIL",
+  "TOO_MANY_ATTEMPTS_TRY_LATER",
+  "TOO_MANY_ATTEMPTS",
+  "QUOTA_EXCEEDED",
+  "ACCEPTED"
+]);
+function sanitizeOtpDeliveryEvent(event) {
+  if (!event || !EVENTS.has(event.evt)) return null;
+  const out = { evt: event.evt };
+  for (const [key, value] of Object.entries(event)) {
+    if (STRING_FIELDS.has(key) && value != null && typeof value !== "object") out[key] = String(value).slice(0, LONG_STRING_FIELDS.has(key) ? 400 : 64);
+    else if (NUMBER_FIELDS.has(key) && Number.isFinite(Number(value))) out[key] = Math.round(Number(value));
+  }
+  if (out.attempt) out.attempt = out.attempt.slice(0, 8);
+  if (out.evt === "reset_request") {
+    if (!RESET_REASONS.has(out.reason)) delete out.reason;
+    delete out.provider;
+    delete out.label;
+    delete out.method;
+    delete out.failureClass;
+    delete out.purpose;
+    return out;
+  }
+  if (out.provider) out.name = OTP_PROVIDER_NAMES[out.provider] || out.provider;
+  return out;
+}
+function emitOtpDeliveryEvent(event, sink = console) {
+  const record = sanitizeOtpDeliveryEvent(event);
+  if (!record) return null;
+  try {
+    const failed = record.outcome === "failed" || record.outcome === "all_failed";
+    (failed ? sink.warn : sink.log).call(sink, JSON.stringify(record));
+  } catch {
+  }
+  return record;
+}
+
 // auth-native/worker/public-auth-handler.mjs
 var AUTH_API_PREFIX = "/api/auth/v1";
 var PUBLIC_PROFILE_PREFIX = "/api/public/profile/";
@@ -13478,14 +13460,6 @@ var resetDeliveryEvent = (env, fields) => {
   } catch (_) {
   }
 };
-var revokeSessionsForReset = async (env, email) => {
-  try {
-    const result = await callAuthority(env, "/internal/session/revoke-user", { input: { email } });
-    return Number(result?.revoked || 0);
-  } catch (_) {
-    return 0;
-  }
-};
 var authSuccess = (request, established, refreshToken, context, verification = {}, extraCookies = []) => {
   const emailVerified = verification.emailVerified !== false;
   const telegramVerified = verification.telegramVerified === true;
@@ -13892,40 +13866,6 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
           deliveryDisclosed: false,
           resendAfter: FIREBASE_VERIFICATION_RESEND_SECONDS
         }, context.isNewDevice ? { "Set-Cookie": deviceCookie(context.deviceId) } : {});
-      }
-      if (request.method === "POST" && url.pathname === `${AUTH_API_PREFIX}/password-reset/complete`) {
-        if (!provider.configured) throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
-        const body = await readJson(request);
-        {
-          const denied = await guardSend({ request, env, context, body, fetchImpl });
-          if (denied) return denied;
-        }
-        const email = normalizeAuthEmail(body?.email);
-        const password = String(body?.password || "");
-        if (!email || password.length < PASSWORD_MIN2 || password.length > PASSWORD_MAX2 || /[\r\n\u0000]/.test(password)) {
-          throw new NativeAuthError(password && password.length < PASSWORD_MIN2 ? AUTH_ERROR_CODES.WEAK_PASSWORD : AUTH_ERROR_CODES.INVALID_INPUT);
-        }
-        const prepared = await callAuthority(env, "/internal/firebase/rate", {
-          input: { operation: "password-reset", email },
-          context
-        });
-        let usable = false;
-        try {
-          await provider.sendPasswordResetEmail(prepared.email);
-          usable = true;
-        } catch (cause) {
-          const spent = cause instanceof FirebaseRequestError && ["EMAIL_NOT_FOUND", "USER_DISABLED", "INVALID_EMAIL", "MISSING_EMAIL"].includes(cause.reason);
-          if (!spent) throw providerError(cause, "password-reset");
-        }
-        if (!usable) throw new NativeAuthError(AUTH_ERROR_CODES.PASSWORD_RESET_EXPIRED);
-        return json4(request, 200, {
-          ok: true,
-          // Our own sessions for this account are revoked here. Firebase
-          // revokes its refresh tokens by itself the moment the password
-          // changes, so nothing survives the reset on either side.
-          sessionsRevoked: await revokeSessionsForReset(env, prepared.email),
-          resetLinkRequired: true
-        }, { "Set-Cookie": clearAuthCookies() });
       }
       if (request.method === "POST" && url.pathname === `${AUTH_API_PREFIX}/verification/resend`) {
         if (!provider.configured) throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
@@ -26200,24 +26140,6 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
       return { revoked: count };
     });
   }
-  /* A5 step 5 (owner 2026-10-31): a password reset must end every session the
-   * account still holds. Firebase already kills its own refresh tokens the
-   * moment the password changes, but our session rows are ours to close, and
-   * leaving them open meant the reset screen came back to a session that
-   * claimed to be live. No step-up gate here on purpose: the caller has just
-   * proved the address with a single-use reset link, which is a stronger proof
-   * than the step-up challenge the manual logout-all asks for. */
-  async revokeSessionsForEmailRef({ emailRef, now }) {
-    return this.#transaction(() => {
-      const user = this.#one("SELECT user_id AS id FROM auth_users WHERE email_ref=?", emailRef);
-      if (!user) return { revoked: 0, found: false };
-      const open = this.#one("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id=? AND revoked_at IS NULL", user.id);
-      const count = Number(open?.count || 0);
-      if (count > 0) this.sql.exec("UPDATE auth_sessions SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL", now, user.id);
-      this.#event("password-reset", null, user.id, now);
-      return { revoked: count, found: true };
-    });
-  }
   async ping() {
     const row = this.#one("SELECT value FROM auth_meta WHERE key='schema_version'");
     const schema2 = Number(row?.value || 0);
@@ -31846,7 +31768,6 @@ var AdmissionAuthAuthority = class {
         config: persistedVerificationConfig || env.VERIFICATION_ORCHESTRATOR_CONFIG,
         providers: createConfiguredVerificationProviders(env),
         activated: ["canary", "enabled"].includes(String(env.VERIFICATION_AUTH_ACTIVATION || "")),
-        // AUTH-ROADMAP step 0: Workers Logs line per send + Telegram alert on failure / >30s.
         onDeliveryEvent: otpDeliverySink
       });
       this.engine.bindVerification(this.verification);
@@ -32182,6 +32103,11 @@ var AdmissionAuthAuthority = class {
         const result = await this.verification.adminStatus();
         return response2(200, { ok: true, result });
       }
+      if (url.pathname === "/internal/observability/reset-request") {
+        const reason2 = String(body.input?.reason || "").slice(0, 40);
+        if (typeof this.otpDeliverySink === "function") this.otpDeliverySink({ evt: "reset_request", reason: reason2 });
+        return response2(200, { ok: true });
+      }
       if (url.pathname === "/internal/verification/admin/config") {
         const result = await this.verification.updateConfig(body.config);
         await this.#scheduleExpiry();
@@ -32194,21 +32120,6 @@ var AdmissionAuthAuthority = class {
       if (url.pathname === "/internal/session/revoke") {
         const result = await this.engine.revokeSession(body.sessionToken);
         return response2(200, { ok: true, result });
-      }
-      if (url.pathname === "/internal/session/revoke-user") {
-        let emailRef = "";
-        try {
-          emailRef = await this.engine.hmac.hex("email-ref-v1", normalizeAuthEmail(body.input?.email));
-        } catch {
-          emailRef = "";
-        }
-        const result = emailRef ? await this.engine.revokeSessionsAfterPasswordReset({ emailRef, now: Date.now() }) : Object.freeze({ revoked: 0, found: false });
-        return response2(200, { ok: true, result });
-      }
-      if (url.pathname === "/internal/observability/reset-request") {
-        const reason2 = String(body.input?.reason || "").slice(0, 40);
-        if (typeof this.otpDeliverySink === "function") this.otpDeliverySink({ evt: "reset_request", reason: reason2 });
-        return response2(200, { ok: true });
       }
       if (url.pathname === "/internal/session/revoke-all") {
         const result = await this.engine.revokeAllSessions({ ...body.input || {}, sessionToken: body.sessionToken }, body.context);

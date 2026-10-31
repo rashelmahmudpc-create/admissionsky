@@ -67,10 +67,10 @@ export class AdmissionAuthAuthority {
         avatarStore: new D1ProfileStore(env.PROFILE_DB || null)
       });
       const persistedVerificationConfig = await this.verificationRepository.getRuntimeConfig();
-      // One sink for the whole authority. The orchestrator hands it one event
-      // per provider try, and the step-5 reset path hands it the reason a
-      // password-reset send was refused — the same allow-list sanitizes both,
-      // so an address or an OTP code can never reach the log or Telegram.
+      // AUTH-ROADMAP step 0: Workers Logs line per send + Telegram alert on
+      // failure / >30s. Step 5 reuses the same sink for the reset path's reason
+      // codes, so it is built once here and handed to both callers: two sinks
+      // would mean two cooldown maps and two Telegram messages per event.
       const otpDeliverySink = this.otpDeliverySink = createOtpDeliverySink({ env, waitUntil: typeof state.waitUntil === 'function' ? promise => state.waitUntil(promise) : null });
       this.verification = new VerificationOrchestrator({
         repository: this.verificationRepository,
@@ -78,7 +78,6 @@ export class AdmissionAuthAuthority {
         config: persistedVerificationConfig || env.VERIFICATION_ORCHESTRATOR_CONFIG,
         providers: createConfiguredVerificationProviders(env),
         activated: ['canary', 'enabled'].includes(String(env.VERIFICATION_AUTH_ACTIVATION || '')),
-        // AUTH-ROADMAP step 0: Workers Logs line per send + Telegram alert on failure / >30s.
         onDeliveryEvent: otpDeliverySink
       });
       // Phase 6, the engine's security challenges reuse this orchestrator
@@ -450,6 +449,16 @@ export class AdmissionAuthAuthority {
         const result = await this.verification.adminStatus();
         return response(200, { ok: true, result });
       }
+      // A5 step 5 (owner 2026-10-31): the reset path runs in the public Worker,
+      // which has no log sink of its own — the authority owns the one that
+      // already reaches Telegram. The handler hands over the reason code only,
+      // and the sink's allow-list drops anything that is not a known code, so
+      // an address cannot ride along.
+      if (url.pathname === '/internal/observability/reset-request') {
+        const reason = String(body.input?.reason || '').slice(0, 40);
+        if (typeof this.otpDeliverySink === 'function') this.otpDeliverySink({ evt: 'reset_request', reason });
+        return response(200, { ok: true });
+      }
       if (url.pathname === '/internal/verification/admin/config') {
         const result = await this.verification.updateConfig(body.config);
         await this.#scheduleExpiry();
@@ -462,25 +471,6 @@ export class AdmissionAuthAuthority {
       if (url.pathname === '/internal/session/revoke') {
         const result = await this.engine.revokeSession(body.sessionToken);
         return response(200, { ok: true, result });
-      }
-      // A5 step 5: close every session an account holds, keyed by the address
-      // rather than by a session the caller would have to still possess. The
-      // address is hashed to an emailRef here and never stored or echoed.
-      if (url.pathname === '/internal/session/revoke-user') {
-        let emailRef = '';
-        try { emailRef = await this.engine.hmac.hex('email-ref-v1', normalizeAuthEmail(body.input?.email)); } catch { emailRef = ''; }
-        const result = emailRef
-          ? await this.engine.revokeSessionsAfterPasswordReset({ emailRef, now: Date.now() })
-          : Object.freeze({ revoked: 0, found: false });
-        return response(200, { ok: true, result });
-      }
-      // A5 step 5: the reset path runs in the public Worker, which has no log
-      // sink of its own — the authority owns the one that already reaches
-      // Telegram. The handler hands over the reason code only.
-      if (url.pathname === '/internal/observability/reset-request') {
-        const reason = String(body.input?.reason || '').slice(0, 40);
-        if (typeof this.otpDeliverySink === 'function') this.otpDeliverySink({ evt: 'reset_request', reason });
-        return response(200, { ok: true });
       }
       if (url.pathname === '/internal/session/revoke-all') {
         // Phase 6, step-up-gated: the engine enforces recent-session or a

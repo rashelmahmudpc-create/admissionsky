@@ -1,16 +1,22 @@
 /* A5 / AUTH-ROADMAP step 5 (owner 2026-10-31): forgot password.
  *
- * Two things were true of the reset path before this suite existed, and both
- * were invisible from the outside:
- *   1. The handler answered 202 for a known address, an unknown one and a
- *      disabled one alike — correct, but it also meant "the link never arrived"
- *      and "there is no such account" left no trace anywhere.
- *   2. Nothing ended the sessions an account still held. Firebase revokes its
- *      own refresh tokens when the password changes; our session rows are ours.
+ * One thing was true of the reset path before this suite existed, and it was
+ * invisible from the outside: the handler answered 202 for a known address, an
+ * unknown one and a disabled one alike — correct for the student, but it also
+ * meant "the link never arrived" and "there is no such account" left no trace
+ * anywhere. The owner had no way to tell a delivery from a refusal.
  *
- * These tests pin the three jobs the step actually shipped: the refusal reason
- * reaches the log and nothing else does, the reset screen enforces the strength
- * rules Firebase's own page does not, and the sessions are closed.
+ * These tests pin the one job the step shipped: the refusal reason reaches the
+ * log and the owner's Telegram, and nothing else about the request does.
+ *
+ * What the step deliberately did NOT ship is recorded in the roadmap and
+ * asserted below, because a later reader will otherwise re-propose it: our own
+ * password-setting screen needs proof that the caller holds the emailed
+ * single-use link, and nothing in this Worker can check that — Firebase only
+ * exposes it to its own action page (`accounts:resetPassword` takes the
+ * `oobCode`, which the Web API key path never hands back). A screen that took
+ * an address and a password without that proof would let anyone who knows a
+ * student's address set that student's password, so it is not here.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -18,12 +24,10 @@ import { readFileSync } from 'node:fs';
 
 import { sanitizeOtpDeliveryEvent } from './observability/otp-delivery-log.mjs';
 import { otpAlertFor, formatOtpAlert } from './observability/otp-alert.mjs';
-import { AUTH_ERROR_CODES, NativeAuthError } from './auth-native/core/errors.mjs';
 
 const read = file => readFileSync(new URL(file, import.meta.url), 'utf8');
 const HANDLER = read('./auth-native/worker/public-auth-handler.mjs');
 const AUTHORITY = read('./auth-native/worker/auth-authority-do.mjs');
-const CLIENT = read('./account-access.js');
 const ROADMAP = read('./docs/AUTH-ROADMAP.md');
 
 test('A5-১: a refused reset leaves a reason code in the log and never an address', () => {
@@ -68,7 +72,7 @@ test('A5-৫: the answer to the student is still identical for known, unknown an
   // refused reasons may appear is the log call — never in the answer.
   const branch = HANDLER.slice(
     HANDLER.indexOf("url.pathname === `${AUTH_API_PREFIX}/password-reset`"),
-    HANDLER.indexOf("url.pathname === `${AUTH_API_PREFIX}/password-reset/complete`")
+    HANDLER.indexOf("url.pathname === `${AUTH_API_PREFIX}/verification/resend`")
   );
   const answer = branch.slice(branch.indexOf('return json(request, 202'));
   assert.match(answer, /accepted: true/);
@@ -79,89 +83,43 @@ test('A5-৫: the answer to the student is still identical for known, unknown an
   assert.match(branch, /cause instanceof FirebaseRequestError/);
 });
 
-test('A5-৬: a reset closes every session the account holds, without a step-up gate', () => {
-  // Unlike /session/logout-all (which is step-up gated because it is asked for
-  // from inside a session), the reset path proves the address with a
-  // single-use link and has no session to challenge.
-  const engine = read('./auth-native/core/auth-engine.mjs');
-  const method = engine.slice(engine.indexOf('async revokeSessionsAfterPasswordReset'));
-  const body = method.slice(0, method.indexOf('\n  ping()'));
-  assert.match(body, /revokeSessionsForEmailRef/);
-  assert.doesNotMatch(body, /#assertStepUp/);
-  // It has to work with no session at all: the sessions it closes are ones the
-  // caller cannot see.
-  assert.doesNotMatch(body, /sessionToken/);
-  assert.match(AUTHORITY, /'\/internal\/session\/revoke-user'/);
-  assert.match(AUTHORITY, /hmac\.hex\('email-ref-v1', normalizeAuthEmail\(body\.input\?\.email\)\)/);
-  assert.match(HANDLER, /revokeSessionsForReset\(env, prepared\.email\)/);
+test('A5-৬: the one sink is shared, so an event cannot raise two Telegram messages', () => {
+  // The orchestrator and the reset path both report through the authority. Two
+  // sinks would mean two cooldown maps and two messages for the same event.
+  assert.equal((AUTHORITY.match(/createOtpDeliverySink\(\{/g) || []).length, 1);
+  assert.match(AUTHORITY, /const otpDeliverySink = this\.otpDeliverySink = createOtpDeliverySink\(\{ env, waitUntil/);
+  assert.match(AUTHORITY, /onDeliveryEvent: otpDeliverySink/);
 });
 
-test('A5-৭: the repository closes the rows by address, in both implementations', () => {
-  const sqlite = read('./auth-native/storage/sqlite-auth-repository.mjs');
-  const memory = read('./auth-native/testing/memory-auth-repository.mjs');
-  for (const source of [sqlite, memory]) assert.match(source, /async revokeSessionsForEmailRef\(\{ emailRef, now \}\)/);
-  assert.match(sqlite, /UPDATE auth_sessions SET revoked_at=\? WHERE user_id=\? AND revoked_at IS NULL/);
-  assert.match(read('./auth-native/core/auth-engine.mjs'), /'revokeSessionsForEmailRef'/);
+test('A5-৭: nothing in the reset path can move a password or end a session', () => {
+  /* The guard that matters. A password-setting endpoint needs proof that the
+   * caller holds the emailed single-use link, and this Worker cannot check one:
+   * Firebase's Web API key path issues the link but never returns the oobCode,
+   * and `accounts:resetPassword` — which does consume it — is reached from
+   * Firebase's own action page. Without that proof, an endpoint that took an
+   * address and a password would let a stranger who knows a student's address
+   * set that student's password, and one that only revoked sessions would let
+   * the same stranger log the student out at will. Neither is here.
+   */
+  assert.doesNotMatch(HANDLER, /password-reset\/complete/);
+  assert.doesNotMatch(HANDLER, /PASSWORD_RESET_EXPIRED/);
+  assert.doesNotMatch(HANDLER, /revokeSessionsForReset|revokeSessionsForEmailRef/);
+  assert.doesNotMatch(HANDLER, /internal\/session\/revoke-user/);
+  assert.doesNotMatch(AUTHORITY, /internal\/session\/revoke-user/);
+  assert.doesNotMatch(HANDLER, /accounts:resetPassword/);
+  // The reset route still sends exactly one thing: the provider's own mail.
+  const branch = HANDLER.slice(
+    HANDLER.indexOf("url.pathname === `${AUTH_API_PREFIX}/password-reset`"),
+    HANDLER.indexOf("url.pathname === `${AUTH_API_PREFIX}/verification/resend`")
+  );
+  assert.match(branch, /provider\.sendPasswordResetEmail\(prepared\.email\)/);
+  assert.doesNotMatch(branch, /body\?\.password|newPassword/);
 });
 
-test('A5-৮: the reset screen enforces the rules Firebase\'s own page does not', () => {
-  assert.match(CLIENT, /data-view="reset"/);
-  assert.match(CLIENT, /api\/password-reset\/complete|'\/password-reset\/complete'/);
-  // Strength meter and rule list, scoped so the signup screen keeps its own.
-  assert.match(CLIENT, /data-password-meter="reset"/);
-  assert.match(CLIENT, /data-password-rule="length" data-password-scope="reset"/);
-  assert.match(CLIENT, /updatePasswordFeedback\('reset'\)/);
-  // Breach check, k-anonymity only.
-  assert.match(CLIENT, /api\.pwnedpasswords\.com\/range\/\$\{hash\.slice\(0, 5\)\}/);
-  assert.doesNotMatch(CLIENT, /pwnedpasswords\.com\/range\/\$\{hash\}/);
-  // A positive hit blocks the submit; an outage never does.
-  assert.match(CLIENT, /state\.resetBreach === 'breached'/);
-  assert.match(CLIENT, /catch \(_\) \{ return 'unknown'; \}/);
-});
-
-test('A5-৯: the server refuses a short password before any provider call', () => {
-  const route = HANDLER.slice(HANDLER.indexOf("`${AUTH_API_PREFIX}/password-reset/complete`"));
-  const guard = route.indexOf('PASSWORD_MIN');
-  const send = route.indexOf('sendPasswordResetEmail');
-  assert.ok(guard > -1 && send > guard, 'the length check must come before the provider call');
-  assert.match(route, /AUTH_ERROR_CODES\.WEAK_PASSWORD/);
-  // Firebase will not issue a second link while one is unspent, which is what
-  // makes "accepted" here mean a live link exists.
-  assert.match(route, /AUTH_ERROR_CODES\.PASSWORD_RESET_EXPIRED/);
-  assert.match(read('./auth-native/core/errors.mjs'), /PASSWORD_RESET_EXPIRED: 'PASSWORD_RESET_EXPIRED'/);
-});
-
-test('A5-১০: returning from the reset link drops the dead session', () => {
-  assert.match(CLIENT, /const dropStaleResetCookies = \(\) => \{/);
-  const uses = (CLIENT.match(/dropStaleResetCookies\(\);/g) || []).length;
-  // both bootstrap branches + the submit handler (the definition has no semicolon)
-  assert.ok(uses >= 3, `expected the cleanup on every reset return, found ${uses}`);
-  // The auth cookies are HttpOnly: client code cannot clear them, and the
-  // tab-storage invariant forbids caching an address there. Both jobs go
-  // through the server route that already owns them.
-  const body = CLIENT.slice(CLIENT.indexOf('const dropStaleResetCookies'), CLIENT.indexOf('const completeLogoutAll'));
-  assert.match(body, /api\('\/session\/logout', \{ method: 'POST', body: \{\} \}\)/);
-  assert.doesNotMatch(body, /document\.cookie/);
-  assert.doesNotMatch(CLIENT, /RESET_EMAIL_KEY/);
-});
-
-test('A5-১১: the new view and error code are registered on the client', () => {
-  assert.match(CLIENT, /SKY_ROUTED_VIEWS = new Set\(\['login', 'signup', 'forgot', 'reset'/);
-  assert.match(CLIENT, /PASSWORD_RESET_EXPIRED: 'Reset link-এর সময় শেষ/);
-});
-
-test('A5-১২: the roadmap step records what shipped and what it deliberately did not', () => {
-  // The step keeps the parts that were deliberately NOT done (Descope in front,
-  // the custom action URL) — dropping them would hide why the flow still hands
-  // the student to Firebase's own page.
+test('A5-৮: the roadmap step records what shipped and what it deliberately did not', () => {
+  // The step keeps the parts that were deliberately NOT done — dropping them
+  // would hide why the flow still hands the student to Firebase's own page.
   assert.match(ROADMAP, /### ধাপ ৫: Forgot password/);
-  assert.match(ROADMAP, /নিজেদের `\/reset` পাতা/);
-});
-
-test('A5-১৩: the new error code carries a safe status and a student-facing message', () => {
-  const error = new NativeAuthError(AUTH_ERROR_CODES.PASSWORD_RESET_EXPIRED);
-  assert.equal(error.status, 403);
-  assert.match(error.message, /Reset link/);
-  assert.equal(error.safe, true);
-  assert.doesNotMatch(JSON.stringify(error.toPublic()), /firebase|provider|stack/i);
+  assert.match(ROADMAP, /ইচ্ছাকৃতভাবে বাদ/);
+  assert.match(ROADMAP, /oobCode/);
 });
