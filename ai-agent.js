@@ -28,7 +28,7 @@ import { bumpDailyStats, statsFromTiming } from './sky-daily-report.mjs';
 /* F1.1: the model catalog is the single source of truth for which models the
    router knows. GEMINI_MODELS and COMPAT_PROVIDERS below are DERIVED from it,
    so a model can never be "known to the router" and absent from the catalog. */
-import { COMPAT_PROVIDERS as CATALOG_COMPAT, tierModels, CAPABILITY, capabilityOf } from './sky-ai/catalog/models.mjs';
+import { CATALOG, COMPAT_PROVIDERS as CATALOG_COMPAT, tierModels, CAPABILITY, capabilityOf } from './sky-ai/catalog/models.mjs';
 import { buildRecall, sanitizeRecent, RECALL_VERSION } from './sky-recall.mjs';
 /* Sky goal (owner plan step 3): advice shaped around the admission goal. Pure. */
 import { isGoalQuestion, resolveGoal, renderGoalContext } from './sky-goal.mjs';
@@ -845,25 +845,52 @@ export async function aiKeyBlobShape(env) {
   try { parsed = JSON.parse(raw); } catch (_) { return { present: true, reason: 'unparseable' }; }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { present: true, reason: 'not-an-object' };
   const names = Object.keys(parsed).filter((k) => parsed[k] && String(parsed[k]).trim());
+  /* Report catalog IDs, the same vocabulary providerReadiness uses, so the two
+     can be compared without a translation table in between. */
+  const idOfKey = (name) => {
+    const rule = PROVIDER_READY_RULES.find((r) => r.keys.includes(name));
+    return rule ? rule.id : null;
+  };
   return {
     present: true,
     count: names.length,
-    providers: names.filter((k) => PROVIDER_KEY_NAMES.includes(k)).sort()
+    providers: [...new Set(names.map(idOfKey).filter(Boolean))].sort()
   };
 }
+
+/* F1.2 — the key vault reads the catalog.
+ *
+ * This used to NAME each provider by stripping a suffix off its credential name
+ * (`OPENROUTER_API_KEYS` -> `openrouter`). The names it produced were mostly
+ * right and quietly wrong for the rest: `aimlapi` came out `aiml`,
+ * `vercel-ai-gateway` came out `vercel_ai_gateway`, `gemini` came out
+ * `gemini_keys`. Nothing broke, because the same function ran on both Workers
+ * and the parity check compares it to itself — a shared mistake compares equal.
+ *
+ * That is the property worth keeping: a name here is a CATALOG ID, so the
+ * provider the router will really use and the provider the health report names
+ * are the same string by construction. Cloudflare is the one provider needing
+ * two credentials, which is why it keeps an explicit predicate. */
+const READY_EXPLICIT = Object.freeze([
+  { id: 'gemini', keys: ['GEMINI_KEYS'] },
+  { id: 'groq', keys: ['GROQ_API_KEY'] },
+  /* Cloudflare needs TWO credentials and its catalog entry names only the token.
+     A catalog rule for it would OVERWRITE this one and report the provider ready
+     on the token alone — so the catalog contributes only the ids not listed
+     here. (A guard test covers exactly this.) */
+  { id: 'cloudflare', keys: ['CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_AI_API_KEY'] }
+]);
+export const PROVIDER_READY_RULES = Object.freeze([
+  ...READY_EXPLICIT,
+  ...CATALOG.filter((c) => !READY_EXPLICIT.some((r) => r.id === c.id))
+    .map((c) => ({ id: c.id, keys: [c.key] }))
+]);
 
 export async function providerReadiness(env) {
   const kv = await aiKeyOverlay(env);
   const has = (name) => !!pickKey(env, kv, name);
-  const out = {
-    gemini: has('GEMINI_KEYS'),
-    groq: has('GROQ_API_KEY'),
-    cloudflare: has('CLOUDFLARE_ACCOUNT_ID') && has('CLOUDFLARE_AI_API_KEY')
-  };
-  for (const p of COMPAT_PROVIDERS) {
-    // Name it after the key so a comma-separated list of ready providers stays short.
-    out[p.key.toLowerCase().replace(/_api_keys?$|_key$|_token$/, '')] = has(p.key);
-  }
+  const out = {};
+  for (const rule of PROVIDER_READY_RULES) out[rule.id] = rule.keys.every(has);
   return out;
 }
 
@@ -1902,7 +1929,11 @@ export async function agentStatus(request, env, uid) {
        routerChain, not providerChain: the latter filters to adapters with a
        one-shot path, which is Gemini alone, so it would report a two-entry
        chain while the chat really tries Gemini, then Groq, then Cloudflare. */
-    chain: routerChain(env, TIER.FAST, new Set(), kv).map(c => c.provider + ':' + c.model),
+    /* F1.2: name the CATALOG provider. Before this every OpenAI-compatible
+       provider reported as the adapter `openai-compat`, so a status with 16 such
+       keys could not say which one the chat would really try — the one thing the
+       field exists to answer. */
+    chain: routerChain(env, TIER.FAST, new Set(), kv).map(c => (c.catalogId || c.provider) + ':' + c.model),
     limits: { perDay: Math.max(1, Math.min(500, Number(env.AGENT_DAILY_CAP || 10))) },
     /* Which store the per-user state actually uses. Without this the migration
        off KV could only be inferred; here it is observable from the status
