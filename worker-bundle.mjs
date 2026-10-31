@@ -11796,7 +11796,7 @@ function safeJson(raw) {
   }
 }
 var OWNER_ALLOWED_DOMAINS = Object.freeze(["gmail.com", "yahoo.com", "icloud.com", "hotmail.com", "outlook.com"]);
-function verificationConfig(raw) {
+function verificationConfig(raw, base = null) {
   const input = typeof raw === "string" ? safeJson(raw) : raw && typeof raw === "object" ? raw : {};
   const policyInput = input.policy && typeof input.policy === "object" ? input.policy : {};
   const policy = Object.freeze({
@@ -11812,8 +11812,9 @@ function verificationConfig(raw) {
   });
   const supplied = Array.isArray(input.providers) ? input.providers : [];
   const byId = new Map(supplied.map((row) => [String(row?.id || ""), row]));
+  const current = new Map((Array.isArray(base?.providers) ? base.providers : []).map((row) => [String(row?.id || ""), row]));
   const providers = Object.entries(SLOT_DEFINITIONS).map(([id, slot]) => {
-    const row = byId.get(id) || {};
+    const row = byId.has(id) ? byId.get(id) : current.get(id) || {};
     return Object.freeze({
       id,
       channel: slot.channel,
@@ -27519,7 +27520,7 @@ var VerificationOrchestrator = class {
     return Object.freeze({ band: worst.band, ratio: worst.ratio, used: spent, limit: capacity });
   }
   async updateConfig(input) {
-    const next = verificationConfig(mergeRuntimeConfig(input, this.config));
+    const next = verificationConfig(mergeRuntimeConfig(input, this.config), this.config);
     await this.repository.setRuntimeConfig({ config: next, now: Number(this.now()) });
     this.runtimeEnabled = next.enabled;
     this.config = this.activated ? next : Object.freeze({ ...next, enabled: false });
