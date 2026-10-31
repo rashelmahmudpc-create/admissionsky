@@ -3,7 +3,7 @@
   "account": "abb783e456e51a5d338419de93d5e576",
   "account_name": "Rashelzayan213@icloud.com's Account",
   "worker_subdomain": "admissionhub.workers.dev",
-  "last_verified": "2026-10-30",
+  "last_verified": "2026-10-31",
   "workers": {
     "tracked": [
       "admission-gk",
@@ -46,6 +46,14 @@
       {
         "name": "study-pal",
         "reason": "Owner's live app: 'Study Pal / 70-Day Admission Planner' (the '70 days রুটিন' website). Briefly retired 2026-10-30 by mistake, then restored from rashelmahmudpc-create/study-pal and redeployed (run 29, success). Source repo deploys on push to main. Do not retire."
+      },
+      {
+        "name": "fleet-keepalive",
+        "reason": "Keepalive supervisor for the owner's fleet bot system (live 2026-10-31); not deployed by this repo. Sibling-bot tooling — waive, do not retire without its owner's yes."
+      },
+      {
+        "name": "fleet-offsite-backup",
+        "reason": "Offsite backup Worker for the owner's fleet bot system (new 2026-10-31); not deployed by this repo. Sibling-bot tooling — waive, do not retire without its owner's yes."
       }
     ]
   },
