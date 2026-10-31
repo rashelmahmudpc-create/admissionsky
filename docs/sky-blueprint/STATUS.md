@@ -15,8 +15,10 @@ Source of truth: Notion "Sky AI v1.0" → main page section **"🚦 এজেন
    "🟡 Doing — where I stopped, which branch/PR".
 4. **Mismatch:** repo / live URL wins over Notion. Fix Notion first, log it as a correction.
 
-## Current status (2026-10-21 23:20 Dhaka)
+## Current status (2026-10-31, main 85a81fd)
 - Phase: **F0 — Doing**
+
+- **F0.8 / repo cleanliness — ✅ Done (2026-10-31).** List at `docs/sky-blueprint/F0.8-repo-cleanliness.md`; the four objective rules are locked by `repo-cleanliness.test.mjs` (wired into `test:shell-guards` and the App Shell Guard triggers). Measured: 0 junk files, 0 unnamed workflows, 2 orphan files (one a deliberate stub), 0 one-shot workflows on an auto trigger, 131 remote branches (35 merged) — branch/doc cleanup left as owner decisions. F0.1–F0.8 all Done; next is F1 (Brain ও মডেল).
 - **F0.1 / DV-01 — Doing.** Steps 1–3 ✅: `sky-ai/` Worker live
   (https://sky-ai.admissionhub.workers.dev/health), `sky-ai-deploy.yml`,
   `SKY_AI` service binding in admission-gk forwarding only `GET /api/ai/sky-health`.
