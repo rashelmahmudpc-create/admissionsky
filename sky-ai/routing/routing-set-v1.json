@@ -1,0 +1,384 @@
+{
+  "version": "routing-v1",
+  "built": "2026-10-31",
+  "count": 52,
+  "bar": 0.9,
+  "byIntent": {
+    "GENERAL_CHAT": 12,
+    "QUIZ_REQUEST": 6,
+    "PERFORMANCE_REQUEST": 7,
+    "SEARCH_REQUEST": 6,
+    "IMAGE_REQUEST": 5,
+    "ACADEMIC_EXPLAIN": 16
+  },
+  "byTier": {
+    "FAST": 36,
+    "SMART": 16
+  },
+  "items": [
+    {
+      "id": "r001",
+      "q": "আসসালামু আলাইকুম",
+      "intent": "GENERAL_CHAT",
+      "tier": "FAST",
+      "why": "greeting"
+    },
+    {
+      "id": "r002",
+      "q": "হ্যালো স্যার",
+      "intent": "GENERAL_CHAT",
+      "tier": "FAST",
+      "why": "greeting"
+    },
+    {
+      "id": "r003",
+      "q": "নমস্কার",
+      "intent": "GENERAL_CHAT",
+      "tier": "FAST",
+      "why": "greeting"
+    },
+    {
+      "id": "r004",
+      "q": "শুভ সকাল",
+      "intent": "GENERAL_CHAT",
+      "tier": "FAST",
+      "why": "greeting"
+    },
+    {
+      "id": "r005",
+      "q": "তোমার নাম কী?",
+      "intent": "GENERAL_CHAT",
+      "tier": "FAST",
+      "why": "about the assistant, not a subject question"
+    },
+    {
+      "id": "r006",
+      "q": "তুমি কে?",
+      "intent": "GENERAL_CHAT",
+      "tier": "FAST",
+      "why": "about the assistant"
+    },
+    {
+      "id": "r007",
+      "q": "তুমি কী করতে পারো?",
+      "intent": "GENERAL_CHAT",
+      "tier": "FAST",
+      "why": "capability question, not academic"
+    },
+    {
+      "id": "r008",
+      "q": "তুমি কি মানুষের মতো?",
+      "intent": "GENERAL_CHAT",
+      "tier": "FAST",
+      "why": "small talk"
+    },
+    {
+      "id": "r009",
+      "q": "ধন্যবাদ",
+      "intent": "GENERAL_CHAT",
+      "tier": "FAST",
+      "why": "courtesy"
+    },
+    {
+      "id": "r010",
+      "q": "তোমাকে কে বানিয়েছে?",
+      "intent": "GENERAL_CHAT",
+      "tier": "FAST",
+      "why": "about the assistant"
+    },
+    {
+      "id": "r011",
+      "q": "hi",
+      "intent": "GENERAL_CHAT",
+      "tier": "FAST",
+      "why": "english greeting"
+    },
+    {
+      "id": "r012",
+      "q": "hello",
+      "intent": "GENERAL_CHAT",
+      "tier": "FAST",
+      "why": "english greeting"
+    },
+    {
+      "id": "r013",
+      "q": "১০টা MCQ বানাও",
+      "intent": "QUIZ_REQUEST",
+      "tier": "FAST",
+      "why": "explicit question generation"
+    },
+    {
+      "id": "r014",
+      "q": "৫টা প্রশ্ন তৈরি করো",
+      "intent": "QUIZ_REQUEST",
+      "tier": "FAST",
+      "why": "explicit generation"
+    },
+    {
+      "id": "r015",
+      "q": "আমাকে একটা কুইজ দাও",
+      "intent": "QUIZ_REQUEST",
+      "tier": "FAST",
+      "why": "quiz ask"
+    },
+    {
+      "id": "r016",
+      "q": "make 10 mcq",
+      "intent": "QUIZ_REQUEST",
+      "tier": "FAST",
+      "why": "english generation"
+    },
+    {
+      "id": "r017",
+      "q": "এই অধ্যায় থেকে প্রশ্ন বানাও",
+      "intent": "QUIZ_REQUEST",
+      "tier": "FAST",
+      "why": "generation from a topic"
+    },
+    {
+      "id": "r018",
+      "q": "২০টা প্রশ্ন বানাও পদার্থ থেকে",
+      "intent": "QUIZ_REQUEST",
+      "tier": "FAST",
+      "why": "count + generate"
+    },
+    {
+      "id": "r019",
+      "q": "আমার প্রোগ্রেস কেমন?",
+      "intent": "PERFORMANCE_REQUEST",
+      "tier": "SMART",
+      "why": "own progress"
+    },
+    {
+      "id": "r020",
+      "q": "আমি কেমন করছি?",
+      "intent": "PERFORMANCE_REQUEST",
+      "tier": "SMART",
+      "why": "own progress"
+    },
+    {
+      "id": "r021",
+      "q": "আমার রিপোর্ট দাও",
+      "intent": "PERFORMANCE_REQUEST",
+      "tier": "SMART",
+      "why": "own report"
+    },
+    {
+      "id": "r022",
+      "q": "আমি কয়টা ভুল করেছি?",
+      "intent": "PERFORMANCE_REQUEST",
+      "tier": "SMART",
+      "why": "own mistake count"
+    },
+    {
+      "id": "r023",
+      "q": "আমার স্কোর কত?",
+      "intent": "PERFORMANCE_REQUEST",
+      "tier": "SMART",
+      "why": "own score"
+    },
+    {
+      "id": "r024",
+      "q": "আমার streak কত?",
+      "intent": "PERFORMANCE_REQUEST",
+      "tier": "SMART",
+      "why": "own streak"
+    },
+    {
+      "id": "r025",
+      "q": "আমি কতটা ভালো করছি?",
+      "intent": "PERFORMANCE_REQUEST",
+      "tier": "SMART",
+      "why": "own standing"
+    },
+    {
+      "id": "r026",
+      "q": "আজকের ভর্তি খবর কী?",
+      "intent": "SEARCH_REQUEST",
+      "tier": "FAST",
+      "why": "news"
+    },
+    {
+      "id": "r027",
+      "q": "ভর্তির শেষ তারিখ কবে?",
+      "intent": "SEARCH_REQUEST",
+      "tier": "FAST",
+      "why": "deadline"
+    },
+    {
+      "id": "r028",
+      "q": "নোটিশ এসেছে কি?",
+      "intent": "SEARCH_REQUEST",
+      "tier": "FAST",
+      "why": "notice"
+    },
+    {
+      "id": "r029",
+      "q": "সার্কুলার কবে আসবে?",
+      "intent": "SEARCH_REQUEST",
+      "tier": "FAST",
+      "why": "circular"
+    },
+    {
+      "id": "r030",
+      "q": "ভর্তির ফল কবে দেবে?",
+      "intent": "SEARCH_REQUEST",
+      "tier": "FAST",
+      "why": "result date"
+    },
+    {
+      "id": "r031",
+      "q": "latest admission news",
+      "intent": "SEARCH_REQUEST",
+      "tier": "FAST",
+      "why": "english news"
+    },
+    {
+      "id": "r032",
+      "q": "এই ছবিটা পড়ো",
+      "intent": "IMAGE_REQUEST",
+      "tier": "FAST",
+      "why": "image input"
+    },
+    {
+      "id": "r033",
+      "q": "এই স্ক্রিনশট দেখো",
+      "intent": "IMAGE_REQUEST",
+      "tier": "FAST",
+      "why": "screenshot"
+    },
+    {
+      "id": "r034",
+      "q": "হাতে লেখা প্রশ্নটা বুঝে দাও",
+      "intent": "IMAGE_REQUEST",
+      "tier": "FAST",
+      "why": "handwritten"
+    },
+    {
+      "id": "r035",
+      "q": "ছবির অঙ্কটা করে দাও",
+      "intent": "IMAGE_REQUEST",
+      "tier": "FAST",
+      "why": "image of a sum"
+    },
+    {
+      "id": "r036",
+      "q": "read this screenshot",
+      "intent": "IMAGE_REQUEST",
+      "tier": "FAST",
+      "why": "english image"
+    },
+    {
+      "id": "r037",
+      "q": "নিউটনের দ্বিতীয় সূত্র কী?",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "FAST",
+      "why": "single fact, no reasoning marker"
+    },
+    {
+      "id": "r038",
+      "q": "বাংলাদেশের রাজধানী কোনটি?",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "FAST",
+      "why": "single fact"
+    },
+    {
+      "id": "r039",
+      "q": "পানির সংকেত কী?",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "FAST",
+      "why": "single fact"
+    },
+    {
+      "id": "r040",
+      "q": "সালোকসংশ্লেষণ কী?",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "FAST",
+      "why": "definition, no marker"
+    },
+    {
+      "id": "r041",
+      "q": "মহাদেশ কতটি?",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "FAST",
+      "why": "single fact"
+    },
+    {
+      "id": "r042",
+      "q": "what is photosynthesis",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "FAST",
+      "why": "english definition"
+    },
+    {
+      "id": "r043",
+      "q": "সূর্য কী?",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "FAST",
+      "why": "short definition"
+    },
+    {
+      "id": "r044",
+      "q": "সালোকসংশ্লেষণ কেন হয়?",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "SMART",
+      "why": "\"কেন\" — why"
+    },
+    {
+      "id": "r045",
+      "q": "পদার্থ ও রসায়নের পার্থক্য বুঝাও",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "SMART",
+      "why": "compare"
+    },
+    {
+      "id": "r046",
+      "q": "নিউটনের সূত্র থেকে বল বের করো",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "SMART",
+      "why": "derive/calculate"
+    },
+    {
+      "id": "r047",
+      "q": "এই অঙ্কটা ধাপে ধাপে সমাধান করো",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "SMART",
+      "why": "step by step"
+    },
+    {
+      "id": "r048",
+      "q": "মাধ্যাকর্ষণ ও ঘর্ষণের তুলনা করো",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "SMART",
+      "why": "comparison"
+    },
+    {
+      "id": "r049",
+      "q": "explain why the sky is blue",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "SMART",
+      "why": "english why"
+    },
+    {
+      "id": "r050",
+      "q": "প্রমাণ করো ত্রিভুজের কোণের সমষ্টি ১৮০",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "SMART",
+      "why": "proof"
+    },
+    {
+      "id": "r051",
+      "q": "বাষ্পীভবন কী এবং কেন হয়?",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "SMART",
+      "why": "multi-part + why"
+    },
+    {
+      "id": "r052",
+      "q": "লাভ-ক্ষতির অঙ্কটা হিসাব করো",
+      "intent": "ACADEMIC_EXPLAIN",
+      "tier": "SMART",
+      "why": "calculate"
+    }
+  ]
+}

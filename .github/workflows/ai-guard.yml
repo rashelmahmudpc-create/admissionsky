@@ -18,6 +18,8 @@ on:
       - 'ai-agent.js'
       - 'ai-*.mjs'
       - 'ai-*.test.mjs'
+      - 'ai-tier-router.mjs'
+      - 'routing-accuracy.test.mjs'
       - 'ai-chat-cache.mjs'
       - 'sky-*.mjs'
       - 'sky-*.test.mjs'

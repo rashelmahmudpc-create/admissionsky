@@ -67,12 +67,16 @@ const TIER = { FAST: 'FAST', SMART: 'SMART' };
 
 /* ── Intent Engine v1: rule-based (Bangla+English+Banglish) ────────────── */
 const RE = {
-  quiz: /(\d+\s*(টা|টি)?\s*(mcq|প্রশ্ন)?|\bquiz\b|\bchallenge\b|মক|প্রশ্ন বানাও|প্রশ্ন তৈরি|make.*(mcq|question)|\bmcq\b)/i,
-  perf: /(performance|প্রোগ্রেস|progress|কেমন আছি|কেমন চলছে|কেমন করছি|কতটা (ভালো|খারাপ)|রিপোর্ট|report|streak|accuracy|সঠিক|ভুল করেছি|কয়টা ঠিক|মার্কস|marks|score|স্কোর)/i,
+  quiz: /(\d+\s*(টা|টি)?\s*(mcq|প্রশ্ন)?|\bquiz\b|কুইজ|\bchallenge\b|মক|প্রশ্ন বানাও|প্রশ্ন তৈরি|make.*(mcq|question)|\bmcq\b)/i,
+  perf: /(performance|প্রোগ্রেস|progress|অগ্রগতি|ফলাফল|কেমন আছি|কেমন চলছে|কেমন করছি|ভালো করছি|কতটা (ভালো|খারাপ)|রিপোর্ট|report|streak|accuracy|সঠিক|ভুল করেছি|কয়টা ঠিক|মার্কস|marks|score|স্কোর)/i,
   image: /(ছবি|স্ক্রিনশট|ফটো|পিকচার|হাতে লেখা|চিত্র|\bimage\b|\bscreenshot\b|\bphoto\b|handwritten|\bdiagram\b)/i,
   search: /(নিউজ|খবর|নোটিশ|তারিখ|সার্কুলার|আপডেট|ভর্তির ফল|কবে|\bnews\b|\bnotice\b|\bdate\b|deadline|\bcircular\b|\bupdate\b)/i,
-  academic: /(বুঝাও|understand|explain|ব্যাখ্যা|কী |কি |কী\?|কি\?|what|why|how|কেন|define|সংজ্ঞা|পার্থক্য|difference|সূত্র|formula|theorem|উপপাদ্য|concept|ধারণা|system|সিস্টেম|photosynthesis|সালোকসংশ্লেষণ|newton|নিউটন|physics|পদার্থ|chemistry|রসায়ন|biology|জীববিজ্ঞান|math|গণিত|english|ইংরেজি|bangla|বাংলা|grammar|ব্যাকরণ)/i,
-  greeting: /(আসসালামু|আসসালাম|সালাম|আলাইকুম|হ্যালো|হাই|নমস্কার|good morning|good evening|\bhi\b|\bhello\b)/i
+  academic: /(বুঝাও|understand|explain|ব্যাখ্যা|কী |কি |কী\?|কি\?|what|why|how|কেন|define|সংজ্ঞা|পার্থক্য|difference|সূত্র|formula|theorem|উপপাদ্য|concept|ধারণা|system|সিস্টেম|photosynthesis|সালোকসংশ্লেষণ|newton|নিউটন|physics|পদার্থ|chemistry|রসায়ন|biology|জীববিজ্ঞান|math|গণিত|english|ইংরেজি|bangla|বাংলা|grammar|ব্যাকরণ|অঙ্ক|প্রমাণ|হিসাব|সমাধান|তুলনা|কতটি|কত|বের করো|গড়|নির্ণয়)/i,
+  greeting: /(আসসালামু|আসসালাম|সালাম|আলাইকুম|হ্যালো|হাই|নমস্কার|good morning|good evening|\bhi\b|\bhello\b)/i,
+  /* "you / your" + a marker about the assistant. (?!\p{L}) because \b is
+     ASCII-only and never fires after a Bengali letter, so কে(?!...) is needed
+     to avoid matching the কে inside কেমন. */
+  self: /(তোমার|তোমাকে|তুমি|তুই|আপনার|আপনি)[\s\S]{0,24}?(নাম|কে(?![\p{L}\p{M}])|কী|কি|মানুষ|পারো|করতে পারো|বানিয়েছ|বানালো|পরিচয়|সম্পর্কে)/u
 };
 
 function lower(s) {
@@ -87,6 +91,11 @@ export function classifyIntent(text) {
     return { intent: INTENTS.QUIZ_REQUEST, tier: TIER.FAST, confidence: 0.8 };
   if (RE.perf.test(t)) return { intent: INTENTS.PERFORMANCE_REQUEST, tier: TIER.SMART, confidence: 0.7 };
   if (RE.search.test(t)) return { intent: INTENTS.SEARCH_REQUEST, tier: TIER.FAST, confidence: 0.65 };
+  /* A question about the assistant itself is small talk, not a subject question.
+     Without this, the copula in "তোমার নাম কী?" matched the academic marker
+     "কী " and the model was told to explain it academically. Checked here so it
+     can only rescue a case that would otherwise be called academic. */
+  if (RE.self.test(t)) return { intent: INTENTS.GENERAL_CHAT, tier: TIER.FAST, confidence: 0.7 };
   if (RE.academic.test(t)) return { intent: INTENTS.ACADEMIC_EXPLAIN, tier: TIER.SMART, confidence: 0.7 };
   return { intent: INTENTS.GENERAL_CHAT, tier: TIER.FAST, confidence: 0.5 };
 }
