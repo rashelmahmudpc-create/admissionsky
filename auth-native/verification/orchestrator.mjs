@@ -1028,7 +1028,9 @@ export class VerificationOrchestrator {
   }
 
   async updateConfig(input) {
-    const next = verificationConfig(mergeRuntimeConfig(input, this.config));
+    // AUTH V2.0: pass the live config as the base so a slot the panel did not
+    // send keeps its current row instead of defaulting to disabled.
+    const next = verificationConfig(mergeRuntimeConfig(input, this.config), this.config);
     await this.repository.setRuntimeConfig({ config: next, now: Number(this.now()) });
     this.runtimeEnabled = next.enabled;
     this.config = this.activated ? next : Object.freeze({ ...next, enabled: false });

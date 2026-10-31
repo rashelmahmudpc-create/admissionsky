@@ -79,7 +79,7 @@ function safeJson(raw) {
 // opts out (unrestricted).
 export const OWNER_ALLOWED_DOMAINS = Object.freeze(['gmail.com', 'yahoo.com', 'icloud.com', 'hotmail.com', 'outlook.com']);
 
-export function verificationConfig(raw) {
+export function verificationConfig(raw, base = null) {
   const input = typeof raw === 'string' ? safeJson(raw) : (raw && typeof raw === 'object' ? raw : {});
   const policyInput = input.policy && typeof input.policy === 'object' ? input.policy : {};
   const policy = Object.freeze({
@@ -95,8 +95,20 @@ export function verificationConfig(raw) {
   });
   const supplied = Array.isArray(input.providers) ? input.providers : [];
   const byId = new Map(supplied.map(row => [String(row?.id || ''), row]));
+  // AUTH V2.0 (owner 2026-10-31): a save may only change what it actually sent.
+  //
+  // Every slot is rebuilt from SLOT_DEFINITIONS and any slot absent from the
+  // posted array came out `enabled: false`. The control center posts one row per
+  // card it rendered, so this only bit when a panel saved a SHORTER list than
+  // the chain — a partial save then silently disabled every slot it left out,
+  // and the owner would have seen the chain shrink with nothing to explain it.
+  //
+  // The current config already carries a row per known slot, so "not sent" and
+  // "sent as disabled" are distinguishable. Treat not-sent as unchanged.
+  const current = new Map((Array.isArray(base?.providers) ? base.providers : [])
+    .map(row => [String(row?.id || ''), row]));
   const providers = Object.entries(SLOT_DEFINITIONS).map(([id, slot]) => {
-    const row = byId.get(id) || {};
+    const row = byId.has(id) ? byId.get(id) : (current.get(id) || {});
     return Object.freeze({
       id,
       channel: slot.channel,
