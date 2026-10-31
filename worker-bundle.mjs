@@ -1519,9 +1519,9 @@ var CATALOG = Object.freeze([
     tiers: { FAST: "gemini-3.1-flash-lite", SMART: "gemini-3-flash-preview" },
     capability: [CAPABILITY.CHAT, CAPABILITY.REASONING, CAPABILITY.VISION, CAPABILITY.TOOLS],
     limits: null,
-    tos: null,
-    banglaScore: null,
-    verifiedAt: null
+    tos: "Free tier: inputs and outputs are used to improve Google's products and human reviewers may read API input/output; the paid tier is not. Source: https://ai.google.dev/gemini-api/docs/pricing",
+    banglaScore: { accuracy: 0.2917, correct: 7, sample: 24, set: "golden-v1" },
+    verifiedAt: "2026-10-31"
   },
   {
     id: "groq",
@@ -1531,10 +1531,10 @@ var CATALOG = Object.freeze([
     url: null,
     models: ["openai/gpt-oss-120b", "openai/gpt-oss-20b"],
     capability: [CAPABILITY.CHAT, CAPABILITY.REASONING],
-    limits: null,
+    limits: { rpm: 30, rpd: 1e3, tpm: 8e3, source: "https://console.groq.com/docs/rate-limits" },
     tos: null,
-    banglaScore: null,
-    verifiedAt: null
+    banglaScore: { accuracy: 0.4167, correct: 10, sample: 24, set: "golden-v1" },
+    verifiedAt: "2026-10-31"
   },
   {
     id: "cloudflare",
@@ -1544,10 +1544,10 @@ var CATALOG = Object.freeze([
     url: null,
     models: ["@cf/meta/llama-3.3-70b-instruct-fp8-fast"],
     capability: [CAPABILITY.CHAT],
-    limits: null,
+    limits: { neuronsPerDay: 1e4, source: "https://developers.cloudflare.com/workers-ai/platform/pricing" },
     tos: null,
     banglaScore: null,
-    verifiedAt: null
+    verifiedAt: "2026-10-31"
   },
   {
     id: "openrouter",
@@ -1557,10 +1557,10 @@ var CATALOG = Object.freeze([
     url: "https://openrouter.ai/api/v1/chat/completions",
     models: ["google/gemma-4-31b-it:free"],
     capability: [CAPABILITY.CHAT],
-    limits: null,
-    tos: null,
+    limits: { rpd: 50, source: "https://openrouter.ai/docs/api-reference/limits" },
+    tos: "Free ':free' model variants are capped and may be logged by the upstream provider; check each provider's policy. Source: https://openrouter.ai/docs/features/privacy-and-logging",
     banglaScore: null,
-    verifiedAt: null
+    verifiedAt: "2026-10-31"
   },
   {
     id: "vercel-ai-gateway",
@@ -1598,8 +1598,8 @@ var CATALOG = Object.freeze([
     capability: [CAPABILITY.CHAT],
     limits: null,
     tos: null,
-    banglaScore: null,
-    verifiedAt: null
+    banglaScore: { accuracy: 0.5833, correct: 14, sample: 24, set: "golden-v1" },
+    verifiedAt: "2026-10-31"
   },
   {
     id: "cerebras",
@@ -1609,10 +1609,10 @@ var CATALOG = Object.freeze([
     url: "https://api.cerebras.ai/v1/chat/completions",
     models: ["llama-3.3-70b"],
     capability: [CAPABILITY.CHAT],
-    limits: null,
+    limits: { rpm: 5, tpm: 3e4, tpd: 1e6, source: "https://inference-docs.cerebras.ai/support/rate-limits" },
     tos: null,
     banglaScore: null,
-    verifiedAt: null
+    verifiedAt: "2026-10-31"
   },
   {
     id: "sambanova",
