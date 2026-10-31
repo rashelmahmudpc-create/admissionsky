@@ -33975,7 +33975,14 @@ var gk_agent_worker_default = {
              is invisible to the public handler, and both the per-user quota and
              the P14 abuse guard fall back to KV without saying so. The AI status
              endpoint reports which store is live, which is how this was caught. */
-          AI_STATE: env.AI_STATE
+          AI_STATE: env.AI_STATE,
+          /* F0.2 follow-up (2026-10-31): the sky-ai service binding. Left out of
+             this whitelist, the public handler's forwardWithIdentity() failed its
+             shouldRouteToSkyAi() check and every identity route — prefs, status,
+             instructions, actions/audit and sky-flags — was answered by the local
+             fallback instead of sky-ai. sky-health worked only because it is
+             forwarded above this block, before the whitelist is applied. */
+          SKY_AI: env.SKY_AI
         };
         const pubResponse = await public_worker_default.fetch(new Request(u2p.href, request), envPub, ctx);
         return await compressResponse(request, pubResponse);
