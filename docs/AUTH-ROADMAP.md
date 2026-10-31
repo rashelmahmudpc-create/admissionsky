@@ -78,11 +78,13 @@
 - [ ] চলতে চলতে স্বাস্থ্য দেখে ধীর provider পিছনে সরানো
 - [ ] ৫–৮ সেকেন্ডে সাড়া না দিলে পরেরটা; একই OTP দুইবার যাবে না
 
-### ধাপ ৫: Forgot password ⬜
-- [ ] প্রথমে Descope Magic Link (`otp-m`), ব্যর্থ হলে Firebase link
-- [ ] Magic link → নিজেদের `/reset` পাতা → নতুন password
-- [ ] Firebase এ Custom action URL
-- [ ] চেপে রাখা error (যেমন `USER_DISABLED`) log এ
+### ধাপ ৫: Forgot password 🟡 (৩১ অক্টোবর ২০২৬)
+- [x] ✅ চেপে রাখা error (`USER_DISABLED` / `EMAIL_NOT_FOUND`) log এ — `reset_request` ইভেন্ট, শুধু reason code, কখনো ঠিকানা নয়; বাতিল হলে Telegram অ্যালার্ট (প্রতি কারণে ১৫ মিনিটে একবার)
+- [ ] ⬜ নিজেদের `/reset` পাতা (password সেট করার স্ক্রিন) — **ইচ্ছাকৃতভাবে বাদ, নিরাপত্তার কারণে**: Firebase-এর Web API key দিয়ে link পাঠানো যায়, কিন্তু `oobCode` কোনো দিন ফেরত আসে না — যাচাই করা যায় শুধু Firebase-এর নিজের action page থেকে, `accounts:resetPassword`-এ। প্রমাণ ছাড়া ঠিকানা + নতুন password নেয় এমন endpoint মানে যে কেউ ছাত্রের ঠিকানা জানলে তার password বদলে দিতে পারবে। তাই password সেট হয় Firebase-এর নিজের পাতাতেই।
+- [ ] ⬜ রিসেটের পর পুরনো সেশন বাতিল — **ইচ্ছাকৃতভাবে বাদ**: যে endpoint প্রমাণ ছাড়া শুধু সেশন বাতিল করে, সেটা দিয়ে যে কেউ ছাত্রের ঠিকানা জেনে তাকে যখন খুশি log out করে দিতে পারবে। Firebase password বদলালে তার নিজের refresh token নিজেই বাতিল করে; বাকিটা উপরের পাতার সাথে একসাথে আসবে।
+- [ ] ⬜ প্রথমে Descope Magic Link (`otp-m`), ব্যর্থ হলে Firebase link — **ইচ্ছাকৃতভাবে বাদ**: `otp-m`-এর লাইভ ডেলিভারি কখনো মাপা হয়নি (`liveDeliveryVerified: false`), আর তার redirect একটাই — `?magic=1`, যা এখন email-ownership-এ বাঁধা। মাপা Firebase link-এর সামনে অমাপা provider বসালে ছাত্র আটকে যেতে পারে।
+- [ ] ⬜ Magic link → নিজেদের `/reset` পাতা → নতুন password (উপরের দুইটার উপর নির্ভরশীল)
+- [ ] ⬜ Firebase এ Custom action URL — **ইচ্ছাকৃতভাবে বাদ**: এতে Firebase Console-এ হাত দিতে হয়, আর password বদলানোর কাজটা Firebase-এর নিজের পাতাতেই থাকে।
 
 ### ধাপ ৬: চেনা device এ ৩০ দিন OTP লাগবে না ⬜
 - [ ] OTP যাচাই/login সফল হলে device ৩০ দিন "চেনা" (signed cookie + server তালিকা)

@@ -32,5 +32,11 @@ test('auth-native stays free of logging primitives; the orchestrator only uses t
   assert.doesNotMatch(orchestrator, /console\.(log|info|warn|error|debug)\s*\(/);
   assert.match(orchestrator, /this\.onDeliveryEvent\?\.\(/);
   const authority = readFileSync(new URL('./auth-native/worker/auth-authority-do.mjs', import.meta.url), 'utf8');
-  assert.match(authority, /onDeliveryEvent: createOtpDeliverySink/);
+  // The authority owns exactly one sink, built once and shared: the
+  // orchestrator gets it for provider tries, the step-5 reset path for its
+  // reason codes. Two sinks would mean two cooldown maps and two Telegram
+  // messages for the same event.
+  assert.match(authority, /const otpDeliverySink = this\.otpDeliverySink = createOtpDeliverySink\(\{ env, waitUntil/);
+  assert.match(authority, /onDeliveryEvent: otpDeliverySink/);
+  assert.equal((authority.match(/createOtpDeliverySink\(\{/g) || []).length, 1);
 });

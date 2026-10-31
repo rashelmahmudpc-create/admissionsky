@@ -27,6 +27,12 @@ export function otpAlertFor(record) {
   // AU-SEC-01 L8 (global fuzz): the day's provider quota is nearly gone. The
   // key is the band, not the provider, so a run working through the list
   // produces one message per escalation rather than one per slot.
+  // Step 5: a refused reset is a support signal, not a failure. The handler
+  // must answer 202 either way (enumeration protection), so the log is the
+  // only place this is visible. One message per reason per cooldown window.
+  if (record.evt === 'reset_request' && record.reason && record.reason !== 'ACCEPTED') {
+    return { kind: 'reset_refused', key: `reset:${record.reason}`, title: `🔑 Password reset পাঠানো হয়নি (${record.reason})`, ms: 0 };
+  }
   if (record.evt === 'otp_delivery' && record.outcome === 'quota_pressure') {
     const pct = Math.round((Number(record.ratio) || 0) * 100);
     return record.band === 'hard'
@@ -38,6 +44,12 @@ export function otpAlertFor(record) {
 
 export function formatOtpAlert(alert, record, at) {
   const lines = ['🔥 AdmissionSky · OTP alert', alert.title];
+  if (record.evt === 'reset_request') {
+    // Only the code and the count: no address ever reaches Telegram.
+    lines.push('ছাত্র এই request-এ কোনো ইঙ্গিত পায়নি (202, একই উত্তর)।');
+    lines.push(`সময় (UTC): ${new Date(at).toISOString()}`);
+    return lines.join('\n');
+  }
   if (record.provider) lines.push(`provider: ${record.name || record.provider} (${record.provider})`);
   if (record.reason) lines.push(`কারণ: ${record.reason}`);
   if (alert.ms) lines.push(`সময়: ${alert.ms} ms`);

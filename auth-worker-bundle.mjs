@@ -2103,6 +2103,81 @@ function sendThrottledSecurityAlert(env, store, input = {}, options = {}) {
   }).catch(() => "failed");
 }
 
+// observability/otp-delivery-log.mjs
+var OTP_PROVIDER_NAMES = Object.freeze({
+  "otp-a": "Brevo",
+  "otp-b": "AppsScript",
+  "otp-c": "Mailjet",
+  "otp-d": "Resend",
+  "otp-e": "AgentMail",
+  "otp-f": "MailerSend",
+  "otp-g": "DeadSimple",
+  "otp-h": "Logto",
+  "otp-i": "Appwrite",
+  "otp-j": "Ory",
+  "otp-k": "Hanko",
+  "otp-l": "Descope-OTP",
+  "otp-m": "Descope-MagicLink",
+  "otp-n": "Maileroo",
+  "otp-o": "ElasticEmail",
+  "otp-q": "Mailgun",
+  "otp-r": "AlibabaDirectMail",
+  "otp-s": "SparkPost",
+  "otp-t": "Plunk",
+  "otp-u": "Loops",
+  "otp-v": "Stytch",
+  "otp-w": "WorkOS",
+  "otp-x": "MojoAuth",
+  "otp-y": "Authgear",
+  "otp-z": "Stack Auth",
+  "otp-za": "SuperTokens",
+  telegram: "Telegram"
+});
+var EVENTS = /* @__PURE__ */ new Set(["otp_delivery", "otp_request", "reset_request"]);
+var LONG_STRING_FIELDS = /* @__PURE__ */ new Set(["tried", "skipped"]);
+var STRING_FIELDS = /* @__PURE__ */ new Set(["attempt", "purpose", "method", "provider", "label", "outcome", "reason", "failureClass", "tried", "skipped"]);
+var NUMBER_FIELDS = /* @__PURE__ */ new Set(["candidates", "rank", "try", "latencyMs", "totalMs"]);
+var RESET_REASONS = /* @__PURE__ */ new Set([
+  "EMAIL_NOT_FOUND",
+  "USER_DISABLED",
+  "INVALID_EMAIL",
+  "MISSING_EMAIL",
+  "TOO_MANY_ATTEMPTS_TRY_LATER",
+  "TOO_MANY_ATTEMPTS",
+  "QUOTA_EXCEEDED",
+  "ACCEPTED"
+]);
+function sanitizeOtpDeliveryEvent(event) {
+  if (!event || !EVENTS.has(event.evt)) return null;
+  const out = { evt: event.evt };
+  for (const [key, value] of Object.entries(event)) {
+    if (STRING_FIELDS.has(key) && value != null && typeof value !== "object") out[key] = String(value).slice(0, LONG_STRING_FIELDS.has(key) ? 400 : 64);
+    else if (NUMBER_FIELDS.has(key) && Number.isFinite(Number(value))) out[key] = Math.round(Number(value));
+  }
+  if (out.attempt) out.attempt = out.attempt.slice(0, 8);
+  if (out.evt === "reset_request") {
+    if (!RESET_REASONS.has(out.reason)) delete out.reason;
+    delete out.provider;
+    delete out.label;
+    delete out.method;
+    delete out.failureClass;
+    delete out.purpose;
+    return out;
+  }
+  if (out.provider) out.name = OTP_PROVIDER_NAMES[out.provider] || out.provider;
+  return out;
+}
+function emitOtpDeliveryEvent(event, sink = console) {
+  const record = sanitizeOtpDeliveryEvent(event);
+  if (!record) return null;
+  try {
+    const failed = record.outcome === "failed" || record.outcome === "all_failed";
+    (failed ? sink.warn : sink.log).call(sink, JSON.stringify(record));
+  } catch {
+  }
+  return record;
+}
+
 // auth-native/worker/public-auth-handler.mjs
 var AUTH_API_PREFIX = "/api/auth/v1";
 var PUBLIC_PROFILE_PREFIX = "/api/public/profile/";
@@ -2556,6 +2631,17 @@ var sessionCookies = (established, refreshToken, context) => {
   if (context.isNewDevice) values.push(deviceCookie(context.deviceId));
   return values;
 };
+var resetDeliveryEvent = (env, fields) => {
+  try {
+    void callAuthority(env, "/internal/observability/reset-request", { input: fields }).catch(() => {
+    });
+  } catch (_) {
+  }
+  try {
+    emitOtpDeliveryEvent({ evt: "reset_request", ...fields }, console);
+  } catch (_) {
+  }
+};
 var authSuccess = (request, established, refreshToken, context, verification = {}, extraCookies = []) => {
   const emailVerified = verification.emailVerified !== false;
   const telegramVerified = verification.telegramVerified === true;
@@ -2950,8 +3036,10 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         });
         try {
           await provider.sendPasswordResetEmail(prepared.email);
+          resetDeliveryEvent(env, { reason: "ACCEPTED" });
         } catch (cause) {
           const privateAccountResult = cause instanceof FirebaseRequestError && ["EMAIL_NOT_FOUND", "USER_DISABLED", "INVALID_EMAIL", "MISSING_EMAIL"].includes(cause.reason);
+          resetDeliveryEvent(env, { reason: privateAccountResult ? cause.reason : "PROVIDER_FAILED" });
           if (!privateAccountResult) throw providerError(cause, "password-reset");
         }
         return json(request, 202, {

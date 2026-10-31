@@ -20,6 +20,7 @@ import { sendThrottledSecurityAlert, SECURITY_ALERT_EVENTS } from '../core/secur
  * *.admissionhub.pages.dev preview host, so production served credentialed
  * CORS to preview builds even after the other handlers were tightened. */
 import { allowedOrigin, corsHeaders } from '../../cors-policy.mjs';
+import { emitOtpDeliveryEvent } from '../../observability/otp-delivery-log.mjs';
 
 export const AUTH_API_PREFIX = '/api/auth/v1';
 // Phase 7 public-safe profile projection, deliberately unauthenticated and
@@ -550,6 +551,22 @@ const sessionCookies = (established, refreshToken, context) => {
   return values;
 };
 
+/* A5 step 5 (owner 2026-10-31). The reset path used to be silent: the handler
+ * answers 202 for a known address, an unknown one and a disabled one alike,
+ * which is right for the student (enumeration protection) but left the owner
+ * unable to tell "the mail went out" from "we refused it". This writes the one
+ * line that closes that gap.
+ *
+ * Only the reason code is passed. The sink's allow-list in
+ * observability/otp-delivery-log.mjs drops anything that is not on its closed
+ * list, so an address cannot reach the log even if a caller passes one by
+ * mistake. The authority owns the sink that reaches Telegram; `console` is only
+ * the fallback for a deployment without a bound authority. */
+const resetDeliveryEvent = (env, fields) => {
+  try { void callAuthority(env, '/internal/observability/reset-request', { input: fields }).catch(() => {}); } catch (_) {}
+  try { emitOtpDeliveryEvent({ evt: 'reset_request', ...fields }, console); } catch (_) {}
+};
+
 const authSuccess = (request, established, refreshToken, context, verification = {}, extraCookies = []) => {
   const emailVerified = verification.emailVerified !== false;
   const telegramVerified = verification.telegramVerified === true;
@@ -985,12 +1002,19 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         const prepared = await callAuthority(env, '/internal/firebase/rate', {
           input: { operation: 'password-reset', email }, context
         });
+        // AUTH-ROADMAP step 5 (owner 2026-10-31): the refusal below is
+        // deliberately invisible to the caller, which used to make it invisible
+        // to the owner too — "reset link এল না" and "এই email-এ account নেই"
+        // produced the same silence. One line per attempt, reason code only,
+        // never the address, and the answer stays byte-identical.
         try {
           await provider.sendPasswordResetEmail(prepared.email);
+          resetDeliveryEvent(env, { reason: 'ACCEPTED' });
         } catch (cause) {
           // Account existence, disabled state, and provider-side address normalization must look identical.
           const privateAccountResult = cause instanceof FirebaseRequestError
             && ['EMAIL_NOT_FOUND', 'USER_DISABLED', 'INVALID_EMAIL', 'MISSING_EMAIL'].includes(cause.reason);
+          resetDeliveryEvent(env, { reason: privateAccountResult ? cause.reason : 'PROVIDER_FAILED' });
           if (!privateAccountResult) throw providerError(cause, 'password-reset');
         }
         return json(request, 202, {

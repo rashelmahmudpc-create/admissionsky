@@ -67,14 +67,18 @@ export class AdmissionAuthAuthority {
         avatarStore: new D1ProfileStore(env.PROFILE_DB || null)
       });
       const persistedVerificationConfig = await this.verificationRepository.getRuntimeConfig();
+      // AUTH-ROADMAP step 0: Workers Logs line per send + Telegram alert on
+      // failure / >30s. Step 5 reuses the same sink for the reset path's reason
+      // codes, so it is built once here and handed to both callers: two sinks
+      // would mean two cooldown maps and two Telegram messages per event.
+      const otpDeliverySink = this.otpDeliverySink = createOtpDeliverySink({ env, waitUntil: typeof state.waitUntil === 'function' ? promise => state.waitUntil(promise) : null });
       this.verification = new VerificationOrchestrator({
         repository: this.verificationRepository,
         hmacSecret: env.AUTH_HMAC_SECRET,
         config: persistedVerificationConfig || env.VERIFICATION_ORCHESTRATOR_CONFIG,
         providers: createConfiguredVerificationProviders(env),
         activated: ['canary', 'enabled'].includes(String(env.VERIFICATION_AUTH_ACTIVATION || '')),
-        // AUTH-ROADMAP step 0: Workers Logs line per send + Telegram alert on failure / >30s.
-        onDeliveryEvent: createOtpDeliverySink({ env, waitUntil: typeof state.waitUntil === 'function' ? promise => state.waitUntil(promise) : null })
+        onDeliveryEvent: otpDeliverySink
       });
       // Phase 6, the engine's security challenges reuse this orchestrator
       // for email/Telegram delivery.
@@ -444,6 +448,16 @@ export class AdmissionAuthAuthority {
       if (url.pathname === '/internal/verification/admin/status') {
         const result = await this.verification.adminStatus();
         return response(200, { ok: true, result });
+      }
+      // A5 step 5 (owner 2026-10-31): the reset path runs in the public Worker,
+      // which has no log sink of its own — the authority owns the one that
+      // already reaches Telegram. The handler hands over the reason code only,
+      // and the sink's allow-list drops anything that is not a known code, so
+      // an address cannot ride along.
+      if (url.pathname === '/internal/observability/reset-request') {
+        const reason = String(body.input?.reason || '').slice(0, 40);
+        if (typeof this.otpDeliverySink === 'function') this.otpDeliverySink({ evt: 'reset_request', reason });
+        return response(200, { ok: true });
       }
       if (url.pathname === '/internal/verification/admin/config') {
         const result = await this.verification.updateConfig(body.config);

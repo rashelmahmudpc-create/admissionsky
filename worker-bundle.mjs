@@ -12921,6 +12921,81 @@ function sendThrottledSecurityAlert(env, store, input = {}, options = {}) {
   }).catch(() => "failed");
 }
 
+// observability/otp-delivery-log.mjs
+var OTP_PROVIDER_NAMES = Object.freeze({
+  "otp-a": "Brevo",
+  "otp-b": "AppsScript",
+  "otp-c": "Mailjet",
+  "otp-d": "Resend",
+  "otp-e": "AgentMail",
+  "otp-f": "MailerSend",
+  "otp-g": "DeadSimple",
+  "otp-h": "Logto",
+  "otp-i": "Appwrite",
+  "otp-j": "Ory",
+  "otp-k": "Hanko",
+  "otp-l": "Descope-OTP",
+  "otp-m": "Descope-MagicLink",
+  "otp-n": "Maileroo",
+  "otp-o": "ElasticEmail",
+  "otp-q": "Mailgun",
+  "otp-r": "AlibabaDirectMail",
+  "otp-s": "SparkPost",
+  "otp-t": "Plunk",
+  "otp-u": "Loops",
+  "otp-v": "Stytch",
+  "otp-w": "WorkOS",
+  "otp-x": "MojoAuth",
+  "otp-y": "Authgear",
+  "otp-z": "Stack Auth",
+  "otp-za": "SuperTokens",
+  telegram: "Telegram"
+});
+var EVENTS = /* @__PURE__ */ new Set(["otp_delivery", "otp_request", "reset_request"]);
+var LONG_STRING_FIELDS = /* @__PURE__ */ new Set(["tried", "skipped"]);
+var STRING_FIELDS = /* @__PURE__ */ new Set(["attempt", "purpose", "method", "provider", "label", "outcome", "reason", "failureClass", "tried", "skipped"]);
+var NUMBER_FIELDS = /* @__PURE__ */ new Set(["candidates", "rank", "try", "latencyMs", "totalMs"]);
+var RESET_REASONS = /* @__PURE__ */ new Set([
+  "EMAIL_NOT_FOUND",
+  "USER_DISABLED",
+  "INVALID_EMAIL",
+  "MISSING_EMAIL",
+  "TOO_MANY_ATTEMPTS_TRY_LATER",
+  "TOO_MANY_ATTEMPTS",
+  "QUOTA_EXCEEDED",
+  "ACCEPTED"
+]);
+function sanitizeOtpDeliveryEvent(event) {
+  if (!event || !EVENTS.has(event.evt)) return null;
+  const out = { evt: event.evt };
+  for (const [key, value] of Object.entries(event)) {
+    if (STRING_FIELDS.has(key) && value != null && typeof value !== "object") out[key] = String(value).slice(0, LONG_STRING_FIELDS.has(key) ? 400 : 64);
+    else if (NUMBER_FIELDS.has(key) && Number.isFinite(Number(value))) out[key] = Math.round(Number(value));
+  }
+  if (out.attempt) out.attempt = out.attempt.slice(0, 8);
+  if (out.evt === "reset_request") {
+    if (!RESET_REASONS.has(out.reason)) delete out.reason;
+    delete out.provider;
+    delete out.label;
+    delete out.method;
+    delete out.failureClass;
+    delete out.purpose;
+    return out;
+  }
+  if (out.provider) out.name = OTP_PROVIDER_NAMES[out.provider] || out.provider;
+  return out;
+}
+function emitOtpDeliveryEvent(event, sink = console) {
+  const record = sanitizeOtpDeliveryEvent(event);
+  if (!record) return null;
+  try {
+    const failed = record.outcome === "failed" || record.outcome === "all_failed";
+    (failed ? sink.warn : sink.log).call(sink, JSON.stringify(record));
+  } catch {
+  }
+  return record;
+}
+
 // auth-native/worker/public-auth-handler.mjs
 var AUTH_API_PREFIX = "/api/auth/v1";
 var PUBLIC_PROFILE_PREFIX = "/api/public/profile/";
@@ -13374,6 +13449,17 @@ var sessionCookies = (established, refreshToken, context) => {
   if (context.isNewDevice) values.push(deviceCookie(context.deviceId));
   return values;
 };
+var resetDeliveryEvent = (env, fields) => {
+  try {
+    void callAuthority(env, "/internal/observability/reset-request", { input: fields }).catch(() => {
+    });
+  } catch (_) {
+  }
+  try {
+    emitOtpDeliveryEvent({ evt: "reset_request", ...fields }, console);
+  } catch (_) {
+  }
+};
 var authSuccess = (request, established, refreshToken, context, verification = {}, extraCookies = []) => {
   const emailVerified = verification.emailVerified !== false;
   const telegramVerified = verification.telegramVerified === true;
@@ -13768,8 +13854,10 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         });
         try {
           await provider.sendPasswordResetEmail(prepared.email);
+          resetDeliveryEvent(env, { reason: "ACCEPTED" });
         } catch (cause) {
           const privateAccountResult = cause instanceof FirebaseRequestError && ["EMAIL_NOT_FOUND", "USER_DISABLED", "INVALID_EMAIL", "MISSING_EMAIL"].includes(cause.reason);
+          resetDeliveryEvent(env, { reason: privateAccountResult ? cause.reason : "PROVIDER_FAILED" });
           if (!privateAccountResult) throw providerError(cause, "password-reset");
         }
         return json4(request, 202, {
@@ -26995,62 +27083,6 @@ var VerificationOrchestrator = class {
 };
 var __verificationOrchestratorTest = Object.freeze({ PURPOSES, SEND_LIMITS, providerFailure: providerFailure2, ratio: ratio3 });
 
-// observability/otp-delivery-log.mjs
-var OTP_PROVIDER_NAMES = Object.freeze({
-  "otp-a": "Brevo",
-  "otp-b": "AppsScript",
-  "otp-c": "Mailjet",
-  "otp-d": "Resend",
-  "otp-e": "AgentMail",
-  "otp-f": "MailerSend",
-  "otp-g": "DeadSimple",
-  "otp-h": "Logto",
-  "otp-i": "Appwrite",
-  "otp-j": "Ory",
-  "otp-k": "Hanko",
-  "otp-l": "Descope-OTP",
-  "otp-m": "Descope-MagicLink",
-  "otp-n": "Maileroo",
-  "otp-o": "ElasticEmail",
-  "otp-q": "Mailgun",
-  "otp-r": "AlibabaDirectMail",
-  "otp-s": "SparkPost",
-  "otp-t": "Plunk",
-  "otp-u": "Loops",
-  "otp-v": "Stytch",
-  "otp-w": "WorkOS",
-  "otp-x": "MojoAuth",
-  "otp-y": "Authgear",
-  "otp-z": "Stack Auth",
-  "otp-za": "SuperTokens",
-  telegram: "Telegram"
-});
-var EVENTS = /* @__PURE__ */ new Set(["otp_delivery", "otp_request"]);
-var LONG_STRING_FIELDS = /* @__PURE__ */ new Set(["tried", "skipped"]);
-var STRING_FIELDS = /* @__PURE__ */ new Set(["attempt", "purpose", "method", "provider", "label", "outcome", "reason", "failureClass", "tried", "skipped"]);
-var NUMBER_FIELDS = /* @__PURE__ */ new Set(["candidates", "rank", "try", "latencyMs", "totalMs"]);
-function sanitizeOtpDeliveryEvent(event) {
-  if (!event || !EVENTS.has(event.evt)) return null;
-  const out = { evt: event.evt };
-  for (const [key, value] of Object.entries(event)) {
-    if (STRING_FIELDS.has(key) && value != null && typeof value !== "object") out[key] = String(value).slice(0, LONG_STRING_FIELDS.has(key) ? 400 : 64);
-    else if (NUMBER_FIELDS.has(key) && Number.isFinite(Number(value))) out[key] = Math.round(Number(value));
-  }
-  if (out.attempt) out.attempt = out.attempt.slice(0, 8);
-  if (out.provider) out.name = OTP_PROVIDER_NAMES[out.provider] || out.provider;
-  return out;
-}
-function emitOtpDeliveryEvent(event, sink = console) {
-  const record = sanitizeOtpDeliveryEvent(event);
-  if (!record) return null;
-  try {
-    const failed = record.outcome === "failed" || record.outcome === "all_failed";
-    (failed ? sink.warn : sink.log).call(sink, JSON.stringify(record));
-  } catch {
-  }
-  return record;
-}
-
 // email-gateway/operations/telegram-notifier.mjs
 var TOKEN_PATTERN = /^[0-9]{6,15}:[A-Za-z0-9_-]{30,100}$/;
 var CHAT_PATTERN = /^(?:-?[0-9]{5,24}|@[A-Za-z][A-Za-z0-9_]{4,31})$/;
@@ -27161,6 +27193,9 @@ function otpAlertFor(record) {
   if (ms > OTP_SLOW_MS && (record.evt === "otp_request" || record.outcome === "accepted")) {
     return { kind: "slow", key: `slow:${record.provider || "request"}`, title: `🐢 OTP পাঠাতে ${Math.round(ms / 1e3)} সেকেন্ড লেগেছে`, ms };
   }
+  if (record.evt === "reset_request" && record.reason && record.reason !== "ACCEPTED") {
+    return { kind: "reset_refused", key: `reset:${record.reason}`, title: `🔑 Password reset পাঠানো হয়নি (${record.reason})`, ms: 0 };
+  }
   if (record.evt === "otp_delivery" && record.outcome === "quota_pressure") {
     const pct6 = Math.round((Number(record.ratio) || 0) * 100);
     return record.band === "hard" ? { kind: "fuzz_hard", key: "fuzz_hard", title: `🛑 OTP কোটা ${pct6}% শেষ — নতুন সাইনআপে কঠিন যাচাই চালু`, ms } : { kind: "fuzz_alert", key: "fuzz_alert", title: `⚠️ OTP কোটা ${pct6}% শেষ (${record.provider || ""})`, ms };
@@ -27169,6 +27204,11 @@ function otpAlertFor(record) {
 }
 function formatOtpAlert(alert, record, at) {
   const lines = ["🔥 AdmissionSky · OTP alert", alert.title];
+  if (record.evt === "reset_request") {
+    lines.push("ছাত্র এই request-এ কোনো ইঙ্গিত পায়নি (202, একই উত্তর)।");
+    lines.push(`সময় (UTC): ${new Date(at).toISOString()}`);
+    return lines.join("\n");
+  }
   if (record.provider) lines.push(`provider: ${record.name || record.provider} (${record.provider})`);
   if (record.reason) lines.push(`কারণ: ${record.reason}`);
   if (alert.ms) lines.push(`সময়: ${alert.ms} ms`);
@@ -31721,14 +31761,14 @@ var AdmissionAuthAuthority = class {
         avatarStore: new D1ProfileStore(env.PROFILE_DB || null)
       });
       const persistedVerificationConfig = await this.verificationRepository.getRuntimeConfig();
+      const otpDeliverySink = this.otpDeliverySink = createOtpDeliverySink({ env, waitUntil: typeof state.waitUntil === "function" ? (promise) => state.waitUntil(promise) : null });
       this.verification = new VerificationOrchestrator({
         repository: this.verificationRepository,
         hmacSecret: env.AUTH_HMAC_SECRET,
         config: persistedVerificationConfig || env.VERIFICATION_ORCHESTRATOR_CONFIG,
         providers: createConfiguredVerificationProviders(env),
         activated: ["canary", "enabled"].includes(String(env.VERIFICATION_AUTH_ACTIVATION || "")),
-        // AUTH-ROADMAP step 0: Workers Logs line per send + Telegram alert on failure / >30s.
-        onDeliveryEvent: createOtpDeliverySink({ env, waitUntil: typeof state.waitUntil === "function" ? (promise) => state.waitUntil(promise) : null })
+        onDeliveryEvent: otpDeliverySink
       });
       this.engine.bindVerification(this.verification);
       try {
@@ -32062,6 +32102,11 @@ var AdmissionAuthAuthority = class {
       if (url.pathname === "/internal/verification/admin/status") {
         const result = await this.verification.adminStatus();
         return response2(200, { ok: true, result });
+      }
+      if (url.pathname === "/internal/observability/reset-request") {
+        const reason2 = String(body.input?.reason || "").slice(0, 40);
+        if (typeof this.otpDeliverySink === "function") this.otpDeliverySink({ evt: "reset_request", reason: reason2 });
+        return response2(200, { ok: true });
       }
       if (url.pathname === "/internal/verification/admin/config") {
         const result = await this.verification.updateConfig(body.config);
