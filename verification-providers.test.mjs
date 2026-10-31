@@ -1181,5 +1181,10 @@ test('wrangler.toml enables otp-j and otp-k at 38 without new vars, ahead of the
   assert.match(toml, /\{"id":"otp-k","enabled":true,"priority":38,"dailyQuota":300/);
   const rows = JSON.parse(toml.match(/VERIFICATION_ORCHESTRATOR_CONFIG = '(.*)'/)[1]).providers;
   const order = rows.slice().sort((a, b) => a.priority - b.priority || a.id.localeCompare(b.id)).map(row => row.id);
-  assert.deepEqual(order.slice(order.indexOf('otp-f')), ['otp-f', 'otp-i', 'otp-j', 'otp-k', 'otp-l', 'otp-m', 'otp-n', 'otp-o', 'otp-q', 'otp-r', 'otp-s', 'otp-t', 'otp-u', 'otp-v', 'otp-w', 'otp-x', 'otp-y', 'otp-z', 'otp-za', 'otp-g', 'otp-c', 'telegram']);
+  // A4 ③ / D-3 (owner order 2026-10-31, option "ক"): otp-i moved ahead of otp-f, and
+  // otp-d joined the 38 group, so the tail is asserted from otp-f's new position.
+  assert.deepEqual(order.slice(order.indexOf('otp-f')), ['otp-f', 'otp-d', 'otp-j', 'otp-k', 'otp-l', 'otp-m', 'otp-n', 'otp-o', 'otp-q', 'otp-r', 'otp-s', 'otp-t', 'otp-u', 'otp-v', 'otp-w', 'otp-x', 'otp-y', 'otp-z', 'otp-za', 'otp-g', 'otp-c', 'telegram']);
+  // The six measured senders come first, in capacity-aware order, and every other
+  // enabled slot stays behind them — none is disabled, so failover is unchanged.
+  assert.deepEqual(order.slice(0, 6), ['otp-a', 'otp-h', 'otp-i', 'otp-b', 'otp-e', 'otp-f']);
 });

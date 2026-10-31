@@ -139,9 +139,18 @@ const STATUS_PROBE_TIMEOUT_MS = 2500;
 // resend still demotes the slot that carried the previous code.
 const NON_GMAIL_FREEMAIL = new Set(['icloud.com', 'me.com', 'mac.com', 'yahoo.com', 'yahoo.co.uk', 'yahoo.co.in', 'ymail.com', 'rocketmail.com', 'outlook.com', 'hotmail.com', 'live.com', 'msn.com', 'aol.com']);
 // Owner 2026-10-16 (later still): Logto (otp-h) lands in Yahoo within seconds while
-// Appwrite can arrive after the code expired, so Logto goes first (15-30 = -15) and
-// Appwrite second (38-40 = -2); a resend (+25) then alternates between the two.
-const NON_GMAIL_PREFERENCE = Object.freeze({ 'otp-h': -30, 'otp-i': -40, 'otp-b': -15, 'otp-e': -30 });
+// Appwrite can arrive after the code expired, so Logto goes first and Appwrite second;
+// a resend (+25) then alternates between the two.
+//
+// A4 ③ (owner order 2026-10-31): these offsets are *additive*, so renumbering the
+// priorities silently reordered this group. otp-i moved 38 -> 20, which would have put
+// Appwrite ahead of Logto for Yahoo/iCloud — the exact inversion the owner reported on
+// 2026-10-16. The offsets are therefore re-derived as (old effective score - new
+// priority), which leaves every score exactly where the owner verified it:
+//   otp-h 15-30 = -15   otp-i 20-22 = -2   otp-b 25-20 = 5   otp-e 30-23 = 7
+// Brevo keeps its bare priority of 10, so the non-Gmail sequence stays
+// Logto > Appwrite > Apps Script > AgentMail > Brevo, and Gmail keeps the operator order.
+const NON_GMAIL_PREFERENCE = Object.freeze({ 'otp-h': -30, 'otp-i': -22, 'otp-b': -20, 'otp-e': -23 });
 // Owner 2026-10-17: the control center posts only enabled/priority/dailyQuota per
 // slot and no allowedDomains, so every save reset each timeoutMs to 8s (Logto,
 // Apps Script and Telegram need longer). Keep whatever the panel did not send.
