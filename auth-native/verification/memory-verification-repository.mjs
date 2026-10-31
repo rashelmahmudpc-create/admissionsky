@@ -423,6 +423,17 @@ export class MemoryVerificationRepository {
       row.lastSuccessAt = input.now;
     } else if (input.failureClass === VERIFICATION_FAILURE_CLASS.USER) {
       row.userErrorCount += 1;
+      // AUTH V2.0 (owner 2026-10-31): a probe that answers USER-class never
+      // closes, so the circuit stays half-open forever. The slot is then sorted
+      // first on every request as "the probe", and each request pays its full
+      // timeout before the healthy providers get a turn — a permanent tax paid
+      // for a provider that is merely answering oddly. Reopen it for another
+      // cooldown instead: the slot keeps its chance to recover on a later
+      // probe, but it stops being tried ahead of everyone else meanwhile.
+      if (row.circuit === 'half-open') {
+        row.circuit = 'open';
+        row.cooldownUntil = input.now + input.cooldownMs;
+      }
     } else {
       row.failureCount += 1;
       row.consecutiveFailures += 1;
