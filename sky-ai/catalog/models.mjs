@@ -317,7 +317,21 @@ export const CATALOG = Object.freeze([
  *  the catalog. */
 export const COMPAT_PROVIDERS = CATALOG
   .filter((c) => c.adapter === 'openai-compat')
-  .map((c) => ({ key: c.key, url: c.url, models: c.models }));
+  .map((c) => ({ id: c.id, key: c.key, url: c.url, models: c.models }));
+
+/** The capability tags of a provider id, or [] when the id is unknown. F1.3
+ *  filters a chain with this so a task's requirement is answered by the
+ *  catalog rather than by a hardcoded provider name. */
+export function capabilityOf(id) {
+  const entry = CATALOG.find((c) => c.id === id);
+  return entry ? [...entry.capability] : [];
+}
+
+/** Provider ids that declare a capability. The inverse of capabilityOf, for a
+ *  caller that needs the set rather than a per-entry test. */
+export function providersWith(cap) {
+  return CATALOG.filter((c) => c.capability.includes(cap)).map((c) => c.id);
+}
 
 /** FAST/SMART model ids for a tier-aware adapter (Gemini today). */
 export function tierModels(id) {
