@@ -43,6 +43,11 @@ export function formatOtpAlert(alert, record, at) {
   if (alert.ms) lines.push(`সময়: ${alert.ms} ms`);
   if (record.purpose) lines.push(`purpose: ${record.purpose}${record.method ? ` · ${record.method}` : ''}`);
   if (record.tried) lines.push(`চেষ্টা: ${record.tried}`);
+  // A4 / AU-OB-02 (owner 2026-10-31): when a send is slow or fails outright,
+  // the first question is which slots never got a turn. Without this the owner
+  // sees "otp-y carried it" and "everything else was out of quota" as the same
+  // message and has to open the logs to tell them apart.
+  if (record.skipped) lines.push(`বাদ পড়েছে: ${record.skipped}`);
   if (record.attempt) lines.push(`ref: ${record.attempt}`);
   lines.push(`সময় (UTC): ${new Date(at).toISOString()}`);
   return lines.join('\n');

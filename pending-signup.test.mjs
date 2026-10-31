@@ -162,3 +162,24 @@ test('pending-signup source has no console.* and never touches Firebase', () => 
   assert.ok(!/console\./.test(source));
   assert.ok(!/signUp\(|firebase-auth/.test(source));
 });
+
+/* A4 / AU-OB-02 (owner 2026-10-31): the signup path keeps its own candidate
+   list, so it has to name the slots it passed over for the same reason the
+   backup path does — otherwise a slow signup code is just as unexplained. */
+test('a signup that lands on a later slot names the faster slots it passed over', async () => {
+  const outOfQuota = new MockProvider({ id: 'otp-a' });
+  outOfQuota.getRemainingQuota = async () => ({ remaining: 0, limit: 100, resetAt: 1_900_000_000_000 });
+  const working = new MockProvider({ id: 'otp-b' });
+  const { store, orchestrator, events } = setup([outOfQuota, working]);
+  const { verificationTicket: ticket } = await store.begin({ email: EMAIL, password: PASSWORD, context });
+
+  const sent = await requestPendingSignupCode({ store, orchestrator, ticket, context, recipientName: 'রিয়া' });
+  assert.equal(sent.accepted, true);
+  assert.equal(working.sends.length, 1);
+  assert.equal(outOfQuota.sends.length, 0);
+
+  const request = events.find(event => event.evt === 'otp_request' && event.purpose === 'signup');
+  assert.equal(request.candidates, 1);
+  assert.equal(request.skipped, 'otp-a:provider-quota', 'the log says why the first slot was passed over');
+  assert.equal(request.provider, 'otp-b');
+});

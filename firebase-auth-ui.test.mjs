@@ -124,8 +124,10 @@ test('signup UI collects Email and Password, clears passwords, and waits for sta
   assert.equal(app.calls.filter(call => call.path.endsWith('/signup')).length, 1);
   const resendButton = app.document.querySelector('[data-role="resend-submit"]');
   assert.equal(resendButton.disabled, true);
-  assert.match(resendButton.textContent, /৫[৮৯]|৬০|5[89]|60/);
-  assert.match(app.document.querySelector('[data-role="resend-status"]').textContent, /সেকেন্ড পর/);
+  // A4 / AU-UX-04 (owner 2026-10-31): the countdown is now the shared mm:ss shape
+  // in Bengali numerals — ০১:০০ for the 60-second default — on every OTP view.
+  assert.match(resendButton.textContent, /০১:০০/);
+  assert.match(app.document.querySelector('[data-role="resend-status"]').textContent, /০১:০০/);
   assert.equal(app.document.querySelector('#ah-signup-password').value, '');
   assert.equal(app.document.querySelector('#ah-signup-confirm').value, '');
   assert.equal(app.window.AdmissionAccount.isVerified(), false);
@@ -181,7 +183,7 @@ test('resend UI enforces Retry-After countdown, blocks repeated submit, and clea
 
   assert.equal(app.calls.filter(call => call.path.endsWith('/verification/resend')).length, 1);
   assert.equal(app.document.querySelector('#ah-resend-password').value, '');
-  assert.match(app.document.querySelector('[data-role="resend-submit"]').textContent, /৪[৩-৫]|4[3-5]/);
+  assert.match(app.document.querySelector('[data-role="resend-submit"]').textContent, /০০:৪[৩-৫]/, 'the countdown is mm:ss in Bengali numerals');
   assert.match(app.document.querySelector('[data-role="message"]').textContent, /অপেক্ষা/);
   app.dom.window.close();
 });

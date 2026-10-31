@@ -208,13 +208,25 @@ export class PendingSignupStore {
 
 // Email OTP slots in operator priority order (half-open probes first on ties).
 // Mirrors the orchestrator's readiness checks; magic link is never a code slot.
+// A4 / AU-OB-02: returns `{ rows, skipped }` just like the orchestrator's own
+// candidate list, so a signup that lands on otp-y can also say which faster
+// slots were passed over and why.
 async function signupCandidates(orchestrator, now) {
   const config = orchestrator?.config;
-  if (!config?.enabled) return [];
-  const eligible = config.providers.filter(entry => entry.enabled && entry.channel === VERIFICATION_CHANNELS.OTP && entry.id !== MAGIC_LINK_PROVIDER_ID);
+  if (!config?.enabled) return { rows: [], skipped: [] };
+  const skipped = [];
+  const eligible = [];
+  for (const entry of config.providers) {
+    if (!entry.enabled) continue;
+    // A signup code goes to email only, so a WhatsApp or Telegram slot is not a
+    // candidate at all and naming it would only add noise to the log line.
+    if (entry.channel !== VERIFICATION_CHANNELS.OTP) continue;
+    if (entry.id === MAGIC_LINK_PROVIDER_ID) { skipped.push(`${entry.id}:magic-link-only`); continue; }
+    eligible.push(entry);
+  }
   const rows = await Promise.all(eligible.map(async entry => {
     const provider = orchestrator.providers.get(entry.id);
-    if (!provider) return null;
+    if (!provider) { skipped.push(`${entry.id}:unavailable`); return null; }
     try {
       const [availability, remoteQuota, localQuota, state] = await Promise.all([
         bounded(() => provider.checkAvailability({ purpose: 'email-ownership' }), Math.min(entry.timeoutMs, PROBE_TIMEOUT_MS)),
@@ -222,11 +234,20 @@ async function signupCandidates(orchestrator, now) {
         orchestrator.repository.dailyQuotaSnapshot({ providerId: entry.id, dailyQuota: entry.dailyQuota, now }),
         orchestrator.repository.providerSnapshot({ providerId: entry.id, now })
       ]);
-      if (availability?.available !== true || state.circuit === 'open' || Number(remoteQuota?.remaining || 0) <= 0 || localQuota.remaining <= 0) return null;
+      if (availability?.available !== true || state.circuit === 'open' || Number(remoteQuota?.remaining || 0) <= 0 || localQuota.remaining <= 0) {
+        skipped.push(`${entry.id}:${availability?.available !== true ? 'unavailable'
+          : state.circuit === 'open' ? 'circuit-open'
+            : Number(remoteQuota?.remaining || 0) <= 0 ? 'provider-quota'
+              : 'local-quota'}`);
+        return null;
+      }
       return { entry, provider, probe: state.circuit === 'half-open' };
-    } catch { return null; }
+    } catch { skipped.push(`${entry.id}:unavailable`); return null; }
   }));
-  return rows.filter(Boolean).sort((a, b) => a.entry.priority - b.entry.priority || Number(b.probe) - Number(a.probe));
+  return {
+    rows: rows.filter(Boolean).sort((a, b) => a.entry.priority - b.entry.priority || Number(b.probe) - Number(a.probe)),
+    skipped: skipped.sort()
+  };
 }
 
 const recordResult = (orchestrator, entry, fields) => orchestrator.repository.recordProviderResult({
@@ -255,9 +276,9 @@ export async function requestPendingSignupCode({ store, orchestrator, ticket, co
   const attemptId = randomToken(24, store.crypto);
   const code = randomSixDigitOtp(store.crypto);
   const codeTtlMs = Math.min(policy.codeTtlSeconds * 1000, Math.max(1000, material.expiresAt - now));
-  const candidates = await signupCandidates(orchestrator, now);
+  const { rows: candidates, skipped } = await signupCandidates(orchestrator, now);
   const emit = (evt, fields) => { try { orchestrator.onDeliveryEvent?.({ evt, ...fields }); } catch {} };
-  const logBase = { attempt: attemptId.slice(0, 8), purpose: 'signup', method: 'code', candidates: candidates.length };
+  const logBase = { attempt: attemptId.slice(0, 8), purpose: 'signup', method: 'code', candidates: candidates.length, ...(skipped.length ? { skipped: skipped.join(',') } : {}) };
   const started = Date.now();
   const tried = [];
   let rank = 0;
