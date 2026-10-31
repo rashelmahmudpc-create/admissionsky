@@ -28,20 +28,45 @@ function testFiles() {
   return files;
 }
 
+// A workflow's `paths:` filter is a list of files that TRIGGER it, not files it
+// runs. Reading the whole workflow as one haystack therefore counted a name in a
+// trigger list as proof the suite executes — and three auth suites had been
+// sitting in `auth-identity-guard.yml`'s path filter only, running nowhere, with
+// this guard reporting them wired. Split the trigger block from the job body so
+// the check only sees what actually runs.
+function splitWorkflow(text) {
+  const jobsAt = text.search(/^jobs:/m);
+  if (jobsAt === -1) return { triggers: text, body: '' };
+  return { triggers: text.slice(0, jobsAt), body: text.slice(jobsAt) };
+}
+
 function wiring() {
   const scripts = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).scripts || {};
-  let haystack = Object.values(scripts).join(' \n ');
+  // Scripts are commands, so everything in them runs.
+  const runs = [Object.values(scripts).join(' \n ')];
+  // `on:` blocks are not runs; only the job bodies are.
+  const triggers = [];
   for (const name of readdirSync(WORKFLOW_DIR)) {
     if (!name.endsWith('.yml') && !name.endsWith('.yaml')) continue;
-    haystack += `\n${readFileSync(join(WORKFLOW_DIR, name), 'utf8')}`;
+    const { triggers: t, body } = splitWorkflow(readFileSync(join(WORKFLOW_DIR, name), 'utf8'));
+    triggers.push(t);
+    runs.push(body);
   }
-  return haystack;
+  return { runs: runs.join('\n'), triggers: triggers.join('\n') };
 }
 
 function isWired(file, haystack) {
   // A directory glob counts as wiring for the files inside it.
   const dir = file.includes('/') ? file.slice(0, file.indexOf('/')) : null;
-  return haystack.includes(file) || (dir ? new RegExp(`${dir}/\\*\\.test\\.mjs`).test(haystack) : false);
+  const glob = dir ? new RegExp(`${dir}/\\*\\.test\\.mjs`) : null;
+  const inRuns = haystack.runs.includes(file) || (glob ? glob.test(haystack.runs) : false);
+  return inRuns;
+}
+
+// Kept for the non-vacuity assertions below: names that appear somewhere, so a
+// test can tell "not wired" apart from "not present at all".
+function isMentionedAnywhere(file, haystack) {
+  return haystack.runs.includes(file) || haystack.triggers.includes(file);
 }
 
 test('no test suite is left without a workflow that runs it', () => {
@@ -52,6 +77,31 @@ test('no test suite is left without a workflow that runs it', () => {
     [],
     'these suites run in no script and no workflow — wire them (usually test:shell-guards) or delete them',
   );
+});
+
+test('a name in a path filter is not mistaken for a run', () => {
+  // Built from a synthetic workflow rather than the real ones: once the orphan
+  // suites are wired there is no live example left, and this must keep proving
+  // the distinction forever.
+  const workflow = [
+    'name: example',
+    'on:',
+    '  push:',
+    '    paths:',
+    "      - 'only-a-trigger.test.mjs'",
+    'jobs:',
+    '  check:',
+    '    steps:',
+    '      - run: node --test a-real-suite.test.mjs',
+  ].join('\n');
+  const { triggers, body } = splitWorkflow(workflow);
+  assert.match(triggers, /only-a-trigger\.test\.mjs/, 'the trigger block holds the path filter');
+  assert.ok(!body.includes('only-a-trigger.test.mjs'), 'the job body must not hold it');
+  assert.match(body, /a-real-suite\.test\.mjs/, 'a run line stays in the body');
+  // And the real repo must have no suite living only in a path filter.
+  const haystack = wiring();
+  const fake = testFiles().filter((f) => !isWired(f, haystack) && isMentionedAnywhere(f, haystack));
+  assert.deepEqual(fake, [], 'these are named in a path filter but no script or job runs them');
 });
 
 test('the wiring check itself is not vacuous', () => {
