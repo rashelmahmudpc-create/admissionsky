@@ -25516,6 +25516,11 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
         this.sql.exec("UPDATE auth_sessions SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL", now, userId);
         revoked = Number(open?.count || 0);
         this.#event("account-sessions-revoked", null, userId, now);
+        const trusted = this.#rows("SELECT device_ref AS deviceRef FROM auth_trusted_devices WHERE user_id=? AND revoked_at IS NULL", userId);
+        if (trusted.length) {
+          this.sql.exec("UPDATE auth_trusted_devices SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL", now, userId);
+          this.#event("device-revoked", null, userId, now, { deviceRef: null, policyVersion: null, reason: "account-state" });
+        }
       }
       this.#event("account-state-changed", null, userId, now);
       return Object.freeze({ userId, status: target, stateVersion: version, changed: true, revokedSessions: revoked });

@@ -894,6 +894,19 @@ export class MemoryAuthRepository {
         }
       }
       this.events.push({ type: 'account-sessions-revoked', userId, at: now });
+      // AUTH V2.0: a state that cannot sign in must also lose every trusted
+      // device — trust is what skips the OTP, so leaving it behind lets the
+      // device that got the account disabled walk back in unchallenged. Kept in
+      // step with the SQLite repository, which this double stands in for.
+      let devicesRevoked = 0;
+      for (const device of this.trustedDevices.values()) {
+        if (device.userId !== userId || device.revokedAt) continue;
+        device.revokedAt = now;
+        devicesRevoked += 1;
+      }
+      if (devicesRevoked > 0) {
+        this.events.push({ type: 'device-revoked', userId, at: now, deviceRef: null, policyVersion: null, reason: 'account-state' });
+      }
     }
     this.events.push({ type: 'account-state-changed', userId, at: now });
     return Object.freeze({ userId, status: target, stateVersion: version, changed: true, revokedSessions: revoked });
