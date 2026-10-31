@@ -692,6 +692,53 @@ test('owner 2026-10-16 (Logto first): a Gmail recipient keeps Brevo first', asyn
   assert.equal(appwrite.sends.length, 0);
 });
 
+test('A7 2026-10-31: Authgear is the second choice on Gmail and never displaces the verified non-Gmail order', async () => {
+  /* The two things that could go wrong when a slot is promoted, and what the
+   * promotion actually buys.
+   *
+   * It does NOT put Authgear ahead of Brevo: Brevo keeps 10, so with both healthy
+   * Brevo still carries a Gmail send. What changed is the fallback position —
+   * Authgear moved 38 -> 11, so when Brevo is exhausted or down the send goes to a
+   * provider measured landing in the Inbox, instead of to one of the twenty
+   * unmeasured slots that used to sit in front of it.
+   *
+   * On Yahoo/iCloud/Outlook the bias must still hold the order the owner verified on
+   * 2026-10-16. Authgear carries no bias, so it must never jump Logto or Appwrite. */
+  // Fresh providers per case: a MockProvider accumulates `sends` across setups, so
+  // sharing one object between the three scenarios would count an earlier send here.
+  const build = () => {
+    const brevo = new MockProvider({ id: 'otp-a' });
+    const authgear = new MockProvider({ id: 'otp-y', verificationMode: VERIFICATION_MODES.PROVIDER_EVIDENCE });
+    const logto = new MockProvider({ id: 'otp-h', verificationMode: VERIFICATION_MODES.PROVIDER_EVIDENCE });
+    const appwrite = new MockProvider({ id: 'otp-i', verificationMode: VERIFICATION_MODES.PROVIDER_EVIDENCE });
+    const list = [brevo, authgear, logto, appwrite];
+    const base = rawConfig(list);
+    const live = { 'otp-a': 10, 'otp-y': 11, 'otp-h': 15, 'otp-i': 20 };
+    const config = { ...base, allowedDomains: ['gmail.com', 'yahoo.com', 'icloud.com', 'outlook.com'], providers: base.providers.map(row => ({ ...row, priority: live[row.id] })) };
+    return { brevo, authgear, logto, appwrite, app: setup({ providers: list, config }) };
+  };
+
+  const gmail = build();
+  await gmail.app.orchestrator.requestVerification(ownershipIdentity('student@gmail.com'), context);
+  assert.equal(gmail.brevo.sends.length, 1, 'Brevo keeps the lead the owner verified with real students');
+  assert.equal(gmail.authgear.sends.length, 0);
+
+  // Brevo out of capacity is the case the promotion exists for.
+  const exhausted = build();
+  exhausted.brevo.getRemainingQuota = async () => ({ remaining: 0, limit: 300, resetAt: Date.now() + 3_600_000, source: 'declared' });
+  await exhausted.app.orchestrator.requestVerification(ownershipIdentity('student@gmail.com'), context);
+  assert.equal(exhausted.authgear.sends.length, 1, 'with Brevo exhausted the send goes to the measured Inbox provider, not an unmeasured slot');
+  assert.equal(exhausted.logto.sends.length, 0);
+  assert.equal(exhausted.appwrite.sends.length, 0);
+
+  const yahoo = build();
+  await yahoo.app.orchestrator.requestVerification(ownershipIdentity('student@yahoo.com'), context);
+  assert.equal(yahoo.logto.sends.length, 1, 'Logto still leads Yahoo — the owner verified this order');
+  assert.equal(yahoo.authgear.sends.length, 0, 'Authgear must not jump the biased group');
+  assert.equal(yahoo.appwrite.sends.length, 0);
+  assert.equal(yahoo.brevo.sends.length, 0);
+});
+
 test('owner 2026-10-16 (user-error failover): a provider 422 fails over to the next slot', async () => {
   const mailersend = new MockProvider({ id: 'otp-f' });
   mailersend.sendVerification = async input => {

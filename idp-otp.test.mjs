@@ -112,15 +112,31 @@ test('OTP_IDP: missing or bad keys keep slots inert; Authgear needs no key', () 
   assert.equal(noRow.find(p => p.id === 'otp-y').configured, false, 'no orchestrator row -> inert');
 });
 
-test('wrangler.toml: otp-v..otp-y at priority 38 before the last-resort pair, no new plain vars', async () => {
+test('wrangler.toml: Authgear joins the measured front group, the rest stay at 38, no new plain vars', async () => {
+  /* A7 / AU-OB-07 (owner order 2026-10-31): Authgear (otp-y) moves 38 -> 11. It
+   * earned a front slot on measurement, not preference: on the owner's own mailboxes
+   * the Firebase reset mail landed in Spam while the Authgear code landed in the
+   * Inbox, and a live round trip measured send -> Inbox in 5-7s with the code
+   * verifying. It lands behind Brevo (10) and not ahead of it: Brevo is the slot the
+   * owner already verified against real student inboxes, and nothing measured today
+   * says Authgear beats it. A bad day at Authgear still fails over to Brevo, so no
+   * student is blocked. The rest of the hosted IdPs keep 38 — no key is bound for
+   * them, so they stay inert and behind everything. */
   const toml = await readFile(new URL('./wrangler.toml', import.meta.url), 'utf8');
   assert.equal(/^OTP_IDP\s*=/m.test(toml), false, 'OTP_IDP is a secret, never a plain var');
   const rows = JSON.parse(toml.match(/VERIFICATION_ORCHESTRATOR_CONFIG = '(.*)'/)[1]).providers;
-  for (const id of ['otp-v', 'otp-w', 'otp-x', 'otp-y', 'otp-z', 'otp-za']) {
+  for (const id of ['otp-v', 'otp-w', 'otp-x', 'otp-z', 'otp-za']) {
     const row = rows.find(r => r.id === id);
     assert.equal(row.enabled, id !== 'otp-z', id); // otp-z off until the code box accepts letters
     assert.equal(row.priority, 38, id);
   }
+  const authgear = rows.find(r => r.id === 'otp-y');
+  const brevo = rows.find(r => r.id === 'otp-a');
+  assert.equal(authgear.priority, 11);
+  assert.ok(authgear.priority > brevo.priority, 'Brevo keeps the lead it was verified with');
+  // It must clear the whole unmeasured 38 block and stay ahead of the locked last resort.
+  assert.ok(authgear.priority < rows.find(r => r.id === 'otp-v').priority);
+  assert.ok(authgear.priority < rows.find(r => r.id === 'otp-g').priority);
   const env = { VERIFICATION_ORCHESTRATOR_CONFIG: toml.match(/VERIFICATION_ORCHESTRATOR_CONFIG = '(.*)'/)[1] };
   assert.equal(createConfiguredVerificationProviders(env).some(p => p.id === 'otp-y'), false, 'inert until OTP_IDP is bound');
   const ids = createConfiguredVerificationProviders({ ...env, OTP_IDP: '{}' }).map(p => p.id);
