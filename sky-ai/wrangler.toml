@@ -32,3 +32,11 @@ id = "fd9a455d1be64c2eade1309186462808"
 name = "AI_STATE"
 class_name = "AiStateObject"
 script_name = "admission-gk"
+
+# F0.2 / DV-02: canary + kill switch for new AI behaviour. Without this binding
+# `wrangler deploy` drops it from the live Worker (a deploy replaces the whole
+# binding set), and /api/ai/sky-flags silently falls back to gk-fallback with
+# every flag off — the switch would look present but do nothing.
+[[kv_namespaces]]
+binding = "SKY_FLAGS"
+id = "0fe1817e14f2466b84ac727a4405859c"
