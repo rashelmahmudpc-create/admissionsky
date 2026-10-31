@@ -11559,9 +11559,12 @@ var __verificationConfigTest = Object.freeze({ SLOT_DEFINITIONS, DEFAULT_POLICY,
 
 // auth-native/verification/turnstile.mjs
 var SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
-async function verifyTurnstile({ env, token, ip, fetchImpl = fetch, timeoutMs = 8e3 } = {}) {
+async function verifyTurnstile({ env, token, ip, fetchImpl = fetch, timeoutMs = 8e3, required = false } = {}) {
   const secret = String(env?.TURNSTILE_SECRET_KEY || "").trim();
-  if (!secret) return { enforced: false };
+  if (!secret) {
+    if (required) throw new NativeAuthError(AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
+    return { enforced: false };
+  }
   const value = String(token ?? "");
   if (!value || value.length > 4096) throw new NativeAuthError(AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
   const form = new URLSearchParams({ secret, response: value });
@@ -11578,6 +11581,215 @@ async function verifyTurnstile({ env, token, ip, fetchImpl = fetch, timeoutMs = 
   }
   throw new NativeAuthError(AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
 }
+
+// auth-native/core/abuse-signals.mjs
+var DATACENTER_ASNS = Object.freeze(/* @__PURE__ */ new Set([
+  14061,
+  // DigitalOcean
+  16509,
+  // Amazon AWS
+  14618,
+  // Amazon AES
+  8075,
+  // Microsoft Azure
+  24940,
+  // Hetzner
+  63949,
+  // Akamai / Linode
+  20473,
+  // Vultr / Choopa
+  16276,
+  // OVH
+  51167,
+  // Contabo
+  12876,
+  // Scaleway / Online SAS
+  197540,
+  // netcup
+  9009,
+  // M247
+  212238,
+  // Datacamp / CDN77
+  45102,
+  // Alibaba Cloud (intl)
+  37963,
+  // Alibaba Cloud (cn)
+  132203,
+  // Tencent Cloud
+  36351,
+  // IBM SoftLayer
+  53667,
+  // FranTech / BuyVM
+  26496,
+  // GoDaddy
+  32244,
+  // Liquid Web
+  28753,
+  // LeaseWeb
+  49981,
+  // WorldStream
+  200651,
+  // Flokinet
+  49505,
+  // Selectel
+  9123,
+  // Timeweb
+  29802,
+  // Hivelocity
+  63018,
+  // ColoCrossing
+  40021,
+  // ColoCrossing
+  3223,
+  // Voxility
+  202425,
+  // IP Volume
+  209854,
+  // Stark Industries
+  62240,
+  // Clouvider
+  215925,
+  // Neterra
+  197695,
+  // Reg.ru
+  48096,
+  // Itldc
+  198610,
+  // Beget
+  210644,
+  // Aeza
+  401120,
+  // Zenlayer
+  55990,
+  // Huawei Cloud
+  136907,
+  // Huawei Cloud
+  55967,
+  // Baidu
+  55020,
+  // Hostinger
+  47583,
+  // Hostinger
+  22612,
+  // Namecheap hosting
+  54290,
+  // Hostwinds
+  30083,
+  // GoDaddy / ASCIO
+  8560,
+  // IONOS
+  34011,
+  // IONOS
+  6724,
+  // Strato
+  31898,
+  // Oracle Cloud
+  14413,
+  // Linode legacy
+  40676,
+  // Psychz
+  53755,
+  // IOFlood
+  19969,
+  // Joe's Datacenter
+  15003,
+  // Nobis
+  32475,
+  // SingleHop
+  21859,
+  // Zenlayer
+  62567,
+  // DigitalOcean legacy
+  393406,
+  // DigitalOcean
+  152900,
+  // Sharktech
+  26347,
+  // Dreamhost
+  30148,
+  // Sucuri
+  32400,
+  // Linode
+  54540,
+  // HostUS
+  199524,
+  // G-Core
+  205544,
+  // G-Core
+  202422
+  // G-Core
+]));
+function isDatacenterAsn(asn) {
+  const value = Number(asn);
+  return Number.isFinite(value) && value > 0 && DATACENTER_ASNS.has(value);
+}
+function networkPrefix(ip) {
+  const value = String(ip || "").trim().toLowerCase();
+  if (!value || value === "unknown") return "";
+  const bare = value.split("%")[0];
+  if (bare.includes(":")) {
+    const [head, tail = ""] = bare.split("::");
+    const headGroups = head ? head.split(":").filter(Boolean) : [];
+    const tailGroups = tail ? tail.split(":").filter(Boolean) : [];
+    if (!headGroups.length && !tailGroups.length) return "";
+    const groups = bare.includes("::") ? [...headGroups, ...Array(Math.max(0, 8 - headGroups.length - tailGroups.length)).fill("0"), ...tailGroups] : headGroups;
+    if (groups.length !== 8 || groups.some((group) => !/^[0-9a-f]{1,4}$/.test(group))) return "";
+    return groups.slice(0, 4).map((group) => group.padStart(4, "0")).join(":");
+  }
+  const parts = bare.split(".");
+  if (parts.length !== 4) return "";
+  if (parts.some((part) => !/^\d{1,3}$/.test(part) || Number(part) > 255)) return "";
+  return `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
+}
+var HONEYPOT_FIELD = "ah_contact_website";
+var MIN_FORM_MS = 2e3;
+var MAX_FORM_MS = 2 * 60 * 60 * 1e3;
+function looksAutomated(input = {}) {
+  const honeypot = input.honeypot;
+  if (typeof honeypot === "string" && honeypot.trim() !== "") return { automated: true, reason: "HONEYPOT_FILLED" };
+  if (typeof honeypot === "number" && Number.isFinite(honeypot)) return { automated: true, reason: "HONEYPOT_FILLED" };
+  if (input.elapsedMs === void 0 || input.elapsedMs === null || input.elapsedMs === "") {
+    return { automated: false, reason: "NO_TIMING_SIGNAL" };
+  }
+  const elapsed = Number(input.elapsedMs);
+  if (!Number.isFinite(elapsed) || elapsed < 0 || elapsed > MAX_FORM_MS) {
+    return { automated: true, reason: "FORM_TIMING_IMPLAUSIBLE" };
+  }
+  if (elapsed < MIN_FORM_MS) return { automated: true, reason: "FORM_TOO_FAST" };
+  return { automated: false, reason: "CLEAN" };
+}
+var FUZZ_ALERT_RATIO = 0.8;
+var FUZZ_HARD_RATIO = 0.95;
+function fuzzBand(quota = {}) {
+  const limit = Number(quota.limit);
+  const used = Number(quota.used);
+  if (!Number.isFinite(limit) || limit <= 0 || !Number.isFinite(used) || used < 0) {
+    return { band: "normal", ratio: 0 };
+  }
+  const spent = Math.max(0, Math.min(1, used / limit));
+  if (spent >= FUZZ_HARD_RATIO) return { band: "hard", ratio: spent };
+  if (spent >= FUZZ_ALERT_RATIO) return { band: "alert", ratio: spent };
+  return { band: "normal", ratio: spent };
+}
+function worstFuzzBand(quotas = []) {
+  let worst = { band: "normal", ratio: 0 };
+  for (const quota of quotas) {
+    const next = fuzzBand(quota);
+    if (next.band === "hard") return next;
+    if (next.band === "alert" && worst.band === "normal") worst = next;
+    else if (next.band === "normal" && next.ratio > worst.ratio) worst = { band: "normal", ratio: next.ratio };
+  }
+  return worst;
+}
+var __abuseSignalsTest = Object.freeze({
+  DATACENTER_ASNS,
+  HONEYPOT_FIELD,
+  MIN_FORM_MS,
+  MAX_FORM_MS,
+  FUZZ_ALERT_RATIO,
+  FUZZ_HARD_RATIO,
+  networkPrefix
+});
 
 // auth-native/verification/telegram-security.mjs
 var WEBHOOK_CONTEXT = "admission-hub-telegram-webhook-v1";
@@ -12580,7 +12792,16 @@ function createKvIpBreadth(store, options = {}) {
 var SECURITY_ALERT_EVENTS = Object.freeze({
   CANARY_HIT: "canary-hit",
   SHADOW_BAN: "shadow-ban",
-  NEW_DEVICE: "new-device"
+  NEW_DEVICE: "new-device",
+  // AU-SEC-01 L8: today's provider quota has been eaten past the alert
+  // threshold. This is the earliest signal that a run is in progress, because
+  // it is measured on our own counters rather than on anything the caller says.
+  PROVIDER_QUOTA_PRESSURE: "provider-quota-pressure",
+  // AU-SEC-01 L5: a submission tripped the honeypot or the form-speed floor and
+  // was dropped silently. Reported rather than logged because the auth runtime
+  // has no console (native-auth-protection.test.mjs), and throttled per event so
+  // a flood of drops cannot become a way to page the owner on demand.
+  BOT_GATE_DROP: "bot-gate-drop"
 });
 var MAX_FIELD = 200;
 var field = (value, max = MAX_FIELD) => typeof value === "string" ? value.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "").trim().slice(0, max) : "";
@@ -12596,7 +12817,9 @@ function maskAlertEmail(value) {
 var LABELS = Object.freeze({
   [SECURITY_ALERT_EVENTS.CANARY_HIT]: "🍯 ক্যানারি অ্যাকাউন্টে চেষ্টা",
   [SECURITY_ALERT_EVENTS.SHADOW_BAN]: "👻 ছায়া-ব্যান হয়েছে",
-  [SECURITY_ALERT_EVENTS.NEW_DEVICE]: "📱 নতুন ডিভাইসে লগইন"
+  [SECURITY_ALERT_EVENTS.NEW_DEVICE]: "📱 নতুন ডিভাইসে লগইন",
+  [SECURITY_ALERT_EVENTS.PROVIDER_QUOTA_PRESSURE]: "🔥 OTP কোটা প্রায় শেষ",
+  [SECURITY_ALERT_EVENTS.BOT_GATE_DROP]: "🤖 বট-ফাঁদে পড়েছে (চুপচাপ বাতিল)"
 });
 function renderSecurityAlert(input = {}) {
   const event = String(input.event || "");
@@ -12611,6 +12834,11 @@ function renderSecurityAlert(input = {}) {
   if (band) lines.push(`ঝুঁকি: ${band}`);
   const reasons = Array.isArray(input.reasons) ? input.reasons.map((value) => field(value, 40)).filter(Boolean).slice(0, 5) : [];
   if (reasons.length) lines.push(`কারণ: ${reasons.join(", ")}`);
+  const used = Number(input.used);
+  const limit = Number(input.limit);
+  if (Number.isFinite(used) && Number.isFinite(limit) && limit > 0) {
+    lines.push(`কোটা: ${Math.round(used)} / ${Math.round(limit)} (${Math.round(used / limit * 100)}%)`);
+  }
   const at = Number(input.at);
   if (Number.isFinite(at) && at > 0) lines.push(`সময়: ${new Date(at).toISOString()}`);
   return Object.freeze({ event, text: lines.join("\n") });
@@ -12771,6 +12999,51 @@ var clientContext = (request, existingDeviceId = "") => {
   });
 };
 var shadowGuardMode = (env) => resolveGuardMode(env?.SHADOW_GUARD_ACTIVATION);
+var botGate = (request, env, context, body) => {
+  const verdict = looksAutomated({
+    honeypot: body?.[HONEYPOT_FIELD],
+    elapsedMs: body?.formElapsedMs
+  });
+  if (verdict.automated) {
+    sendThrottledSecurityAlert(env, shadowGuardStore(env), {
+      event: SECURITY_ALERT_EVENTS.BOT_GATE_DROP,
+      // `reasons` is the field the renderer reads; the path is added to it so
+      // the owner can see which endpoint is being hit without a second field.
+      reasons: [verdict.reason, new URL(request.url).pathname.slice(0, 40)],
+      at: Date.now()
+    });
+    return json4(request, 202, { ok: true, accepted: true, deliveryDisclosed: false });
+  }
+  return null;
+};
+var requiresHardHumanCheck = (context) => isDatacenterAsn(context.asn);
+var FUZZ_CACHE_MS = 6e4;
+var fuzzCache = { band: "normal", expiresAt: 0 };
+var fuzzBandNow = async (env) => {
+  const now = Date.now();
+  if (fuzzCache.expiresAt > now) return fuzzCache.band;
+  try {
+    const result = await callAuthority(env, "/internal/verification/fuzz", {});
+    const band = ["normal", "alert", "hard"].includes(result?.band) ? result.band : "normal";
+    fuzzCache = { band, expiresAt: now + FUZZ_CACHE_MS };
+    return band;
+  } catch {
+    return "normal";
+  }
+};
+var guardSend = async ({ request, env, context, body, fetchImpl }) => {
+  const gate = botGate(request, env, context, body);
+  if (gate) return gate;
+  const required = requiresHardHumanCheck(context) || await fuzzBandNow(env) === "hard";
+  await verifyTurnstile({
+    env,
+    token: body?.turnstileToken,
+    ip: context.ip,
+    fetchImpl,
+    required
+  });
+  return null;
+};
 var shadowGuardStore = (env) => env?.GK_KV || env?.PUB_KV || null;
 var flagCanaryHit = (env, email, context) => {
   const list2 = parseCanaryEmails(env?.CANARY_EMAILS);
@@ -13383,7 +13656,10 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
           throw new NativeAuthError(AUTH_ERROR_CODES.CLIENT_UPDATE_REQUIRED);
         }
         const turnstileBody = await readJson(request);
-        await verifyTurnstile({ env, token: turnstileBody?.turnstileToken, ip: context.ip, fetchImpl });
+        {
+          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl });
+          if (denied) return denied;
+        }
         const input = credentials(turnstileBody);
         if (isDisposableEmail(input.email)) throw new NativeAuthError(AUTH_ERROR_CODES.DISPOSABLE_EMAIL);
         if (reservedTelegramLoginEmail(input.email)) throw new NativeAuthError(AUTH_ERROR_CODES.DISPOSABLE_EMAIL);
@@ -13460,7 +13736,10 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
       if (request.method === "POST" && url.pathname === `${AUTH_API_PREFIX}/password-reset`) {
         if (!provider.configured) throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
         const body = await readJson(request);
-        await verifyTurnstile({ env, token: body?.turnstileToken, ip: context.ip, fetchImpl });
+        {
+          const denied = await guardSend({ request, env, context, body, fetchImpl });
+          if (denied) return denied;
+        }
         const email = normalizeAuthEmail(body?.email);
         if (isDisposableEmail(email)) throw new NativeAuthError(AUTH_ERROR_CODES.DISPOSABLE_EMAIL);
         const prepared = await callAuthority(env, "/internal/firebase/rate", {
@@ -13483,7 +13762,10 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
       if (request.method === "POST" && url.pathname === `${AUTH_API_PREFIX}/verification/resend`) {
         if (!provider.configured) throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
         const turnstileBody = await readJson(request);
-        await verifyTurnstile({ env, token: turnstileBody?.turnstileToken, ip: context.ip, fetchImpl });
+        {
+          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl });
+          if (denied) return denied;
+        }
         const input = credentials(turnstileBody);
         const prepared = await callAuthority(env, "/internal/firebase/rate", { input: { operation: "verification-resend", email: input.email }, context });
         let signed;
@@ -13515,7 +13797,10 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
       if (request.method === "POST" && url.pathname === `${AUTH_API_PREFIX}/login`) {
         if (!provider.configured) throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
         const turnstileBody = await readJson(request);
-        await verifyTurnstile({ env, token: turnstileBody?.turnstileToken, ip: context.ip, fetchImpl });
+        {
+          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl });
+          if (denied) return denied;
+        }
         const input = credentials(turnstileBody);
         const prepared = await callAuthority(env, "/internal/firebase/rate", { input: { operation: "login", email: input.email }, context });
         if (Number(prepared?.retryAfter) > 0) {
@@ -14044,7 +14329,10 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         if (!verificationTicket) throw new NativeAuthError(AUTH_ERROR_CODES.TELEGRAM_VERIFICATION_INVALID);
         const startBody = await readJson(request);
         const magicLink = startBody?.method === "magic-link";
-        await verifyTurnstile({ env, token: startBody?.turnstileToken, ip: context.ip, fetchImpl });
+        {
+          const denied = await guardSend({ request, env, context, body: startBody, fetchImpl });
+          if (denied) return denied;
+        }
         if (isPendingSignupTicket(verificationTicket)) return startPendingSignupCode({ request, env, provider, context, ticket: verificationTicket, magicLink, deps: pendingDeps() });
         const material = await callAuthority(env, "/internal/firebase/account-verification/material", {
           verificationTicket,
@@ -14204,7 +14492,10 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         const verificationTicket = jar[AUTH_VERIFICATION_COOKIE];
         if (!verificationTicket) throw new NativeAuthError(AUTH_ERROR_CODES.TELEGRAM_VERIFICATION_INVALID);
         const turnstileBody = await readJson(request);
-        await verifyTurnstile({ env, token: turnstileBody?.turnstileToken, ip: context.ip, fetchImpl });
+        {
+          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl });
+          if (denied) return denied;
+        }
         const result = await callAuthority(env, "/internal/verification/preauth/request", {
           input: { verificationTicket },
           context
@@ -14690,7 +14981,10 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
           throw new NativeAuthError(AUTH_ERROR_CODES.BACKUP_UNAVAILABLE);
         }
         const body = await readJson(request);
-        await verifyTurnstile({ env, token: body?.turnstileToken, ip: context.ip, fetchImpl });
+        {
+          const denied = await guardSend({ request, env, context, body, fetchImpl });
+          if (denied) return denied;
+        }
         const contact = String(body.contact || "").trim();
         if (contact && !/^\+[1-9]\d{7,14}$/.test(contact)) throw new NativeAuthError(AUTH_ERROR_CODES.INVALID_INPUT);
         const current = await firebaseReadySession({ provider, jar, env, context, allowTelegram: telegramVerificationRequested(env, url) });
@@ -25790,6 +26084,9 @@ var SEND_LIMITS = Object.freeze([
 ]);
 var DAY_MS10 = 24 * HOUR_MS2;
 var EMAIL_DAILY_LIMIT = 3;
+var EMAIL_HOURLY_LIMIT = 3;
+var DEVICE_DAILY_OTP_LIMIT = 5;
+var NETWORK_DAILY_OTP_LIMIT = 500;
 var validText = (value, min, max) => typeof value === "string" && value.length >= min && value.length <= max && !/[\r\n\u0000]/.test(value);
 var cleanRecipientName = (value) => String(value ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 60);
 var reason = (value) => String(value || "UNKNOWN").toUpperCase().replace(/[^A-Z0-9_-]/g, "_").slice(0, 64) || "UNKNOWN";
@@ -25815,6 +26112,9 @@ function contextOf(input = {}) {
   return Object.freeze({
     deviceId,
     ip: String(input.ip || "unknown").slice(0, 96),
+    // AU-SEC-01 L6: the /64 (v6) or /24 (v4) the caller sits in, so a device
+    // that throws its cookie away and comes back is still the same caller.
+    network: networkPrefix(input.ip),
     userAgent: String(input.userAgent || "").slice(0, 300),
     origin: String(input.origin || "").slice(0, 256)
   });
@@ -25923,10 +26223,11 @@ var VerificationOrchestrator = class {
       if (purpose === "email-ownership" && !ownershipEmail) failAuth(AUTH_ERROR_CODES.INVALID_INPUT);
       this.#assertDeliverable(ownershipEmail);
       const recipientName2 = purpose === "email-ownership" ? cleanRecipientName(trusted.recipientName) : "";
-      const [ipRef2, deviceRef2, destinationRef2] = await Promise.all([
+      const [ipRef2, deviceRef2, destinationRef2, networkRef2] = await Promise.all([
         this.hmac.hex("network-ref-v1", context.ip),
         this.hmac.hex("device-ref-v1", context.deviceId),
-        this.hmac.hex("verification-destination-v1", purpose === "email-ownership" ? `email-ownership:${ownershipEmail}` : "telegram-account-verification")
+        this.hmac.hex("verification-destination-v1", purpose === "email-ownership" ? `email-ownership:${ownershipEmail}` : "telegram-account-verification"),
+        context.network ? this.hmac.hex("netblock-ref-v1", context.network) : ""
       ]);
       return Object.freeze({
         sessionToken: "",
@@ -25946,7 +26247,8 @@ var VerificationOrchestrator = class {
         emailRef: emailRef2,
         ipRef: ipRef2,
         deviceRef: deviceRef2,
-        destinationRef: destinationRef2
+        destinationRef: destinationRef2,
+        networkRef: networkRef2
       });
     }
     const sessionToken = String(input?.sessionToken || "").trim();
@@ -25964,15 +26266,16 @@ var VerificationOrchestrator = class {
     const telegram = linkedTelegram || (input?.allowTelegramLink === true ? "user-initiated-link" : "");
     const destinations = Object.freeze({ otp: email, whatsapp, telegram });
     const recipientName = cleanRecipientName(input?.recipientName);
-    const [sessionRef, subjectRef, emailRef, ipRef, deviceRef, destinationRef] = await Promise.all([
+    const [sessionRef, subjectRef, emailRef, ipRef, deviceRef, destinationRef, networkRef] = await Promise.all([
       this.hmac.hex("session-ref-v1", sessionToken),
       this.hmac.hex("firebase-subject-v1", subject),
       this.hmac.hex("email-ref-v1", email),
       this.hmac.hex("network-ref-v1", context.ip),
       this.hmac.hex("device-ref-v1", context.deviceId),
-      this.hmac.hex("verification-destination-v1", `${email}|${whatsapp}|${telegram}`)
+      this.hmac.hex("verification-destination-v1", `${email}|${whatsapp}|${telegram}`),
+      context.network ? this.hmac.hex("netblock-ref-v1", context.network) : ""
     ]);
-    return Object.freeze({ sessionToken, subject, userId, email, purpose, recipientName, destinations, context, sessionRef, subjectRef, emailRef, ipRef, deviceRef, destinationRef });
+    return Object.freeze({ sessionToken, subject, userId, email, purpose, recipientName, destinations, context, sessionRef, subjectRef, emailRef, ipRef, deviceRef, destinationRef, networkRef });
   }
   // Email-ownership only. The other purposes carry no real address in tests or
   // deliveries, and the allowlist is opt-in, so an unset list never blocks.
@@ -25992,8 +26295,13 @@ var VerificationOrchestrator = class {
       limit: limit.limit,
       windowMs: limit.windowMs
     }));
+    limits.push(Object.freeze({ scope: "device-otp-day", key: identity.deviceRef, limit: DEVICE_DAILY_OTP_LIMIT, windowMs: DAY_MS10 }));
+    if (identity.networkRef) {
+      limits.push(Object.freeze({ scope: "netblock-otp-day", key: identity.networkRef, limit: NETWORK_DAILY_OTP_LIMIT, windowMs: DAY_MS10 }));
+    }
     if (identity.purpose === "email-ownership" && identity.emailRef) {
       limits.push(Object.freeze({ scope: "ownership-email-day", key: identity.emailRef, limit: EMAIL_DAILY_LIMIT, windowMs: DAY_MS10 }));
+      limits.push(Object.freeze({ scope: "ownership-email-hour", key: identity.emailRef, limit: EMAIL_HOURLY_LIMIT, windowMs: HOUR_MS2 }));
     }
     return limits;
   }
@@ -26170,6 +26478,20 @@ var VerificationOrchestrator = class {
           tried.push(`${entry.id}:quota`);
           logDelivery({ ...logBase, provider: entry.id, rank: rank2, try: currentTry + 1, outcome: "quota_exhausted" });
           break;
+        }
+        try {
+          if (quota.limit > 0 && quota.used / quota.limit >= FUZZ_ALERT_RATIO) {
+            logDelivery({
+              ...logBase,
+              provider: entry.id,
+              rank: rank2,
+              try: currentTry + 1,
+              outcome: "quota_pressure",
+              band: quota.used / quota.limit >= FUZZ_HARD_RATIO ? "hard" : "alert",
+              ratio: Math.round(quota.used / quota.limit * 1e3) / 1e3
+            });
+          }
+        } catch {
         }
         const started = Date.now();
         let providerAccepted = false;
@@ -26596,6 +26918,26 @@ var VerificationOrchestrator = class {
       recentEvents: Object.freeze((stored.recentEvents || []).slice(-100))
     });
   }
+  /**
+   * AU-SEC-01 L8 (global fuzz). How much of today's provider quota is gone,
+   * as one band the caller can act on. Reads only the local reservation
+   * counters, so it is cheap enough to call on a request path and cannot be
+   * influenced by a caller.
+   *
+   * @returns {Promise<{band: 'normal'|'alert'|'hard', ratio: number, used: number, limit: number}>}
+   */
+  async fuzzPressure() {
+    const now = Number(this.now());
+    const enabled = this.config.providers.filter((entry) => entry.enabled && entry.dailyQuota > 0);
+    if (!enabled.length) return Object.freeze({ band: "normal", ratio: 0, used: 0, limit: 0 });
+    const snapshots = await Promise.all(enabled.map(
+      (entry) => this.repository.dailyQuotaSnapshot({ providerId: entry.id, dailyQuota: entry.dailyQuota, now }).catch(() => ({ used: 0, limit: 0 }))
+    ));
+    const worst = worstFuzzBand(snapshots);
+    const spent = snapshots.reduce((total, row) => total + Number(row?.used || 0), 0);
+    const capacity = snapshots.reduce((total, row) => total + Number(row?.limit || 0), 0);
+    return Object.freeze({ band: worst.band, ratio: worst.ratio, used: spent, limit: capacity });
+  }
   async updateConfig(input) {
     const next = verificationConfig(mergeRuntimeConfig(input, this.config));
     await this.repository.setRuntimeConfig({ config: next, now: Number(this.now()) });
@@ -26777,6 +27119,10 @@ function otpAlertFor(record) {
   }
   if (ms > OTP_SLOW_MS && (record.evt === "otp_request" || record.outcome === "accepted")) {
     return { kind: "slow", key: `slow:${record.provider || "request"}`, title: `🐢 OTP পাঠাতে ${Math.round(ms / 1e3)} সেকেন্ড লেগেছে`, ms };
+  }
+  if (record.evt === "otp_delivery" && record.outcome === "quota_pressure") {
+    const pct6 = Math.round((Number(record.ratio) || 0) * 100);
+    return record.band === "hard" ? { kind: "fuzz_hard", key: "fuzz_hard", title: `🛑 OTP কোটা ${pct6}% শেষ — নতুন সাইনআপে কঠিন যাচাই চালু`, ms } : { kind: "fuzz_alert", key: "fuzz_alert", title: `⚠️ OTP কোটা ${pct6}% শেষ (${record.provider || ""})`, ms };
   }
   return null;
 }
@@ -31300,6 +31646,7 @@ var response2 = (status, body, extraHeaders = {}) => new Response(JSON.stringify
   status,
   headers: { ...JSON_HEADERS2, ...extraHeaders }
 });
+var shadowStoreFor = (env) => env?.GK_KV || env?.PUB_KV || null;
 async function readJson2(request, maxBytes = 32768) {
   const raw = await request.text();
   if (!raw || raw.length > maxBytes) throw new NativeAuthError(AUTH_ERROR_CODES.INVALID_INPUT);
@@ -31650,6 +31997,24 @@ var AdmissionAuthAuthority = class {
       if (url.pathname === "/internal/verification/telegram/deactivate") {
         if (!["canary", "enabled"].includes(this.env.VERIFICATION_AUTH_ACTIVATION)) throw new NativeAuthError(AUTH_ERROR_CODES.BACKUP_UNAVAILABLE);
         const result = await this.verification.removeTelegramWebhook();
+        return response2(200, { ok: true, result });
+      }
+      if (url.pathname === "/internal/verification/fuzz") {
+        const result = await this.verification.fuzzPressure();
+        if (result.band !== "normal") {
+          const waitUntil = typeof this.state.waitUntil === "function" ? (promise) => this.state.waitUntil(promise) : null;
+          const job = sendThrottledSecurityAlert(this.env, shadowStoreFor(this.env), {
+            event: SECURITY_ALERT_EVENTS.PROVIDER_QUOTA_PRESSURE,
+            band: result.band,
+            used: result.used,
+            limit: result.limit,
+            at: Date.now()
+          });
+          try {
+            if (waitUntil) waitUntil(job);
+          } catch {
+          }
+        }
         return response2(200, { ok: true, result });
       }
       if (url.pathname === "/internal/verification/admin/status") {

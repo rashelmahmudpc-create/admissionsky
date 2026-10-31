@@ -18,6 +18,10 @@
 .ah-account-body{padding:22px 25px 25px}
 .ah-account-view[hidden]{display:none!important}
 .ah-account-field+.ah-account-field{margin-top:13px}
+/* AU-SEC-01 L5 honeypot. Off-screen rather than display:none: a scraper that
+   only fills "visible" inputs would skip a display:none field, which defeats
+   the point. A person never scrolls here, never tabs here, and never reads it. */
+.ah-honeypot{position:absolute!important;left:-9999px!important;top:auto!important;width:1px!important;height:1px!important;overflow:hidden!important;opacity:0!important;pointer-events:none!important}
 .ah-account-label{display:block;margin:0 0 7px;color:var(--ah-ink-mid);font-size:13px;font-weight:800}
 .ah-account-input{box-sizing:border-box;width:100%;height:50px;padding:0 14px;border:1.5px solid #cddbd7;border-radius:13px;background:var(--ah-surface);color:var(--ah-ink);font:600 16px/1 system-ui,-apple-system,"Noto Sans Bengali",sans-serif;transition:border-color .15s ease,box-shadow .15s ease}
 .ah-account-input::placeholder{color:var(--ah-ink-muted);font-weight:500}

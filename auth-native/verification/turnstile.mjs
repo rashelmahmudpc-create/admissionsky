@@ -15,10 +15,21 @@ const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverif
  * code before the Cloudflare secret exists cannot lock students out of signup.
  * Once the secret is set the endpoint fails closed: a Cloudflare outage or a
  * missing token refuses the send rather than waving it through.
+ *
+ * `required` (AU-SEC-01 L3) removes the inert escape hatch for one request: a
+ * caller the edge placed on a hosting ASN, or a deployment whose quota is in
+ * the L8 hard band, must clear a human check even when no secret is bound.
+ * That case still cannot be *satisfied* without a secret — there is nothing to
+ * verify against — so it refuses rather than pretending. It is only ever set
+ * for callers already judged suspicious, never for the ordinary path, so an
+ * unconfigured deployment keeps serving students normally.
  */
-export async function verifyTurnstile({ env, token, ip, fetchImpl = fetch, timeoutMs = 8000 } = {}) {
+export async function verifyTurnstile({ env, token, ip, fetchImpl = fetch, timeoutMs = 8000, required = false } = {}) {
   const secret = String(env?.TURNSTILE_SECRET_KEY || '').trim();
-  if (!secret) return { enforced: false };
+  if (!secret) {
+    if (required) throw new NativeAuthError(AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
+    return { enforced: false };
+  }
   const value = String(token ?? '');
   if (!value || value.length > 4096) throw new NativeAuthError(AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
   const form = new URLSearchParams({ secret, response: value });

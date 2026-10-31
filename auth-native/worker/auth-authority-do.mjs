@@ -12,6 +12,7 @@ import { migrateStudentDirectory } from '../storage/student-directory-schema.mjs
 import { listStudents, studentProfile } from '../storage/student-admin-view.mjs';
 import { wipeAll, wipeConfirmPhrase, wipeCounts } from '../storage/student-wipe.mjs';
 import { normalizeAuthEmail } from '../core/crypto.mjs';
+import { SECURITY_ALERT_EVENTS, sendThrottledSecurityAlert } from '../core/security-alerts.mjs';
 import { PendingSignupStore } from './pending-signup.mjs';
 import { isTelegramLoginEmail, TELEGRAM_LOGIN_DOMAIN } from '../verification/telegram-login.mjs';
 import { handlePendingSignupRoute, isPendingSignupRoute } from './pending-signup-authority.mjs';
@@ -27,6 +28,13 @@ const response = (status, body, extraHeaders = {}) => new Response(JSON.stringif
   status,
   headers: { ...JSON_HEADERS, ...extraHeaders }
 });
+
+/* The KV namespace a Durable Object can reach for throttling alerts. The DO
+ * cannot hold a binding to itself and has no KV of its own, so this reads the
+ * same namespaces the Worker-side guard uses; absent means "cannot record",
+ * and the throttle helper treats that as "send it", which is the safe way to
+ * fail: one duplicate alert beats a swallowed fuzz signal. */
+const shadowStoreFor = env => env?.GK_KV || env?.PUB_KV || null;
 
 async function readJson(request, maxBytes = 32_768) {
   const raw = await request.text();
@@ -407,6 +415,30 @@ export class AdmissionAuthAuthority {
       if (url.pathname === '/internal/verification/telegram/deactivate') {
         if (!['canary', 'enabled'].includes(this.env.VERIFICATION_AUTH_ACTIVATION)) throw new NativeAuthError(AUTH_ERROR_CODES.BACKUP_UNAVAILABLE);
         const result = await this.verification.removeTelegramWebhook();
+        return response(200, { ok: true, result });
+      }
+      // AU-SEC-01 L8: the handler asks for one small number before a signup so
+      // it can force the strict human check when the day's quota is nearly
+      // gone. Separate from admin/status on purpose: that one probes every
+      // provider, which is far too heavy and far too slow for a request path.
+      if (url.pathname === '/internal/verification/fuzz') {
+        const result = await this.verification.fuzzPressure();
+        // AU-SEC-01 L8: entering the alert band is the earliest sign that a run
+        // is eating the day's quota. The owner is told once per hour at most —
+        // the throttle key is the band itself, so a run cannot turn this into a
+        // way to flood his Telegram. Fired in the background: a fuzz signal must
+        // never sit on a student's request.
+        if (result.band !== 'normal') {
+          const waitUntil = typeof this.state.waitUntil === 'function' ? promise => this.state.waitUntil(promise) : null;
+          const job = sendThrottledSecurityAlert(this.env, shadowStoreFor(this.env), {
+            event: SECURITY_ALERT_EVENTS.PROVIDER_QUOTA_PRESSURE,
+            band: result.band,
+            used: result.used,
+            limit: result.limit,
+            at: Date.now()
+          });
+          try { if (waitUntil) waitUntil(job); } catch { /* alerting is best-effort */ }
+        }
         return response(200, { ok: true, result });
       }
       if (url.pathname === '/internal/verification/admin/status') {

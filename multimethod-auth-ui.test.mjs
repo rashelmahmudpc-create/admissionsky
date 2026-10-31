@@ -428,10 +428,15 @@ test('generic backup UX is hidden when unavailable and contains no provider-spec
   await waitFor(() => enabled.calls.some(call => call.path.endsWith('/backup/verify')));
   const requestCall = enabled.calls.find(call => call.path.endsWith('/backup/request'));
   const verifyCall = enabled.calls.find(call => call.path.endsWith('/backup/verify'));
-  const { turnstileToken: backupToken, ...backupRequest } = requestCall.body;
+  const { turnstileToken: backupToken, ah_contact_website: backupHoneypot, formElapsedMs: backupElapsed, ...backupRequest } = requestCall.body;
   assert.deepEqual(backupRequest, { purpose: 'account-backup' });
   // F-03: backup requests also carry the Turnstile field.
   assert.equal(typeof backupToken, 'string');
+  // AU-SEC-01 L5: and the bot signals every guarded route sends. This route
+  // shows no form (contactInput 'none'), so there is no form on screen to time
+  // and the field is correctly absent — an absent timing is never a signal.
+  assert.equal(backupHoneypot, '');
+  assert.equal(backupElapsed, undefined);
   assert.equal(verifyCall.body.code, '123456');
   assert.doesNotMatch(script, /otp-a|otp-b|otp-c|mailjet|brevo|sendgrid/i);
   enabled.dom.window.close();
@@ -446,9 +451,12 @@ test('generic backup accepts a server-requested phone input without exposing an 
   app.document.querySelector('#ah-backup-contact').value = '+8801700000000';
   app.document.querySelector('[data-view="backup-prepare"]').dispatchEvent(new app.window.Event('submit', { bubbles: true, cancelable: true }));
   await waitFor(() => app.calls.some(call => call.path.endsWith('/backup/request')));
-  const { turnstileToken: contactToken, ...contactRequest } = app.calls.find(call => call.path.endsWith('/backup/request')).body;
+  const { turnstileToken: contactToken, ah_contact_website: contactHoneypot, formElapsedMs: contactElapsed, ...contactRequest } = app.calls.find(call => call.path.endsWith('/backup/request')).body;
   assert.deepEqual(contactRequest, { purpose: 'account-backup', contact: '+8801700000000' });
   assert.equal(typeof contactToken, 'string');
+  // AU-SEC-01 L5: the bot signals ride along on this route too.
+  assert.equal(contactHoneypot, '');
+  assert.equal(typeof contactElapsed, 'number');
   assert.doesNotMatch(app.document.querySelector('[data-view="backup-prepare"]').textContent, /otp-a|mailjet|brevo|sendgrid|whatsapp/i);
   app.dom.window.close();
 });
