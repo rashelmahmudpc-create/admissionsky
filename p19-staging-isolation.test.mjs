@@ -11,10 +11,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   checkStagingConfig, findProductionIds, findProductionNames, findPlaceholders,
-  hasCronTrigger, PRODUCTION_IDS,
+  hasCronTrigger, PRODUCTION_IDS, findProductionServices,
 } from './scripts/check-staging-isolation.mjs';
 
 const CONFIG = readFileSync('wrangler.staging.toml', 'utf8');
+/* F0.3: the sky-ai twin is a second staging config and must satisfy the same
+ * isolation rules. It is the one that could bind the production AI Worker. */
+const SKY_CONFIG = readFileSync('sky-ai/wrangler.staging.toml', 'utf8');
 
 test('p19s-১: the shipped staging config contains no production resource id', () => {
   assert.deepEqual(findProductionIds(CONFIG), [], 'staging must never reference a live KV/D1/R2 id');
@@ -88,4 +91,44 @@ test('p19s-৯: a fully configured, isolated config passes', () => {
 test('p19s-১০: placeholders are reported once each, however often they appear', () => {
   const text = 'a REPLACE_X b REPLACE_X c REPLACE_Y';
   assert.deepEqual(findPlaceholders(text).sort(), ['REPLACE_X', 'REPLACE_Y']);
+});
+
+/* F0.3 — the sky-ai staging twin. These are the assertions that keep a staging
+ * AI test off the live AI Worker and off live student data. */
+
+test('p19s-১১: the sky-ai staging config carries no production resource id', () => {
+  assert.deepEqual(findProductionIds(SKY_CONFIG), [],
+    'sky-ai-staging must not read production PUB_KV or write production SKY_FLAGS');
+});
+
+test('p19s-১২: the sky-ai staging config binds the staging twin, not production sky-ai', () => {
+  assert.ok(SKY_CONFIG.includes('name = "sky-ai-staging"'),
+    'the script itself is the staging twin');
+  assert.deepEqual(findProductionServices(SKY_CONFIG), [],
+    'a service = "sky-ai" here would route a staging test through live prefs and live quota');
+});
+
+test('p19s-১৩: the app staging config forwards AI to the staging twin, never production sky-ai', () => {
+  assert.deepEqual(findProductionServices(CONFIG), [],
+    'admission-gk-staging must bind sky-ai-staging, not the live sky-ai Worker');
+  assert.ok(CONFIG.includes('service = "sky-ai-staging"'),
+    'the F0.3 hop must exist, or a staging AI test has nowhere to go');
+});
+
+test('p19s-১৪: a production service binding is refused, the staging twin is not', () => {
+  const bad = 'name = "admission-gk-staging"\n[[services]]\nbinding = "SKY_AI"\nservice = "sky-ai"\n';
+  const { ok, problems } = checkStagingConfig(bad);
+  assert.equal(ok, false, 'binding the production AI Worker from staging must be refused');
+  assert.ok(problems.some(p => p.includes('production service binding')), 'the refusal names the service');
+  const good = 'name = "admission-gk-staging"\n[[services]]\nbinding = "SKY_AI"\nservice = "sky-ai-staging"\n';
+  assert.equal(checkStagingConfig(good).ok, true, 'the staging twin is allowed');
+});
+
+test('p19s-১৫: the sky-ai staging twin shares nothing with production', () => {
+  // The two things that would make a staging test destructive: the live KV and
+  // the live flags namespace. Both must be absent.
+  assert.ok(!SKY_CONFIG.includes('fd9a455d1be64c2eade1309186462808'), 'not the production PUB_KV');
+  assert.ok(!SKY_CONFIG.includes('0fe1817e14f2466b84ac727a4405859c'), 'not the production SKY_FLAGS');
+  assert.ok(SKY_CONFIG.includes('36d6cb09f9104693b7d58e1fde07b40c'), 'the staging flags namespace');
+  assert.ok(SKY_CONFIG.includes('2827bff9b9974101a305102e1fbd1214'), 'the staging PUB_KV');
 });

@@ -20,13 +20,28 @@ export const PRODUCTION_IDS = [
   'fd9a455d1be64c2eade1309186462808', // PUB_KV (public content, split out 2026-10-26)
   '942828aa82e546d4af11796ef92ab134', // OLD_KV
   '8f7cf101-66a3-437d-bc98-a8984698d7f5', // PROFILE_DB (D1)
+  '0fe1817e14f2466b84ac727a4405859c', // SKY_FLAGS (F0.2 feature flags, 2026-10-31)
 ];
 
 /** Production resource names. Matched as whole TOML values, not substrings, so
- *  `admission-hub-staging` does not trip the `admission-hub` rule. */
-export const PRODUCTION_NAMES = ['admission-profile', 'admission-hub', 'admission-gk'];
+ *  `admission-hub-staging` does not trip the `admission-hub` rule. `sky-ai` is
+ *  listed so a staging config cannot bind the production AI Worker: the staging
+ *  twin is `sky-ai-staging`, and a `service = "sky-ai"` here would send a test
+ *  through live prefs and live chat quota. */
+export const PRODUCTION_NAMES = ['admission-profile', 'admission-hub', 'admission-gk', 'sky-ai'];
 
 const valueOf = (name) => new RegExp(`^\\s*(?:name|database_name|bucket_name)\\s*=\\s*"${name}"\\s*$`, 'm');
+
+/** A production service binding — `service = "<name>"`. Separate from
+ *  PRODUCTION_NAMES because that list is matched against name/database_name/
+ *  bucket_name, and a service binding uses the `service` key. */
+export const PRODUCTION_SERVICES = ['sky-ai', 'admission-gk', 'admission-auth'];
+const serviceOf = (name) => new RegExp(`^\\s*service\\s*=\\s*"${name}"\\s*$`, 'm');
+
+/** Every production service binding found in `text`. Pure. */
+export function findProductionServices(text) {
+  return PRODUCTION_SERVICES.filter(name => serviceOf(name).test(text));
+}
 
 /** Every production id found in `text`. Pure. */
 export function findProductionIds(text) {
@@ -58,6 +73,8 @@ export function checkStagingConfig(text) {
   if (ids.length) problems.push(`production resource id(s) present: ${ids.join(', ')}`);
   const names = findProductionNames(text);
   if (names.length) problems.push(`production resource name(s) present: ${names.join(', ')}`);
+  const services = findProductionServices(text);
+  if (services.length) problems.push(`production service binding(s) present: ${services.join(', ')}`);
   const placeholders = findPlaceholders(text);
   if (placeholders.length) problems.push(`unfilled placeholder(s): ${placeholders.join(', ')}, run tools/setup-staging.sh`);
   if (hasCronTrigger(text)) problems.push('a cron trigger is present: staging must not run the notification scheduler');
@@ -66,15 +83,26 @@ export function checkStagingConfig(text) {
 
 const isMain = process.argv[1] && process.argv[1].endsWith('check-staging-isolation.mjs');
 if (isMain) {
-  const file = process.argv[2] || 'wrangler.staging.toml';
-  let text;
-  try { text = readFileSync(file, 'utf8'); }
-  catch (e) { console.error(`staging-isolation: cannot read ${file}: ${e.message}`); process.exit(2); }
-  const { ok, problems } = checkStagingConfig(text);
-  if (!ok) {
-    console.error(`staging-isolation: REFUSED, ${file} is not safe to deploy:`);
-    for (const p of problems) console.error(`  - ${p}`);
-    process.exit(1);
+  /* F0.3: there are now two staging configs — the app Worker's and the AI
+   * Worker's twin. Both are gated by the same rules; checking only the first
+   * would let a production id or a `service = "sky-ai"` slip in through the
+   * second. */
+  const files = process.argv.slice(2).length
+    ? process.argv.slice(2)
+    : ['wrangler.staging.toml', 'sky-ai/wrangler.staging.toml'];
+  let failed = false;
+  for (const file of files) {
+    let text;
+    try { text = readFileSync(file, 'utf8'); }
+    catch (e) { console.error(`staging-isolation: cannot read ${file}: ${e.message}`); process.exit(2); }
+    const { ok, problems } = checkStagingConfig(text);
+    if (!ok) {
+      console.error(`staging-isolation: REFUSED, ${file} is not safe to deploy:`);
+      for (const p of problems) console.error(`  - ${p}`);
+      failed = true;
+      continue;
+    }
+    console.log(`staging-isolation: ${file} is isolated from production and fully configured.`);
   }
-  console.log(`staging-isolation: ${file} is isolated from production and fully configured.`);
+  if (failed) process.exit(1);
 }
