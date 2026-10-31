@@ -53,7 +53,11 @@ test('memory saves are off the hot path but still awaited inside the request', (
   assert.ok(SRC.includes("later(() => finalize(c.model, c.provider, full));"));
   assert.ok(SRC.includes("later(() => finalize(c.model, c.provider, raw));"));
   assert.ok(SRC.includes('if (lastTopicWrite) await lastTopicWrite;'));
-  const done = SRC.indexOf('push(`event: done');
+  /* F0.4 replaced the hand-built frames with the sky-stream-v1 writer, so the
+     done frame is now emitted by `s.done(...)` rather than a raw push. The
+     invariant is unchanged -- the student's answer is complete before the
+     memory save starts -- so the check follows the writer, not the old literal. */
+  const done = SRC.indexOf('s.done({ rid, model: c.model');
   const fin = SRC.indexOf('later(() => finalize(c.model, c.provider, full));');
   assert.ok(done > 0 && fin > done, 'done is pushed before the memory save starts');
   assert.ok(SRC.indexOf('await settleBackground();', fin) > fin);
