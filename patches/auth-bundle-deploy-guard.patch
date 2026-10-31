@@ -1,0 +1,17 @@
+--- a/.github/workflows/deploy-pages-worker.yml
++++ b/.github/workflows/deploy-pages-worker.yml
+@@ -79,6 +79,14 @@
+         run: npm ci
+       - name: Verify the committed Worker bundle matches its sources
+         run: npm run check:worker-bundle
++      # AUTH V2.0 (owner 2026-10-31): this workflow deploys the auth Worker at
++      # wrangler.auth.toml, whose main is auth-worker-bundle.mjs -- but it only
++      # ever verified the *app* bundle above. An edit under auth-native/** could
++      # therefore merge with a stale or hand-edited auth bundle and ship it as
++      # the live login script, with every check green. Check the bundle we are
++      # about to deploy, not just the one next to it.
++      - name: Verify the committed auth Worker bundle matches its sources
++        run: npm run check:auth-worker-bundle
+       # F-04: deploy the auth Worker BEFORE the app. Both scripts are deployed on
+       # every merge to main, and if the app went first it would briefly point at
+       # the previous auth build. Same content here as in the auth workflow, so a
