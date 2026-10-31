@@ -12,7 +12,8 @@
       "admission-voice",
       "admission-notify",
       "admission-hub-ai-proxy",
-      "sky-ai"
+      "sky-ai",
+      "sky-ai-staging"
     ],
     "waived": [
       {
