@@ -10824,8 +10824,14 @@ var CloudflareNativeAuthEngine = class {
     const session = errorFromRepository(await this.repository.getSession({ sessionRef: identity.sessionRef, now }));
     await this.#assertStepUp(input, identity, session, now);
     const result = errorFromRepository(await this.repository.revokeUserSessions({ userId: session.user.id, now }));
+    const devices = errorFromRepository(await this.repository.revokeTrustedDevice({
+      userId: session.user.id,
+      now,
+      policyVersion: this.securityConfig.policyVersion
+    }));
     return Object.freeze({
       revoked: Number(result.revoked || 0),
+      devicesRevoked: Number(devices?.revoked || 0),
       emailMasked: session.user.emailMask,
       browserClass: identity.context.userAgent || null
     });
