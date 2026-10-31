@@ -483,6 +483,34 @@ const telegramVerificationAvailable = async (env, allowed) => {
   } catch { return false; }
 };
 
+/**
+ * AUTH-ROADMAP step 8 (owner 2026-10-31): the availability code for the
+ * Telegram method, kept honest against `available`.
+ *
+ * `available` and `availabilityCode` are always read as a pair — the live
+ * harness (`liveAuthMethodsReady` in operations/live-mailbox-e2e.mjs) and the
+ * canary workflow both require `available === true` AND
+ * `availabilityCode === 'READY'`. This field used to borrow the *OTP channel's*
+ * code from `backup`, so production published
+ * `{available: false, availabilityCode: 'READY'}` whenever the OTP channel was
+ * healthy but no telegram candidate row existed. The two fields contradicted
+ * each other, and the harness aborted with the opaque `PUBLIC_METHOD_CONTRACT`
+ * instead of naming the missing channel — a green code on a red method is worse
+ * than no code, because it reads as "fine" to everyone who checks only one.
+ *
+ * Now the code describes the Telegram method itself, so the pair can never
+ * disagree: available implies READY, and unavailable says which of the two
+ * reasons applies — the whole backup family is down, or the family is healthy
+ * and Telegram alone has no channel.
+ */
+const telegramVerificationAvailabilityCode = ({ env, verificationRequested, telegramAvailable, backup }) => {
+  if (!verificationRequested) return verificationEndpointReady(env) ? 'LIVE_E2E_PENDING' : 'NOT_ACTIVATED';
+  if (telegramAvailable) return String(backup?.availabilityCode || 'READY');
+  return backup?.availabilityCode === 'READY'
+    ? 'NO_TELEGRAM_CHANNEL'
+    : String(backup?.availabilityCode || 'STATUS_UNAVAILABLE');
+};
+
 const emailOwnershipProven = async ({ env, user, context, allowed }) => {
   if (!allowed) return false;
   try {
@@ -827,7 +855,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         };
         const telegramVerification = {
           available: verificationRequested && telegramAvailable,
-          availabilityCode: verificationRequested ? String(backup?.availabilityCode || 'STATUS_UNAVAILABLE') : verificationEndpointReady(env) ? 'LIVE_E2E_PENDING' : 'NOT_ACTIVATED',
+          availabilityCode: telegramVerificationAvailabilityCode({ env, verificationRequested, telegramAvailable, backup }),
           optional: true,
           codeLength: 6,
           expiresInSeconds: Number(backup?.expiresInSeconds || 300),

@@ -753,6 +753,51 @@ test('approved Telegram publication exposes the Email-or-Telegram selector and t
   assert.equal((await diagnostic.json()).auth.methods.backup.available, true);
 });
 
+test('step 8: the Telegram method never publishes a READY code on an unavailable method', async () => {
+  /* The live defect this pins: `telegramVerification.availabilityCode` was
+     copied from the OTP channel's `backup.availabilityCode`. With a healthy OTP
+     channel and no telegram candidate row — which is what production served —
+     the public contract said `{available: false, availabilityCode: 'READY'}`.
+     `liveAuthMethodsReady` requires both, so the live harness aborted on
+     `PUBLIC_METHOD_CONTRACT` and could not say why. */
+  const healthyOtpChannel = {
+    available: true,
+    availabilityCode: 'READY',
+    genericFlow: true,
+    providerNamesExposed: false,
+    contactInput: 'none',
+    maxAttempts: 5,
+    expiresInSeconds: 300,
+    telegramAvailable: false
+  };
+  const app = handlerSetup({ backupCapabilities: healthyOtpChannel });
+  app.env.VERIFICATION_AUTH_ACTIVATION = 'enabled';
+  const auth = (await (await app.handler(apiRequest(`${AUTH_API_PREFIX}/config`), app.env, {})).json()).auth;
+
+  // The OTP channel is untouched and still reports itself ready.
+  assert.equal(auth.methods.backup.available, true);
+  assert.equal(auth.methods.backup.availabilityCode, 'READY');
+  // The Telegram method now says what is actually true about Telegram.
+  assert.equal(auth.methods.telegramVerification.available, false);
+  assert.equal(auth.methods.telegramVerification.availabilityCode, 'NO_TELEGRAM_CHANNEL');
+  assert.notEqual(auth.methods.telegramVerification.availabilityCode, 'READY');
+});
+
+test('step 8: a Telegram channel that is down does not borrow the OTP channel reason', async () => {
+  const deadFamily = {
+    available: false,
+    availabilityCode: 'NO_HEALTHY_PROVIDER',
+    genericFlow: true,
+    providerNamesExposed: false,
+    telegramAvailable: false
+  };
+  const app = handlerSetup({ backupCapabilities: deadFamily });
+  app.env.VERIFICATION_AUTH_ACTIVATION = 'enabled';
+  const auth = (await (await app.handler(apiRequest(`${AUTH_API_PREFIX}/config`), app.env, {})).json()).auth;
+  assert.equal(auth.methods.telegramVerification.available, false);
+  assert.equal(auth.methods.telegramVerification.availabilityCode, 'NO_HEALTHY_PROVIDER');
+});
+
 test('Email status creates a session only after real verification and preserves the ticket-scoped guided profile', async () => {
   const app = handlerSetup({ backupCapabilities: { available: true, availabilityCode: 'READY', telegramAvailable: true } });
   app.env.VERIFICATION_AUTH_ACTIVATION = 'enabled';
