@@ -291,6 +291,23 @@ function skyStream(push, counter = { n: 0 }) {
   };
 }
 
+// sky-request.mjs
+var SKY_REQUEST_ID_HEADER = "x-sky-req-id";
+var REQ_ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
+function normalizeRequestId(raw) {
+  const s = String(raw == null ? "" : raw).trim();
+  return REQ_ID_RE.test(s) ? s : "";
+}
+function mintRequestId() {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+  } catch (_) {
+  }
+  return "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+}
+
 // context-engine.js
 var CONTEXT_VERSION = "ctx-v1";
 var CATEGORY = Object.freeze({
@@ -2463,6 +2480,7 @@ var AI_STATE_VERSION = "ai-state-v1";
 var RL_WINDOW_MS = 24 * 60 * 60 * 1e3;
 var K_QUOTA = "quota";
 var K_QUOTA_ID = (id) => "quotaid:" + id;
+var REPLAY_WINDOW_MS = 5 * 60 * 1e3;
 var json = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
   headers: { "Content-Type": "application/json" }
@@ -2491,10 +2509,12 @@ var AiStateObject = class {
   async consume({ uid, cap, now, reqId }) {
     const limit = Math.max(1, Math.min(500, num2(cap, 10)));
     const t = num2(now, Date.now());
-    const rid = String(reqId || "").trim();
-    if (rid) {
-      const prior = await this.#entry(K_QUOTA_ID(rid));
-      if (prior && prior.v) return { ...prior.v, replayed: true };
+    const rid2 = String(reqId || "").trim();
+    if (rid2) {
+      const prior = await this.#entry(K_QUOTA_ID(rid2));
+      if (prior && prior.v && t - num2(prior.v.at, 0) < REPLAY_WINDOW_MS) {
+        return { ...prior.v, replayed: true };
+      }
     }
     const cur = await this.#entry(K_QUOTA);
     let n = cur ? num2(cur.v && cur.v.n) : 0;
@@ -2508,9 +2528,9 @@ var AiStateObject = class {
     }
     await this.ctx.storage.put(K_QUOTA, { v: { n: n + 1, start }, exp: 0 });
     const decision = { allowed: true, used: n + 1, cap: limit, remaining: limit - n - 1, start, uid: String(uid || "") };
-    if (rid) {
+    if (rid2) {
       try {
-        await this.ctx.storage.put(K_QUOTA_ID(rid), { v: decision, exp: t + RL_WINDOW_MS });
+        await this.ctx.storage.put(K_QUOTA_ID(rid2), { v: { ...decision, at: t }, exp: t + REPLAY_WINDOW_MS });
       } catch (_) {
       }
     }
@@ -4097,6 +4117,7 @@ async function agentChat(request, env, uid, opts = {}) {
   const stream = opts && opts.stream !== false;
   const persistMemory = opts?.persistMemory !== false;
   const startedAt = Date.now();
+  const reqId = normalizeRequestId(opts && opts.reqId) || makeRequestId(String(uid || "") + ":" + startedAt);
   const timings = {};
   const mark = (name) => {
     if (timings[name] == null) timings[name] = Date.now() - startedAt;
@@ -4203,7 +4224,7 @@ async function agentChat(request, env, uid, opts = {}) {
   let quota = null;
   if (aiState) {
     try {
-      const q = await aiState.consumeQuota(sendCtx.uid, cap, opts && opts.reqId);
+      const q = await aiState.consumeQuota(sendCtx.uid, cap, reqId);
       quota = { exhausted: !q.allowed, remaining: q.remaining, start: Number(q.start) || 0 };
     } catch (_) {
       quota = null;
@@ -4462,9 +4483,9 @@ async function agentChat(request, env, uid, opts = {}) {
     });
     const payloadO = () => ({ messages: [{ role: "system", content: sys }].concat(msgs.map((m) => ({ role: m.role, content: m.content }))) });
     const failures = [];
-    const rid = makeRequestId(sendCtx.uid + ":" + startedAt);
+    const rid2 = reqId;
     const traceCtx = {
-      rid,
+      rid: rid2,
       callerRef: callerRef(sendCtx.uid),
       intent,
       tier,
@@ -4624,7 +4645,7 @@ async function agentChat(request, env, uid, opts = {}) {
                   const toStore = check.text || full;
                   later(() => chatStore.putCache(cacheKey, "summary", { text: toStore, structured: check.structured ?? null, model: c.model, intent }, { ttlMs: chatCacheTtl(intent), model: c.model }));
                 }
-                s.done({ model: c.model, provider: c.provider, intent, quiz: quizMode, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt, structured: check.structured });
+                s.done({ rid: rid2, model: c.model, provider: c.provider, intent, quiz: quizMode, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt, structured: check.structured });
                 later(() => finalize2(c.model, c.provider, full));
                 await settleBackground();
                 emitTrace({ provider: c.provider, model: c.model, text: full, responseType: check.structured?.type, validated: !check.enforced });
@@ -4911,7 +4932,7 @@ function sseCached(text, intent, startedAt, model, request = null) {
       const s = skyStream(push);
       s.hello();
       s.text(text);
-      s.done({ model: model || null, provider: "cache", intent, cached: true, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt });
+      s.done({ rid, model: model || null, provider: "cache", intent, cached: true, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt });
       try {
         controller.close();
       } catch (_) {
@@ -5620,7 +5641,7 @@ var statusHopHeaders = (env, needed) => {
   return headers;
 };
 var chatWithFallback = async (request, env, identity, { stream }) => {
-  const reqId = crypto.randomUUID();
+  const reqId = normalizeRequestId(request.headers.get(SKY_REQUEST_ID_HEADER)) || mintRequestId();
   const local = { stream, persistMemory: identity.persistMemory, reqId };
   let needed = [];
   try {
@@ -5640,11 +5661,20 @@ var chatWithFallback = async (request, env, identity, { stream }) => {
     }
     try {
       const viaSky = await forwardWithIdentityBody(request, env, identity.uid, void 0, headers);
-      if (viaSky) return viaSky;
+      if (viaSky) return withRequestId(viaSky, reqId);
     } catch (_) {
     }
   }
-  return await agentChat(request, env, identity.uid, local);
+  return withRequestId(await agentChat(request, env, identity.uid, local), reqId);
+};
+var withRequestId = (response3, reqId) => {
+  try {
+    const headers = new Headers(response3.headers);
+    headers.set(SKY_REQUEST_ID_HEADER, reqId);
+    return new Response(response3.body, { status: response3.status, headers });
+  } catch (_) {
+    return response3;
+  }
 };
 var publishGlobal = async (env, full) => {
   if (!env || !env.PUB_KV) return { error: "no-pub-kv" };

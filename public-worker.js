@@ -11,6 +11,7 @@ import { forwardWithIdentity, forwardWithIdentityBody } from './sky-ai-route.mjs
 import { createSnapshot, listSnapshots, restoreSnapshot } from './p19-backup.mjs';
 
 import { corsHeaders } from './cors-policy.mjs';
+import { SKY_REQUEST_ID_HEADER, normalizeRequestId, mintRequestId } from './sky-request.mjs';
 
 /* BUG-004 (2026-10-29 audit). This used to hardcode
    `Access-Control-Allow-Origin: *` on every JSON response, which let any site
@@ -245,7 +246,11 @@ const statusHopHeaders = (env, needed) => {
 
    No providers here means nothing to gain: skip the hop and save the round trip. */
 const chatWithFallback = async (request, env, identity, { stream }) => {
-  const reqId = crypto.randomUUID();
+  /* F0.5 / GW-07: the id belongs to the TURN, not to this HTTP request. A
+     client retrying the turn it just failed to get an answer for sends the id
+     back, so the retry replays the first quota decision instead of spending a
+     second message. An absent or malformed id is ignored, never an error. */
+  const reqId = normalizeRequestId(request.headers.get(SKY_REQUEST_ID_HEADER)) || mintRequestId();
   const local = { stream, persistMemory: identity.persistMemory, reqId };
   let needed = [];
   try { needed = readyProviderNames(await providerReadiness(env)); } catch (_) { needed = []; }
@@ -261,10 +266,23 @@ const chatWithFallback = async (request, env, identity, { stream }) => {
     }
     try {
       const viaSky = await forwardWithIdentityBody(request, env, identity.uid, undefined, headers);
-      if (viaSky) return viaSky;
+      if (viaSky) return withRequestId(viaSky, reqId);
     } catch (_) { /* the local path below is the whole point of the fallback */ }
   }
-  return await agentChat(request, env, identity.uid, local);
+  return withRequestId(await agentChat(request, env, identity.uid, local), reqId);
+};
+
+/* F0.5 / GW-07: hand the id back on every chat response. The body is NOT read
+   or copied — the answer is a stream and buffering it would delay the first
+   token — so the id rides as a header, which reaches the client before the
+   first byte. `done` carries it too, inside the stream, for a client that only
+   keeps the parsed events. */
+const withRequestId = (response, reqId) => {
+  try {
+    const headers = new Headers(response.headers);
+    headers.set(SKY_REQUEST_ID_HEADER, reqId);
+    return new Response(response.body, { status: response.status, headers });
+  } catch (_) { return response; }
 };
 
 export const publishGlobal = async (env, full) => {

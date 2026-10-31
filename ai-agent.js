@@ -17,6 +17,7 @@
  */
 import { corsHeaders } from './cors-policy.mjs';
 import { skyStream, skySse, SKY_STREAM_VERSION } from './sky-stream.mjs';
+import { normalizeRequestId, SKY_REQUEST_ID_HEADER } from './sky-request.mjs';
 import { buildContext, renderContext, describeContext, CONTEXT_VERSION } from './context-engine.js';
 import { getPromptText, BASE_PROMPT_ID } from './prompt-registry.js';
 import { listTools, TOOL_REGISTRY_VERSION } from './tool-registry.js';
@@ -1012,6 +1013,13 @@ export async function agentChat(request, env, uid, opts = {}) {
   const stream = opts && opts.stream !== false;
   const persistMemory = opts?.persistMemory !== false;
   const startedAt = Date.now();
+  /* F0.5 / GW-07: ONE id for the whole request, decided before anything else so
+     the quota counter, the trace line and the `done` frame all carry it. The
+     gateway mints it (opts.reqId) and a retry sends the same one back, which is
+     what makes a retried turn replay its first decision instead of spending a
+     second message. A missing or malformed id falls back to the old derived
+     one; nothing here can fail a chat. */
+  const reqId = normalizeRequestId(opts && opts.reqId) || makeRequestId(String(uid || '') + ':' + startedAt);
   /* P30 (owner order 2026-10-16): per-stage timings, ms since startedAt. Only
      numbers are recorded, never text, and they ride on the existing trace
      line, so this adds no storage write. */
@@ -1134,7 +1142,7 @@ export async function agentChat(request, env, uid, opts = {}) {
   let quota = null;
   if (aiState) {
     try {
-      const q = await aiState.consumeQuota(sendCtx.uid, cap, opts && opts.reqId);
+      const q = await aiState.consumeQuota(sendCtx.uid, cap, reqId);
       quota = { exhausted: !q.allowed, remaining: q.remaining, start: Number(q.start) || 0 };
     } catch (_) { quota = null; }
   }
@@ -1437,7 +1445,7 @@ export async function agentChat(request, env, uid, opts = {}) {
   /* M10: one trace per request, emitted to the Worker log sink. It carries ids,
      counts and durations only, never message text, prompt text or a raw uid -
      and it costs no KV write, so the chat path keeps its two-write budget. */
-  const rid = makeRequestId(sendCtx.uid + ':' + startedAt);
+  const rid = reqId;
   const traceCtx = {
     rid,
     callerRef: callerRef(sendCtx.uid),
@@ -1645,7 +1653,9 @@ export async function agentChat(request, env, uid, opts = {}) {
               /* P30 (খ): `done` goes out first, so the student's answer is complete on
                  screen right away; the memory save finishes afterwards, still inside
                  this request (the stream closes only after it lands). */
-              s.done({ model: c.model, provider: c.provider, intent, quiz: quizMode, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt, structured: check.structured });
+              /* F0.5: `rid` on the frame too, so a client that only keeps the parsed
+                 events still has the id the quota decision and the log line used. */
+              s.done({ rid, model: c.model, provider: c.provider, intent, quiz: quizMode, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt, structured: check.structured });
               later(() => finalize(c.model, c.provider, full));
               await settleBackground();
               emitTrace({ provider: c.provider, model: c.model, text: full, responseType: check.structured?.type, validated: !check.enforced });
@@ -1919,7 +1929,7 @@ function sseCached(text, intent, startedAt, model, request = null) {
       const s = skyStream(push);
       s.hello();
       s.text(text);
-      s.done({ model: model || null, provider: 'cache', intent, cached: true, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt });
+      s.done({ rid, model: model || null, provider: 'cache', intent, cached: true, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt });
       try { controller.close(); } catch (_) {}
     }
   }), { status: 200, headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache', ...corsHeaders(request) } });
