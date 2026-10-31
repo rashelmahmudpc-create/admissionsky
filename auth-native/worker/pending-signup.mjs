@@ -69,6 +69,30 @@ export class PendingSignupStore {
     return this.hmac.hex('device-ref-v1', String(context.deviceId || ''));
   }
 
+  /* AUTH V2.0 (owner 2026-10-31): signup starts are serialised.
+   *
+   * The rate-limit counters and the one-live-signup-per-address rule are both
+   * read-modify-write over storage: read the count, add one, write it back.
+   * Two signup starts arriving together interleave those steps, so both read
+   * the same count and both write the same value — five allowed becomes ten,
+   * and two parallel starts each delete the other's ticket, leaving whichever
+   * lands last. The limiter then reports a number that was never enforced.
+   *
+   * This store lives inside one Durable Object, and a Durable Object instance
+   * handles one request at a time — so a promise chain here is a real lock, not
+   * a hopeful one. It costs nothing when calls are already sequential: the
+   * chain is empty and the work runs immediately.
+   */
+  #queue = Promise.resolve();
+
+  #serialise(work) {
+    const run = this.#queue.then(work, work);
+    // Keep the chain alive even when a call rejects, or one refused signup
+    // would wedge every later one behind a rejected promise.
+    this.#queue = run.then(() => undefined, () => undefined);
+    return run;
+  }
+
   async #consumeLimits(refs, now) {
     for (const limit of BEGIN_LIMITS) {
       const windowStart = Math.floor(now / limit.windowMs) * limit.windowMs;
@@ -82,6 +106,10 @@ export class PendingSignupStore {
   }
 
   async begin({ email, password, profile = null, context = {} } = {}) {
+    return this.#serialise(() => this.#begin({ email, password, profile, context }));
+  }
+
+  async #begin({ email, password, profile = null, context = {} } = {}) {
     const normalized = normalizeAuthEmail(email);
     const secret = typeof password === 'string' ? password : '';
     if (secret.length < PASSWORD_MIN || secret.length > PASSWORD_MAX) fail(AUTH_ERROR_CODES.WEAK_PASSWORD);
