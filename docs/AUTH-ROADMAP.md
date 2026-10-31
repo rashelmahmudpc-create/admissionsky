@@ -94,9 +94,13 @@
 - [x] ✅ CRITICAL account (suspended) trusted device-এও আটকায় — trust কখনো authority-র উপরে নয়
 - [ ] ⬜ নিজে থেকে trust করার সুবিধা ছাত্রকে দেখানো (device তালিকা + আলাদা করে বাতিল) — এই মুহূর্তে `/security/state` ও `/security/devices/revoke` server-এ আছে কিন্তু কোনো স্ক্রিন ওগুলো ডাকে না; trust আসে challenge শেষ করলে বা "Trust করি" চাপলে
 
-### ধাপ ৭: নতুন ফ্রি provider খোঁজা ⬜
-- [ ] নিজের domain লাগে না এমন ফ্রি email/OTP সেবা খোঁজা
-- [ ] গতি আর Inbox এ যায় কিনা test; ভালোগুলোই যোগ
+### ধাপ ৭: নতুন ফ্রি provider খোঁজা 🟡 (৩১ অক্টোবর ২০২৬)
+- [x] ✅ নিজের domain লাগে না এমন ফ্রি email/OTP সেবা — নতুন কিছু কেনার দরকার পড়েনি: **Authgear (`otp-y`) আগেই chain-এ ছিল**, শুধু ৩৮-এ পিছনে পড়ে ছিল। কোনো key ছাড়াই চলে (public endpoint কোডে), তাই এটাই একমাত্র slot যেটা এই বক্স থেকে সরাসরি যাচাই করা যায়
+- [x] ✅ গতি আর Inbox এ যায় কিনা মাপা — **স্যারের নিজের mailbox-এ দুটো provider পাশাপাশি**: Firebase-এর reset link **Spam**-এ, Authgear-এর কোড **Inbox**-এ। লাইভ round trip: send → Inbox **৫–৭ সেকেন্ড**, ভুল কোড false, সঠিক কোড true (temp mailbox দিয়ে প্রমাণ করা)
+- [x] ✅ ভালোটা যোগ করা — `otp-y` ৩৮ → **১১**। Brevo (১০) এখনো সামনে, কারণ ওটাই আসল ছাত্রের inbox-এ যাচাই করা slot; Authgear দ্বিতীয়। **ছাত্র আটকানোর ঝুঁকি নেই** — Authgear খারাপ দিনে failover আগের মতোই Brevo-তে যায়
+- [x] ✅ **বাইস-নিয়ম অটুট** — Gmail: Brevo > Authgear > Logto। Yahoo/iCloud: **Logto > Appwrite > Apps Script > AgentMail > Brevo > Authgear** (আগের ক্রম হুবহু)। Authgear-এ bias নেই, তাই সে কখনো Logto/Appwrite-এর আগে যেতে পারে না — নতুন টেস্ট সেটা পাহারা দেয়
+- [ ] ⬜ Inbox-এ গেল না Spam-এ — এটা **শুধু মালিকের mailbox দেখে** বলা যায়; এই বক্সের IP-তে Cloudflare Turnstile পাস হয় না (error 600010), তাই ভিতরের endpoint দিয়ে placement যাচাই করা অসম্ভব। temp mailbox-এ Spam ফোল্ডারই নেই
+- [ ] ⬜ বাকি ২০টা অমাপা slot একবার করে চালিয়ে দেখা — আজ শুধু প্রমাণিত provider-গুলোই সাজানো হলো; বাকিগুলো inert ও পিছনে, কোনোটা বন্ধ করা হয়নি
 
 ### ধাপ ৮: পুরো audit আর কাজ শেষ ⬜
 - [ ] পুরো ধারা test: signup → OTP → dashboard, login, ৩০ দিন, forgot password, bot

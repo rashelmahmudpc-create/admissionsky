@@ -1183,8 +1183,11 @@ test('wrangler.toml enables otp-j and otp-k at 38 without new vars, ahead of the
   const order = rows.slice().sort((a, b) => a.priority - b.priority || a.id.localeCompare(b.id)).map(row => row.id);
   // A4 ③ / D-3 (owner order 2026-10-31, option "ক"): otp-i moved ahead of otp-f, and
   // otp-d joined the 38 group, so the tail is asserted from otp-f's new position.
-  assert.deepEqual(order.slice(order.indexOf('otp-f')), ['otp-f', 'otp-d', 'otp-j', 'otp-k', 'otp-l', 'otp-m', 'otp-n', 'otp-o', 'otp-q', 'otp-r', 'otp-s', 'otp-t', 'otp-u', 'otp-v', 'otp-w', 'otp-x', 'otp-y', 'otp-z', 'otp-za', 'otp-g', 'otp-c', 'telegram']);
-  // The six measured senders come first, in capacity-aware order, and every other
-  // enabled slot stays behind them — none is disabled, so failover is unchanged.
-  assert.deepEqual(order.slice(0, 6), ['otp-a', 'otp-h', 'otp-i', 'otp-b', 'otp-e', 'otp-f']);
+  // A7 / AU-OB-07 (owner order 2026-10-31): otp-y left the 38 group for 11, so it is
+  // no longer in this tail — it is asserted in the front group below.
+  assert.deepEqual(order.slice(order.indexOf('otp-f')), ['otp-f', 'otp-d', 'otp-j', 'otp-k', 'otp-l', 'otp-m', 'otp-n', 'otp-o', 'otp-q', 'otp-r', 'otp-s', 'otp-t', 'otp-u', 'otp-v', 'otp-w', 'otp-x', 'otp-z', 'otp-za', 'otp-g', 'otp-c', 'telegram']);
+  // The six measured senders, plus Authgear which was measured the same way, come
+  // first. Every other enabled slot stays behind them — none is disabled, so
+  // failover is unchanged.
+  assert.deepEqual(order.slice(0, 7), ['otp-a', 'otp-y', 'otp-h', 'otp-i', 'otp-b', 'otp-e', 'otp-f']);
 });
