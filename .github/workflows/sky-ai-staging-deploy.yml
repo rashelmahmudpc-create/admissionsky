@@ -6,9 +6,13 @@
 # which is the whole point of the twin — a staging AI test must not read live
 # prefs or spend live chat quota.
 #
-# Order matters: sky-ai-staging must exist before admission-gk-staging is
-# deployed, because the app config binds it as SKY_AI and wrangler refuses a
-# binding that points at a script that is not there yet.
+# ORDER: do not use this workflow on a fresh account — the two staging scripts
+# bind each other, so neither can be deployed first (a service binding needs the
+# target to exist, code 10143; a DO binding needs the target to declare the class,
+# code 10061). Both errors were hit for real on 2026-10-31. Use
+# `tools/setup-staging-ai.sh` for the first provision; it breaks the cycle in
+# three deploys. After that, this workflow is the ordinary way to ship a change
+# to the twin.
 name: Deploy Staging Sky AI Worker (manual)
 on:
   workflow_dispatch:

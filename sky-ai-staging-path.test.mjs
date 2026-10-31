@@ -68,3 +68,40 @@ test('f03-৭: production configs are untouched by F0.3', () => {
     'production still binds the production AI Worker');
   assert.ok(!APP_PROD.includes('sky-ai-staging'), 'production never mentions the twin');
 });
+
+/* F0.3 follow-up (2026-10-31): the two staging scripts bind EACH OTHER, so on a
+ * fresh account neither can be deployed first. Both errors were hit live:
+ *   sky-ai-staging first  -> 10061 (admission-gk-staging does not declare the class)
+ *   admission-gk-staging  -> 10143 (sky-ai-staging does not exist)
+ * tools/setup-staging-ai.sh is the order that works. These pin it, because a
+ * future edit that "simplifies" the bootstrap back to two steps would fail only
+ * on a fresh account, long after anyone remembers why. */
+
+test('f03-৮: the bootstrap strips the AI_STATE binding for the first deploy', () => {
+  const sh = readFileSync('tools/setup-staging-ai.sh', 'utf8');
+  assert.ok(/AI_STATE/.test(sh), 'it must name the binding it strips');
+  assert.ok(/class_name = \\?"AiStateObject\\?"/.test(sh), 'the strip targets the DO binding');
+  assert.ok(/wrangler.staging.bootstrap.toml/.test(sh), 'the first deploy uses a stripped config');
+});
+
+test('f03-৯: the bootstrap deploys the app before the twin in full', () => {
+  const sh = readFileSync('tools/setup-staging-ai.sh', 'utf8');
+  const appFirst = sh.indexOf('deploy --config wrangler.staging.toml');
+  const twinFull = sh.indexOf('cd sky-ai && $WRANGLER deploy --config wrangler.staging.toml');
+  assert.ok(appFirst > 0 && twinFull > 0, 'both full deploys are present');
+  assert.ok(appFirst < twinFull,
+    'the app must declare AiStateObject before the twin binds it (code 10061 otherwise)');
+});
+
+test('f03-১০: the bootstrap seeds the staging internal key, not production', () => {
+  const sh = readFileSync('tools/setup-staging-ai.sh', 'utf8');
+  assert.ok(sh.includes('2827bff9b9974101a305102e1fbd1214'), 'the staging PUB_KV');
+  assert.ok(!sh.includes('fd9a455d1be64c2eade1309186462808'), 'never the production PUB_KV');
+  assert.ok(/secret:sky-internal/.test(sh), 'without this key the identity routes fall back silently');
+});
+
+test('f03-১১: the deploy workflow warns that it cannot bootstrap a fresh account', () => {
+  const wf = readFileSync('.github/workflows/sky-ai-staging-deploy.yml', 'utf8');
+  assert.ok(/setup-staging-ai\.sh/.test(wf), 'it points at the bootstrap');
+  assert.ok(/10143/.test(wf) && /10061/.test(wf), 'both failure codes are recorded');
+});
