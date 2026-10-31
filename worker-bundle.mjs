@@ -27188,6 +27188,7 @@ var VerificationOrchestrator = class {
     }));
     const selected = selectedResult.challenge;
     if (!selected) throw new NativeAuthError(AUTH_ERROR_CODES.STORAGE_UNAVAILABLE);
+    const verifyDeadline = Date.now() + this.config.policy.deliveryBudgetMs;
     let verified;
     if (selected.verificationMode === VERIFICATION_MODES.LOCAL_CODE) {
       const code = String(input.code || "").trim();
@@ -27224,7 +27225,7 @@ var VerificationOrchestrator = class {
           ...entry.id === "otp-l" || entry.id === MAGIC_LINK_PROVIDER_ID2 ? { destination: identity.destinations[entry.channel] } : {},
           purpose: identity.purpose,
           serverConfirmed: Boolean(selected.providerConfirmed)
-        }), entry.timeoutMs);
+        }), Math.min(entry.timeoutMs, Math.max(1, verifyDeadline - Date.now())));
         if (result?.verified !== true) {
           errorFromRepository(await this.repository.rejectChallengeAttempt({
             attemptId,

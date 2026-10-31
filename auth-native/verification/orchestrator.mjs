@@ -683,6 +683,14 @@ export class VerificationOrchestrator {
     }));
     const selected = selectedResult.challenge;
     if (!selected) throw new NativeAuthError(AUTH_ERROR_CODES.STORAGE_UNAVAILABLE);
+    // AUTH V2.0 (owner 2026-10-31): the student waits on this call too, so it
+    // gets the same ceiling the send path already honours. `requestVerification`
+    // bounds every provider call by the shared delivery budget; this one used
+    // the slot's own timeoutMs, which may be 20s — a single hung provider could
+    // therefore hold a verification for longer than the whole send budget the
+    // product promises. The deadline is measured from here, so it caps the
+    // provider call rather than the work that already happened above.
+    const verifyDeadline = Date.now() + this.config.policy.deliveryBudgetMs;
     let verified;
     if (selected.verificationMode === VERIFICATION_MODES.LOCAL_CODE) {
       const code = String(input.code || '').trim();
@@ -720,7 +728,7 @@ export class VerificationOrchestrator {
           ...(entry.id === 'otp-l' || entry.id === MAGIC_LINK_PROVIDER_ID ? { destination: identity.destinations[entry.channel] } : {}),
           purpose: identity.purpose,
           serverConfirmed: Boolean(selected.providerConfirmed)
-        }), entry.timeoutMs);
+        }), Math.min(entry.timeoutMs, Math.max(1, verifyDeadline - Date.now())));
         if (result?.verified !== true) {
           errorFromRepository(await this.repository.rejectChallengeAttempt({
             attemptId,
