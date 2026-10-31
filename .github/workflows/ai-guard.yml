@@ -1,0 +1,55 @@
+name: AI Guard
+
+# F0.7 (blueprint v1.0, owner order 2026-10-31): "AI tests in CI".
+#
+# The AI suites already existed and passed, but only sky-rich-live-fix.yml ran
+# them -- and that workflow is manual-only, so no pull request was ever gated
+# on AI behaviour. A regression in the chat turn, the stream protocol, the
+# provider chain, memory/recall or the question engine could merge green.
+#
+# This guard runs the whole AI surface on every PR that touches it, so the
+# golden-set baseline (F0.6) has a stable floor to measure against. It is
+# read-only: no deploy, no secrets, no network -- every suite stubs its
+# provider keys and hosts.
+on:
+  push:
+    branches: [main]
+    paths: &ai_paths
+      - 'ai-agent.js'
+      - 'ai-*.mjs'
+      - 'ai-*.test.mjs'
+      - 'ai-chat-cache.mjs'
+      - 'sky-*.mjs'
+      - 'sky-*.test.mjs'
+      - 'sky-ai/**'
+      - 'question-engine.mjs'
+      - 'question-*.test.mjs'
+      - 'phase9-*.test.mjs'
+      - 'p21-*.test.mjs'
+      - 'p25-*.test.mjs'
+      - 'p29-*.test.mjs'
+      - 'p30-*.test.mjs'
+      - 'p31-*.test.mjs'
+      - 'memory-engine.js'
+      - 'prompt-registry.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ai-guard.yml'
+  pull_request:
+    paths: *ai_paths
+permissions:
+  contents: read
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Verify the AI surface (chat turn, stream, providers, memory, questions)
+        run: npm run test:ai-guard
