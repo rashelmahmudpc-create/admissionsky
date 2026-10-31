@@ -98,19 +98,31 @@ test('the request id reaches the quota counter from both sides', () => {
   // same decision. That only works if the SAME id is used on both sides, so both
   // call sites are pinned.
   const worker = readFileSync(new URL('../public-worker.js', import.meta.url), 'utf8');
-  const helper = worker.slice(worker.indexOf('const chatWithFallback ='));
-  assert.match(helper, /const reqId = crypto\.randomUUID\(\);/);
+  const helper = worker.slice(worker.indexOf('const chatWithFallback ='), worker.indexOf('const publishGlobal'));
+  /* F0.5 / GW-07: the id is the TURN's, so the caller's id is honoured and one
+     is minted only when it is absent. That is what makes a retry replay. */
+  assert.match(helper, /normalizeRequestId\(request\.headers\.get\(SKY_REQUEST_ID_HEADER\)\) \|\| mintRequestId\(\)/);
   assert.match(helper, /'x-sky-req-id': reqId/);
-  assert.match(helper, /return await agentChat\(request, env, identity\.uid, local\)/);
+  assert.match(helper, /withRequestId\(await agentChat\(request, env, identity\.uid, local\), reqId\)/);
   assert.match(helper, /const local = \{ stream, persistMemory: identity\.persistMemory, reqId \}/);
+  /* the id must come back, or it cannot correlate anything */
+  assert.match(helper, /headers\.set\(SKY_REQUEST_ID_HEADER, reqId\)/);
 
   const chat = readFileSync(new URL('./chat.mjs', import.meta.url), 'utf8');
   assert.match(chat, /reqId: request\.headers\.get\('x-sky-req-id'\) \|\| undefined/);
 
   const agent = readFileSync(new URL('../ai-agent.js', import.meta.url), 'utf8');
-  assert.match(agent, /consumeQuota\(sendCtx\.uid, cap, opts && opts\.reqId\)/);
+  /* F0.5 / GW-07: the quota counter and the trace line now share ONE id, minted
+     once at the top of agentChat, so a decision and the log line that explains
+     it can be joined. */
+  assert.match(agent, /const reqId = normalizeRequestId\(opts && opts\.reqId\) \|\| makeRequestId\(/);
+  assert.match(agent, /consumeQuota\(sendCtx\.uid, cap, reqId\)/);
+  assert.match(agent, /const rid = reqId;/);
   const doSrc = readFileSync(new URL('../ai-state-do.mjs', import.meta.url), 'utf8');
-  assert.match(doSrc, /if \(rid\) \{[\s\S]{0,200}replayed: true/);
+  /* F0.5 / GW-07: a replay is bounded to a short window, so idempotency cannot
+     become a quota bypass (one id answering the same question all day). */
+  assert.match(doSrc, /REPLAY_WINDOW_MS/);
+  assert.match(doSrc, /replayed: true/);
 });
 
 test('the settings that shape an answer cross the hop, so the rooms cannot drift', () => {

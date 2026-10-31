@@ -17,6 +17,29 @@
   const MAX_MSGS = 60;
   const MAX_HISTORY = 12;
 
+  /* F0.5 / GW-07: one request id per TURN. The server keys the quota decision on
+     this id, so a retry that carries the same id replays the first decision
+     instead of spending a second message from the student's daily allowance.
+     The rule is "same question, same id": re-sending the identical text reuses
+     the id, so a retry, a dropped connection or a double tap cannot charge
+     twice — while a genuinely new question mints a new id and is charged
+     normally. Keying on the text (not just "the last send") is what keeps this
+     from becoming unlimited free answers: only an identical repeat replays. */
+  const TURN_ID_TTL_MS = 10 * 60 * 1000;
+  let turnReqId = '';
+  let turnReqText = '';
+  let turnReqAt = 0;
+  function newTurnId() {
+    try { if (window.crypto && crypto.randomUUID) return String(crypto.randomUUID()); } catch (_) {}
+    return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  }
+  function turnIdFor(text) {
+    const t = String(text == null ? '' : text);
+    if (turnReqId && t === turnReqText && (Date.now() - turnReqAt) < TURN_ID_TTL_MS) return turnReqId;
+    turnReqId = newTurnId(); turnReqText = t; turnReqAt = Date.now();
+    return turnReqId;
+  }
+
   /* ───────── theme: single source of truth is the app's engine ───────── */
   function appResolved() {
     /* The app carries two theme engines: phase1-upgrade owns
@@ -449,6 +472,8 @@
 
   async function ask(messages, onChunk, opts, onReplace) {
     opts = opts || {};
+    /* F0.5: the id for this turn, decided by the caller from the turn text. */
+    const reqId = opts.reqId || turnIdFor(messages.length ? messages[messages.length - 1].content : '');
     const fresh = opts.fresh != null ? opts.fresh : messages.filter((m) => m.role === 'user').length <= 1;
     const payload = { messages: messages, fresh: fresh, context: { stats: localStats(), profile: profilePayload(), examMode: opts.mode || null } };
     const ctrl = new AbortController();
@@ -457,7 +482,7 @@
     try {
       r = await fetch('/api/ai/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-AH-Guest': guestId() },
+        headers: { 'Content-Type': 'application/json', 'X-AH-Guest': guestId(), 'X-Sky-Req-Id': reqId },
         body: JSON.stringify(payload),
         signal: ctrl.signal
       });
@@ -506,8 +531,8 @@
        is what let a truncated answer look like a short one, so it is reported
        as incomplete. `truncated` is new, so callers that ignore it are no worse
        off than before. */
-    if (streamV && !sawDone) return { ok: true, text: full, meta: meta, truncated: true, stream: streamV };
-    return { ok: true, text: full, meta: meta, stream: streamV || undefined };
+    if (streamV && !sawDone) return { ok: true, text: full, meta: meta, truncated: true, stream: streamV, reqId };
+    return { ok: true, text: full, meta: meta, stream: streamV || undefined, reqId };
   }
 
   /* The server may correct text that already streamed (event: replace). A
@@ -1275,7 +1300,7 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
          headings, tables and diagrams appear while the answer is written. */
       if (node) { const b = node.querySelector('.bw'); if (b) b.innerHTML = mdRich(full); }
       scrollEnd();
-    }, { onStage: (label) => procStage(node, holder, label) }, (corrected) => { holder.text = corrected; replaceStream(corrected); });
+    }, { onStage: (label) => procStage(node, holder, label), reqId: turnIdFor(t) }, (corrected) => { holder.text = corrected; replaceStream(corrected); });
 
     setBusy(false);
     if (holder.stage) { holder.steps.push(holder.stage); holder.stage = ''; }
@@ -1583,6 +1608,9 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
       const c = e.target.closest('[data-c]');
       if (c) { const m = sessions[cur].msgs[+c.getAttribute('data-c')]; try { navigator.clipboard.writeText(m.text); } catch (_) {} say(T.copied, 1600); return; }
       const r = e.target.closest('[data-r]');
+      /* F0.5: "আবার" is a retry of the SAME question, so it must carry the same
+         request id — otherwise asking again after a cut-off answer would spend a
+         second message. turnIdFor() gives back the same id for identical text. */
       if (r) { const i = +r.getAttribute('data-r'); const prev = sessions[cur].msgs[i - 1]; if (prev && prev.role === 'user') { sessions[cur].msgs.splice(i, 1); save(); renderMsgs(); send(prev.text); } return; }
       const g = e.target.closest('[data-g]');
       if (g) { g.classList.add('on'); say('ধন্যবাদ!', 1600); return; }

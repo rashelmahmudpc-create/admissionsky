@@ -30,6 +30,15 @@ const K_QUOTA = 'quota';
    it costs nothing either. */
 const K_QUOTA_ID = (id) => 'quotaid:' + id;
 
+/* F0.5 / GW-07: how long a request id may be replayed. This is what keeps
+   idempotency from becoming a quota bypass. The id exists so a RETRY — the
+   client re-sending a turn whose answer was lost — does not spend a second
+   message. Without a bound, pressing "আবার" on the same question would answer
+   for free for as long as the entry lives (a whole 24-hour window), which is a
+   student getting unlimited answers from one credit. Five minutes covers every
+   real retry (a reconnect, a dropped stream, a double tap) and nothing else. */
+export const REPLAY_WINDOW_MS = 5 * 60 * 1000;
+
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
   headers: { 'Content-Type': 'application/json' }
@@ -71,7 +80,11 @@ export class AiStateObject {
        caller can tell it apart while debugging. */
     if (rid) {
       const prior = await this.#entry(K_QUOTA_ID(rid));
-      if (prior && prior.v) return { ...prior.v, replayed: true };
+      /* Only a RECENT decision replays. A stale id is treated as a new request,
+         so the bound above cannot be widened by holding an id. */
+      if (prior && prior.v && (t - num(prior.v.at, 0)) < REPLAY_WINDOW_MS) {
+        return { ...prior.v, replayed: true };
+      }
     }
     const cur = await this.#entry(K_QUOTA);
     let n = cur ? num(cur.v && cur.v.n) : 0;
@@ -83,7 +96,10 @@ export class AiStateObject {
     await this.ctx.storage.put(K_QUOTA, { v: { n: n + 1, start }, exp: 0 });
     const decision = { allowed: true, used: n + 1, cap: limit, remaining: limit - n - 1, start, uid: String(uid || '') };
     if (rid) {
-      try { await this.ctx.storage.put(K_QUOTA_ID(rid), { v: decision, exp: t + RL_WINDOW_MS }); } catch (_) { /* counting still happened */ }
+      /* `at` is the replay clock and the expiry is the replay window, not the
+         24-hour quota window: the entry is only useful while a retry is
+         plausible, so it is not kept a day longer than that. */
+      try { await this.ctx.storage.put(K_QUOTA_ID(rid), { v: { ...decision, at: t }, exp: t + REPLAY_WINDOW_MS }); } catch (_) { /* counting still happened */ }
     }
     return decision;
   }
