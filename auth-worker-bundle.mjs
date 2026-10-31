@@ -2954,7 +2954,7 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         if (isDisposableEmail(input.email)) throw new NativeAuthError(AUTH_ERROR_CODES.DISPOSABLE_EMAIL);
         if (reservedTelegramLoginEmail(input.email)) throw new NativeAuthError(AUTH_ERROR_CODES.DISPOSABLE_EMAIL);
         const prepared = await callAuthority(env, "/internal/firebase/rate", { input: { operation: "signup", email: input.email }, context });
-        if (emailOwnershipRequested(env, url)) return await beginPendingSignup({ request, env, context, prepared, password: input.password, deps: pendingDeps() });
+        if (verificationPublished(env)) return await beginPendingSignup({ request, env, context, prepared, password: input.password, deps: pendingDeps() });
         let signed;
         try {
           signed = await provider.signUp(prepared.email, input.password);

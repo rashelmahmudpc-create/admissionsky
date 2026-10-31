@@ -234,8 +234,11 @@ test('V2.0-৫: the handler no longer reads a signup-flow header, and the module
   assert.doesNotMatch(module, /export const PENDING_SIGNUP_HEADER/);
   assert.doesNotMatch(module, /export const pendingSignupRequested/);
   assert.doesNotMatch(module, /headers\.get\(PENDING_SIGNUP_HEADER\)/);
-  // The gate on the held path is the capability switch, not a caller's header.
-  assert.match(HANDLER_SRC, /if \(emailOwnershipRequested\(env, url\)\) return await pendingSignup\.beginPendingSignup\(/);
+  // The gate on the held path is the published-ownership switch, not a
+  // caller's header — and specifically not `emailOwnershipRequested`, which is
+  // also true for `?telegramCanary=1` and would drag the Telegram canary into a
+  // path that deliberately offers no Telegram.
+  assert.match(HANDLER_SRC, /if \(verificationPublished\(env\)\) return await pendingSignup\.beginPendingSignup\(/);
 });
 
 test('V2.0-৫: every held-signup call in the handler is awaited, so a refusal keeps its code', async () => {

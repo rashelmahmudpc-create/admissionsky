@@ -953,8 +953,15 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
          * caller that omitted the header reached `provider.signUp` below and
          * learned from 409-vs-202 whether an address already had an account —
          * an enumeration oracle on an endpoint anyone can call. With the header
-         * gone the answer is the same 202 for a new address and a taken one. */
-        if (emailOwnershipRequested(env, url)) return await pendingSignup.beginPendingSignup({ request, env, context, prepared, password: input.password, deps: pendingDeps() });
+         * gone the answer is the same 202 for a new address and a taken one.
+         *
+         * The gate is `verificationPublished`, NOT `emailOwnershipRequested`.
+         * The latter is also true for `?telegramCanary=1`, and the held path has
+         * no Telegram option — it answers `telegram: { available: false }` by
+         * design. Gating on it therefore pulled the Telegram canary off its own
+         * flow and into a path that cannot serve it. Only a genuinely published
+         * ownership flow may claim signup. */
+        if (verificationPublished(env)) return await pendingSignup.beginPendingSignup({ request, env, context, prepared, password: input.password, deps: pendingDeps() });
         let signed;
         try { signed = await provider.signUp(prepared.email, input.password); } catch (cause) { throw providerError(cause, 'signup'); }
 
