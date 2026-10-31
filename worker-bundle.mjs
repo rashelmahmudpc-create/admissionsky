@@ -4213,17 +4213,24 @@ var PROVIDER_KEY_NAMES = Object.freeze([
   "CLOUDFLARE_AI_API_KEY",
   ...COMPAT_PROVIDERS2.map((p) => p.key)
 ]);
+var READY_EXPLICIT = Object.freeze([
+  { id: "gemini", keys: ["GEMINI_KEYS"] },
+  { id: "groq", keys: ["GROQ_API_KEY"] },
+  /* Cloudflare needs TWO credentials and its catalog entry names only the token.
+     A catalog rule for it would OVERWRITE this one and report the provider ready
+     on the token alone — so the catalog contributes only the ids not listed
+     here. (A guard test covers exactly this.) */
+  { id: "cloudflare", keys: ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_AI_API_KEY"] }
+]);
+var PROVIDER_READY_RULES = Object.freeze([
+  ...READY_EXPLICIT,
+  ...CATALOG.filter((c) => !READY_EXPLICIT.some((r) => r.id === c.id)).map((c) => ({ id: c.id, keys: [c.key] }))
+]);
 async function providerReadiness(env) {
   const kv2 = await aiKeyOverlay(env);
   const has2 = (name) => !!pickKey(env, kv2, name);
-  const out = {
-    gemini: has2("GEMINI_KEYS"),
-    groq: has2("GROQ_API_KEY"),
-    cloudflare: has2("CLOUDFLARE_ACCOUNT_ID") && has2("CLOUDFLARE_AI_API_KEY")
-  };
-  for (const p of COMPAT_PROVIDERS2) {
-    out[p.key.toLowerCase().replace(/_api_keys?$|_key$|_token$/, "")] = has2(p.key);
-  }
+  const out = {};
+  for (const rule of PROVIDER_READY_RULES) out[rule.id] = rule.keys.every(has2);
   return out;
 }
 function readyProviderNames(readiness) {
@@ -5145,7 +5152,11 @@ async function agentStatus(request, env, uid) {
        routerChain, not providerChain: the latter filters to adapters with a
        one-shot path, which is Gemini alone, so it would report a two-entry
        chain while the chat really tries Gemini, then Groq, then Cloudflare. */
-    chain: routerChain(env, TIER.FAST, /* @__PURE__ */ new Set(), kv2).map((c) => c.provider + ":" + c.model),
+    /* F1.2: name the CATALOG provider. Before this every OpenAI-compatible
+       provider reported as the adapter `openai-compat`, so a status with 16 such
+       keys could not say which one the chat would really try — the one thing the
+       field exists to answer. */
+    chain: routerChain(env, TIER.FAST, /* @__PURE__ */ new Set(), kv2).map((c) => (c.catalogId || c.provider) + ":" + c.model),
     limits: { perDay: Math.max(1, Math.min(500, Number(env.AGENT_DAILY_CAP || 10))) },
     /* Which store the per-user state actually uses. Without this the migration
        off KV could only be inferred; here it is observable from the status
