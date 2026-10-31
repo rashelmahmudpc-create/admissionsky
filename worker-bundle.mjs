@@ -1758,7 +1758,11 @@ var CATALOG = Object.freeze([
     verifiedAt: null
   }
 ]);
-var COMPAT_PROVIDERS = CATALOG.filter((c) => c.adapter === "openai-compat").map((c) => ({ key: c.key, url: c.url, models: c.models }));
+var COMPAT_PROVIDERS = CATALOG.filter((c) => c.adapter === "openai-compat").map((c) => ({ id: c.id, key: c.key, url: c.url, models: c.models }));
+function capabilityOf(id) {
+  const entry = CATALOG.find((c) => c.id === id);
+  return entry ? [...entry.capability] : [];
+}
 function tierModels(id) {
   const entry = CATALOG.find((c) => c.id === id);
   return entry && entry.tiers ? entry.tiers : null;
@@ -3611,6 +3615,14 @@ var INTENTS = {
   IMAGE_REQUEST: "IMAGE_REQUEST"
 };
 var TIER = { FAST: "FAST", SMART: "SMART" };
+function requiredCapability(intent, hasImage) {
+  if (hasImage) return CAPABILITY.VISION;
+  return CAPABILITY.CHAT;
+}
+function filterByCapability(chain, need) {
+  if (!need) return chain;
+  return chain.filter((c) => capabilityOf(c.catalogId).includes(need));
+}
 var RE = {
   quiz: /(\d+\s*(টা|টি)?\s*(mcq|প্রশ্ন)?|\bquiz\b|কুইজ|\bchallenge\b|মক|প্রশ্ন বানাও|প্রশ্ন তৈরি|make.*(mcq|question)|\bmcq\b)/i,
   perf: /(performance|প্রোগ্রেস|progress|অগ্রগতি|ফলাফল|কেমন আছি|কেমন চলছে|কেমন করছি|ভালো করছি|কতটা (ভালো|খারাপ)|রিপোর্ট|report|streak|accuracy|সঠিক|ভুল করেছি|কয়টা ঠিক|মার্কস|marks|score|স্কোর)/i,
@@ -4226,7 +4238,7 @@ function routerChain(env, tier, badSet = /* @__PURE__ */ new Set(), kv2 = {}) {
     for (const key of k) {
       const sig = String(key).slice(0, 12) + ":" + m;
       if (badSet.has(sig)) continue;
-      chain.push({ provider: "gemini", key, model: m });
+      chain.push({ provider: "gemini", catalogId: "gemini", key, model: m });
     }
   };
   if (geminiModels.length) geminiModels.forEach(addGem);
@@ -4240,7 +4252,7 @@ function routerChain(env, tier, badSet = /* @__PURE__ */ new Set(), kv2 = {}) {
   if (groqKey) {
     const groqModels = String(env && env.AGENT_GROQ_MODELS || kv2.AGENT_GROQ_MODELS || "").split(",").map((s) => s.trim()).filter(Boolean);
     for (const m of groqModels.length ? groqModels : ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]) {
-      chain.push({ provider: "groq", key: groqKey, model: m });
+      chain.push({ provider: "groq", catalogId: "groq", key: groqKey, model: m });
     }
   }
   const cfAccount = pickKey(env, kv2, "CLOUDFLARE_ACCOUNT_ID");
@@ -4248,7 +4260,7 @@ function routerChain(env, tier, badSet = /* @__PURE__ */ new Set(), kv2 = {}) {
   if (cfAccount && cfKey) {
     const cfModels = String(env && env.AGENT_CLOUDFLARE_MODELS || kv2.AGENT_CLOUDFLARE_MODELS || "").split(",").map((s) => s.trim()).filter(Boolean);
     const list2 = cfModels.length ? cfModels : ["@cf/meta/llama-3.3-70b-instruct-fp8-fast"];
-    for (const m of list2) chain.push({ provider: "cloudflare", key: cfKey, model: m });
+    for (const m of list2) chain.push({ provider: "cloudflare", catalogId: "cloudflare", key: cfKey, model: m });
   }
   for (const p of COMPAT_PROVIDERS2) {
     const keys2 = String(pickKey(env, kv2, p.key) || "").split(",").map((s) => s.trim()).filter(Boolean);
@@ -4258,7 +4270,7 @@ function routerChain(env, tier, badSet = /* @__PURE__ */ new Set(), kv2 = {}) {
       for (const m of models.length ? models : p.models) {
         const sig = String(key).slice(0, 12) + ":" + m;
         if (badSet.has(sig)) continue;
-        chain.push({ provider: "openai-compat", key, model: m, url: p.url });
+        chain.push({ provider: "openai-compat", catalogId: p.id, key, model: m, url: p.url });
       }
     }
   }
@@ -4389,6 +4401,7 @@ async function agentChat(request, env, uid, opts = {}) {
   }
   const intentCls = classifyIntent(v.messages[v.messages.length - 1].content);
   const intent = intentCls.intent;
+  const hasImage = v.messages.some((m) => m.image);
   const baseTier = intentCls.tier;
   const routing = routeTier(intent, v.messages[v.messages.length - 1].content, baseTier);
   const tier = routing.tier;
@@ -4412,7 +4425,7 @@ async function agentChat(request, env, uid, opts = {}) {
     }
     const fullChain = routerChain(env, tier, /* @__PURE__ */ new Set(), kvKeys2).map((c) => ({ ...c, sig: String(c.key).slice(0, 12) + ":" + c.model }));
     let chain2 = healthyChain(fullChain, badMap2, healthNow);
-    if (v.messages.some((m) => m.image)) chain2 = chain2.filter((c) => c.provider === "gemini");
+    chain2 = filterByCapability(chain2, requiredCapability(intent, hasImage));
     chain2 = rankChainByModelHealth(chain2, badMap2, healthNow);
     return { kvKeys: kvKeys2, badMap: badMap2, badSet: badSet2, chain: chain2 };
   })();
@@ -4509,6 +4522,10 @@ async function agentChat(request, env, uid, opts = {}) {
   if (verificationGuidance) return guidanceResponse(verificationGuidance, stream, request);
   const { kvKeys, badMap, badSet } = await providersP;
   let { chain } = await providersP;
+  if (!chain.length && hasImage) {
+    const msg = { error: "no_vision_provider", message: "ছবি পড়ার মতো AI এখনো চালু হয়নি — মালিককে জানাও (GEMINI_KEYS)।" };
+    return stream ? sseError(msg, 503, request) : jsonResp(msg, 503, request);
+  }
   if (!chain.length) {
     const msg = { error: "no_providers", message: "AI-সেবা এখন কনফিগার করা নেই, দয়া করে মালিককে জানাও (GEMINI_KEYS)।" };
     return stream ? sseError(msg, 503, request) : jsonResp(msg, 503, request);
@@ -4639,7 +4656,7 @@ async function agentChat(request, env, uid, opts = {}) {
         goalUsed = false;
       }
     }
-    const hasImage = msgs.some((m) => m.image);
+    const hasImage2 = msgs.some((m) => m.image);
     mark("context");
     if (appFeatureHit) sys = sys + "\n\n" + renderAppFeatures(await appFeaturesP);
     const extraTools = toolPlan.filter((p) => p.name !== "get_app_features");
@@ -4660,7 +4677,7 @@ async function agentChat(request, env, uid, opts = {}) {
     const cacheQuestion = (v.messages[v.messages.length - 1] || {}).content;
     const cacheable = chatCacheOn && !instrText && isCacheableRequest({
       messages: v.messages,
-      hasImage,
+      hasImage: hasImage2,
       quizMode,
       onboarding,
       memoryText,
@@ -4671,7 +4688,7 @@ async function agentChat(request, env, uid, opts = {}) {
     });
     const sharedCandidate = !cacheable && chatCacheOn && !instrText && isSharedAcademicCandidate({
       messages: v.messages,
-      hasImage,
+      hasImage: hasImage2,
       quizMode,
       onboarding,
       examMode,
@@ -4850,7 +4867,7 @@ async function agentChat(request, env, uid, opts = {}) {
           if (memoryText || summaryText || msgs.length > v.messages.length) stage("memory", "তোমার আগের কথাগুলো মনে করছি");
           if (stats && intent === INTENTS.PERFORMANCE_REQUEST) stage("tool", "টুল চালাচ্ছি, তোমার অগ্রগতির তথ্য পড়ছি");
           else if (profileCtx && ctxBundle) stage("profile", "তোমার লক্ষ্য অনুযায়ী উত্তর মিলিয়ে নিচ্ছি");
-          if (hasImage) stage("image", "ছবিটা বিশ্লেষণ করছি");
+          if (hasImage2) stage("image", "ছবিটা বিশ্লেষণ করছি");
           stage("think", "ভাবছি, উত্তর সাজাচ্ছি");
           let ok2 = false;
           let lastErr = "";
