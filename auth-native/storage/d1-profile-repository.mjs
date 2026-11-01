@@ -76,6 +76,30 @@ export class D1ProfileStore {
     await this.d1.prepare('DELETE FROM avatars WHERE user_id=?').bind(userId).run();
     return { deleted: true };
   }
+
+  /* AUTH V2.4 (owner 2026-10-31): the wipe reaches the avatars too.
+   *
+   * The blueprint's finding ১৬. "Delete all users" emptied the Durable Object's
+   * SQLite — every auth table — and stopped there. Avatars live in a different
+   * store entirely (D1, the PROFILE_DB binding), so a wipe left every student's
+   * photo behind: the accounts were gone and the pictures were not.
+   *
+   * That is the worst shape a deletion bug can take. The operator sees a wipe
+   * succeed, the tables come back empty, and the one thing a student would
+   * actually recognise — their own face — is still there.
+   *
+   * Returns a count rather than a boolean, because "nothing to delete" and
+   * "could not reach the store" must not look the same in the wipe's report —
+   * the second is a wipe that did not finish, and it has to be visible. */
+  async wipeAllAvatars() {
+    if (!this.d1) return { deleted: 0, available: false };
+    await this.#ensureTable();
+    // Counted before the delete: D1 reports a change count, but a count taken
+    // first is the number the operator was told, which is the one that must match.
+    const before = await this.d1.prepare('SELECT COUNT(*) AS count FROM avatars').first();
+    await this.d1.prepare('DELETE FROM avatars').run();
+    return { deleted: Number(before?.count || 0), available: true };
+  }
 }
 
 // Deterministic default avatar (blueprint §10, zero-raster owner rule):
