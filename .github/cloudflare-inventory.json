@@ -3,7 +3,7 @@
   "account": "abb783e456e51a5d338419de93d5e576",
   "account_name": "Rashelzayan213@icloud.com's Account",
   "worker_subdomain": "admissionhub.workers.dev",
-  "last_verified": "2026-10-31",
+  "last_verified": "2026-11-01",
   "workers": {
     "tracked": [
       "admission-gk",
@@ -55,6 +55,22 @@
       {
         "name": "fleet-offsite-backup",
         "reason": "Offsite backup Worker for the owner's fleet bot system (new 2026-10-31); not deployed by this repo. Sibling-bot tooling — waive, do not retire without its owner's yes."
+      },
+      {
+        "name": "inflowsky-tg-relay",
+        "reason": "The Tenuza fleet relay Worker (2026-11-01); routes the ten agents' reads/dispatches. Not deployed by this repo. Sibling-bot/fleet tooling — waive; do not retire."
+      },
+      {
+        "name": "zozo-fleet",
+        "reason": "Fleet control Worker for the owner's bot fleet (2026-11-01). Not deployed by this repo. Sibling-bot/fleet tooling — waive; do not retire."
+      },
+      {
+        "name": "hermes-ask",
+        "reason": "Hermes assistant Worker for the owner's bot fleet (2026-11-01). Not deployed by this repo. Sibling-bot/fleet tooling — waive; do not retire."
+      },
+      {
+        "name": "zozo-vault",
+        "reason": "Owner-bot secret vault Worker for the fleet (2026-11-01). Not deployed by this repo. Sibling-bot/fleet tooling — waive; do not retire."
       }
     ]
   },

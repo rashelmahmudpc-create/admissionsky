@@ -89,23 +89,35 @@ export function constantTimeEqual(left, right) {
  * 64-variable ceiling, so a second secret cannot be added as its own binding.
  * `AUTH_HMAC_SECRET` accepts a `current:previous` pair instead, which is why
  * this is a parsing change and not a binding change. */
-const KEY_VERSION_PREFIX = /^v(\d+):/;
-
 /** Split a keyring value into its ordered keys.
- *  A plain secret is a one-element ring, so every existing deployment keeps
- *  working untouched — that is the whole reason this is safe to ship. */
+ *
+ *  A ring is written with a LEADING MARKER: `v2:<current>:<previous>`. Anything
+ *  without that marker is a single key, whatever it contains.
+ *
+ *  The marker is not decoration, and this is the one detail worth reading twice.
+ *  Splitting on every colon would mean a secret that merely CONTAINS a colon is
+ *  read as a two-key ring — and a secret is arbitrary text. The day one held a
+ *  colon, every derived reference would change under it and every account,
+ *  session and trusted device would be orphaned at once. `AUTH_HMAC_SECRET` is a
+ *  Cloudflare secret: write-only, unreadable from here, and re-issuing it is the
+ *  exact outage this whole change exists to prevent. So the safe reading is the
+ *  default one — no marker, no split — and the risky reading has to be asked for
+ *  explicitly. A secret that starts with `v<digits>:` and was never meant as a
+ *  ring is the only way left to surprise anyone, and that shape is not what a
+ *  generated secret looks like.
+ *
+ *  An EMPTY segment inside a marked ring is an error, not something to skip.
+ *  `v2:KEY:` and `v2::KEY` both look like a ring with a key missing, and
+ *  filtering the gap out would turn either into a one-key ring that works — so a
+ *  typo during a rotation would silently sign under the wrong key, or quietly
+ *  retire the one still in use. Empty segments are kept and the constructor
+ *  refuses them, which is the loud failure the operator needs. */
 export function parseHmacKeyring(secret) {
   const value = String(secret || '');
   if (!value.trim()) return [];
-  /* `current:previous` — the current key signs, the previous one only verifies.
-   *
-   * An EMPTY segment is an error, not something to skip. `KEY:` and `:KEY` both
-   * look like a ring with a key missing, and filtering the gap out would turn
-   * either into a one-key ring that works — so a typo during a rotation would
-   * silently sign under the wrong key, or quietly retire the one still in use.
-   * The parser therefore keeps empty segments and lets the constructor refuse
-   * them, which is the loud failure the operator needs. */
-  return value.split(':').map(part => part.trim());
+  const marked = value.trim().match(/^v\d+:(.*)$/s);
+  if (!marked) return [value.trim()];
+  return marked[1].split(':').map(part => part.trim());
 }
 
 export class AuthHmac {

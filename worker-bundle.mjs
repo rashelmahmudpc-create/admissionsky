@@ -9083,7 +9083,9 @@ function constantTimeEqual(left, right) {
 function parseHmacKeyring(secret) {
   const value = String(secret || "");
   if (!value.trim()) return [];
-  return value.split(":").map((part) => part.trim());
+  const marked = value.trim().match(/^v\d+:(.*)$/s);
+  if (!marked) return [value.trim()];
+  return marked[1].split(":").map((part) => part.trim());
 }
 var AuthHmac = class {
   constructor(secret, cryptoImpl = globalThis.crypto) {
@@ -25751,7 +25753,10 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
   // Read-only reconciliation snapshot (Phase 3). HMAC refs only, never
   // emails, tokens or raw provider subjects.
   async identitySnapshot() {
-    const users = this.#rows("SELECT user_id AS id, status FROM auth_users").map((row) => Object.freeze({ id: row.id, status: row.status }));
+    const users = this.#rows(
+      `SELECT u.user_id AS id, COALESCE(st.status,u.status) AS status
+       FROM auth_users u LEFT JOIN auth_account_state st ON st.user_id=u.user_id`
+    ).map((row) => Object.freeze({ id: row.id, status: row.status }));
     const externalIdentities = this.#rows(
       "SELECT provider, subject_ref AS subjectRef, user_id AS userId FROM auth_external_identities"
     ).map((row) => Object.freeze({ provider: row.provider, subjectRef: row.subjectRef, userId: row.userId }));
@@ -25985,10 +25990,12 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
   }
   #canonicalSession({ sessionRef, subjectRef, emailRef, now }) {
     const row = this.#one(
-      `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,u.status,
+      `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,
+        COALESCE(st.status,u.status) AS status,
         u.created_at AS createdAt,s.expires_at AS expiresAt
        FROM auth_sessions s
        JOIN auth_users u ON u.user_id=s.user_id
+       LEFT JOIN auth_account_state st ON st.user_id=u.user_id
        JOIN auth_external_identities x ON x.user_id=u.user_id AND x.provider='firebase' AND x.subject_ref=?
        WHERE s.session_ref=? AND s.revoked_at IS NULL AND s.expires_at>? AND u.email_ref=?`,
       subjectRef,
@@ -26035,12 +26042,16 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
         input.subjectRef
       );
       let user = identity ? this.#one(
-        `SELECT user_id AS id,email_ref AS emailRef,email_mask AS emailMask,status,created_at AS createdAt
-         FROM auth_users WHERE user_id=?`,
+        `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,
+          COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
+         FROM auth_users u LEFT JOIN auth_account_state st ON st.user_id=u.user_id
+         WHERE u.user_id=?`,
         identity.userId
       ) : this.#one(
-        `SELECT user_id AS id,email_ref AS emailRef,email_mask AS emailMask,status,created_at AS createdAt
-         FROM auth_users WHERE email_ref=?`,
+        `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,
+          COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
+         FROM auth_users u LEFT JOIN auth_account_state st ON st.user_id=u.user_id
+         WHERE u.email_ref=?`,
         input.emailRef
       );
       if (identity && !user) return { error: AUTH_ERROR_CODES.STORAGE_UNAVAILABLE };
@@ -26177,10 +26188,16 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
         input.subjectRef
       );
       let user = identity ? this.#one(
-        "SELECT user_id AS id,email_ref AS emailRef,email_mask AS emailMask,status,created_at AS createdAt FROM auth_users WHERE user_id=?",
+        `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,
+          COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
+         FROM auth_users u LEFT JOIN auth_account_state st ON st.user_id=u.user_id
+         WHERE u.user_id=?`,
         identity.userId
       ) : this.#one(
-        "SELECT user_id AS id,email_ref AS emailRef,email_mask AS emailMask,status,created_at AS createdAt FROM auth_users WHERE email_ref=?",
+        `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,
+          COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
+         FROM auth_users u LEFT JOIN auth_account_state st ON st.user_id=u.user_id
+         WHERE u.email_ref=?`,
         input.emailRef
       );
       if (identity && !user) return { error: AUTH_ERROR_CODES.STORAGE_UNAVAILABLE };
@@ -26250,9 +26267,10 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
       const row = this.#one(
         `SELECT t.user_id AS userId,t.subject_ref AS subjectRef,t.email_ref AS emailRef,
           t.refresh_cipher AS refreshCipher,t.state,t.expires_at AS expiresAt,
-          u.email_mask AS emailMask,u.status,u.created_at AS createdAt
+          u.email_mask AS emailMask,COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
          FROM auth_account_verification_tickets t
          JOIN auth_users u ON u.user_id=t.user_id
+         LEFT JOIN auth_account_state st ON st.user_id=u.user_id
          WHERE t.ticket_ref=? AND t.device_ref=?`,
         input.ticketRef,
         input.deviceRef
@@ -26270,8 +26288,10 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
     return this.#transaction(() => {
       const row = this.#one(
         `SELECT t.user_id AS userId,t.subject_ref AS subjectRef,t.email_ref AS emailRef,
-          t.state,t.purpose AS purpose,t.expires_at AS expiresAt,u.email_mask AS emailMask,u.status,u.created_at AS createdAt
+          t.state,t.purpose AS purpose,t.expires_at AS expiresAt,u.email_mask AS emailMask,
+          COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
          FROM auth_account_verification_tickets t JOIN auth_users u ON u.user_id=t.user_id
+         LEFT JOIN auth_account_state st ON st.user_id=u.user_id
          WHERE t.ticket_ref=? AND t.device_ref=?`,
         input.ticketRef,
         input.deviceRef
@@ -26328,14 +26348,15 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
   }
   async getFirebaseIdentity(input) {
     const row = this.#one(
-      `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,u.status,u.created_at AS createdAt
+      `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,
+        COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
        FROM auth_external_identities x JOIN auth_users u ON u.user_id=x.user_id
+       LEFT JOIN auth_account_state st ON st.user_id=u.user_id
        WHERE x.provider='firebase' AND x.subject_ref=? AND u.email_ref=?`,
       input.subjectRef,
       input.emailRef
     );
     if (!row) return { error: AUTH_ERROR_CODES.SESSION_INVALID };
-    if (row.status !== "active") return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
     return { user: row };
   }
   // Greeting personalisation for the ownership OTP. The pending profile written
@@ -26356,8 +26377,9 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
   async savePendingProfile(input) {
     return this.#transaction(() => {
       const row = this.#one(
-        `SELECT t.user_id AS userId,t.state,t.expires_at AS expiresAt,u.status
+        `SELECT t.user_id AS userId,t.state,t.expires_at AS expiresAt,COALESCE(st.status,u.status) AS status
          FROM auth_account_verification_tickets t JOIN auth_users u ON u.user_id=t.user_id
+         LEFT JOIN auth_account_state st ON st.user_id=u.user_id
          WHERE t.ticket_ref=? AND t.device_ref=?`,
         input.ticketRef,
         input.deviceRef
@@ -26506,7 +26528,7 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
        JOIN auth_users u ON u.user_id=p.user_id
        JOIN auth_public_identities x ON x.user_id=p.user_id
        LEFT JOIN auth_account_state st ON st.user_id=p.user_id
-       WHERE x.public_id=? AND u.status='active' AND COALESCE(st.status,'active')='active'`,
+       WHERE x.public_id=? AND COALESCE(st.status,u.status)='active'`,
       input.publicId
     );
     if (!row) return { error: AUTH_ERROR_CODES.PUBLIC_PROFILE_NOT_FOUND };
@@ -26673,8 +26695,10 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
       const row = this.#one(
         `SELECT p.credential_id AS credentialId,p.user_id AS userId,p.subject_ref AS subjectRef,
           p.user_handle AS userHandle,p.public_key_jwk AS publicKeyJwk,p.sign_count AS counter,
-          p.refresh_cipher AS refreshCipher,p.status,u.status AS userStatus
+          p.refresh_cipher AS refreshCipher,p.status,
+          COALESCE(st.status,u.status) AS userStatus
          FROM auth_passkey_credentials p JOIN auth_users u ON u.user_id=p.user_id
+         LEFT JOIN auth_account_state st ON st.user_id=u.user_id
          WHERE p.credential_id=?`,
         input.credentialId
       );
@@ -26756,8 +26780,10 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
         return { error: AUTH_ERROR_CODES.PASSKEY_INVALID };
       }
       const identity = this.#one(
-        `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,u.status,u.created_at AS createdAt
+        `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,
+          COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
          FROM auth_users u JOIN auth_external_identities x ON x.user_id=u.user_id
+         LEFT JOIN auth_account_state st ON st.user_id=u.user_id
          WHERE u.user_id=? AND x.provider='firebase' AND x.subject_ref=?`,
         ticket.userId,
         input.subjectRef
@@ -26854,8 +26880,9 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
     return this.#transaction(() => {
       const row = this.#one(
         `SELECT s.expires_at AS expiresAt,s.last_seen_at AS lastSeenAt,s.created_at AS sessionCreatedAt,
-          u.user_id AS id,u.email_mask AS emailMask,u.status,u.created_at AS createdAt
+          u.user_id AS id,u.email_mask AS emailMask,COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
          FROM auth_sessions s JOIN auth_users u ON u.user_id=s.user_id
+         LEFT JOIN auth_account_state st ON st.user_id=u.user_id
          WHERE s.session_ref=? AND s.revoked_at IS NULL`,
         sessionRef
       );
