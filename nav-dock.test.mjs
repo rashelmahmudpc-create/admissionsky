@@ -93,5 +93,5 @@ test('AI chat stays full screen: no dock and no dock padding there (owner 2026-1
   assert.ok(SRC.includes("'html.ai-chat-open body #navRoot .bottomnav.ahd-host{display:none!important}'"), 'dock hidden on the AI screen');
   assert.ok(SRC.includes("'html:not(.ai-chat-open) body #app:not(.no-nav){padding-bottom:calc(112px + var(--safe-b,0px))!important}'"), 'dock padding skipped on the AI screen');
   assert.ok(!SRC.includes("'html body #app:not(.no-nav){padding-bottom"), 'old unconditional padding rule is gone');
-  assert.ok(HTML.includes('src="nav-dock.js?v=dock-v2-20261017"'), 'cache-busted script tag');
+  assert.ok(HTML.includes('src="nav-dock.js?v=dock-v2-20261101-orb54"'), 'cache-busted script tag');
 });

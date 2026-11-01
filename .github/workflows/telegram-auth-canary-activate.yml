@@ -180,7 +180,7 @@ jobs:
           grep -Fq 'institutions-bd.js?v=bd-institutions-v2' "$verify_dir/index.html"
           grep -Fq 'account-access.css?v=20261018-allowlist-v1' "$verify_dir/index.html"
           grep -Fq 'dashboard-v2.css?v=dash2f13-theme' "$verify_dir/index.html"
-          grep -Fq 'dashboard-v2.js?v=dash2f18-chrome' "$verify_dir/index.html"
+          grep -Fq 'dashboard-v2.js?v=dash2f19-orb54' "$verify_dir/index.html"
           grep -Fq 'ai-agent-chat.js?v=agent-f1-ui-skyv13' "$verify_dir/index.html"
           grep -Fq 'phase12-ui.js?v=nav-resume-router-v11-main-ai' "$verify_dir/index.html"
 
@@ -207,7 +207,7 @@ jobs:
 
           fetch_public "$verify_dir/account-access.js" 'https://admissionhub.pages.dev/account-access.js?v=20261021-turnstile-v1'
           fetch_public "$verify_dir/account-access.css" 'https://admissionhub.pages.dev/account-access.css?v=20261018-allowlist-v1'
-          fetch_public "$verify_dir/dashboard-v2.js" 'https://admissionhub.pages.dev/dashboard-v2.js?v=dash2f18-chrome'
+          fetch_public "$verify_dir/dashboard-v2.js" 'https://admissionhub.pages.dev/dashboard-v2.js?v=dash2f19-orb54'
           fetch_public "$verify_dir/ai-agent-chat.js" 'https://admissionhub.pages.dev/ai-agent-chat.js?v=agent-f1-ui-skyv13'
           fetch_public "$verify_dir/phase12-ui.js" 'https://admissionhub.pages.dev/phase12-ui.js?v=nav-resume-router-v11-main-ai'
 

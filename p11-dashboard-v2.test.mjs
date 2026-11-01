@@ -8,9 +8,9 @@ const V2 = readFileSync('dashboard-v2.js', 'utf8');
 const CSS = readFileSync('dashboard-v2.css', 'utf8');
 
 /* ১ — ফাইল-লোড + ক্যাশ-কী */
-t('dashboard-v2.js defer-লোড (?v=dash2)', H.includes('<script defer src="./dashboard-v2.js?v=dash2f18-chrome"></script>'));
+t('dashboard-v2.js defer-লোড (?v=dash2)', H.includes('<script defer src="./dashboard-v2.js?v=dash2f19-orb54"></script>'));
 t('dashboard-v2.css link (?v=dash2)', H.includes('<link rel="stylesheet" href="./dashboard-v2.css?v=dash2f13-theme">'));
-t('sw APP_SHELL-এ dashboard-v2 (js+css)', SW.includes("'./dashboard-v2.js?v=dash2f18-chrome'") && SW.includes("'./dashboard-v2.css?v=dash2f13-theme'"));
+t('sw APP_SHELL-এ dashboard-v2 (js+css)', SW.includes("'./dashboard-v2.js?v=dash2f19-orb54'") && SW.includes("'./dashboard-v2.css?v=dash2f13-theme'"));
 
 t('sw BUILD_ID v364-sky-goal', SW.includes("const BUILD_ID = 'v364-sky-goal'"));
 t('index sw-marker v348', H.includes("const expectedSwVersion = 'v364-sky-goal'") && H.includes('admission-hub-shell-v364-sky-goal'));

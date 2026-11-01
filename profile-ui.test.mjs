@@ -653,7 +653,7 @@ test('v264: poisoned-cache fix — asset re-pin, no-store SW fetch, digest-verif
   assert.match(HTML, /profile-ui\.js\?v=profile-v20-sky-instr/);
   assert.match(HTML, /profile-ui\.css\?v=profile-v15-uni-tap/);
   assert.match(HTML, /academic-catalog\.js\?v=acad-cat-v2/);
-  assert.match(HTML, /dashboard-v2\.js\?v=dash2f18-chrome/);
+  assert.match(HTML, /dashboard-v2\.js\?v=dash2f19-orb54/);
   assert.match(HTML, /session-persist\.js\?v=session-v2/);
   // SW runtime asset fetches never consult the browser HTTP cache
   assert.match(SW, /fetch\(request, \{ cache: 'no-store', signal: controller\.signal \}\)/);
