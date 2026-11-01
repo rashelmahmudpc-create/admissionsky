@@ -611,7 +611,24 @@ export class AdmissionAuthAuthority {
           return response(409, { ok: false, error: { code: 'WIPE_CONFIRM_MISMATCH', message: 'Confirm phrase does not match the current user count.', users: before.users } });
         }
         const outcome = wipeAll(sql);
-        return response(200, { ok: true, result: { dryRun: false, before, outcome, after: wipeCounts(sql) } });
+        /* AUTH V2.4 (owner 2026-10-31): the wipe has to reach the avatars too.
+         * They live in D1, not in this object's SQLite, so emptying every table
+         * here left every student's photo behind — the accounts gone and the
+         * pictures not (blueprint finding ১৬). Reported separately so an
+         * operator can see that part of the deletion happened somewhere else. */
+        let avatars = { deleted: 0, available: false };
+        try {
+          // The binding is optional (absent until PROFILE_DB is added at publish
+          // time), so an unbound store reports "not available" rather than
+          // throwing — a wipe of the auth tables must still succeed.
+          avatars = typeof this.engine.avatarStore?.wipeAllAvatars === 'function'
+            ? await this.engine.avatarStore.wipeAllAvatars()
+            : { deleted: 0, available: false };
+        } catch (error) {
+          // A wipe that could not finish must say so rather than report success.
+          avatars = { deleted: 0, available: true, error: String(error?.message || 'avatar-wipe-failed').slice(0, 120) };
+        }
+        return response(200, { ok: true, result: { dryRun: false, before, outcome, avatars, after: wipeCounts(sql) } });
       }
       if (url.pathname === '/internal/admin/security/events') {
         const result = await this.engine.securityEventsPage(body.input || {});
