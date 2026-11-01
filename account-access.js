@@ -549,6 +549,22 @@
     if (state.ownershipTimer) clearInterval(state.ownershipTimer);
     state.ownershipTimer = null;
   };
+  /* AUTH V2.1 (owner 2026-10-31): every countdown timer is bound to the view
+   * that owns it. The blueprint's finding ৭: the Telegram resend interval was
+   * only cleared when the countdown reached zero or the flow finished, so a
+   * student who navigated away left a 1-second interval running for the rest of
+   * the session. The ownership countdown had the same shape, and it is the live
+   * one — the Telegram *verification* flow was retired on 2026-10-18
+   * (capabilities.telegram is hardcoded false), so that timer now only exists in
+   * unreachable code, but the leak it demonstrated is real in the timer that
+   * still runs. Clearing them at the one place that knows the view changed beats
+   * remembering to clear each timer at each exit — which is how the leak
+   * happened in the first place. */
+  const clearViewTimers = () => {
+    clearTelegramTimer();
+    clearOwnershipTimer();
+    clearResendCooldown();
+  };
   const telegramResendRemaining = () => Math.max(0, Math.ceil((Number(state.telegram?.resendUntil || 0) - Date.now()) / 1000));
   const renderTelegramDigits = () => {
     const input = $('#ah-telegram-code');
@@ -1249,6 +1265,10 @@
     return renderView(name, keepMessage);
   };
   const renderView = (name, keepMessage = false) => {
+    /* AUTH V2.1: leaving a view ends its countdowns. Only on a real change —
+     * re-rendering the same view must not cancel the interval that view just
+     * started, which is why this compares before assigning. */
+    if (state.currentView && state.currentView !== name) clearViewTimers();
     state.currentView = name;
     // AU-SEC-01 L5: remember when this view appeared. The Worker refuses a
     // submission that arrives faster than a person can type, so the clock has
