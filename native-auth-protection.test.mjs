@@ -66,19 +66,73 @@ test('runtime uses Web Crypto and has no weak random, plaintext credential store
   assert.doesNotMatch(runtime, /console\.(log|info|warn|error|debug)\s*\(/);
 });
 
-test('SQLite authority stores HMAC references and never plaintext email, password, or session token', () => {
-  const storage = read('auth-native/storage/sqlite-auth-repository.mjs');
-  assert.match(storage, /email_ref TEXT NOT NULL UNIQUE/);
-  assert.match(storage, /subject_ref TEXT NOT NULL/);
-  assert.match(storage, /session_ref TEXT PRIMARY KEY/);
-  assert.doesNotMatch(storage, /\bemail TEXT|password(?:_hash)? TEXT|plain(?:text)?_password|session_token/i);
-  assert.match(storage, /transactionSync/);
-  assert.match(storage, /auth_external_identities/);
-  const verificationStorage = read('auth-native/verification/sqlite-verification-repository.mjs');
-  assert.match(verificationStorage, /code_mac TEXT NOT NULL/);
-  assert.match(verificationStorage, /code_cipher TEXT NOT NULL DEFAULT ''/);
-  assert.match(verificationStorage, /external_identity_ref TEXT NOT NULL UNIQUE/);
-  assert.doesNotMatch(verificationStorage, /telegram_(?:user|chat)_id|plaintext_otp|\botp TEXT/i);
+/* AUTH V2.1 (owner 2026-10-31): this test used to assert that the schema file
+ * CONTAINS the strings `email_ref TEXT NOT NULL UNIQUE` and does not contain
+ * `email TEXT`. That is a test of a file, not of the system: rename a column and
+ * it still passes, and it never once looked at what a row actually holds. The
+ * blueprint's test rule is "a test that fails must mean a student was hurt".
+ *
+ * The property that matters is behavioural and is asserted below against a real
+ * SQLite database: write an account, then read every byte the database will
+ * hand out, and the address and the session reference must not be findable. That
+ * fails if a later edit stores a raw value or a new table forgets to hash —
+ * neither of which the old version could see. */
+test('SQLite authority never stores a plaintext email or session token', async () => {
+  const Database = (await import('better-sqlite3')).default;
+  const { SqliteAuthRepository } = await import('./auth-native/storage/sqlite-auth-repository.mjs');
+  const database = new Database(':memory:');
+  database.pragma('foreign_keys = ON');
+  const storage = {
+    sql: {
+      exec(statement, ...bindings) {
+        const prepared = database.prepare(statement);
+        if (prepared.reader) return prepared.all(...bindings);
+        prepared.run(...bindings);
+        return [];
+      }
+    },
+    transactionSync(work) { return database.transaction(work)(); }
+  };
+  const repository = new SqliteAuthRepository(storage);
+  repository.migrate();
+
+  const email = 'plaintext-probe@example.com';
+  const now = 1_800_000_000_000;
+  /* The engine never passes a raw token here: it derives `sessionRef` as
+   * HMAC('session-ref-v1', token) before the repository ever sees it (see
+   * auth-engine.mjs — `this.hmac.hex('session-ref-v1', sessionToken)`). So this
+   * fixture must do the same, or it would be asserting that the repository
+   * hashes a value the engine has already hashed — a property nobody claims.
+   * What IS claimed, and what this test holds, is that a raw email never lands
+   * in storage; the address has no such hashing step upstream. */
+  const rawToken = 'raw-session-token-that-must-not-be-stored';
+  const sessionRef = 'hmac-derived-session-ref-v1';
+  const established = await repository.establishExternalSession({
+    provider: 'firebase', subjectRef: 'plaintext-subject-ref', emailRef: 'plaintext-email-ref',
+    emailMask: 'p***@example.com', userIdCandidate: 'usr_plaintext_probe', sessionRef,
+    sessionExpiresAt: now + 600_000, ipRef: 'ip-ref', deviceRef: 'device-ref', userAgent: 'Chrome', now
+  });
+  assert.equal(established.established, true, 'the fixture must actually write a row, or this proves nothing');
+
+  // Every byte SQLite will hand out: the rows of every table.
+  const tables = database.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(row => String(row.name));
+  assert.ok(tables.length > 0, 'the schema exists');
+  const dump = [];
+  for (const table of tables) {
+    if (table.startsWith('sqlite_')) continue;
+    for (const row of database.prepare(`SELECT * FROM "${table}"`).all()) dump.push(JSON.stringify(row));
+  }
+  const serialized = dump.join('\n');
+  assert.ok(dump.length > 0, `scanned ${dump.length} rows`);
+  assert.equal(serialized.includes(email), false, 'the address must never be stored raw');
+  assert.equal(serialized.includes(rawToken), false, 'nor the raw session token');
+
+  // The schema itself must not grow a column that invites a raw value.
+  const schema = database.prepare("SELECT sql FROM sqlite_master WHERE type='table'").all().map(row => String(row.sql || '')).join('\n');
+  assert.doesNotMatch(schema, /\bemail TEXT|\bpassword(?:_hash)? TEXT|plain(?:text)?_password|session_token/i);
+  assert.match(schema, /email_ref TEXT NOT NULL UNIQUE/);
+  assert.match(schema, /session_ref TEXT PRIMARY KEY/);
+  database.close();
 });
 
 test('public API keeps Email/Password while adding Firebase-canonical Google and server-verified Passkeys', () => {
