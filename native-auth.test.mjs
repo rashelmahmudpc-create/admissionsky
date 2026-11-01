@@ -331,10 +331,16 @@ class FirebaseMock {
     }
 
     if (parsed.pathname.endsWith('/accounts:createAuthUri')) {
+      // Echo the requested provider, as the real endpoint does. Returning
+      // google.com unconditionally made the Facebook probe (which checks that
+      // providerId comes back as facebook.com) impossible to drive from here.
+      const requested = String(body.providerId || 'google.com');
       return this.response({
-        providerId: 'google.com',
+        providerId: requested,
         sessionId: `provider-session-${'x'.repeat(32)}`,
-        authUri: 'https://accounts.google.com/o/oauth2/v2/auth?client_id=123456789012-nativeauthclient.apps.googleusercontent.com'
+        authUri: requested === 'facebook.com'
+          ? `https://www.facebook.com/v19.0/dialog/oauth?client_id=${'1'.repeat(16)}`
+          : 'https://accounts.google.com/o/oauth2/v2/auth?client_id=123456789012-nativeauthclient.apps.googleusercontent.com'
       });
     }
 
@@ -1396,4 +1402,69 @@ test('a verified human check lets the ownership OTP proceed', async () => {
   assert.equal(start.status, 202);
   assert.equal(body.delivery.method, 'email-otp');
   assert.ok(body.ownership?.attemptId, 'a good human check must reach the OTP form');
+});
+
+/* ── AUTH V2.0 step 6 — the social routes run the shared guard ──────────────
+ *
+ * /google/link and /facebook were the two credential-taking routes that never
+ * called guardSend. /google/link takes an email AND a password, so guessing
+ * there leaned on the rate limiter alone. These tests hold the two halves that
+ * have to ship together: the server refuses a caller with no human check, and
+ * the client sends the token that lets a real student through. Shipping only
+ * the server half would fail closed and lock every student out of social
+ * sign-in — which is why the guard is asserted here rather than assumed.
+ */
+
+test('V2.0-৬: /google/link refuses a caller with no human check', async () => {
+  /* The route takes an email AND a password, so before this it leaned on the
+   * rate limiter alone against password guessing. */
+  const app = handlerSetup();
+  app.env.GOOGLE_AUTH_ACTIVATION = 'enabled';
+  app.env.TURNSTILE_SECRET_KEY = 'turnstile-secret-key';
+  const response = await app.handler(apiRequest(`${AUTH_API_PREFIX}/google/link`, {
+    method: 'POST',
+    body: { email: 'link.target@gmail.com', password: 'Correct-Horse-42', accessToken: 'a'.repeat(40) }
+  }), app.env, {});
+  const payload = await response.json();
+  assert.equal(response.status, 400);
+  assert.equal(payload.error.code, AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
+  // The refusal happens before the credential is used, so no password was ever
+  // compared against Firebase.
+  assert.equal(app.firebase.calls.some(call => call.pathname.endsWith('/accounts:signInWithPassword')), false,
+    'a token-less caller must not reach Firebase');
+});
+
+test('V2.0-৬: /facebook refuses a caller with no human check', async () => {
+  // The second of the two routes that took credentials unguarded.
+  const app = handlerSetup();
+  app.env.GOOGLE_AUTH_ACTIVATION = 'enabled';
+  app.env.TURNSTILE_SECRET_KEY = 'turnstile-secret-key';
+  const response = await app.handler(apiRequest(`${AUTH_API_PREFIX}/facebook`, {
+    method: 'POST', body: { accessToken: 'a'.repeat(40) }
+  }), app.env, {});
+  const payload = await response.json();
+  assert.equal(response.status, 400);
+  assert.equal(payload.error.code, AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
+  assert.equal(app.firebase.calls.some(call => call.pathname.endsWith('/accounts:signInWithIdp')), false,
+    'a token-less caller must not reach the identity provider exchange');
+});
+
+test('V2.0-৬: the client sends the human-check token on every social call site', () => {
+  /* The other half. A guard without a token is an outage, so this pins the
+   * client the same way the server tests pin the handler. Read as source
+   * because the call sites live in four places across two flows (inline shell
+   * and the Sky bridge) and a fifth added later would otherwise slip through.
+   *
+   * Line-based rather than a brace-matching regex: the body contains a call,
+   * so `[^}]*` stops at the first `}` inside `humanToken()` and silently
+   * under-counts. The count assertion is what makes that visible. */
+  const client = readFileSync(new URL('./account-access.js', import.meta.url), 'utf8');
+  const lines = client.split('\n');
+  const calls = lines.filter(line => /(?:sky)?[Aa]pi\('(\/facebook|\/google\/link)'/.test(line));
+  assert.equal(calls.length, 4, 'every social call site is covered by this assertion');
+  for (const line of calls) {
+    const path = line.match(/[Aa]pi\('([^']+)'/)[1];
+    assert.match(line, /turnstileToken:\s*await humanToken\(\)/, `${path} must send a human-check token`);
+    assert.match(line, /botSignals\(/, `${path} must send the honeypot and timing signals`);
+  }
 });

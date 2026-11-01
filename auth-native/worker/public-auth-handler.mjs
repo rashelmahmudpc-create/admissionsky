@@ -1407,6 +1407,20 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
       if (request.method === 'POST' && url.pathname === `${AUTH_API_PREFIX}/google/link`) {
         if (!provider.configured || !googleEndpointReady(env)) throw new NativeAuthError(AUTH_ERROR_CODES.GOOGLE_UNAVAILABLE);
         const body = await readJson(request);
+        /* AUTH V2.0 (owner 2026-10-31): this route takes an email AND a
+         * password, and it was one of two that never ran the shared guard — so
+         * password guessing here leaned on the rate limiter alone. Every other
+         * send and password route goes through guardSend; this one now does too.
+         *
+         * Order matters and is deliberate: the guard runs BEFORE credentials are
+         * parsed, so a bot is turned away without its input being read. The
+         * client change that ships with this sends `turnstileToken` and the bot
+         * signals, which is why the two must land together — the guard is
+         * fail-closed once the secret is bound, and it is bound in production. */
+        {
+          const denied = await guardSend({ request, env, context, body, fetchImpl });
+          if (denied) return denied;
+        }
         const input = credentials(body);
         const credential = googleCredential(body);
         if (!credential.accessToken) throw new NativeAuthError(AUTH_ERROR_CODES.INVALID_INPUT);
@@ -1487,7 +1501,18 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         // idpConfig is not returned by this Firebase project's /v1/projects
         // endpoint, so only the createAuthUri probe proves facebook.com is live.
         try { await provider.inspectFacebookProvider(); } catch (cause) { throw providerError(cause, 'facebook-config'); }
-        const credential = facebookCredential(await readJson(request));
+        const body = await readJson(request);
+        /* AUTH V2.0 (owner 2026-10-31): the second of the two routes that took
+         * credentials without the shared guard. The provider probe above is a
+         * configuration check, not a caller check — it says facebook.com is
+         * live, nothing about who is asking. The guard runs before the
+         * credential is parsed, and the client half that sends `turnstileToken`
+         * ships in the same change because the guard fails closed. */
+        {
+          const denied = await guardSend({ request, env, context, body, fetchImpl });
+          if (denied) return denied;
+        }
+        const credential = facebookCredential(body);
         await callAuthority(env, '/internal/firebase/rate', { input: { operation: 'facebook' }, context });
         let signed;
         let user;

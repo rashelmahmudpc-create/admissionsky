@@ -2097,7 +2097,7 @@
     const providerId = googlePending ? 'google.com' : String(result.credential?.providerId || result.user.providerId || '');
     try {
       if (providerId === 'facebook.com') {
-        const r = await api('/facebook', { method: 'POST', body: { accessToken } });
+        const r = await api('/facebook', { method: 'POST', body: { accessToken, turnstileToken: await humanToken(), ...botSignals('facebook') } });
         await establishSession(r, 'Facebook \u09a6\u09bf\u09af\u09bc\u09c7 \u09a4\u09cb\u09ae\u09be\u09b0 account-\u098f \u09aa\u09cd\u09b0\u09ac\u09c7\u09b6 \u09b9\u09af\u09bc\u09c7\u099b\u09c7\u0964');
       } else if (providerId === 'google.com') {
         state.googleLinkToken = '';
@@ -2200,7 +2200,7 @@
     try {
       const accessToken = await facebookAccessToken();
       if (accessToken === OAUTH_REDIRECT) return;
-      const result = await api('/facebook', { method: 'POST', body: { accessToken } });
+      const result = await api('/facebook', { method: 'POST', body: { accessToken, turnstileToken: await humanToken(), ...botSignals('facebook') } });
       await establishSession(result, 'Facebook \u09a6\u09bf\u09af\u09bc\u09c7 \u09a4\u09cb\u09ae\u09be\u09b0 \u098f\u0995\u0987 account-\u098f \u09aa\u09cd\u09b0\u09ac\u09c7\u09b6 \u09b9\u09af\u09bc\u09c7\u099b\u09c7\u0964');
     } catch (error) {
       if (error?.code === 'ACCOUNT_LINK_REQUIRED') showView('google-link');
@@ -2274,7 +2274,7 @@
     if (accessToken.length < 20) {
       throw Object.assign(new Error('google-token-missing'), { userMessage: 'আগে আবার "Continue with Google" চাপো, ফিরে এসে এখানে ইমেইল ও পাসওয়ার্ড দাও। [google-token-missing]' });
     }
-    const result = await api('/google/link', { method: 'POST', body: { email, password, accessToken } });
+    const result = await api('/google/link', { method: 'POST', body: { email, password, accessToken, turnstileToken: await humanToken(), ...botSignals('google-link') } });
     state.googleLinkToken = '';
     return result;
   };
@@ -4019,7 +4019,7 @@
       if (accessToken === OAUTH_REDIRECT) return true;
       let result;
       try {
-        result = await skyApi('/facebook', { method: 'POST', body: { accessToken } });
+        result = await skyApi('/facebook', { method: 'POST', body: { accessToken, turnstileToken: await humanToken(), ...botSignals('facebook') } });
       } catch (error) {
         if (error?.code === 'EMAIL_NOT_VERIFIED') error.userMessage = 'তোমার Facebook অ্যাকাউন্টে নিশ্চিত করা কোনো ইমেইল নেই, ইমেইল দিয়ে সাইন আপ করো।';
         throw error;
