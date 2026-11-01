@@ -1,4 +1,4 @@
-/* Admission Hub data protection layer.
+/* Admission Sky data protection layer.
  * This module is intentionally additive: it never clears storage, deletes records,
  * or replaces user-created content. Migration failures are surfaced for recovery.
  */
@@ -38,7 +38,7 @@
       localStorage.setItem(BACKUP_KEY, JSON.stringify(snapshots.slice(-MAX_SNAPSHOTS)));
       localStorage.setItem('admissionHub:data-protection:last-snapshot', String(snapshot.snapshotId));
     } catch (error) {
-      console.warn('[Admission Hub] Could not persist protection snapshot.', error);
+      console.warn('[Admission Sky] Could not persist protection snapshot.', error);
     }
     return snapshot;
   }
@@ -223,7 +223,7 @@
     }
     const warnings = { losses, corruptRecords: audit.corruptRecords || [], auditFailure: audit.failed ? audit.error : null };
     if (losses.length || warnings.corruptRecords.length || warnings.auditFailure) {
-      console.error('[Admission Hub] Migration verification detected a possible safety issue. No automatic data repair was attempted.', warnings);
+      console.error('[Admission Sky] Migration verification detected a possible safety issue. No automatic data repair was attempted.', warnings);
       await snapshot(db.name, 'migration-safety-warning', { warnings, after, dbVersion: db.version });
     } else {
       await snapshot(db.name, 'after-open-or-migration', { after, dbVersion: db.version, audit });
@@ -253,7 +253,7 @@
     if (bootSnapshotScheduled) return;
     bootSnapshotScheduled = true;
     const run = () => snapshot('admissionHubPublicDB', 'boot-idle')
-      .catch(error => console.warn('[Admission Hub] Boot snapshot skipped.', error));
+      .catch(error => console.warn('[Admission Sky] Boot snapshot skipped.', error));
     if (typeof global.requestIdleCallback === 'function') global.requestIdleCallback(run, { timeout: 12000 });
     else global.setTimeout(run, 8000);
   }

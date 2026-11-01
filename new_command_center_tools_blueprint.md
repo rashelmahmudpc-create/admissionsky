@@ -1,4 +1,4 @@
-# Admission Hub — New Command Center Tools Blueprint
+# Admission Sky — New Command Center Tools Blueprint
 
 > **এই document শুধু blueprint।** এখন কোনো নতুন tool, card, database change বা UI add করা হবে না। তোমার approval পাওয়ার পরেই build শুরু হবে।
 

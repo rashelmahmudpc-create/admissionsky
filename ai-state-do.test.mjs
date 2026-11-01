@@ -1,4 +1,4 @@
-/* Admission Hub — AiStateObject tests.
+/* Admission Sky — AiStateObject tests.
  *
  * The object replaces three KV writes per chat with Durable Object calls,
  * because the Workers Free KV allowance is 1,000 writes a day and that capped

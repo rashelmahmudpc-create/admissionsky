@@ -1,5 +1,5 @@
 /**
- * 🤖 ADMISSION HUB AI, AGENT CORE v1 (Phase 1: AI Agent Foundation)
+ * 🤖 ADMISSION SKY AI, AGENT CORE v1 (Phase 1: AI Agent Foundation)
  * ====================================================================
  * মালিক-স্পেক (২০২৬-০৯-০৮): model-independent central AI brain.
  *   Chat UI → AI Gateway (public-worker: anonymous-device rate+validate) → Agent Core → Model Router

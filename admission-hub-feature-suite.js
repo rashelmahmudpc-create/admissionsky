@@ -1,4 +1,4 @@
-/* Admission Hub additive feature suite
+/* Admission Sky additive feature suite
  * Keeps original question records immutable during exam sessions and adds safe tools.
  */
 (function () {
@@ -160,7 +160,7 @@
       state.rows = []; state.rejected = []; state.text = '';
       render();
     } catch (error) {
-      console.error('[Admission Hub] Question import failed', error);
+      console.error('[Admission Sky] Question import failed', error);
       toast?.(`Import failed: ${error?.message || error}`);
     } finally { state.importing = false; }
   };

@@ -35,7 +35,7 @@
   async function run() {
     try {
       if (!standaloneApp()) {
-        console.info('[Admission Hub] Vocabulary cleanup skipped outside the installed standalone app.');
+        console.info('[Admission Sky] Vocabulary cleanup skipped outside the installed standalone app.');
         return;
       }
       if (window.__admissionBootPromise && typeof window.__admissionBootPromise.then === 'function') {
@@ -54,13 +54,13 @@
 
       const memorizing = subjects.filter(subject => isMemorizing(subject.name));
       if (memorizing.length !== 1) {
-        console.warn('[Admission Hub] Vocabulary cleanup skipped: expected exactly one Memorizing subject.', memorizing.map(x => x.name));
+        console.warn('[Admission Sky] Vocabulary cleanup skipped: expected exactly one Memorizing subject.', memorizing.map(x => x.name));
         return;
       }
 
       const roots = topics.filter(topic => topic.subjectId === memorizing[0].id && isVocabulary100(topic.name));
       if (roots.length !== 1) {
-        console.warn('[Admission Hub] Vocabulary cleanup skipped: expected exactly one Vocabulary 1–100 topic.', roots.map(x => x.name));
+        console.warn('[Admission Sky] Vocabulary cleanup skipped: expected exactly one Vocabulary 1–100 topic.', roots.map(x => x.name));
         return;
       }
 
@@ -70,7 +70,7 @@
       // descendants must not be folded into the range.
       const topicQuestions = questions.filter(question => question.subjectId === memorizing[0].id && question.topicId === roots[0].id);
       if (topicQuestions.length !== END) {
-        console.warn('[Admission Hub] Vocabulary cleanup skipped: expected exactly 547 questions in the target topic.', {
+        console.warn('[Admission Sky] Vocabulary cleanup skipped: expected exactly 547 questions in the target topic.', {
           found: topicQuestions.length,
           expected: END
         });
@@ -78,7 +78,7 @@
       }
       const candidates = topicQuestions.slice(START - 1, END);
       if (candidates.length !== EXPECTED) {
-        console.warn('[Admission Hub] Vocabulary cleanup skipped: displayed 101–547 range is incomplete.', {
+        console.warn('[Admission Sky] Vocabulary cleanup skipped: displayed 101–547 range is incomplete.', {
           found: candidates.length,
           expected: EXPECTED
         });
@@ -117,9 +117,9 @@
       if (typeof loadCache === 'function') await loadCache();
       if (typeof window.__admissionRenderRoute === 'function') window.__admissionRenderRoute();
       if (typeof toast === 'function') toast(`${candidates.length}টি প্রশ্ন মুছে ফেলা হয়েছে, Vocabulary 1–100 · 101–547`);
-      console.info('[Admission Hub] Vocabulary range cleanup completed.', { deleted: candidates.length, expected: EXPECTED, verifiedNumbers });
+      console.info('[Admission Sky] Vocabulary range cleanup completed.', { deleted: candidates.length, expected: EXPECTED, verifiedNumbers });
     } catch (error) {
-      console.error('[Admission Hub] Vocabulary range cleanup failed; no completion marker was written.', error);
+      console.error('[Admission Sky] Vocabulary range cleanup failed; no completion marker was written.', error);
     }
   }
 

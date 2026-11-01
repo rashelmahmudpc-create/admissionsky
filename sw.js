@@ -92,28 +92,28 @@ const APP_SHELL = [
 // A truncated/corrupt download is NEVER written to the shell cache.
 const ASSET_DIGESTS = {
 /* sw-manifest:start */
-  "./index.html": "8fa5d0d9cba543d279bb5bfe27a2b58e327c10c7d48553bf19b579a0ee579747",
-  "./manifest.json": "6dcf0e0c6f7671750549e53558ba8b9f0c2c83b0c6759072a6b5e2276331f491",
-  "./manifest.webmanifest": "abcd26174710f6df3e183889a5a9da182f73ee8cdcc543b43db8fb4070cad54f",
+  "./index.html": "91a2137614db1e3cde88e8da457073fd348700914a6ceebf38ccce747d788cfe",
+  "./manifest.json": "b85bf71627f396fb4b89cdce1fdc3723e616a7778cf2bf7df135a6266ab9d943",
+  "./manifest.webmanifest": "0db3ff740c2833d60bfee6a8156fb51ed935fe366d0dcb72a4a228b58c16fb6e",
   "./dashboard-v2.css?v=dash2f13-theme": "4541bc1e65fd158c593443562975400d128b8f1d3b636595df3c235b99e8cced",
-  "./3d-loader.css?v=3d-v2": "43ca21b0a41be5d223c317fd63582f19ff6ffab5d010639ef26349464550da63",
-  "./session-persist.js?v=session-v2": "81f7fe7d56e934c4a2706e1c6f2f8a8a671aaf7718a0062ef155d9a7e2491401",
-  "./analytics-service.js?v=analytics-p2-v2-insights": "9afcc7a0842ed69b4394e5b61ef8d4c944ab72f1d8d8f4ea6f9670f264b54cf7",
-  "./account-access.css?v=20261101-humancheck-v1": "f7e24f29cf6c5d7439cb88df50a4a4de451e3f71b3b2317c3d948da2b1221f9f",
+  "./3d-loader.css?v=3d-v2": "d186d0ef97f9db680bb1dd7ed20cbbe4e8c6be725de6ae88bbe0a75fc78b7a06",
+  "./session-persist.js?v=session-v2": "e4b86d09a44d3fcf74a1f123bbade5640d381cd56cb718b7ad7e9859beea2296",
+  "./analytics-service.js?v=analytics-p2-v2-insights": "0ab179926605131aa1f3db0064d035dce9733c5051c6b48780230feaf660953d",
+  "./account-access.css?v=20261101-humancheck-v1": "860c919519741e135e98a4e0e7642e1f367047d077a5cdb255a33f9ed2254d6b",
   "./sky-onboarding.css?v=sky-flow-20261018-v12": "f94c44b34348038eea1b934f68ae0988a27ef64d76dbef47cd6dd640efde0bbe",
   "./institutions-bd.js?v=bd-institutions-v2": "602c5549515e8207ad152b948ca9b8fe3ad0fbe429afb56380e4e21b662f779d",
-  "./language-engine.js?v=lang-v5-single-email-button": "8cf34fda1aaf25b61b5c8f9255014e6decc1653a62f9779958f11a0532d4abcd",
-  "./account-access.js?v=20261101-humancheck-v1&startup=fast1": "9226a3c0a677edcd2ca3887617ecbd8264ca2f62d666694b0f3a59a42a0fd4f8",
+  "./language-engine.js?v=lang-v5-single-email-button": "5df04230120078119c39d1a574fb7b80a74b8606c2988fd929c26ae3e7614ae2",
+  "./account-access.js?v=20261101-humancheck-v1&startup=fast1": "47871ff1b62c4b04575657dd5dbca74aaf4bca0638fdb842d59ac8acadedac2c",
   "./sky-onboarding.js?v=sky-flow-20261018-v12": "f601a6e189d2a0123546b024ba3da24e8ebe3bbd92c374d95fe66f092793e5b6",
   "./email-policy-client.js?v=20261018-allowlist-v1": "d52570ca207888a5dc0e320a30ea59b576887e4bc4f33f48bfec64c2eb2245b5",
   "./welcome-story.css?v=welcome-story-20261018-v3": "4b589890fdf457149113e236320f94014b5cc2845c190b1bdf853f1f2963073d",
   "./welcome-story.js?v=welcome-story-20261018-v3": "af3aa4e476c890acbb5eba5420e9a0dd71cfdae90d9a42dcd981cddc8a3eacbb",
-  "./academic-catalog.js?v=acad-cat-v2": "b5c8e1145b553a4f67854d380c00dfbc507e932552415f640d7fed7d8d3a9990",
-  "./profile-ui.js?v=profile-v20-sky-instr": "dac012fca41d8b3986667d6178675fa69dbad4a75e29a004d5f65f88148315d9",
+  "./academic-catalog.js?v=acad-cat-v2": "18d0e06fd212620d70e74aeffe340f3dee9a411704c27ae436c4a7b98c49e678",
+  "./profile-ui.js?v=profile-v20-sky-instr": "d52849d58b5c844e86c570f67137166acae8ebf2e6dcc8576e7a06f9695a1cea",
   "./profile-ui.css?v=profile-v15-uni-tap": "6408a4b7ac8acf6845cd0148c58377a4953c8ff879d30b2c520eafae0314b98a",
-  "./profile-v2.html?v=profile-v2-7": "b9b8325f372c6bdb822a8c19b39d7f459baf2aa868f36f174a9b932c90164d2f",
+  "./profile-v2.html?v=profile-v2-7": "bef34a621f1935135083c83712d249bc0104ef79a4c72c7ebabb85b72c5e5cfe",
   "./profile-v2-mount.js?v=profile-v2-7": "45ffae2bdc26107148eaa1a7c04365c9c983e4c1a1a73935666c8d92c8e63665",
-  "./data-protection.js?v=dp-v3-fastboot": "359dc907ade4bcb3a6a722385969ebb6af47f7e436e6cdf2cce0dd6b7343723d",
+  "./data-protection.js?v=dp-v3-fastboot": "35eed6f7a741576b3f3b5e255c32ec92529cc8fd9cf2d2fb79f1225870574bd6",
   "./dashboard-v2.js?v=dash2f20-orb-inline": "35b72befa33db6bbdb28b73d863ba8234b50b6c1f03ab65b19a095869a02aaae",
   "./sky-smalltalk.js?v=st2": "114b0b0ebead92de93c11063196323f3218a82259067ad05b0fadbf924fe6fa5",
   "./sky-replies.json?v=r1": "f5e97d43641a1dbedbe3d17f24c740ebb38b761a79c833a902b8876b7ead5a9f",
@@ -123,33 +123,33 @@ const ASSET_DIGESTS = {
   "./sky-faq-en.js?v=faq1": "4923f584193c9569329b001b20867f2954b93b8e232a704e2effd632f25bb833",
   "./sky-faq-sci.js?v=faq1": "f574bcdb1441678c6ae4cbf6be8baa73d5cdd06a24bccfab712e241a29b6a42b",
   "./sky-faq-gk.js?v=faq1": "e406ee8982e255881ff5a6c854c19dc0c4f8004d6e4cc341a2c114bf678ee492",
-  "./ai-agent-chat.js?v=agent-f1-ui-skyv13": "e2e639bc40beff3c7805c4281eafc14e71a473461934bf78962de70016fb7a15",
-  "./question-engine.js?v=qe1": "7f63c4d5f8d917c853dd85ba1a9fd4fdd8f51f7f36f3f9d561ee8fdd1d6441e5",
-  "./question-engine-panel.js?v=qe1": "f86b20b325fa1139d3cca774a2bd9f086093fba2e249630b8c32ea7800d02c24",
-  "./notification-fcm.js?v=fcm-p3-v15": "5c9b73e7c9b93a9db3a5dc8ca0e78be8dd22484270f4596611719161e43215dd",
-  "./notification-inbox.js?v=notif-inbox-v7": "2de1c6b5c572ee60bea9d53b43b3650326ba1e58b5bab00e1d0175c99c778061",
+  "./ai-agent-chat.js?v=agent-f1-ui-skyv13": "32db3fd78ab050d952e59c015dcdeb23a37d9b19453d5130274863670b92ffcf",
+  "./question-engine.js?v=qe1": "b63d1b549951225ae8c3034ffffef99066e0e30fe699bcbd6a09d92a65a4c851",
+  "./question-engine-panel.js?v=qe1": "97a4696cbbaf076ca5d77e45fe7efbca552f6b03afba581cac48fc8f3be0c939",
+  "./notification-fcm.js?v=fcm-p3-v15": "fe3805d3f859ee772e14d1935c0a4cc508f94e7573754bd0262fc2572f1f22a4",
+  "./notification-inbox.js?v=notif-inbox-v7": "34fbb48c1cd0bddb126f9604479bec9ac96229be59ca99fdda2c91b93f08128f",
   "./notification-center-route.js?v=ns-cc-route-v1": "5367fd1e9d23759874b68cc9b4688fb849644904e8a9945c80414cad0aed55ef",
-  "./analytics-dashboard.js?v=analytics-p4-v1": "77c1d07fd9b5a74c141322edf9536e3bc522bd4efdc4db1f24276652ee4326c6",
+  "./analytics-dashboard.js?v=analytics-p4-v1": "ed999841656b32c005eb6192f6021237d9b8892009c743292e692d01fca66fbc",
   "./analytics-insight-engine.js?v=p09-v1": "7cac05d2955ea34688321a0abac2b1e81abe21100fcf46051fdbc29e82f98dec",
-  "./analytics-insights-panel.js?v=p09-v1": "3f1f2b57428918e1d90d31b7cf1c96afb155b1af51bf24ae8e9a496c5db00d4b",
-  "./mistake-engine.js?v=p10-v1": "509007fbd3cd399b2c7aca42d759428c719215b9d245ec30f0163f29e7c8987b",
-  "./adaptive-engine.js?v=p11-v1": "d6953b96ef6dff610a34f3b6d7016857fe96d2ed61a7b622ad3de02b776acb57",
-  "./adaptive-insights-panel.js?v=p11-v1": "82051f70bf464e1ae80e5ed8ceaabd3c42611214dcbf6ba08a68a582e55d4cc0",
-  "./study-plan-engine.js?v=p17-v1": "4cfae2b1c0bd9fe210984587386c7a7d234d9d0fa2757c2e46d1d0b03a73c941",
-  "./study-plan-panel.js?v=p17-v2": "c4471a70a5c624ef2c622b732f9d743b4bac8fb032681e560ebaa7b34a50227e",
-  "./question-pattern.js?v=p18-v1": "bb3a606f4adf1fad3e554bbace40c6658fcbfa475bb7aa48805458a13a5b30d2",
-  "./admission-intel-engine.js?v=p18-v3": "35a854d4ba9a435663e96036cd0d72ff29e0fabc41d4134ab8573b6336eefbe3",
-  "./admission-intel-panel.js?v=p18-v3": "fcb4007c5c2178ef76ea7c5f22ac8b02678f3747c39a5f15dd9ec5a9c84cf218",
-  "./p13-performance-core.js?v=p13-core-v1": "2e8bf6d22b8dbf3b66c87f64f0fcf717149c361d2a5c5d97cb71e317b7298979",
-  "./p13-performance-runtime.js?v=p13-runtime-v1": "93670f8b356f3c6ab527a185822c0a58d9d192369f39ee2b861c2b6b99bd075e",
+  "./analytics-insights-panel.js?v=p09-v1": "057be8385c80ccba2b078012aadaa7160458b6c6099958ed3cf5f9fe7305a110",
+  "./mistake-engine.js?v=p10-v1": "0412640dc77a8ea48547f2d366dc6532bcab62d6554f40f333da522d5fd44e54",
+  "./adaptive-engine.js?v=p11-v1": "6349e715cfc917b805ea1eb969e80cb771db5e1a98b50c9cd347b57561a4e412",
+  "./adaptive-insights-panel.js?v=p11-v1": "6d854929cecf2c480bb505a3f453311a4e70b017d6a59c7b3d14764ed4793a1a",
+  "./study-plan-engine.js?v=p17-v1": "153ba6f00cfb32896f57145a7875f70802be42c71490b7d3c7ab663bc886e568",
+  "./study-plan-panel.js?v=p17-v2": "44bf60af81ecfdc8b49758995c95dd93486f2a24c46be31558651dc4d68df872",
+  "./question-pattern.js?v=p18-v1": "70b5d59a4c43c8970321ac3b1bf0bd48546d2d394ff29e0b58e53aadd7a8b5bc",
+  "./admission-intel-engine.js?v=p18-v3": "518be8d8120d48280d49f9b042dbec7e7860d8e6d5d35b385069def4a028b822",
+  "./admission-intel-panel.js?v=p18-v3": "4db8e0ab6aa0f7bba4e547f1949c7a379dae3ab901dcefa656875b407af82717",
+  "./p13-performance-core.js?v=p13-core-v1": "8bbbfa73de6cae2058e25c6afd978d4324c94ad0dbc6380099a9fceebcae00c9",
+  "./p13-performance-runtime.js?v=p13-runtime-v1": "68ac58000ca59a87c3f06214aedfacba79aac19278d5f0717476d42d34482101",
   "./student-data-sync.js?v=student-sync-v1": "296abb5271f4350e2c759b177e781aee524357e3826605e7f86414d5859a9d09",
   "./install-guide.css?v=install-v4": "0eb58c7551f8d973390fb7b19fd98e4dd63ea2070f9f6cbe9429962098c3635c",
-  "./install-guide.js?v=install-v4": "aaa6e4215cd474fd3a8851f07b868c8e18f3a6d60037fd7708d48c496b323953",
+  "./install-guide.js?v=install-v4": "33a7cda2dd210380485a7cc23f8a3cc5aa42dd3fdb467e6477b57ac203312f5c",
   "./sentry-report.js?v=sentry-v2": "9ea89f2625dabedff0e53e7c15a95f7c705768e3a2ada7d4269fab08455e44bd",
   "./a11y-core.css?v=a11y-v1": "c3829667c87b46bbe7effd4ca4e9732f02b58ed849c4ac481f9be7ef02026aac",
-  "./a11y-core.js?v=a11y-v1": "ade17443592bdf9f435bcb6d3d4155105516bd73d7b7a27c7f7a44b94bba9423",
+  "./a11y-core.js?v=a11y-v1": "af5d7fc0ef6f144b8ad13f479b0a1b68f7d8aa1cf090cd6707ab98afd00a7efa",
   "./offline-status.css?v=offline-v2": "da9bd572435484b98efc921273e7f244fb68ea18b9a926f6a5e928e6dcd87d58",
-  "./offline-status.js?v=offline-v2": "0ceefc5bb67e9acc7db222e853551605f6721042d8a5881bd0e00449d211638b",
+  "./offline-status.js?v=offline-v2": "56c9e0a04d123f1b1f9726a45a39304e52c6bf7b64d9c159aaad3b21d6608e77",
   "./icons/icon-192.png": "777ce5566fbeff0f2e384c787c8dde4f47d7c869e455c6e577a503decd4f1683",
   "./icons/icon-512.png": "86459109582f82b1d891a3e5a82723fefd21a3c65e9d0d22ab4dae33bb540520",
 /* sw-manifest:end */
@@ -206,7 +206,7 @@ async function offlineFallback(request) {
 function rescueResponse() {
   const html = `<!doctype html><html lang="bn"><meta charset="utf-8">`
     + `<meta name="viewport" content="width=device-width,initial-scale=1">`
-    + `<title>Admission Hub, আবার চেষ্টা করছি</title>`
+    + `<title>Admission Sky, আবার চেষ্টা করছি</title>`
     + `<style>body{margin:0;min-height:100dvh;display:flex;align-items:center;justify-content:center;`
     + `font-family:system-ui,-apple-system,"Hind Siliguri",sans-serif;background:#f5f8ff;color:#0b1b3a;text-align:center}`
     + `main{padding:24px;max-width:340px}b{display:block;font-size:19px;margin-bottom:8px}`
@@ -487,7 +487,7 @@ self.addEventListener('push', (event) => {
   let data = {};
   try { data = event.data.json(); } catch (_) {}
   if (isFcmPayload(data)) {
-    const title = String((data.notification && data.notification.title) || 'Admission Hub');
+    const title = String((data.notification && data.notification.title) || 'Admission Sky');
     const body = String((data.notification && data.notification.body) || '');
     const link = String((data.data && data.data.link) || 'dashboard');
     const fcmData = { link, src: 'fcm' };
@@ -508,7 +508,7 @@ self.addEventListener('push', (event) => {
     return;
   }
   // Legacy v107 path (admission-notify worker), behavior preserved.
-  event.waitUntil(self.registration.showNotification(String(data.title || 'Admission Hub 🔔'), {
+  event.waitUntil(self.registration.showNotification(String(data.title || 'Admission Sky 🔔'), {
     body: String(data.body || ''), tag: String(data.tag || 'admission-hub'), renotify: true, data: { url: data.url || './' }
   }));
 });

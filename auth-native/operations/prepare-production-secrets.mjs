@@ -95,9 +95,9 @@ async function sandboxValidatesSender({ apiBase, apiKey, secretKey, address, fet
       body: JSON.stringify({
         SandboxMode: true,
         Messages: [{
-          From: { Email: address, Name: 'Admission Hub' },
+          From: { Email: address, Name: 'Admission Sky' },
           To: [{ Email: address }],
-          Subject: 'Admission Hub sender validation',
+          Subject: 'Admission Sky sender validation',
           TextPart: 'Sandbox validation only. No message is delivered.'
         }]
       }),
@@ -185,7 +185,7 @@ export async function discoverActiveMailjetSender({ env = process.env, fetchImpl
     apiKey: selected.apiKey,
     secretKey: selected.secretKey,
     address: selected.address,
-    name: 'Admission Hub',
+    name: 'Admission Sky',
     evidence: 'api'
   });
 }

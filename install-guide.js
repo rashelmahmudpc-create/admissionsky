@@ -1,5 +1,5 @@
 /*
- * Install Guide, Admission Hub
+ * Install Guide, Admission Sky
  *
  * A short, one-tap invitation to keep the app on the phone.
  *  · Android, a single button opens the browser's real install prompt, so the
@@ -79,7 +79,7 @@
             <div class="ahig-menu-row ahig-menu-hit" data-anim="hit">➕ Add to Home Screen</div>
             <div class="ahig-menu-row">বুকমার্ক</div></div>
           <div class="ahig-result" data-anim="land"><span class="ahig-appicon">🎓</span>
-            <span class="ahig-result-label">Admission Hub</span></div></div>`;
+            <span class="ahig-result-label">Admission Sky</span></div></div>`;
     }
     if (p === 'android') {
       return `<div class="ahig-stage" data-demo="android" aria-hidden="true">
@@ -90,13 +90,13 @@
             <div class="ahig-menu-row ahig-menu-hit" data-anim="hit">Install app</div>
             <div class="ahig-menu-row">Bookmark</div></div>
           <div class="ahig-result" data-anim="land"><span class="ahig-appicon">🎓</span>
-            <span class="ahig-result-label">Admission Hub</span></div></div>`;
+            <span class="ahig-result-label">Admission Sky</span></div></div>`;
     }
     return `<div class="ahig-stage" data-demo="desktop" aria-hidden="true">
         <div class="ahig-bar"><span class="ahig-bar-title">admissionsky.pages.dev</span>
           <span class="ahig-dots" data-anim="tap">⤓</span></div>
         <div class="ahig-result" data-anim="land"><span class="ahig-appicon">🎓</span>
-          <span class="ahig-result-label">Admission Hub</span></div></div>`;
+          <span class="ahig-result-label">Admission Sky</span></div></div>`;
   }
 
   let root = null;
@@ -116,12 +116,12 @@
       <div class="ahig-card" tabindex="-1">
         <button class="ahig-close" type="button" aria-label="বন্ধ করুন">✕</button>
         <h2 class="ahig-title" id="ahig-title">পড়াশোনা থাকুক হাতের কাছেই 📚</h2>
-        <p class="ahig-lead">Admission Hub হোম স্ক্রিনে যোগ করুন, এক ক্লিকে খুলবে, অফলাইনেও পড়া যাবে।</p>
+        <p class="ahig-lead">Admission Sky হোম স্ক্রিনে যোগ করুন, এক ক্লিকে খুলবে, অফলাইনেও পড়া যাবে।</p>
         <div class="ahig-detail" hidden>
           ${demoMarkup(p)}
           <div class="ahig-howtitle">যেভাবে যোগ করবেন</div>
           <ol class="ahig-steps">${steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
-          <p class="ahig-foot">এরপর হোম স্ক্রিন থেকেই Admission Hub খুলতে পারবেন।</p>
+          <p class="ahig-foot">এরপর হোম স্ক্রিন থেকেই Admission Sky খুলতে পারবেন।</p>
         </div>
         <div class="ahig-actions">
           <button class="ahig-primary" type="button" data-action="install">${canOneTap ? 'এখনই যোগ করুন' : 'কীভাবে যোগ করব?'}</button>

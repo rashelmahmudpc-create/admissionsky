@@ -1,4 +1,4 @@
-/* Admission Hub, P17 student action agent: the "prepare me" plan panel.
+/* Admission Sky, P17 student action agent: the "prepare me" plan panel.
  *
  * The visible half of the study-plan engine. The student taps "আমাকে প্রস্তুত করো"
  * on the Progress page and gets an ordered plan built from their own history:

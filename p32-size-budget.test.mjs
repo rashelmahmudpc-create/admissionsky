@@ -1,6 +1,6 @@
 /* P32 — size budget ("আর ভারী হবে না" পাহারা).
  *
- * Speed blueprint T15 (Notion: "Admission Hub — স্পিড ব্লুপ্রিন্ট").
+ * Speed blueprint T15 (Notion: "Admission Sky — স্পিড ব্লুপ্রিন্ট").
  * Measured 2026-10-23 on main @ 0efabbe:
  *   index.html 523,667 B raw (≈137 KB over the wire, Brotli)
  *   inline <script> ≈406,254 chars in 20 blocks · inline <style> ≈85,728 chars · 100 <script src> tags

@@ -1,4 +1,4 @@
-/* Admission Hub, P11 Adaptive Learning Engine.
+/* Admission Sky, P11 Adaptive Learning Engine.
  *
  * Pure and dependency-free (like question-engine.js / analytics-insight-engine.js /
  * mistake-engine.js), so it runs in the browser as window.AhAdaptiveEngine and

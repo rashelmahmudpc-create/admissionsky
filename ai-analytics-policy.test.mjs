@@ -544,7 +544,7 @@ test('P5-৪৬. the copilot prompt forbids inventing numbers and names the resu
   assert.match(COPILOT_SYSTEM_PROMPT, /only the numbers present/i);
   assert.match(COPILOT_SYSTEM_PROMPT, /never (compute|invent)/i);
   /* The prompt text comes from the versioned registry. */
-  assert.ok(COPILOT_SYSTEM_PROMPT.includes('Admission Hub analytics copilot'));
+  assert.ok(COPILOT_SYSTEM_PROMPT.includes('Admission Sky analytics copilot'));
 });
 
 test('P5-৪৭. example questions are offered in both languages', () => {

@@ -1,4 +1,4 @@
-# Admission Hub Auth Foundation — Phase 2A
+# Admission Sky Auth Foundation — Phase 2A
 
 This directory is a protected, isolated authentication domain. It is foundation code only.
 

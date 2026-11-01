@@ -160,7 +160,7 @@ function buildSecrets(randomBytes) {
     secretKey,
     secretValue: values[secretKey],
     skipMultilineEncoding: true,
-    secretComment: 'Admission Hub protected OIDC bootstrap; activation disabled'
+    secretComment: 'Admission Sky protected OIDC bootstrap; activation disabled'
   }));
 }
 

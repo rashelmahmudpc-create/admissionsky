@@ -416,7 +416,7 @@ export function composeAnswer(intent, queryResult, filters = {}) {
  * so it is versioned alongside the other prompts, with a local fallback for the
  * (test-only) case where the registry has been emptied. */
 export const COPILOT_SYSTEM_PROMPT = getPromptText('analytics-copilot') || [
-  'You are the Admission Hub analytics copilot.',
+  'You are the Admission Sky analytics copilot.',
   'You are given a computed result and must restate it in one short, plain paragraph.',
   'HARD RULES:',
   '1. Use only the numbers present in the provided result. Never compute, round differently, or invent a number.',

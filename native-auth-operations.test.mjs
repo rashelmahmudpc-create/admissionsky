@@ -31,7 +31,7 @@ const fetchFixture = ({ existing = [] } = {}) => async (url, options) => {
     assert.match(String(options?.headers?.Authorization), /^Basic /);
     return response({ Data: [
       { Email: 'stale@admissionhub.pages.dev', Name: 'Pending', Status: 'Pending' },
-      { Email: 'active.sender@example.com', Name: 'Admission Hub', Status: 'Active', IsDefaultSender: true }
+      { Email: 'active.sender@example.com', Name: 'Admission Sky', Status: 'Active', IsDefaultSender: true }
     ] });
   }
   if (String(url).includes('/workers/scripts/admission-gk/secrets')) {
@@ -44,7 +44,7 @@ const fetchFixture = ({ existing = [] } = {}) => async (url, options) => {
 test('activation privately selects an Active Mailjet sender instead of stale Pending source', async () => {
   const sender = await discoverActiveMailjetSender({ env: ENV, fetchImpl: fetchFixture() });
   assert.equal(sender.address, 'active.sender@example.com');
-  assert.equal(sender.name, 'Admission Hub');
+  assert.equal(sender.name, 'Admission Sky');
   assert.equal(sender.apiBase, 'https://api.mailjet.com');
 });
 
@@ -454,7 +454,7 @@ test('live Firebase check extracts only a standard verify-email action', () => {
 test('live Firebase check reports only sanitized sender, authentication, DNS, and template evidence', async () => {
   const actionUrl = 'https://sample.firebaseapp.com/__/auth/action?mode=verifyEmail&oobCode=do-not-print';
   const source = [
-    'From: Admission Hub <noreply@sample.firebaseapp.com>',
+    'From: Admission Sky <noreply@sample.firebaseapp.com>',
     'Return-Path: <bounce@sample.firebaseapp.com>',
     'Authentication-Results: mx.example; spf=pass smtp.mailfrom=sample.firebaseapp.com; dkim=pass header.d=firebaseapp.com; dmarc=pass header.from=sample.firebaseapp.com',
     'DKIM-Signature: v=1; d=firebaseapp.com; s=firebase1; bh=safe; b=redacted',
@@ -475,11 +475,11 @@ test('live Firebase check reports only sanitized sender, authentication, DNS, an
   };
   const audit = await auditVerificationMessage({
     message: {
-      from: { name: 'Admission Hub', address: 'noreply@sample.firebaseapp.com' },
-      subject: 'Admission Hub ইমেইল যাচাই',
+      from: { name: 'Admission Sky', address: 'noreply@sample.firebaseapp.com' },
+      subject: 'Admission Sky ইমেইল যাচাই',
       size: 2048,
       text: 'বোতামটি কাজ না করলে যাচাইয়ের লিংকটি ব্যবহার করুন। এই অনুরোধ আপনার না হলে উপেক্ষা করুন।',
-      html: [`<p>Admission Hub</p><a href="${actionUrl}">Verify My Email</a>`]
+      html: [`<p>Admission Sky</p><a href="${actionUrl}">Verify My Email</a>`]
     },
     source,
     fetchImpl

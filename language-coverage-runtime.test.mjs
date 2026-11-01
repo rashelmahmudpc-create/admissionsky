@@ -28,7 +28,7 @@ const I18N = (() => {
   /* Anchor on the two phrases, not on the punctuation between them: the
      shipped-copy typography pass (29a1ac7) rewrites interstitial em dashes,
      which used to break this lookup even though the engine was intact. */
-  const start = html.search(/\/\*\s*ADMISSION HUB[^\n]*Global i18n Engine/);
+  const start = html.search(/\/\*\s*ADMISSION SKY[^\n]*Global i18n Engine/);
   const marker = html.indexOf('window.AhI18n', start);
   const end = html.indexOf('})();', marker);
   assert.ok(start >= 0 && marker > start && end > marker, 'AhI18n engine block not found in index.html');

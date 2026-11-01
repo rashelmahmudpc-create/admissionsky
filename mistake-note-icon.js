@@ -1,5 +1,5 @@
 /*
-  ADMISSION HUB · MISTAKE NOTE ICON  (v14)
+  ADMISSION SKY · MISTAKE NOTE ICON  (v14)
 
   Rules (user requirements):
   1. The icon is HIDDEN until the question has actually been answered WRONG.

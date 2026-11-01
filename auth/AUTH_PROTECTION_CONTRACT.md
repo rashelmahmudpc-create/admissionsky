@@ -1,4 +1,4 @@
-# 🔒 Admission Hub Auth Protection Contract
+# 🔒 Admission Sky Auth Protection Contract
 
 **Protected path:** `/auth/**`  
 **Foundation version:** `phase2a-1`
