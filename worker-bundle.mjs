@@ -26781,6 +26781,27 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
       return { cleaned: true };
     });
   }
+  /* AUTH V2.1 (owner 2026-10-31): the alarm chain covers every table cleanup
+   * touches. The blueprint's finding ১৭.
+   *
+   * The Durable Object sets its next alarm from this method, so a table this
+   * method does not mention is a table whose cleanup never runs — unless some
+   * OTHER table happens to expire first and drags a full cleanup along with it.
+   * That is exactly the bug: `cleanup` deletes from ten tables, but this only
+   * scheduled from five. `auth_security_events` keeps a 90-day retention, so on
+   * a quiet deployment — no sessions expiring, no rate limits resetting — the
+   * oldest events were never deleted and the table grew without bound.
+   *
+   * Each added row schedules the moment cleanup would ACT on a row, not the
+   * moment it expires. `cleanup` waits a retention window past the timestamp for
+   * four of these tables, so the row's own deadline is `stamp + window`, and the
+   * bound is `stamp > now - window` — a row already past its window is due NOW,
+   * not something to arm an alarm for. Getting that bound wrong in the obvious
+   * direction (`stamp > now`) silently excludes every row that is about to
+   * become deletable, which is the entire set this is meant to schedule.
+   *
+   * The rule this now holds: if cleanup deletes from a table on a schedule,
+   * nextExpiry schedules from that table, with the same window. */
   async nextExpiry(now) {
     const row = this.#one(
       `SELECT MIN(expiry) AS nextExpiry FROM (
@@ -26789,12 +26810,29 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
         UNION ALL SELECT MIN(expires_at) FROM auth_passkey_tickets WHERE expires_at>?
         UNION ALL SELECT MIN(expires_at) FROM auth_sessions WHERE expires_at>? AND revoked_at IS NULL
         UNION ALL SELECT MIN(expires_at) FROM auth_rate_limits WHERE expires_at>?
+        -- AUTH V2.1: the five below were cleaned but never scheduled. Each
+        -- adds its retention window, and is bounded by that same window.
+        UNION ALL SELECT MIN(expires_at)+? FROM auth_account_verification_tickets WHERE expires_at>? AND state<>'active'
+        UNION ALL SELECT MIN(expires_at)+? FROM auth_trusted_devices WHERE expires_at>?
+        UNION ALL SELECT MIN(expires_at)+? FROM auth_security_challenges WHERE expires_at>?
+        UNION ALL SELECT MIN(revoked_at)+? FROM auth_passkey_credentials WHERE status='revoked' AND revoked_at>?
+        UNION ALL SELECT MIN(occurred_at)+? FROM auth_security_events WHERE occurred_at>?
       )`,
       now,
       now,
       now,
       now,
-      now
+      now,
+      DAY_MS9,
+      now - DAY_MS9,
+      DAY_MS9,
+      now - DAY_MS9,
+      DAY_MS9,
+      now - DAY_MS9,
+      EVENT_RETENTION_MS,
+      now - EVENT_RETENTION_MS,
+      EVENT_RETENTION_MS,
+      now - EVENT_RETENTION_MS
     );
     const next = Number(row?.nextExpiry || 0);
     return next > now ? next : null;
