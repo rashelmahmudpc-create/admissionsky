@@ -61,8 +61,24 @@ test('the note is wired into the bubble and fed by the parser flag', () => {
   assert.ok(/cutNote\(m\)/.test(UI), 'cutNote is never rendered in the bubble');
   /* The whole point of F0.4 was that `truncated` means something. If the UI stops
      reading it, the flag goes back to being dead code. */
-  assert.ok(/res\.truncated\)\s*holder\.cutOff\s*=\s*true/.test(UI), 'res.truncated is not recorded on the message');
+  assert.ok(/res\.truncated\s*&&\s*!holder\.stopped\)\s*holder\.cutOff\s*=\s*true/.test(UI), 'res.truncated is not recorded on the message');
   assert.ok(/pending:\s*true,\s*stage:\s*T\.stageRead,\s*steps:\s*\[\],\s*q:\s*t/.test(UI), 'the holder does not keep the question the retry needs');
+});
+
+test('a deliberate stop is not reported as a cut connection', () => {
+  /* stop() calls abort(), which ends the read before `done`, so the parser
+     returns the SAME `truncated: true` a broken connection returns. Without the
+     `stopped` guard the student presses stop and is told their answer was cut
+     off — a false alarm about a fault that did not happen. The two must stay
+     apart, and the guard must be set before abort() runs. */
+  assert.ok(/activeHolder\.stopped\s*=\s*true/.test(UI), 'stop() does not mark the holder');
+  assert.ok(/res\.truncated\s*&&\s*!holder\.stopped/.test(UI), 'the cutoff notice does not check whether the student stopped it');
+  const stopBody = UI.slice(UI.indexOf('function stop()'), UI.indexOf('function newChat()'));
+  assert.ok(stopBody.indexOf('activeHolder.stopped = true') < stopBody.indexOf('.abort()'),
+    'the holder is marked after abort(), so a synchronous handler could read it too late');
+  /* The holder must be cleared, or the next turn inherits the flag. */
+  assert.ok(/activeHolder\s*=\s*holder/.test(UI), 'the holder is never published for stop() to reach');
+  assert.ok(/activeHolder\s*=\s*null/.test(UI), 'the holder is never cleared after the turn');
 });
 
 test('both language tables carry the strings', () => {
