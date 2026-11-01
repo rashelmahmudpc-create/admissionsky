@@ -1,1 +1,132 @@
-PLACEHOLDER
+name: Cloudflare Pages Bundle Guard (No Deploy)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'about.html'
+      - 'contact.html'
+      - 'privacy.html'
+      - 'data-deletion.html'
+      - '_worker.js'
+      - 'sitemap.xml'
+      - 'slug/**'
+      - 'account-access.*'
+      - 'sw.js'
+      - 'public-worker.js'
+      - 'worker-bundle.mjs'
+      - 'gk-agent-worker.js'
+      - 'voice-worker.js'
+      - 'notification-worker.js'
+      - 'ai-agent.js'
+      - 'fcm-notification.mjs'
+      - 'scripts/pii-scan.mjs'
+      - 'seo-routing.test.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'wrangler.toml'
+      - '.github/workflows/cf-pages.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'about.html'
+      - 'contact.html'
+      - 'privacy.html'
+      - 'data-deletion.html'
+      - '_worker.js'
+      - 'sitemap.xml'
+      - 'slug/**'
+      - 'account-access.*'
+      - 'sw.js'
+      - 'public-worker.js'
+      - 'worker-bundle.mjs'
+      - 'gk-agent-worker.js'
+      - 'voice-worker.js'
+      - 'notification-worker.js'
+      - 'ai-agent.js'
+      - 'fcm-notification.mjs'
+      - 'scripts/pii-scan.mjs'
+      - 'seo-routing.test.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'wrangler.toml'
+      - '.github/workflows/cf-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bundle-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Build the sanitized public bundle without publishing
+        run: |
+          set -eu
+          mkdir -p dist
+          rsync -a --exclude='.git' --exclude='node_modules' --exclude='docs' --exclude='AGENT_RESUME' --exclude='ai-proxy' --exclude='auth' --exclude='auth-native' --exclude='email-gateway' --exclude='apps-script' --exclude='uploads' --exclude='.github' --exclude='gk-agent-worker.js' --exclude='public-worker.js' --exclude='ai-agent.js' --exclude='worker-bundle.mjs' --exclude='auth-worker-bundle.mjs' --exclude='voice-worker.js' --exclude='notification-worker.js' --exclude='fcm-notification.mjs' --exclude='wrangler.toml' --exclude='package.json' --exclude='package-lock.json' --exclude='*.test.mjs' --exclude='*.md' ./ dist/
+          test -s dist/index.html
+          test -s dist/sw.js
+          test -s dist/account-access.js
+          test ! -e dist/onboarding-welcome-hero.webp
+          test ! -e dist/onboarding-personal-hero.webp
+          ! grep -Eiq '<(img|picture|source|canvas|video|object|embed)([[:space:]>])' dist/account-access.js
+          ! grep -Eiq 'background(-image)?[[:space:]]*:[^;]*url\(' dist/account-access.css
+          du -sh dist
+
+      - name: Guard SEO artifacts, meta tags and public/404 routing
+        run: |
+          set -eu
+          # Crawler files must ship and must not be the SPA shell.
+          for f in robots.txt sitemap.xml favicon.ico og-image.png apple-touch-icon.png; do
+            test -s "dist/$f"
+          done
+          head -c 200 dist/robots.txt | grep -Fq 'User-agent:'
+          ! head -c 200 dist/robots.txt | grep -Fq '<!DOCTYPE'
+          head -c 200 dist/sitemap.xml | grep -Fq '<urlset'
+          head -c 200 dist/sitemap.xml | grep -Fq 'https://admissionsky.pages.dev/'
+
+          # Root page must carry its own title, canonical, OG and JSON-LD.
+          grep -Fq '<title>Admission Hub' dist/index.html
+          grep -Fq '<link rel="canonical" href="https://admissionsky.pages.dev/">' dist/index.html
+          grep -Fq 'property="og:image" content="https://admissionsky.pages.dev/og-image.png"' dist/index.html
+          grep -Fq 'name="twitter:card" content="summary_large_image"' dist/index.html
+          grep -Fq 'type="application/ld+json"' dist/index.html
+          ! grep -Fq 'A privacy-first admission preparation hub' dist/index.html
+
+          # Every course landing page needs its own canonical, description and
+          # structured data, and its JSON-LD must actually parse.
+          for slug in prottoy prottoy-master sandhi somas; do
+            page="dist/courses/$slug/index.html"
+            test -s "$page"
+            grep -Fq "<link rel=\"canonical\" href=\"https://admissionsky.pages.dev/courses/$slug/\">" "$page"
+            grep -Fq 'name="description"' "$page"
+            grep -Fq 'property="og:title"' "$page"
+            grep -Fq 'type="application/ld+json"' "$page"
+            node -e "const fs=require('fs');const h=fs.readFileSync('$page','utf8');const m=h.match(/<script type=\"application\\/ld\\+json\">([\\s\\S]*?)<\\/script>/);if(!m)throw new Error('no JSON-LD in $slug');const d=JSON.parse(m[1]);const types=d['@graph'].map(n=>n['@type']);if(!types.includes('Course'))throw new Error('missing Course schema in $slug');"
+          done
+
+          # The allowlist worker keeps unknown paths and missing assets at 404.
+          node --test seo-routing.test.mjs
+
+          echo 'SEO artifacts, meta tags and 404 routing are intact.'
+
+      - name: Refuse to publish personal data in a public asset
+        run: node scripts/pii-scan.mjs
+
+      - name: Require protected Telegram publication workflow
+        run: |
+          set -eu
+          workflow='.github/workflows/telegram-auth-canary-activate.yml'
+          grep -Fq 'environment: email-gateway-production' "$workflow"
+          grep -Fq 'npm run test:production-auth' "$workflow"
+          grep -Fq 'npm run audit:premium-browser' "$workflow"
+          publish_verb='deploy'
+          grep -Fq "pages ${publish_verb} dist --project-name admissionhub --branch main" "$workflow"
+          echo 'Bundle is valid. This guard intentionally has no deploy credentials or publication command.'
