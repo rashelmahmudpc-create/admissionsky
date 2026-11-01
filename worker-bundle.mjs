@@ -263,6 +263,23 @@ var corsHeaders = (request) => {
 
 // sky-stream.mjs
 var SKY_STREAM_VERSION = "sky-stream-v1";
+var SKY_HEARTBEAT_MS = 2e3;
+function startHeartbeat(push, ms = SKY_HEARTBEAT_MS) {
+  const wanted = Number(ms);
+  const every = wanted > 0 ? wanted : SKY_HEARTBEAT_MS;
+  const timer = setInterval(() => {
+    try {
+      push(": hb\n\n");
+    } catch (_) {
+    }
+  }, every);
+  return () => {
+    try {
+      clearInterval(timer);
+    } catch (_) {
+    }
+  };
+}
 function skySse(event, payload) {
   const data = JSON.stringify(payload);
   return event ? `event: ${event}
@@ -5056,9 +5073,9 @@ async function agentChat(request, env, uid, opts = {}) {
   };
   if (!stream) return core();
   mark("open");
-  return openEarly(core, early, () => prepStage("understand", STAGE_UNDERSTAND[intent] || STAGE_UNDERSTAND.GENERAL_CHAT), request);
+  return openEarly(core, early, () => prepStage("understand", STAGE_UNDERSTAND[intent] || STAGE_UNDERSTAND.GENERAL_CHAT), request, Number(env && env.SKY_HEARTBEAT_MS) || void 0);
 }
-function openEarly(run, early, first, request = null) {
+function openEarly(run, early, first, request = null, heartbeatMs = void 0) {
   const enc = new TextEncoder();
   let ctl = null;
   const readable = new ReadableStream({ start(c) {
@@ -5073,6 +5090,7 @@ function openEarly(run, early, first, request = null) {
   early.push = write;
   write(": open\n\n");
   skyStream(write, early.seq).hello();
+  const stopBeat = startHeartbeat(write, heartbeatMs);
   if (first) first();
   (async () => {
     try {
@@ -5088,6 +5106,7 @@ function openEarly(run, early, first, request = null) {
     } catch (e) {
       write(skySse("error", Object.assign({ seq: early.seq.n++ }, { error: "stream_failed", message: "যুক্তি-বিচ্ছেদ ঘটেছে।", detail: String(e && e.message || e), retryable: true })));
     } finally {
+      stopBeat();
       early.push = null;
       try {
         ctl.close();

@@ -16,7 +16,7 @@
  * env/fetch পরীক্ষায় mock করা যায় (ai-agent-f1.test.mjs)।
  */
 import { corsHeaders } from './cors-policy.mjs';
-import { skyStream, skySse, SKY_STREAM_VERSION } from './sky-stream.mjs';
+import { skyStream, skySse, SKY_STREAM_VERSION, startHeartbeat } from './sky-stream.mjs';
 import { normalizeRequestId, SKY_REQUEST_ID_HEADER } from './sky-request.mjs';
 import { buildContext, renderContext, describeContext, CONTEXT_VERSION } from './context-engine.js';
 import { getPromptText, BASE_PROMPT_ID } from './prompt-registry.js';
@@ -1904,14 +1904,14 @@ export async function agentChat(request, env, uid, opts = {}) {
   };
   if (!stream) return core();
   mark('open');
-  return openEarly(core, early, () => prepStage('understand', STAGE_UNDERSTAND[intent] || STAGE_UNDERSTAND.GENERAL_CHAT), request);
+  return openEarly(core, early, () => prepStage('understand', STAGE_UNDERSTAND[intent] || STAGE_UNDERSTAND.GENERAL_CHAT), request, Number(env && env.SKY_HEARTBEAT_MS) || undefined);
 }
 
 /* PR-2: open the SSE response at once and pipe the real answer into it when it
    is ready. Stage events written during preparation go out first, in order.
    A plain queue (no backpressure): the work and the memory save must finish
    even when the reader is slow, exactly as with the inner stream. */
-function openEarly(run, early, first, request = null) {
+function openEarly(run, early, first, request = null, heartbeatMs = undefined) {
   const enc = new TextEncoder();
   let ctl = null;
   const readable = new ReadableStream({ start(c) { ctl = c; } });
@@ -1922,6 +1922,12 @@ function openEarly(run, early, first, request = null) {
      inner stream put it after the first early stage, so a client could not know
      the protocol until frame two. `early.seq` is shared with the inner writer. */
   skyStream(write, early.seq).hello();
+  /* F2: the Done-condition is that the student is never in silence for 3 s. The
+     first token is up to AGENT_FIRST_CHUNK_MS (5 s) away and a dead-key retry
+     adds more, so the connection is kept moving for the whole stream and stopped
+     only when it closes. A comment carries no `data:`, so neither the pre-v1
+     parser nor a v1 one sees it — it fills the silence without claiming work. */
+  const stopBeat = startHeartbeat(write, heartbeatMs);
   if (first) first();
   (async () => {
     try {
@@ -1931,6 +1937,7 @@ function openEarly(run, early, first, request = null) {
     } catch (e) {
       write(skySse('error', Object.assign({ seq: early.seq.n++ }, { error: 'stream_failed', message: 'যুক্তি-বিচ্ছেদ ঘটেছে।', detail: String((e && e.message) || e), retryable: true })));
     } finally {
+      stopBeat();
       early.push = null;
       try { ctl.close(); } catch (_) {}
     }
