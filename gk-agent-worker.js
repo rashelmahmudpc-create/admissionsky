@@ -43,7 +43,7 @@ export { AiStateObject } from './ai-state-do.mjs';
 
 const nativeAuthHandler = createNativeAuthHandler();
 /**
- * 🤖 ADMISSION HUB, Daily GK Agent Worker
+ * 🤖 ADMISSION SKY, Daily GK Agent Worker
  * v111 · Browser Use cloud (৩ key failover) → দিনে মাত্র ১ রান → GK MCQ + verified admission news
  *
  * Secrets:

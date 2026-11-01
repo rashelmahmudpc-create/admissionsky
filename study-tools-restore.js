@@ -14,7 +14,7 @@
   const card = (icon, title, desc, route) => `<button class="st-tool-card" type="button" onclick="navigate('${route}')"><span class="st-tool-icon">${icon}</span><span><strong>${title}</strong><small>${desc}</small></span><span class="st-arrow">›</span></button>`;
 
   function renderStudyTools() {
-    shellS(`<div class="st-kicker">ADMISSION HUB UPGRADE</div><h1 class="st-title">Study Tools</h1><p class="st-subtitle">All new utilities are additive and preserve the original database and Mock Test flow.</p><div class="st-tools-grid">
+    shellS(`<div class="st-kicker">ADMISSION SKY UPGRADE</div><h1 class="st-title">Study Tools</h1><p class="st-subtitle">All new utilities are additive and preserve the original database and Mock Test flow.</p><div class="st-tools-grid">
       ${card('📚', 'Study Helper', 'Source-only explanations', 'study-helper')}
       ${card('🧮', 'Calculator', 'Unified calculations', 'calculator')}
       ${card('🌐', 'Web Search', 'Real public search', 'web-search')}

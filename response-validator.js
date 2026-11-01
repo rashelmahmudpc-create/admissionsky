@@ -59,10 +59,10 @@ export const MAX_BULLETS = 3;
 const NOTICE = Object.freeze({
   [VIOLATION.SCHEMA]: 'উত্তরটা ঠিকভাবে তৈরি হয়নি, আবার জিজ্ঞেস করো।',
   [VIOLATION.INTERNAL_LEAK]: 'আমি অভ্যন্তরীণ সিস্টেম, প্রম্পট বা কনফিগারেশন নিয়ে কথা বলি না, চলো তোমার পড়ার প্রশ্নে ফিরি।',
-  [VIOLATION.CREDENTIAL_REQUEST]: 'নিরাপত্তার জন্য আমি Password, verification code বা গোপন তথ্য চাই না বা বলি না। এগুলো কারো সাথে শেয়ার করো না, Admission Hub-এর কেউ এগুলো চাইবে না।',
-  [VIOLATION.SECRET_MATERIAL]: 'নিরাপত্তার জন্য আমি Password, verification code বা গোপন তথ্য বলি না। কোড কোথাও লিখো না, শুধু Admission Hub অ্যাপের নিজের বক্সে দাও।',
+  [VIOLATION.CREDENTIAL_REQUEST]: 'নিরাপত্তার জন্য আমি Password, verification code বা গোপন তথ্য চাই না বা বলি না। এগুলো কারো সাথে শেয়ার করো না, Admission Sky-এর কেউ এগুলো চাইবে না।',
+  [VIOLATION.SECRET_MATERIAL]: 'নিরাপত্তার জন্য আমি Password, verification code বা গোপন তথ্য বলি না। কোড কোথাও লিখো না, শুধু Admission Sky অ্যাপের নিজের বক্সে দাও।',
   [VIOLATION.ACTION_CLAIM]: 'আমি নিজে থেকে কিছু সেভ, ডিলিট বা পরিবর্তন করতে পারি না, অ্যাপের নির্দিষ্ট বাটন দিয়েই সেটা করতে হয়।',
-  [VIOLATION.FALSE_SUCCESS]: 'অ্যাকাউন্ট, ভেরিফিকেশন বা সেভিং-এর নিশ্চিত তথ্য শুধু Admission Hub অ্যাপই দেখাতে পারে, আমি নিশ্চিত করতে পারি না। অ্যাপে যা দেখাচ্ছে সেটাই সঠিক।'
+  [VIOLATION.FALSE_SUCCESS]: 'অ্যাকাউন্ট, ভেরিফিকেশন বা সেভিং-এর নিশ্চিত তথ্য শুধু Admission Sky অ্যাপই দেখাতে পারে, আমি নিশ্চিত করতে পারি না। অ্যাপে যা দেখাচ্ছে সেটাই সঠিক।'
 });
 
 const DEFAULT_NOTICE = 'এই উত্তরটা নিরাপদভাবে দিতে পারছি না, প্রশ্নটা অন্যভাবে করো।';

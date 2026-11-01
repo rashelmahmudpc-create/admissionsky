@@ -1,4 +1,4 @@
-/* v119, Admission Hub Smart Notification engine (client).
+/* v119, Admission Sky Smart Notification engine (client).
    Phase 2 (owner-approved 2026-09-17): global feed unread in the bell badge,
    notification click logging for the global engine analytics.
    Round 8 (owner directive 2026-09-17): auto engine OFF, premium centered
@@ -673,7 +673,7 @@
   const testNow = async () => {
     closeModal();
     window.toast?.('টেস্ট পাঠানো হচ্ছে…');
-    const okSend = await dispatch({ title: 'Admission Hub টেস্ট', body: 'বাহ! Notification চ্যানেল কাজ করছে, এখন থেকে ঠিক সময়ে আমি মনে করিয়ে দেব', category: 'update' }, { streak: streakNow(), todayQ: todayQuestions() });
+    const okSend = await dispatch({ title: 'Admission Sky টেস্ট', body: 'বাহ! Notification চ্যানেল কাজ করছে, এখন থেকে ঠিক সময়ে আমি মনে করিয়ে দেব', category: 'update' }, { streak: streakNow(), todayQ: todayQuestions() });
     if (okSend === 'ok') await logRow({ id: uid(), category: 'update', title: 'টেস্ট notification', body: 'চ্যানেল যাচাই সম্পন্ন ✓', priority: 1, dedup: 'test-' + Date.now(), status: 'sent', readAt: null, createdAt: Date.now() });
     // BUG-001: the Worker now requires a real proof of identity, so a device
     // without the owner's admin token is refused. Say that plainly instead of

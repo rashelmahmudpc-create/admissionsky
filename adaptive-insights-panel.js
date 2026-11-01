@@ -1,4 +1,4 @@
-/* Admission Hub, P11 Adaptive Learning: insight panel.
+/* Admission Sky, P11 Adaptive Learning: insight panel.
  *
  * The visible half of P11. It feeds the student's own exam history to
  * window.AhAdaptiveEngine (see adaptive-engine.js) and shows what the engine

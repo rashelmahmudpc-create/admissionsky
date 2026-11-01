@@ -1,4 +1,4 @@
-/* Admission Hub, P13 API compression.
+/* Admission Sky, P13 API compression.
  *
  * Large JSON replies travel gzipped when the client asks for it. The decision
  * is separated from the compression so it is testable, and compression itself

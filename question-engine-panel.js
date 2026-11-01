@@ -1,4 +1,4 @@
-/* Admission Hub, P07 Intelligent Question Engine: analysis panel.
+/* Admission Sky, P07 Intelligent Question Engine: analysis panel.
  *
  * The visible half of P07. It reads the bank through window.AhQuestionEngine
  * (see question-engine.js), shows what the bank actually contains, difficulty

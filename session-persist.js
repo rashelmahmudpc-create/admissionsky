@@ -1,5 +1,5 @@
 /* ============================================================
-   ADMISSION HUB, SESSION STATE PERSIST (v1 · 2026-09-03)
+   ADMISSION SKY, SESSION STATE PERSIST (v1 · 2026-09-03)
    🎯 অ্যাপ background-এ গিয়ে ফিরলে / PWA reopen-এ একই জায়গায় ফেরা।
    - কোনো auto-reload নেই, কোনো auto-logout নেই
    - route + scroll position ধরে রাখে (একই route-এ থাকলে scroll ফেরত)

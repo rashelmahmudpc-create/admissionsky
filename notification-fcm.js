@@ -1,4 +1,4 @@
-/* v1, Admission Hub FCM client (Phase 1, FCM-NOTIFICATION-BLUEPRINT.md).
+/* v1, Admission Sky FCM client (Phase 1, FCM-NOTIFICATION-BLUEPRINT.md).
  *
  * Layers FCM web push on top of the existing notification-hub.js (which keeps
  * the legacy Telegram + admission-notify VAPID path). Golden rules:
@@ -156,7 +156,7 @@
         messaging.onMessage((payload) => {
           const n = (payload && payload.notification) || {};
           const d = (payload && payload.data) || {};
-          const title = n.title || 'Admission Hub';
+          const title = n.title || 'Admission Sky';
           const body = n.body || '';
           try { window.toast?.(`${title}, ${body}`.slice(0, 240)); } catch (_) {}
           try { window.AhFcmInbox?.onForeground?.(d); } catch (_) {}
@@ -519,7 +519,7 @@
         <label class="flabel" style="margin-top:10px">Admin token (Bearer, store করা হয় না)</label>
         <input id="ahFcmDevToken" type="password" placeholder="ADMIN_TOKEN" style="width:100%;box-sizing:border-box">
         <label class="flabel" style="margin-top:8px">Test message</label>
-        <input id="ahFcmDevBody" type="text" value="Admission Hub, FCM test successful" style="width:100%;box-sizing:border-box">
+        <input id="ahFcmDevBody" type="text" value="Admission Sky, FCM test successful" style="width:100%;box-sizing:border-box">
         <button class="btn sm" style="margin-top:10px" id="ahFcmDevSend"> Send Test</button>
         <pre id="ahFcmDevOut" style="font-size:11px;white-space:pre-wrap;margin-top:10px;color:var(--sub)"></pre>` : ''}
         <button class="btn ghost sm" style="margin-top:14px" onclick="closeModal()">Close</button>`;

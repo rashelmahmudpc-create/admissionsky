@@ -354,7 +354,7 @@ test('Backup OTP email carries the AdmissionSky brand, one big code box, and dar
   assert.match(html, /color-scheme" content="light dark"/);
   assert.match(html, /prefers-color-scheme: dark/);
   assert.match(html, /AdmissionSky/);
-  assert.equal(html.includes('Admission Hub'), false);
+  assert.equal(html.includes('Admission Sky'), false);
   assert.match(html, /Your Admission Companion/);
   assert.match(html, /AdmissionSky অ্যাকাউন্ট যাচাই করতে/);
   assert.match(html, /প্রিয় মাহমুদ রাসেল,/);
@@ -365,7 +365,7 @@ test('Backup OTP email carries the AdmissionSky brand, one big code box, and dar
   assert.match(text, /123456/);
 
   // The owner asked for the onboarding brand mark in the header. The old
-  // "Admission Hub" banner asset must stay out, and inline SVG stays out because
+  // "Admission Sky" banner asset must stay out, and inline SVG stays out because
   // Gmail and Outlook strip it, so the mark ships as a hosted PNG.
   assert.match(html, /icons\/email-mark\.png/);
   assert.equal(/email-logo\.png/.test(html), false);

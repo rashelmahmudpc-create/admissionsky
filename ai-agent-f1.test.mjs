@@ -211,7 +211,7 @@ t('৩০. Vision-এ chain-শুধু-gemini (groq-ফলব্যাক ন�
   return r.status === 200 && text.includes('event: error') && !text.includes('গ্রক-উত্তর');
 }, { timeout: 10000 });
 
-t('৩১. Telegram guidance শুধু Admission Hub-এর নিশ্চিত ধাপ বোঝায়; OTP বানায় বা success ঘোষণা করে না', (() => {
+t('৩১. Telegram guidance শুধু Admission Sky-এর নিশ্চিত ধাপ বোঝায়; OTP বানায় বা success ঘোষণা করে না', (() => {
   const guidance = authVerificationGuidance('Telegram OTP কীভাবে verify করব?');
   return guidance.includes('official bot') && guidance.includes('START') && guidance.includes('AdmissionSky-এর নিশ্চিত ফলই চূড়ান্ত')
     && guidance.includes('Gmail/ইমেইল মালিকানা প্রমাণ করে না') && !/\b\d{6}\b/.test(guidance);

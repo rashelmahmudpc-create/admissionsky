@@ -449,7 +449,7 @@
   function journeyMilestones(p, stats) {
     const completion = Number(state.data?.completion || 0);
     return [
-      { id: 'joined', label: 'Joined', ts: p?.createdAt ? Number(p.createdAt) : null, hint: 'Admission Hub-এ জয়েন' },
+      { id: 'joined', label: 'Joined', ts: p?.createdAt ? Number(p.createdAt) : null, hint: 'Admission Sky-এ জয়েন' },
       { id: 'practice', label: 'Started Practice', ts: stats.firstFlash, hint: 'প্রথম practice/flash session' },
       { id: 'mock', label: 'First Mock', ts: stats.firstMock, hint: 'প্রথম mock test' },
       { id: 'achievement', label: 'First Achievement', ts: null, done: stats.earned.length > 0, hint: 'প্রথম achievement unlock' },
@@ -1279,7 +1279,7 @@
         ${appt('light', 'Light', 'ডিফল্ট থিম')}
         ${appt('dark', 'Dark', 'রাতের মোড')}
         ${appt('system', 'System', 'Device-এর সাথে মানানসই')}
-        ${appt('green', 'Premium Green', 'Admission Hub signature green')}
+        ${appt('green', 'Premium Green', 'Admission Sky signature green')}
       </div>
       <div class="pp-sheet-actions"><button class="pp-btn-ghost" data-role="sheet-close" type="button">বাতিল</button></div>`);
   }
@@ -2504,7 +2504,7 @@
         <span class="pp-brand-logo" aria-hidden="true">
           <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="15" fill="#e7f6ee"/><path d="M16 25c0-6.5 2.6-10.5 7-13-1 7-3.2 11.2-7 13z" fill="#16a34a"/><path d="M16 25c0-5-2-8.2-5.6-10.3.8 5.7 2.6 8.9 5.6 10.3z" fill="#22c55e"/></svg>
         </span>
-        <div class="pp-brand-text"><b>Admission Hub</b><small>Your Admission. Our Mission.</small></div>
+        <div class="pp-brand-text"><b>Admission Sky</b><small>Your Admission. Our Mission.</small></div>
         <span class="pp-brand-actions">
           <button class="pp-brand-ic" data-role="brand-account" type="button" aria-label="Account">👤</button>
         </span>
@@ -2699,7 +2699,7 @@
               ${allTargets.map((t) => `<div class="pp-hero-meta">🎯 ${esc(t.name)}${t.unit ? ` · ${esc(t.unit)}` : ''}${t.year ? ` · ${esc(bnYear(t.year))}` : ''}</div>`).join('')}
               ${p.admissionSession ? `<div class="pp-hero-meta">📅 Admission Session · ${esc(bnYear(sessionLabel(p.admissionSession)))}</div>` : ''}
               ${p.goal ? `<div class="pp-hero-meta">🚀 ${esc(p.goal)}</div>` : ''}
-              ${p.joinedYear ? `<div class="pp-hero-meta">${bnYear(p.joinedYear)} সাল থেকে Admission Hub-এ</div>` : ''}
+              ${p.joinedYear ? `<div class="pp-hero-meta">${bnYear(p.joinedYear)} সাল থেকে Admission Sky-এ</div>` : ''}
             </div>
             ${p.bio ? `<div class="card pp-card"><div class="pp-kicker">BIO</div><div class="pp-value">${esc(p.bio)}</div></div>` : ''}
             <div class="card pp-card">
@@ -2709,8 +2709,8 @@
               </div>
             </div>
             <div class="pp-public-foot">
-              <span>🎓 Admission Hub</span>
-              <button class="pp-btn-secondary" data-role="public-open-app" type="button">আপনি Admission Hub-এ? Profile দেখো</button>
+              <span>🎓 Admission Sky</span>
+              <button class="pp-btn-secondary" data-role="public-open-app" type="button">আপনি Admission Sky-এ? Profile দেখো</button>
             </div>
           </div>`);
         $('[data-role="public-open-app"]')?.addEventListener('click', () => {

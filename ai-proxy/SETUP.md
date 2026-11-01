@@ -1,4 +1,4 @@
-# Admission Hub AI Proxy
+# Admission Sky AI Proxy
 
 This Worker is a server-side proxy for the Result Analysis button. It keeps the Browser Use API key outside the GitHub Pages frontend.
 

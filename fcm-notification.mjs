@@ -1353,7 +1353,7 @@ export async function handleFcmNotificationRequest(request, env) {
       return jsonResponse(request, { error: 'rate-limited' }, 429);
     }
     const body = await parseBody(request) || {};
-    const title = String(body.title || '🔔 Admission Hub').slice(0, 120);
+    const title = String(body.title || '🔔 Admission Sky').slice(0, 120);
     const text = String(body.body || 'FCM notification system successfully configured.').slice(0, 400);
     const link = String(body.link || '/').replace(/[^\w./#-]/g, '').slice(0, 200);
     const targets = (await store.activeTokens(userId)).slice(0, 8);
@@ -1385,7 +1385,7 @@ export async function handleFcmNotificationRequest(request, env) {
       const outcome = await fcmSendToDevice(env, {
         token: device.token,
         title: '📡 Test notification',
-        body: 'এটি Admission Hub-এর test push, সিস্টেম ঠিকঠাক চলছে ✅',
+        body: 'এটি Admission Sky-এর test push, সিস্টেম ঠিকঠাক চলছে ✅',
         data: { link: 'notifications', src: 'fcm-self-test' }
       });
       if (!outcome.ok && (outcome.reason === 'unregistered' || outcome.reason === 'invalid')) {

@@ -1,4 +1,4 @@
-/* Admission Hub, P14 public-API abuse guard.
+/* Admission Sky, P14 public-API abuse guard.
  *
  * The public surface (AI chat/actions, content writes) is reachable without a
  * login, so it needs a ceiling that does not depend on the caller being honest.

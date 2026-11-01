@@ -1,4 +1,4 @@
-/* Admission Hub, P12 Smart Vocabulary (spaced repetition).
+/* Admission Sky, P12 Smart Vocabulary (spaced repetition).
  *
  * A native tool page over the existing Vocabulary Master words. It adds three
  * P12 pieces on top of the words the app already stores:

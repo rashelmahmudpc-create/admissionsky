@@ -1,5 +1,5 @@
 /*
- * Offline status indicator, Admission Hub
+ * Offline status indicator, Admission Sky
  *
  * P15's promise is "works offline, syncs when the network returns". The device
  * only speaks up when it is actually offline, and never over the UI:

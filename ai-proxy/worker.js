@@ -67,7 +67,7 @@ function buildTask(payload) {
 
   if (requestType === 'weekly_report') {
     const weekly = payload?.weekly && typeof payload.weekly === 'object' ? payload.weekly : {};
-    return `তুমি Admission Hub-এর সাপ্তাহিক study mentor। নিচের VERIFIED weekly JSON দেখে সহজ বাংলায় সংক্ষিপ্ত, বাস্তবসম্মত রিপোর্ট তৈরি করো। কোনো বাইরের তথ্য বা বানানো সংখ্যা ব্যবহার করবে না। শুধু JSON ফেরত দাও, markdown fence ছাড়া:
+    return `তুমি Admission Sky-এর সাপ্তাহিক study mentor। নিচের VERIFIED weekly JSON দেখে সহজ বাংলায় সংক্ষিপ্ত, বাস্তবসম্মত রিপোর্ট তৈরি করো। কোনো বাইরের তথ্য বা বানানো সংখ্যা ব্যবহার করবে না। শুধু JSON ফেরত দাও, markdown fence ছাড়া:
 {"opening":"...","trend":"...","strongAreas":["..."],"weakTopics":["..."],"tasks":["...","...","..."],"motivation":"...","verdict":"..."}
 Verified JSON:
 ${JSON.stringify({ ...base, weekly })}`.slice(0, MAX_TASK_CHARS);
@@ -76,7 +76,7 @@ ${JSON.stringify({ ...base, weekly })}`.slice(0, MAX_TASK_CHARS);
   if (requestType === 'question_explanation_batch') {
     const source = Array.isArray(payload?.explanationQuestions) ? payload.explanationQuestions : [];
     const explanationQuestions = source.slice(0, 30).map(compactQuestion);
-    return `তুমি Admission Hub-এর একজন সহানুভূতিশীল exam mentor। নিচের ভুল MCQ-গুলো দেখে প্রতিটি প্রশ্নের জন্য সহজ বাংলায় সংক্ষিপ্ত explanation লেখো। শুধু দেওয়া প্রশ্ন, option, শিক্ষার্থীর উত্তর ও সঠিক উত্তর ব্যবহার করবে; কোনো বাইরের তথ্য বা বানানো নিয়ম নয়। প্রতিটি questionId একবার রাখবে। শুধু JSON ফেরত দাও, markdown fence ছাড়া:
+    return `তুমি Admission Sky-এর একজন সহানুভূতিশীল exam mentor। নিচের ভুল MCQ-গুলো দেখে প্রতিটি প্রশ্নের জন্য সহজ বাংলায় সংক্ষিপ্ত explanation লেখো। শুধু দেওয়া প্রশ্ন, option, শিক্ষার্থীর উত্তর ও সঠিক উত্তর ব্যবহার করবে; কোনো বাইরের তথ্য বা বানানো নিয়ম নয়। প্রতিটি questionId একবার রাখবে। শুধু JSON ফেরত দাও, markdown fence ছাড়া:
 {"explanations":[{"questionId":"...","explanation":"...","whyCorrect":"...","whyWrong":"...","easy":"...","memory":"...","trap":"...","practice":"..."}]}
 Verified JSON:
 ${JSON.stringify({ ...base, explanationQuestions })}`.slice(0, MAX_TASK_CHARS);
@@ -85,7 +85,7 @@ ${JSON.stringify({ ...base, explanationQuestions })}`.slice(0, MAX_TASK_CHARS);
   const allQuestions = Array.isArray(payload?.questions) ? payload.questions : [];
   const orderedQuestions = [...allQuestions.filter((item) => item?.status === 'wrong'), ...allQuestions.filter((item) => item?.status !== 'wrong')];
   const questions = orderedQuestions.slice(0, 40).map(compactQuestion);
-  return `তুমি Admission Hub-এর একজন দক্ষ, সহানুভূতিশীল exam mentor। নিচের VERIFIED JSON result summary বিশ্লেষণ করো। কোনো website খুলবে না, কোনো বাইরের তথ্য ব্যবহার করবে না, এবং কোনো সংখ্যা বানাবে না। App-এর calculated score, accuracy, negative marking, current result ও previous result পরিবর্তন করবে না। ভুল প্রশ্নের তালিকা থাকলে শুধু সেই তালিকা থেকে focusQuestions বেছে নাও।
+  return `তুমি Admission Sky-এর একজন দক্ষ, সহানুভূতিশীল exam mentor। নিচের VERIFIED JSON result summary বিশ্লেষণ করো। কোনো website খুলবে না, কোনো বাইরের তথ্য ব্যবহার করবে না, এবং কোনো সংখ্যা বানাবে না। App-এর calculated score, accuracy, negative marking, current result ও previous result পরিবর্তন করবে না। ভুল প্রশ্নের তালিকা থাকলে শুধু সেই তালিকা থেকে focusQuestions বেছে নাও।
 
 Explanation/analysis-এর ভাষা হবে সহজ, স্বাভাবিক, বন্ধুর মতো কিন্তু শিক্ষকের মতো গুছানো বাংলা। “বইয়ে বলা হয়েছে”, “বই অনুযায়ী”, “উৎসে উল্লেখ আছে”, “প্রদত্ত তথ্য অনুযায়ী”, “উপরের তথ্য থেকে”, “পাঠ্যাংশে বলা হয়েছে”, “প্রশ্নের তথ্য অনুযায়ী”, “উল্লিখিত তথ্য অনুযায়ী”, “এই অধ্যায়ে উল্লেখ করা হয়েছে”, “দেওয়া তথ্য অনুসারে”-এ ধরনের source-dependent phrase ব্যবহার করবে না।
 

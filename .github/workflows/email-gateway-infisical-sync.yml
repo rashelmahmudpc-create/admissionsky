@@ -58,7 +58,7 @@ jobs:
           EMAIL_GATEWAY_SECRET_BULK_PATH: ${{ runner.temp }}/admission-hub-email-gateway-secrets.json
         run: node email-gateway/operations/prepare-infisical-worker-secrets.mjs
 
-      - name: Stage isolated secrets in the Admission Hub Worker
+      - name: Stage isolated secrets in the Admission Sky Worker
         uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

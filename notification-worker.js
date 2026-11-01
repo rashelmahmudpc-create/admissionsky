@@ -1,5 +1,5 @@
 /**
- * 🔔 ADMISSION HUB, Smart Notification Worker
+ * 🔔 ADMISSION SKY, Smart Notification Worker
  * v107 · Telegram delivery + iPhone/PWA web-push (VAPID) + cron streak-fallback
  *
  * Secrets (worker → Settings → Variables & Secrets):

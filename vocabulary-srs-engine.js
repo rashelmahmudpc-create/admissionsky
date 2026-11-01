@@ -1,4 +1,4 @@
-/* Admission Hub, P12 Smart Vocabulary Engine.
+/* Admission Sky, P12 Smart Vocabulary Engine.
  *
  * Pure, dependency-free spaced-repetition core (like mistake-engine.js /
  * adaptive-engine.js), so it runs in the browser as window.AhVocabSrs and under

@@ -33,7 +33,7 @@ test('Telegram notifier sends one bounded request and requires acceptance eviden
   const captures = [];
   const result = await sendTelegramNotification({
     token: token(), chatId,
-    message: { status: 'COMPLETED', summary: 'Admission Hub task completed.', details: ['Tests passed'] },
+    message: { status: 'COMPLETED', summary: 'Admission Sky task completed.', details: ['Tests passed'] },
     fetchImpl: async (url, init) => {
       captures.push({ url, init, body: JSON.parse(init.body) });
       return new Response(JSON.stringify({ ok: true, result: { message_id: 42 } }), { status: 200, headers: { 'Content-Type': 'application/json' } });

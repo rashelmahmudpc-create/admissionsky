@@ -88,7 +88,7 @@
     <main class="ah-account-shell" aria-labelledby="ah-account-title" data-current-view="login" data-visual-contract="code-native-page-system-v1">
       <button class="ah-account-close" type="button" data-role="close" aria-label="বন্ধ করুন">×</button>
       <header class="ah-account-head">
-        <p class="ah-account-kicker">Admission Hub</p>
+        <p class="ah-account-kicker">Admission Sky</p>
         <h2 class="ah-account-title" id="ah-account-title">তোমার Admission Journey</h2>
         <p class="ah-account-subtitle" data-role="account-subtitle">নিরাপদ ও সহজে account-এ প্রবেশ করো।</p>
       </header>
@@ -146,7 +146,7 @@
         <form class="ah-account-view ah-signup-view" data-view="signup" data-personal-visual-contract="interactive-native-personal-v1" data-media-contract="zero-raster-entry-v1" data-signup-current-step="personal" hidden novalidate>
           <div class="ah-honeypot" aria-hidden="true"><label for="ah-contact-website-signup">Website</label><input id="ah-contact-website-signup" name="website" type="text" tabindex="-1" autocomplete="off" value=""></div>
           <header class="ah-signup-topbar">
-            <div class="ah-signup-brand" aria-label="Admission Hub">
+            <div class="ah-signup-brand" aria-label="Admission Sky">
               <span class="ah-signup-brand-mark" aria-hidden="true"><svg viewBox="0 0 44 34" fill="none"><path d="m3 12 19-9 19 9-19 9L3 12Z"/><path d="M10 16v8c7 5 17 5 24 0v-8l-12 6-12-6Z"/><path d="M38 14v9"/><circle cx="38" cy="25" r="2"/></svg></span>
               <span><strong>Admission <em>Hub</em></strong><small>Build your admission profile</small></span>
             </div>
@@ -354,7 +354,7 @@
           <h3 class="ah-account-view-title">তোমার Email-এ একটি ছোট্ট কাজ আছে <svg class="ah-title-mail" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.2" y="5.6" width="17.6" height="12.8" rx="3.2"/><path d="m4.6 8.2 7.4 5 7.4-5"/></svg></h3>
           <p class="ah-account-mask">তোমার <strong>নিজের সিদ্ধান্তে</strong> নিচের button চাপলে একটি verification link পাঠানো হবে। Email-এ গিয়ে link-এ tap করো।</p>
           <div class="ah-email-address-card ah-mail-card"><span class="ah-mail-chip" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3.2" y="5.6" width="17.6" height="12.8" rx="3.2"/><path d="m4.6 8.2 7.4 5 7.4-5"/></svg></span><div><strong data-role="email-intro-address">তোমার Email</strong><small>এখনো নতুন link পাঠানো হয়নি</small></div><span class="ah-mail-shield" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 5 6v5c0 4.8 2.5 8 7 10 4.5-2 7-5.2 7-10V6l-7-3Z"/><path d="m9.4 12.1 1.7 1.7 3.7-4"/></svg></span></div>
-          <div class="ah-mini-journey" aria-label="Verification progress"><span class="done">✓<small>Account<br>Created</small></span><i></i><span>2<small>Email<br>Send</small></span><i></i><span>3<small>Enter<br>Admission Hub</small></span></div>
+          <div class="ah-mini-journey" aria-label="Verification progress"><span class="done">✓<small>Account<br>Created</small></span><i></i><span>2<small>Email<br>Send</small></span><i></i><span>3<small>Enter<br>Admission Sky</small></span></div>
           <div class="ah-help ah-email-help">
             <button class="ah-help-fab" type="button" data-help-toggle="ah-email-help-card" aria-expanded="false" aria-controls="ah-email-help-card" aria-label="Email verification নিয়ে সাহায্য"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4.2" y="8.2" width="15.6" height="11" rx="5"/><path d="M12 8.2V5.6"/><circle cx="12" cy="4.4" r="1.4"/><circle cx="9.4" cy="13.2" r="1.1"/><circle cx="14.6" cy="13.2" r="1.1"/><path d="M9.7 16.4c1.5 1 3.1 1 4.6 0"/></svg></button>
             <div class="ah-help-card" id="ah-email-help-card" hidden><strong>Email link নিয়ে টিপস</strong><ul><li>Button চাপার পর Inbox, Spam ও Promotions দেখো।</li><li>Link-এ tap করে এখানে ফিরে এসো।</li><li>ফিরে এসে “আমি Verify করেছি” চাপো।</li></ul></div>
@@ -372,7 +372,7 @@
           <p class="ah-account-fine" data-role="ownership-expiry" hidden></p>
           <button class="ah-account-primary" type="submit" data-role="ownership-verify">Verify →</button>
           <button class="ah-account-secondary" type="button" data-role="ownership-resend">নতুন code নিন</button>
-          <p class="ah-account-note">Code কখনো অন্য কাউকে দিও না। Admission Hub কখনো ফোনে বা chat-এ code চাইবে না।</p>
+          <p class="ah-account-note">Code কখনো অন্য কাউকে দিও না। Admission Sky কখনো ফোনে বা chat-এ code চাইবে না।</p>
           <p class="ah-account-switch"><button class="ah-account-link" type="button" data-role="ownership-back">অন্য পদ্ধতি ব্যবহার করো</button></p>
         </form>
 
@@ -401,10 +401,10 @@
 
         <form class="ah-account-view ah-account-telegram-view" data-view="telegram" data-state="connecting" hidden novalidate>
           <div class="ah-telegram-hero" aria-hidden="true"><span>➤</span><i></i></div><p class="ah-view-kicker">SECURE VERIFICATION</p><h3 class="ah-account-view-title">Telegram দিয়ে verify করো</h3><p class="ah-account-mask">Official bot খুলে <strong>START</strong> চাপো। Bot যে ৬ সংখ্যার code পাঠাবে, সেটি শুধু নিচের secure box-এ লিখবে।</p>
-          <ol class="ah-account-telegram-steps" aria-label="Telegram verification steps"><li><span>১</span> Official Telegram bot খোলো</li><li><span>২</span> START চাপো ও code নাও</li><li><span>৩</span> Admission Hub-এ code লিখো</li></ol>
+          <ol class="ah-account-telegram-steps" aria-label="Telegram verification steps"><li><span>১</span> Official Telegram bot খোলো</li><li><span>২</span> START চাপো ও code নাও</li><li><span>৩</span> Admission Sky-এ code লিখো</li></ol>
           <a class="ah-account-primary ah-account-external ah-account-telegram-open" data-role="telegram-link" target="_blank" rel="noopener noreferrer">Continue with Telegram →</a><div class="ah-account-telegram-status" data-role="telegram-status" aria-live="polite">START চাপার অপেক্ষায়…</div>
           <div class="ah-account-field ah-otp-field"><label class="ah-account-label" for="ah-telegram-code">Telegram-এর ৬ সংখ্যার code</label><div class="ah-six-code" aria-hidden="true"><span data-otp-digit="0"></span><span data-otp-digit="1"></span><span data-otp-digit="2"></span><span data-otp-digit="3"></span><span data-otp-digit="4"></span><span data-otp-digit="5"></span></div><input class="ah-account-input ah-account-otp" id="ah-telegram-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" aria-describedby="ah-telegram-code-help" required></div><p class="ah-field-feedback ah-otp-help" id="ah-telegram-code-help">Code পাওয়া যায়নি? Official bot-এ START চাপো।</p>
-          <button class="ah-account-primary" type="submit" data-role="telegram-verify">Verify →</button><button class="ah-account-secondary" type="button" data-role="telegram-resend" data-bn="নতুন code নিন" data-en="Get a new code">নতুন code নিন</button><p class="ah-account-note" data-bn="Telegram verification শুধু Telegram account-এর নিয়ন্ত্রণ নিশ্চিত করে-Email মালিকানা নয়। Code বা Password কখনো অন্য কোনো chat-এ লিখবে না; শুধু secure form ব্যবহার করবে। START বা animation একা success নয়, নিশ্চিত ফল Admission Hub দেখাবে।" data-en="Telegram verification proves control of your Telegram account only, not ownership of the email. Never type the code or password into any other chat; use the secure form only. START or an animation alone is not success, only the confirmed result from Admission Hub is.">Telegram verification শুধু Telegram account-এর নিয়ন্ত্রণ নিশ্চিত করে-Email মালিকানা নয়। Code বা Password কখনো অন্য কোনো chat-এ লিখবে না; শুধু secure form ব্যবহার করবে। START বা animation একা success নয়, নিশ্চিত ফল Admission Hub দেখাবে।</p><p class="ah-account-switch"><button class="ah-account-link" type="button" data-role="telegram-email-back">অন্য method বেছে নিন</button></p>
+          <button class="ah-account-primary" type="submit" data-role="telegram-verify">Verify →</button><button class="ah-account-secondary" type="button" data-role="telegram-resend" data-bn="নতুন code নিন" data-en="Get a new code">নতুন code নিন</button><p class="ah-account-note" data-bn="Telegram verification শুধু Telegram account-এর নিয়ন্ত্রণ নিশ্চিত করে-Email মালিকানা নয়। Code বা Password কখনো অন্য কোনো chat-এ লিখবে না; শুধু secure form ব্যবহার করবে। START বা animation একা success নয়, নিশ্চিত ফল Admission Sky দেখাবে।" data-en="Telegram verification proves control of your Telegram account only, not ownership of the email. Never type the code or password into any other chat; use the secure form only. START or an animation alone is not success, only the confirmed result from Admission Sky is.">Telegram verification শুধু Telegram account-এর নিয়ন্ত্রণ নিশ্চিত করে-Email মালিকানা নয়। Code বা Password কখনো অন্য কোনো chat-এ লিখবে না; শুধু secure form ব্যবহার করবে। START বা animation একা success নয়, নিশ্চিত ফল Admission Sky দেখাবে।</p><p class="ah-account-switch"><button class="ah-account-link" type="button" data-role="telegram-email-back">অন্য method বেছে নিন</button></p>
         </form>
 
         <form class="ah-account-view" data-view="google-link" hidden novalidate><div class="ah-account-verify-badge" aria-hidden="true">G</div><h3 class="ah-account-view-title">আগের account-এ Google যুক্ত করো</h3><p class="ah-account-mask">একই Email-এ account আছে। একবার আগের Email ও Password দিলে Google নতুন account না বানিয়ে সেটিতেই যুক্ত হবে।</p><div class="ah-account-field"><label class="ah-account-label" for="ah-link-email">Email</label><input class="ah-account-input" id="ah-link-email" type="email" autocomplete="email" maxlength="254" required></div><div class="ah-account-field"><label class="ah-account-label" for="ah-link-password">Password</label><input class="ah-account-input" id="ah-link-password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required></div><button class="ah-account-primary" type="submit">Google যুক্ত করে প্রবেশ করুন</button><p class="ah-account-switch"><button class="ah-account-link" type="button" data-role="link-cancel">Login-এ ফিরুন</button></p></form>
@@ -418,7 +418,7 @@
           <div class="ah-success-check ah-success-glow" aria-hidden="true"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="46"/><path d="m38 61 14 14 31-34"/></svg></div>
           <h3 class="ah-account-view-title" data-role="verified-title">Email Verified! 🎉</h3>
           <p class="ah-account-mask" data-role="verified-copy">তোমার Email এবং account নিরাপদভাবে যাচাই হয়েছে।</p>
-          <div class="ah-ready-list"><span>✓ Account Created</span><span data-role="verified-method-row">✓ Email Verified</span><span>✓ Ready for Admission Hub</span></div>
+          <div class="ah-ready-list"><span>✓ Account Created</span><span data-role="verified-method-row">✓ Email Verified</span><span>✓ Ready for Admission Sky</span></div>
           <button class="ah-account-primary ah-view-bottom-cta" type="button" data-role="verified-continue">Continue →</button>
         </div>
 
@@ -437,9 +437,9 @@
           <p class="ah-account-note">Passkey সম্পূর্ণ optional। Skip করলে Email, Password, Google বা Telegram বন্ধ হবে না। ফোনের নিজের অনুমতি screen-এ শেষ সিদ্ধান্ত তোমার।</p>
         </div>
 
-        <div class="ah-account-view ah-success-view" data-view="success" hidden><div class="ah-success-check" aria-hidden="true"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="46"/><path d="m38 61 14 14 31-34"/></svg></div><p class="ah-view-kicker">ALL SET</p><h3 class="ah-account-view-title">সব ঠিক আছে! 🎉</h3><p class="ah-account-mask">তোমার account এখন প্রস্তুত।</p><div class="ah-ready-list"><span data-role="ready-profile">… Profile details দেখা হচ্ছে</span><span>✓ Verification Complete</span><span>✓ Admission Hub Ready</span></div><button class="ah-account-primary" type="button" data-role="enter-app">Admission Hub-এ প্রবেশ করো →</button></div>
+        <div class="ah-account-view ah-success-view" data-view="success" hidden><div class="ah-success-check" aria-hidden="true"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="46"/><path d="m38 61 14 14 31-34"/></svg></div><p class="ah-view-kicker">ALL SET</p><h3 class="ah-account-view-title">সব ঠিক আছে! 🎉</h3><p class="ah-account-mask">তোমার account এখন প্রস্তুত।</p><div class="ah-ready-list"><span data-role="ready-profile">… Profile details দেখা হচ্ছে</span><span>✓ Verification Complete</span><span>✓ Admission Sky Ready</span></div><button class="ah-account-primary" type="button" data-role="enter-app">Admission Sky-এ প্রবেশ করো →</button></div>
 
-        <div class="ah-account-view" data-view="signed" hidden><div class="ah-account-secure"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 10V8a5 5 0 0 1 10 0v2m-11 0h12v10H6V10Zm6 4v2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><div><h3>Account নিরাপদ ও সক্রিয়</h3><p data-role="account-verification-summary">তোমার account সত্যিকারের যাচাইয়ের মাধ্যমে সক্রিয় আছে।</p></div></div><div class="ah-account-identity"><p class="ah-account-identity-label" data-role="identity-label">Admission Hub account</p><p class="ah-account-identity-value" data-role="identity">-</p></div><section class="ah-account-security-tools" data-role="passkey-tools" hidden><div class="ah-account-tool-head"><div><h3>Passkey</h3><p data-role="passkey-status">এই device-এ দ্রুত প্রবেশ চালু করতে পারো।</p></div><span aria-hidden="true">◉</span></div><div data-role="passkey-list"></div><button class="ah-account-secondary" type="button" data-role="passkey-add">নতুন Passkey যোগ করুন</button></section><section class="ah-account-security-tools" data-role="trust-prompt" hidden><div class="ah-account-tool-head"><div><h3>এই device-কে trust করবে?</h3><p>পরবর্তী ৩০ দিন এই device থেকে লগইন করলে extra verification লাগবে না।</p></div></div><button class="ah-account-secondary" type="button" data-role="trust-accept">Trust করি (৩০ দিন)</button><button class="ah-account-link" type="button" data-role="trust-decline">না, ধন্যবাদ</button></section><button class="ah-account-secondary" type="button" data-role="backup-start" hidden>বিকল্প যাচাই</button><button class="ah-account-secondary" type="button" data-role="logout">Log Out</button><button class="ah-account-secondary ah-account-danger" type="button" data-role="logout-all">সব device থেকে Log Out</button><p class="ah-account-fine">Password ও প্রবেশের গোপন তথ্য এই পেজে দেখানো বা জমা রাখা হয় না।</p></div>
+        <div class="ah-account-view" data-view="signed" hidden><div class="ah-account-secure"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 10V8a5 5 0 0 1 10 0v2m-11 0h12v10H6V10Zm6 4v2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><div><h3>Account নিরাপদ ও সক্রিয়</h3><p data-role="account-verification-summary">তোমার account সত্যিকারের যাচাইয়ের মাধ্যমে সক্রিয় আছে।</p></div></div><div class="ah-account-identity"><p class="ah-account-identity-label" data-role="identity-label">Admission Sky account</p><p class="ah-account-identity-value" data-role="identity">-</p></div><section class="ah-account-security-tools" data-role="passkey-tools" hidden><div class="ah-account-tool-head"><div><h3>Passkey</h3><p data-role="passkey-status">এই device-এ দ্রুত প্রবেশ চালু করতে পারো।</p></div><span aria-hidden="true">◉</span></div><div data-role="passkey-list"></div><button class="ah-account-secondary" type="button" data-role="passkey-add">নতুন Passkey যোগ করুন</button></section><section class="ah-account-security-tools" data-role="trust-prompt" hidden><div class="ah-account-tool-head"><div><h3>এই device-কে trust করবে?</h3><p>পরবর্তী ৩০ দিন এই device থেকে লগইন করলে extra verification লাগবে না।</p></div></div><button class="ah-account-secondary" type="button" data-role="trust-accept">Trust করি (৩০ দিন)</button><button class="ah-account-link" type="button" data-role="trust-decline">না, ধন্যবাদ</button></section><button class="ah-account-secondary" type="button" data-role="backup-start" hidden>বিকল্প যাচাই</button><button class="ah-account-secondary" type="button" data-role="logout">Log Out</button><button class="ah-account-secondary ah-account-danger" type="button" data-role="logout-all">সব device থেকে Log Out</button><p class="ah-account-fine">Password ও প্রবেশের গোপন তথ্য এই পেজে দেখানো বা জমা রাখা হয় না।</p></div>
       </div>
 
     </main>
@@ -604,7 +604,7 @@
       wrong: 'কোডটি সঠিক নয়-Telegram-এর সর্বশেষ ৬ সংখ্যার কোড লিখুন।',
       expired: 'এই কোডের সময় শেষ। নিচে “নতুন কোড নিন” চাপুন।',
       locked: 'অনেকবার ভুল কোড দেওয়া হয়েছে। নিরাপত্তার জন্য সাময়িকভাবে বন্ধ আছে।',
-      conflict: 'এই Telegram accountটি অন্য Admission Hub account-এর সঙ্গে আগে থেকেই যুক্ত।',
+      conflict: 'এই Telegram accountটি অন্য Admission Sky account-এর সঙ্গে আগে থেকেই যুক্ত।',
       unavailable: 'Telegram যাচাই এখন সাময়িকভাবে পাওয়া যাচ্ছে না। ইমেইল ব্যবহার করুন।',
       success: 'Telegram account যাচাই সফল হয়েছে।'
     };
@@ -710,7 +710,7 @@
 
   const safeStudentText = value => String(value || '')
     .replace(/\bFirebase\b/gi, 'account system')
-    .replace(/\bbackend\b/gi, 'Admission Hub')
+    .replace(/\bbackend\b/gi, 'Admission Sky')
     .replace(/\bAPI(?:\s+key)?\b/gi, 'নিরাপত্তার তথ্য')
     .replace(/\bprovider\b/gi, 'service')
     .replace(/\btoken\b/gi, 'নিরাপত্তার তথ্য')
@@ -721,7 +721,7 @@
     if (!error?.code && typeof error?.message === 'string' && /[\u0980-\u09FF]/.test(error.message)) return error.message;
     const known = {
       ACCOUNT_LINK_REQUIRED: 'এই ইমেইলে আগে ইমেইল-পাসওয়ার্ড দিয়ে অ্যাকাউন্ট খোলা হয়েছে, ইমেইল ও পাসওয়ার্ড দিয়ে সাইন ইন করো।',
-      CLIENT_UPDATE_REQUIRED: 'Admission Hub-এর নতুন সংস্করণ এসেছে, পেজটি একবার refresh করে আবার চেষ্টা করো।',
+      CLIENT_UPDATE_REQUIRED: 'Admission Sky-এর নতুন সংস্করণ এসেছে, পেজটি একবার refresh করে আবার চেষ্টা করো।',
       INVALID_CREDENTIALS: 'Email বা Password সঠিক নয়। আবার দেখে লিখো।',
       HUMAN_CHECK_FAILED: 'মানব যাচাই সম্পন্ন হয়নি। পেজটি একবার রিফ্রেশ করে আবার চেষ্টা করো; তারপরেও না হলে ব্রাউজারের বিজ্ঞাপন ব্লকার বন্ধ করো।',
       EMAIL_ALREADY_IN_USE: 'এই Email-এ account আছে-Log In করো।',
@@ -1358,8 +1358,8 @@
       $('[data-role="verified-copy"]').textContent = label === 'Telegram'
         ? 'তোমার Telegram account-এর নিয়ন্ত্রণ নিশ্চিত হয়েছে। এটি Email মালিকানার দাবি নয়।'
         : label === 'Email'
-          ? 'তোমার Email এবং Admission Hub account নিরাপদভাবে যাচাই হয়েছে।'
-          : 'তোমার Admission Hub account নিরাপদভাবে যাচাই হয়েছে।';
+          ? 'তোমার Email এবং Admission Sky account নিরাপদভাবে যাচাই হয়েছে।'
+          : 'তোমার Admission Sky account নিরাপদভাবে যাচাই হয়েছে।';
       $('[data-role="verified-method-row"]').textContent = `✓ ${label} Verified`;
     }
     if (name === 'signed') {
@@ -1618,7 +1618,7 @@
     let parsed = false;
     try { data = await response.json(); parsed = Boolean(data && typeof data === 'object'); } catch (_) {}  
     if (!response.ok) {  
-      const error = new Error('Admission Hub অনুরোধটি শেষ করতে পারেনি।');  
+      const error = new Error('Admission Sky অনুরোধটি শেষ করতে পারেনি।');  
       error.status = response.status;
       error.authStage = String(response.headers.get('X-AH-Auth-Stage') || '').replace(/[^A-Z0-9_]/g, '').slice(0, 40);
       error.diagnostic = String(response.headers.get('X-AH-Auth-Diagnostic') || '').replace(/[^A-Z0-9_]/g, '').slice(0, 80);
@@ -3628,7 +3628,7 @@
           body: { attemptId: state.telegram.attemptId, code }
         });
         renderTelegramState('success');
-        await establishSession(result, 'Telegram account verification সফল। তোমার Admission Hub account সক্রিয় হয়েছে।');
+        await establishSession(result, 'Telegram account verification সফল। তোমার Admission Sky account সক্রিয় হয়েছে।');
       } catch (error) {
         $('#ah-telegram-code').value = '';
         renderTelegramDigits();
@@ -3946,7 +3946,7 @@
     const result = await skyApi('/telegram/verification/verify', {
       method: 'POST', body: { attemptId: state.telegram.attemptId, code }
     });
-    await establishSession(result, 'Telegram account verification সফল। তোমার Admission Hub account সক্রিয় হয়েছে।');
+    await establishSession(result, 'Telegram account verification সফল। তোমার Admission Sky account সক্রিয় হয়েছে।');
     return result;
   };
   const skyBridge = Object.freeze({

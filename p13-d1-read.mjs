@@ -1,4 +1,4 @@
-/* Admission Hub, P13 D1 public read path.
+/* Admission Sky, P13 D1 public read path.
  *
  * The public question/content read path, moved off KV blobs onto D1 with real
  * indexes and keyset pagination, so a table of a million questions answers as

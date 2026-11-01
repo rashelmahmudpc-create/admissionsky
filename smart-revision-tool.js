@@ -1,4 +1,4 @@
-/* Admission Hub, Smart Revision 2.0
+/* Admission Sky, Smart Revision 2.0
  * Selects real question IDs and runs a small persistent revision loop without a second database.
  */
 (() => {
