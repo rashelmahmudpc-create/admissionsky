@@ -79,6 +79,12 @@ export function renderSecurityNotification(input = {}) {
 
 // Dispatch rendered notifications. Dry-run (the Phase 6 default) renders and
 // counts but never calls the sender.
+//
+// AUTH V2.1: the sender is called with the rendered item AND an envelope that
+// carries the real recipient. The body stays PII-free (the renderer enforces
+// that); the address travels beside it, which is the only way a notification
+// can be delivered without putting an address in the content. `envelope` is
+// per-event, so a batch of events for different students cannot cross wires.
 export async function dispatchSecurityNotifications({
   events = [],
   dryRun = true,
@@ -86,14 +92,20 @@ export async function dispatchSecurityNotifications({
   now = Date.now
 } = {}) {
   const rendered = [];
+  const envelopes = [];
   for (const event of events) {
     try {
       const item = renderSecurityNotification({ ...event, at: event.at ?? now() });
       if (item) rendered.push(item);
+      // The recipient is read from the raw event, never from the rendered item:
+      // a caller that tried to smuggle an address into the body still cannot
+      // reach the envelope through it.
+      envelopes.push(Object.freeze({ recipient: String(event?.recipient || '').trim() }));
     } catch (error) {
       // A PII violation in the event input is a contract break: skip it
       // (the ledger row already exists) but never forward raw data.
       rendered.push(Object.freeze({ skipped: true, eventType: String(event?.eventType || 'unknown'), reason: 'pii-contract' }));
+      envelopes.push(Object.freeze({ recipient: '' }));
     }
   }
   const sent = [];
@@ -103,7 +115,8 @@ export async function dispatchSecurityNotifications({
         if (!item.skipped) sent.push(Object.freeze({ template: item.template, ok: false, reason: 'sender-not-configured' }));
       }
     } else {
-      for (const item of rendered) {
+      for (let index = 0; index < rendered.length; index += 1) {
+        const item = rendered[index];
         if (item.skipped) {
           sent.push(item);
           continue;
@@ -111,7 +124,7 @@ export async function dispatchSecurityNotifications({
         let ok = false;
         let reason = null;
         try {
-          const result = await sendSecurityEmail(item);
+          const result = await sendSecurityEmail(item, envelopes[index]);
           ok = result?.ok !== false;
           reason = ok ? null : String(result?.reason || 'send-failed');
         } catch (_) {
