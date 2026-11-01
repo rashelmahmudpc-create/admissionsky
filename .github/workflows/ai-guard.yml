@@ -16,6 +16,7 @@ on:
     branches: [main]
     paths: &ai_paths
       - 'ai-agent.js'
+      - 'ai-agent-chat.js'
       - 'ai-*.mjs'
       - 'ai-*.test.mjs'
       - 'ai-tier-router.mjs'
