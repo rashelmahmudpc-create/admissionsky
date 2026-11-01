@@ -963,6 +963,47 @@ export function routerChain(env, tier, badSet = new Set(), kv = {}) {
   return chain;
 }
 
+/* F1.5 — Router v2: the router reads the catalog's measured quality.
+ *
+ * The chain was ordered by tier and by health, and neither says how WELL a
+ * provider answers. The catalog carries a measured banglaScore (ML-06, on the
+ * F0.6 golden set) and nothing read it — so a Bengali question went first to
+ * gemini (29.2%) while mistral (58.3%) sat further down the very same chain.
+ * Every student on this app writes Bengali.
+ *
+ * So: when the message is Bengali, a provider that has been MEASURED is tried
+ * before one that has not, and among measured providers the better score leads.
+ * Nothing is dropped — the set of providers is identical, only the order
+ * changes, so this can cost a little latency but cannot cost availability.
+ * A score from too few items is weak evidence, so ML-06's floor of 20 applies.
+ */
+export const BANGLA_SCRIPT = /[\u0980-\u09FF]/;
+export const BANGLA_MIN_SAMPLE = 20;
+
+export function isBengali(text) {
+  return BANGLA_SCRIPT.test(String(text || ''));
+}
+
+export function banglaQualityOf(entry) {
+  const c = CATALOG.find((x) => x.id === (entry && entry.catalogId));
+  const s = c && c.banglaScore;
+  return s && Number(s.sample) >= BANGLA_MIN_SAMPLE ? Number(s.accuracy) : null;
+}
+
+export function rankChainByBanglaQuality(entries, bangla = false) {
+  const list = Array.isArray(entries) ? entries : [];
+  if (!bangla || list.length < 2) return list;
+  return list
+    .map((e, i) => ({ e, i, s: banglaQualityOf(e) }))
+    .sort((a, b) => {
+      const as = a.s === null ? -1 : a.s;
+      const bs = b.s === null ? -1 : b.s;
+      if (as !== bs) return bs - as;
+      return a.i - b.i;
+    })
+    .map((x) => x.e);
+}
+
 /* ── helpers: KV (best-effort) -------------------------------------------- */
 const dayKey = () => new Date().toISOString().slice(0, 10);
 /* Rolling quota window: a student gets `cap` messages, then `cap` more 24h after
@@ -1138,6 +1179,12 @@ export async function agentChat(request, env, uid, opts = {}) {
   let chain = healthyChain(fullChain, badMap, healthNow);
   /* F1.3: the task names the capability, the catalog decides who has it. */
   chain = filterByCapability(chain, requiredCapability(intent, hasImage));
+  /* F1.5: for a Bengali question, the better-measured provider leads. Applied
+     BEFORE the health ranking so liveness wins over quality — a healthy but
+     worse-scoring model is still tried before a dead better-scoring one, because
+     the health pass is a stable partition and preserves this order within the
+     live group. */
+  chain = rankChainByBanglaQuality(chain, isBengali(v.messages[v.messages.length - 1].content));
   /* P31: a working model is tried before a dead one. `healthyChain` already
      drops individually-cooling entries, so this matters when everything is
      cooling and the whole list comes back, the least-broken model then leads. */
