@@ -22,7 +22,7 @@ def need(cond, msg):
 for f in sorted(glob.glob('**/*.test.mjs', recursive=True)):
     if 'node_modules' in f:
         continue
-    edit(f, lambda t: t.replace('v350-notes-screen-v2', 'v364-sky-goal'))
+    edit(f, lambda t: t.replace('v350-notes-screen-v2', 'v365-human-check'))
 
 # 2. agent pin + dedicated account-access.js version
 LINE = "const UI_JS_VERSION = '20261018-logout-otp-v1';"
@@ -40,10 +40,10 @@ for f in ('code-native-welcome-v1.test.mjs', 'interactive-native-personal-v1.tes
 CANARY = '.github/workflows/telegram-auth-canary-activate.yml'
 PINS = [
     ('account-access.js?v=20261015-safearea1', 'account-access.js?v=20261018-logout-otp-v1'),
-    ('account-access.css?v=20261015-safearea1', 'account-access.css?v=20261018-allowlist-v1'),
+    ('account-access.css?v=20261015-safearea1', 'account-access.css?v=20261101-humancheck-v1'),
     ('agent-f1-ui-p06chat', 'agent-f1-ui-skyv13'),
     ('dash2f17-v3frame', 'dash2f18-chrome'),
-    ('v335-lock-20261016', 'v364-sky-goal'),
+    ('v335-lock-20261016', 'v365-human-check'),
 ]
 def canary(t):
     for a, b in PINS:
