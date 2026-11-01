@@ -26064,10 +26064,27 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
   async getExternalSession({ sessionRef, provider, subjectRef, emailRef, now, trackRefresh = false }) {
     return this.#transaction(() => {
       const row = this.#one(
+        /* AUTH V2.1 (owner 2026-10-31): the status this checks is the one that
+         * is actually written. The blueprint's finding ১৪.
+         *
+         * This read `u.status` — a column only ever set at INSERT, always to
+         * 'active', and never updated by anything. Suspension is written to
+         * `auth_account_state` instead, so the guard below could never fire: an
+         * account suspended by an admin would still pass this check. It was not
+         * an open hole only because suspension also revokes every live session
+         * (from #242), so a suspended account had no session left to check —
+         * but the guard was decorative, and a future change to the revocation
+         * path would have made it a real bypass with nothing to catch it.
+         *
+         * `COALESCE(st.status,'active')` matches getAccountState's own default:
+         * a user with no state row is active, which is every user who has never
+         * been suspended. */
         `SELECT s.expires_at AS expiresAt,s.last_seen_at AS lastSeenAt,
-          u.user_id AS id,u.email_mask AS emailMask,u.status,u.created_at AS createdAt
+          u.user_id AS id,u.email_mask AS emailMask,
+          COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
          FROM auth_sessions s
          JOIN auth_users u ON u.user_id=s.user_id
+         LEFT JOIN auth_account_state st ON st.user_id=u.user_id
          JOIN auth_external_identities x ON x.user_id=u.user_id AND x.provider=? AND x.subject_ref=?
          WHERE s.session_ref=? AND s.revoked_at IS NULL AND u.email_ref=?`,
         provider,
