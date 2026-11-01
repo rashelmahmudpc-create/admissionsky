@@ -4283,6 +4283,26 @@ function routerChain(env, tier, badSet = /* @__PURE__ */ new Set(), kv2 = {}) {
   }
   return chain;
 }
+var BANGLA_SCRIPT = /[\u0980-\u09FF]/;
+var BANGLA_MIN_SAMPLE = 20;
+function isBengali(text) {
+  return BANGLA_SCRIPT.test(String(text || ""));
+}
+function banglaQualityOf(entry) {
+  const c = CATALOG.find((x) => x.id === (entry && entry.catalogId));
+  const s = c && c.banglaScore;
+  return s && Number(s.sample) >= BANGLA_MIN_SAMPLE ? Number(s.accuracy) : null;
+}
+function rankChainByBanglaQuality(entries, bangla = false) {
+  const list2 = Array.isArray(entries) ? entries : [];
+  if (!bangla || list2.length < 2) return list2;
+  return list2.map((e, i) => ({ e, i, s: banglaQualityOf(e) })).sort((a, b) => {
+    const as = a.s === null ? -1 : a.s;
+    const bs = b.s === null ? -1 : b.s;
+    if (as !== bs) return bs - as;
+    return a.i - b.i;
+  }).map((x) => x.e);
+}
 var dayKey2 = () => (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
 var RL_WINDOW_MS2 = 24 * 60 * 60 * 1e3;
 function limitMessage(cap, resetAt, now) {
@@ -4434,6 +4454,7 @@ async function agentChat(request, env, uid, opts = {}) {
     const fullChain = routerChain(env, tier, /* @__PURE__ */ new Set(), kvKeys2).map((c) => ({ ...c, sig: String(c.key).slice(0, 12) + ":" + c.model }));
     let chain2 = healthyChain(fullChain, badMap2, healthNow);
     chain2 = filterByCapability(chain2, requiredCapability(intent, hasImage));
+    chain2 = rankChainByBanglaQuality(chain2, isBengali(v.messages[v.messages.length - 1].content));
     chain2 = rankChainByModelHealth(chain2, badMap2, healthNow);
     return { kvKeys: kvKeys2, badMap: badMap2, badSet: badSet2, chain: chain2 };
   })();
