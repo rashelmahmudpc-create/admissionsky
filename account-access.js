@@ -549,6 +549,30 @@
     if (state.ownershipTimer) clearInterval(state.ownershipTimer);
     state.ownershipTimer = null;
   };
+  /* AUTH V2.1 (owner 2026-10-31): a countdown interval is bound to the view that
+   * shows it. The blueprint's finding ৭: the Telegram resend interval was
+   * cleared only when the countdown reached zero or the flow finished, so a
+   * student who navigated away left a 1-second interval running for the rest of
+   * the session. The ownership countdown had the same shape, and that one is
+   * live — the Telegram *verification* flow was retired on 2026-10-18
+   * (capabilities.telegram is hardcoded false), so its timer now sits in
+   * unreachable code, but the leak it demonstrated is real in the timer that
+   * still runs.
+   *
+   * This stops the INTERVALS only. It deliberately does not call
+   * clearResendCooldown, which also zeroes `verification.resendUntil`: the
+   * resend form lives inside the verify view, so wiping the deadline on the way
+   * in would cancel the countdown the view is about to display. A timer tick is
+   * cheap to stop and cheap to restart; a deadline is state, and state outlives
+   * a view change. The countdown resumes from the same deadline when its view
+   * comes back, because `startResendCooldown`/`updateResendCooldown` recompute
+   * the remaining time from `resendUntil` rather than from a counter. */
+  const clearViewTimers = () => {
+    clearTelegramTimer();
+    clearOwnershipTimer();
+    if (state.resendTimer) clearInterval(state.resendTimer);
+    state.resendTimer = null;
+  };
   const telegramResendRemaining = () => Math.max(0, Math.ceil((Number(state.telegram?.resendUntil || 0) - Date.now()) / 1000));
   const renderTelegramDigits = () => {
     const input = $('#ah-telegram-code');
@@ -1249,6 +1273,10 @@
     return renderView(name, keepMessage);
   };
   const renderView = (name, keepMessage = false) => {
+    /* AUTH V2.1: leaving a view ends its countdowns. Only on a real change —
+     * re-rendering the same view must not cancel the interval that view just
+     * started, which is why this compares before assigning. */
+    if (state.currentView && state.currentView !== name) clearViewTimers();
     state.currentView = name;
     // AU-SEC-01 L5: remember when this view appeared. The Worker refuses a
     // submission that arrives faster than a person can type, so the clock has

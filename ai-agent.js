@@ -114,6 +114,35 @@ const RE = {
 function lower(s) {
   return String(s || '').toLowerCase();
 }
+/* F1.8 — Clarify: a message with nothing in it gets a question, not a guess.
+ *
+ * A message of only punctuation ("?", "...", "।", "!!!") passed validation: it
+ * is non-empty after trim, so it was not `empty_messages`, and it is short, so it
+ * was not `message_too_long`. It then went down the whole chat path — classified
+ * as GENERAL_CHAT, sent to a model, charged a real daily credit — and the model,
+ * with no subject to answer, invented one.
+ *
+ * So: a message carrying no letter or digit is not an answerable question. It is
+ * answered with a short question back, and it does not touch the student's daily
+ * allowance. This is the one case where asking again is strictly better than
+ * answering, and it is decided from the text alone — no model call.
+ *
+ * Bengali, Latin, digits, and any script's letters all count as content; the
+ * test is "no word character at all", which is why it uses \p{L} and \p{N}
+ * rather than a list of scripts.
+ */
+const HAS_CONTENT = /[\p{L}\p{N}]/u;
+
+export function needsClarification(text) {
+  const t = String(text == null ? '' : text).trim();
+  if (!t) return false; /* an empty message is rejected earlier, not clarified */
+  return !HAS_CONTENT.test(t);
+}
+
+export function clarifyMessage() {
+  return 'তোমার প্রশ্নটা ঠিক বুঝতে পারিনি। একটু লিখে বলবে কী জানতে চাও?';
+}
+
 export function classifyIntent(text) {
   const t = lower(text);
   if (!t.trim()) return { intent: INTENTS.GENERAL_CHAT, tier: TIER.FAST, confidence: 0.4 };
@@ -1267,6 +1296,10 @@ export async function agentChat(request, env, uid, opts = {}) {
     const tr = await simpleToolResponse(toolPlan, stream, { intent, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, firstName: prof.firstName, stats, statedWeak, kv: env && env.PUB_KV }, request).catch(() => null);
     if (tr) { mark('tools'); emitTiming({ tools: toolPlan.length, quota: false }); return tr; }
   }
+
+  /* F1.8: a content-free message is clarified here — before a model call and
+     before the daily allowance is spent, because nothing was answered. */
+  if (needsClarification(toolText)) return guidanceResponse(clarifyMessage(), stream, request);
 
   /* rate limit: প্রতি-user rolling 24h window-এ cap */
   const cap = Math.max(1, Math.min(500, Number((env && env.AGENT_DAILY_CAP) || 10)));
