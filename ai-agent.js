@@ -35,7 +35,7 @@ import { isGoalQuestion, resolveGoal, renderGoalContext } from './sky-goal.mjs';
 /* Sky custom instructions (owner plan step 3): the student's own short note. */
 import { checkInstruction, parseStoredInstruction, storedInstruction, renderInstructionBlock, INSTRUCTION_KV_PREFIX, INSTRUCTION_MAX, INSTRUCTION_EXAMPLES, INSTRUCTIONS_VERSION } from './sky-instructions.mjs';
 import { extractMemoryCandidates, makeMemory, upsertMemory, parseMemory, renderMemory, resolveMemoryOwner, isPiiFree, statedWeakTopics, KIND, SOURCE, MEMORY_VERSION } from './memory-engine.js';
-import { validateResponse, describeResponseValidation, RESPONSE_VALIDATION_VERSION } from './response-validator.js';
+import { validateResponse, describeResponseValidation, RESPONSE_VALIDATION_VERSION, buildEnvelope } from './response-validator.js';
 import { describeActions, ACTION_VERSION } from './action-engine.js';
 import { makeTrace, makeRequestId, callerRef, quotaState, renderTrace, estimateTokens, FALLBACK, OBSERVABILITY_VERSION, describeObservability, parseTraces, appendTrace, addUsage, emptyUsage, estimateCost, validateObservability } from './observability.js';
 import { aiStateStore, AI_STATE_VERSION } from './ai-state-do.mjs';
@@ -1032,12 +1032,19 @@ export function authVerificationGuidance(text) {
 }
 
 function guidanceResponse(text, stream, request = null) {
-  if (!stream) return jsonResp({ text, intent: INTENTS.GENERAL_CHAT, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, authoritative: false }, 200, request);
+  /* F1.4: a guidance reply is a structured response too, not just prose. It is
+     built through buildEnvelope, the same builder a model answer uses, so its
+     envelope carries the same version and shape instead of a second hand-made
+     one that can drift. `blocked` is what selects type `guidance`; the text is
+     NOT re-scanned here — this text is the system's own policy statement, and
+     rewriting it with a violation notice would replace a correct instruction. */
+  const structured = buildEnvelope(text, { blocked: true });
+  if (!stream) return jsonResp({ text, structured, intent: INTENTS.GENERAL_CHAT, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, authoritative: false }, 200, request);
   const encoder = new TextEncoder();
   return new Response(new ReadableStream({
     start(controller) {
       controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
-      controller.enqueue(encoder.encode(`event: done\ndata: ${JSON.stringify({ intent: INTENTS.GENERAL_CHAT, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, authoritative: false })}\n\n`));
+      controller.enqueue(encoder.encode(`event: done\ndata: ${JSON.stringify({ intent: INTENTS.GENERAL_CHAT, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, authoritative: false, structured })}\n\n`));
       controller.close();
     }
   }), {

@@ -4356,7 +4356,8 @@ function authVerificationGuidance(text) {
   return "Telegram যাচাই করতে AdmissionSky-এ “Telegram দিয়ে যাচাই করুন” চাপুন, official bot খুলে START চাপুন, তারপর bot-এর পাঠানো কোডটি শুধু AdmissionSky-এর verification box-এ লিখুন। আমি OTP তৈরি, অনুমান, দেখা, পুনরাবৃত্তি বা যাচাই করতে পারি না এবং verification সফলও ঘোষণা করতে পারি না, শুধু AdmissionSky-এর নিশ্চিত ফলই চূড়ান্ত। Telegram যাচাই Gmail/ইমেইল মালিকানা প্রমাণ করে না।";
 }
 function guidanceResponse(text, stream, request = null) {
-  if (!stream) return jsonResp({ text, intent: INTENTS.GENERAL_CHAT, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, authoritative: false }, 200, request);
+  const structured = buildEnvelope(text, { blocked: true });
+  if (!stream) return jsonResp({ text, structured, intent: INTENTS.GENERAL_CHAT, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, authoritative: false }, 200, request);
   const encoder8 = new TextEncoder();
   return new Response(new ReadableStream({
     start(controller) {
@@ -4364,7 +4365,7 @@ function guidanceResponse(text, stream, request = null) {
 
 `));
       controller.enqueue(encoder8.encode(`event: done
-data: ${JSON.stringify({ intent: INTENTS.GENERAL_CHAT, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, authoritative: false })}
+data: ${JSON.stringify({ intent: INTENTS.GENERAL_CHAT, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, authoritative: false, structured })}
 
 `));
       controller.close();
