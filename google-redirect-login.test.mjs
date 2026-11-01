@@ -174,7 +174,14 @@ test('ACCOUNT_LINK_REQUIRED after the redirect opens google-link and reuses the 
   app.document.querySelector('[data-view="google-link"]').dispatchEvent(new app.w.Event('submit', { cancelable: true }));
   await waitFor(() => app.record.calls.some(call => call.path.endsWith('/google/link')));
   const link = app.record.calls.find(item => item.path.endsWith('/google/link'));
-  assert.deepEqual(link.body, { email: 'student@example.com', password: 'password-123', accessToken: TOKEN });
+  /* AUTH V2.0: this route now runs the shared guard, so the body carries the
+   * human-check token and the bot signals alongside the credentials. The
+   * credentials themselves are unchanged, which is what this test is about. */
+  assert.equal(link.body.email, 'student@example.com');
+  assert.equal(link.body.password, 'password-123');
+  assert.equal(link.body.accessToken, TOKEN);
+  assert.ok('turnstileToken' in link.body, 'the guarded route needs a human-check token');
+  assert.ok('ah_contact_website' in link.body, 'and the honeypot field the guard reads');
   assert.equal(app.record.redirect, 0, 'linking must not need a second trip to Google');
   await waitFor(() => app.w.AdmissionAccount.isVerified() === true);
   await sleep(100);

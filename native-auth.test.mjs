@@ -5,6 +5,11 @@ import { CloudflareNativeAuthEngine, SESSION_TTL_MS } from './auth-native/core/a
 import { AUTH_ERROR_CODES, asNativeAuthError } from './auth-native/core/errors.mjs';
 import { MemoryAuthRepository } from './auth-native/testing/memory-auth-repository.mjs';
 import { AUTH_API_PREFIX, createNativeAuthHandler } from './auth-native/worker/public-auth-handler.mjs';
+import { VerificationOrchestrator } from './auth-native/verification/orchestrator.mjs';
+import { MemoryVerificationRepository } from './auth-native/verification/memory-verification-repository.mjs';
+import { VERIFICATION_CHANNELS, VERIFICATION_FAILURE_CLASS, VERIFICATION_MODES, VerificationProviderError } from './auth-native/verification/provider-contract.mjs';
+import { PendingSignupStore } from './auth-native/worker/pending-signup.mjs';
+import { handlePendingSignupRoute, isPendingSignupRoute } from './auth-native/worker/pending-signup-authority.mjs';
 
 const SECRET = 'native-auth-test-secret-0123456789-ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
@@ -146,14 +151,80 @@ test('opaque Firebase sessions expire and revoke without exposing stored token',
   await expectCode(() => state.engine.getSession(login2.sessionToken), AUTH_ERROR_CODES.SESSION_INVALID);
 });
 
+/* AUTH V2.0: the held signup is the only signup path now, so the harness has to
+ * carry the same pieces the real Durable Object does. Before the change these
+ * tests reached the legacy account-first branch by simply not sending the
+ * opt-in header; that branch is no longer selectable, which is the point of the
+ * change. `pendingSignups` + the `/internal/signup/pending/*` dispatch below
+ * mirror auth-authority-do.mjs. */
+class MemoryKv {
+  constructor() { this.map = new Map(); }
+  async get(key) { return this.map.has(key) ? structuredClone(this.map.get(key)) : undefined; }
+  async put(key, value) { this.map.set(key, structuredClone(value)); }
+  async delete(key) { for (const k of Array.isArray(key) ? key : [key]) this.map.delete(k); }
+  async list({ prefix = '' } = {}) {
+    return new Map([...this.map].filter(([k]) => k.startsWith(prefix)).map(([k, v]) => [k, structuredClone(v)]));
+  }
+}
+
+/* The mailer the held signup walks its provider chain with. `verifyCode` is
+ * unused for a LOCAL_CODE provider — the store checks the HMAC itself — but the
+ * orchestrator requires the method to exist. */
+class SignupOtpProvider {
+  constructor(now, { down = false } = {}) {
+    this.id = 'otp-a';
+    this.channel = VERIFICATION_CHANNELS.OTP;
+    this.verificationMode = VERIFICATION_MODES.LOCAL_CODE;
+    this.down = down;
+    this.now = now;
+    this.sends = [];
+  }
+  async checkAvailability() { return { available: true, code: 'READY' }; }
+  async getRemainingQuota() { return { remaining: 100, limit: 100, resetAt: this.now() + 86_400_000 }; }
+  async getProviderStatus() { return { status: 'healthy', configured: true }; }
+  async sendVerification(input) {
+    this.sends.push(input);
+    if (this.down) throw new VerificationProviderError('HARD_DOWN', VERIFICATION_FAILURE_CLASS.HARD);
+    return { accepted: true };
+  }
+  async verifyCode() { return { verified: false }; }
+}
+
+/* Minimal SQL surface for the one ownership row the held signup writes. */
+class FakeOwnershipSql {
+  constructor() { this.rows = new Map(); }
+  exec(query, ...args) {
+    if (query.startsWith('SELECT')) return this.rows.has(args[0]) ? [this.rows.get(args[0])] : [];
+    this.rows.set(args[0], { emailRef: args[2], subjectRef: args[1] });
+    return [];
+  }
+}
+
 class EngineNamespace {
-  constructor(engine, { backupCapabilities = null } = {}) {
+  constructor(engine, { backupCapabilities = null, now = () => Date.now(), otpProvider = null } = {}) {
     this.engine = engine;
     this.backupCapabilities = backupCapabilities;
     // Stands in for the verification orchestrator's ownership record so the
     // handler tests can flip "this address was proven by an OTP" on and off.
     this.ownership = { proven: false, method: null };
     this.calls = [];
+    // AUTH V2.0: the account-less signup rows, exactly as the DO holds them.
+    this.pendingSignups = new PendingSignupStore({ storage: new MemoryKv(), hmacSecret: SECRET, now });
+    this.otpProvider = otpProvider;
+    // The held signup records email ownership after the code is proven. That
+    // write goes through recordEmailOwnership, which needs a SQL surface — the
+    // same shape pending-signup-wire.test.mjs uses.
+    this.verificationRepository = { sql: new FakeOwnershipSql() };
+    this.verification = otpProvider
+      ? new VerificationOrchestrator({
+        repository: new MemoryVerificationRepository(),
+        hmacSecret: SECRET,
+        providers: [otpProvider],
+        activated: true,
+        now,
+        config: { enabled: true, policy: {}, providers: [{ id: otpProvider.id, enabled: true, priority: 10, dailyQuota: 100, timeoutMs: 1000 }] }
+      })
+      : null;
   }
   idFromName(name) { return name; }
   get() {
@@ -163,6 +234,10 @@ class EngineNamespace {
     try {
       const url = new URL(request.url);
       this.calls.push(url.pathname);
+      if (isPendingSignupRoute(url.pathname)) {
+        const body = await request.json();
+        return Response.json({ ok: true, result: await handlePendingSignupRoute(this, url.pathname, body) });
+      }
       if (request.method === 'GET' && url.pathname === '/internal/ping') return Response.json({ ok: true, ...(await this.engine.ping()) });
       const body = await request.json();
       if (url.pathname === '/internal/verification/capabilities' && this.backupCapabilities) {
@@ -191,7 +266,14 @@ class EngineNamespace {
         '/internal/security/device/trust': () => this.engine.trustCurrentDevice(body.input, body.context),
         '/internal/security/device/revoke': () => this.engine.revokeTrustedDevice(body.input, body.context),
         '/internal/security/state': () => this.engine.getSecurityState(body.input, body.context),
-        '/internal/verification/ownership/status': () => this.ownership
+        /* The held signup records ownership through recordEmailOwnership, which
+         * writes into this.verificationRepository. Reading that same store back
+         * is what the real DO does, so the flag follows the write instead of
+         * being a hand-set stub the journey can drift away from. */
+        '/internal/verification/ownership/status': () => {
+          const row = [...this.verificationRepository.sql.rows.values()].find(entry => entry.emailRef);
+          return row ? { proven: true, method: 'email-otp' } : this.ownership;
+        }
       };
       if (!routes[url.pathname]) return Response.json({ ok: false }, { status: 404 });
       return Response.json({ ok: true, result: await routes[url.pathname]() });
@@ -249,10 +331,16 @@ class FirebaseMock {
     }
 
     if (parsed.pathname.endsWith('/accounts:createAuthUri')) {
+      // Echo the requested provider, as the real endpoint does. Returning
+      // google.com unconditionally made the Facebook probe (which checks that
+      // providerId comes back as facebook.com) impossible to drive from here.
+      const requested = String(body.providerId || 'google.com');
       return this.response({
-        providerId: 'google.com',
+        providerId: requested,
         sessionId: `provider-session-${'x'.repeat(32)}`,
-        authUri: 'https://accounts.google.com/o/oauth2/v2/auth?client_id=123456789012-nativeauthclient.apps.googleusercontent.com'
+        authUri: requested === 'facebook.com'
+          ? `https://www.facebook.com/v19.0/dialog/oauth?client_id=${'1'.repeat(16)}`
+          : 'https://accounts.google.com/o/oauth2/v2/auth?client_id=123456789012-nativeauthclient.apps.googleusercontent.com'
       });
     }
 
@@ -341,17 +429,20 @@ const apiRequest = (path, { method = 'GET', body, cookie = '', origin = 'https:/
   ...(body ? { body: JSON.stringify(body) } : {})
 });
 
-const handlerSetup = ({ backupCapabilities = null } = {}) => {
+const handlerSetup = ({ backupCapabilities = null, otpDown = false } = {}) => {
   const state = setup();
   const firebase = new FirebaseMock();
   const handler = createNativeAuthHandler({ fetchImpl: firebase.fetch.bind(firebase) });
-  const authority = new EngineNamespace(state.engine, { backupCapabilities });
+  // AUTH V2.0: the held signup sends its code through a real orchestrator, so
+  // the harness needs one. `otpDown` drives the "every mailer is out" path.
+  const otpProvider = new SignupOtpProvider(state.now, { down: otpDown });
+  const authority = new EngineNamespace(state.engine, { backupCapabilities, now: state.now, otpProvider });
   const env = {
     AUTH_AUTHORITY: authority,
     FIREBASE_WEB_API_KEY: 'test-firebase-api-key-1234567890',
     FIREBASE_CONTINUE_URL: 'https://admissionhub.pages.dev/?firebaseVerified=1'
   };
-  return { state, firebase, handler, authority, env };
+  return { state, firebase, handler, authority, env, otpProvider };
 };
 
 test('Firebase signup sends standard verification but creates no authenticated session', async () => {
@@ -798,16 +889,24 @@ test('step 8: a Telegram channel that is down does not borrow the OTP channel re
   assert.equal(auth.methods.telegramVerification.availabilityCode, 'NO_HEALTHY_PROVIDER');
 });
 
-test('Email status creates a session only after real verification and preserves the ticket-scoped guided profile', async () => {
+test('Email ownership verification creates a session only after the real code, and preserves the ticket-scoped guided profile', async () => {
   const app = handlerSetup({ backupCapabilities: { available: true, availabilityCode: 'READY', telegramAvailable: true } });
   app.env.VERIFICATION_AUTH_ACTIVATION = 'enabled';
   const email = 'guided.status@gmail.com';
   const password = 'StrongPassword!9';
+  /* AUTH V2.0: with ownership live, /signup holds the credentials and creates
+   * nothing — that is the whole point of the change (the old account-first
+   * branch is what answered 409-vs-202). So this test now walks the journey the
+   * production client actually walks: hold → prove the code → session. */
   const signup = await app.handler(apiRequest(`${AUTH_API_PREFIX}/signup`, {
     method: 'POST', body: { email, password }
   }), app.env, {});
   assert.equal(signup.status, 202);
-  assert.equal((await signup.clone().json()).verification.sent, false);
+  const signupBody = await signup.clone().json();
+  assert.equal(signupBody.accountCreated, false, 'no Firebase account before the code is proven');
+  assert.equal(signupBody.verification.sent, false);
+  assert.equal(signupBody.verification.selectionRequired, true);
+  assert.equal(app.firebase.users.has(email), false);
   const verificationCookie = extractCookiePair(signup, '__Host-ah_verification');
   const deviceCookie = extractCookiePair(signup, '__Host-ah_device');
   const pendingCookies = [verificationCookie, deviceCookie].filter(Boolean).join('; ');
@@ -826,27 +925,33 @@ test('Email status creates a session only after real verification and preserves 
   assert.equal(saved.status, 200);
   assert.equal((await saved.json()).saved, true);
 
-  const started = await app.handler(apiRequest(`${AUTH_API_PREFIX}/account-verification/email/start`, {
+  const started = await app.handler(apiRequest(`${AUTH_API_PREFIX}/email-ownership/start`, {
     method: 'POST', cookie: pendingCookies, body: {}
   }), app.env, {});
   assert.equal(started.status, 202);
-  assert.equal((await started.json()).verification.sent, true);
+  const startedBody = await started.json();
+  assert.equal(startedBody.delivery.method, 'email-otp');
+  const attemptId = startedBody.ownership?.attemptId;
+  assert.ok(attemptId, 'the code form needs an attempt id to verify against');
+  const code = String(app.otpProvider.sends.at(-1)?.code || '');
+  assert.match(code, /^\d{6}$/);
 
-  const before = await app.handler(apiRequest(`${AUTH_API_PREFIX}/account-verification/email/status`, {
-    method: 'POST', cookie: pendingCookies, body: {}
+  // A wrong code proves nothing and must not create the account.
+  const wrong = code === '000000' ? '111111' : '000000';
+  const rejected = await app.handler(apiRequest(`${AUTH_API_PREFIX}/email-ownership/verify`, {
+    method: 'POST', cookie: pendingCookies, body: { attemptId, code: wrong }
   }), app.env, {});
-  assert.equal(before.status, 200);
-  assert.equal((await before.json()).authenticated, false);
-  assert.equal(extractCookiePair(before, '__Host-ah_session'), '');
+  assert.equal(rejected.status, 401);
+  assert.equal(app.firebase.users.has(email), false);
 
-  app.firebase.users.get(email).emailVerified = true;
-  const after = await app.handler(apiRequest(`${AUTH_API_PREFIX}/account-verification/email/status`, {
-    method: 'POST', cookie: pendingCookies, body: {}
+  const after = await app.handler(apiRequest(`${AUTH_API_PREFIX}/email-ownership/verify`, {
+    method: 'POST', cookie: pendingCookies, body: { attemptId, code }
   }), app.env, {});
   assert.equal(after.status, 200);
   const afterBody = await after.clone().json();
   assert.equal(afterBody.authenticated, true);
-  assert.equal(afterBody.emailVerified, true);
+  assert.equal(afterBody.emailOwnershipProven, true);
+  assert.equal(app.firebase.users.has(email), true);
   const sessionCookies = [
     extractCookiePair(after, '__Host-ah_session'),
     extractCookiePair(after, '__Host-ah_firebase'),
@@ -875,22 +980,49 @@ test('stale cached Auth UI is rejected before signup creates an account or sends
   assert.equal(app.firebase.calls.some(call => call.pathname.endsWith('/accounts:sendOobCode')), false);
 });
 
-test('selector setup failure preserves the account but never auto-sends Firebase Email', async () => {
+test('selector setup failure rolls the account back and never auto-sends Firebase Email', async () => {
   const app = handlerSetup({ backupCapabilities: { available: true, availabilityCode: 'READY', telegramAvailable: true } });
   app.env.VERIFICATION_AUTH_ACTIVATION = 'enabled';
+  /* AUTH V2.0: the selector is set up in createAccount, which now runs only
+   * after the emailed code is proven — the account-first signup that used to
+   * reach it directly is gone. The guarantee is unchanged and still worth
+   * holding: if the selector cannot be set up, the half-made account is deleted
+   * rather than left behind, and no Firebase Email is sent as a silent
+   * substitute.
+   *
+   * The stub answers in the authority envelope (`{ ok:false, error:{ code } }`)
+   * because that is what callAuthority reads; a bare `{ error }` body would be
+   * mapped to STORAGE_UNAVAILABLE and the test would pass for the wrong reason. */
   const authorityFetch = app.authority.fetch.bind(app.authority);
   app.authority.fetch = request => new URL(request.url).pathname === '/internal/firebase/account-verification/begin'
-    ? jsonResponse({ error: { code: AUTH_ERROR_CODES.VERIFICATION_UNAVAILABLE } }, 503)
+    ? Response.json({ ok: false, error: { code: AUTH_ERROR_CODES.VERIFICATION_UNAVAILABLE } }, { status: 503 })
     : authorityFetch(request);
   const email = 'selector-outage@gmail.com';
-  const response = await app.handler(apiRequest(`${AUTH_API_PREFIX}/signup`, {
+  const signup = await app.handler(apiRequest(`${AUTH_API_PREFIX}/signup`, {
     method: 'POST',
     body: { email, password: 'StrongPassword!9' }
   }), app.env, {});
-  const body = await response.json();
+  assert.equal(signup.status, 202);
+  // Nothing exists yet: the hold creates no account at all.
+  assert.equal(app.firebase.users.has(email), false);
+  const cookies = [
+    extractCookiePair(signup, '__Host-ah_verification'),
+    extractCookiePair(signup, '__Host-ah_device')
+  ].filter(Boolean).join('; ');
+  const started = await app.handler(apiRequest(`${AUTH_API_PREFIX}/email-ownership/start`, {
+    method: 'POST', cookie: cookies, body: {}
+  }), app.env, {});
+  const attemptId = (await started.json()).ownership?.attemptId;
+  const code = String(app.otpProvider.sends.at(-1)?.code || '');
+
+  const response = await app.handler(apiRequest(`${AUTH_API_PREFIX}/email-ownership/verify`, {
+    method: 'POST', cookie: cookies, body: { attemptId, code }
+  }), app.env, {});
   assert.equal(response.status, 503);
-  assert.equal(body.error.code, AUTH_ERROR_CODES.VERIFICATION_UNAVAILABLE);
-  assert.equal(app.firebase.users.has(email), true);
+  assert.equal((await response.json()).error.code, AUTH_ERROR_CODES.VERIFICATION_UNAVAILABLE);
+  // The rollback is the point: no half-made account survives, and the failure
+  // never turns into an unannounced verification Email.
+  assert.equal(app.firebase.users.has(email), false);
   assert.equal(app.firebase.calls.some(call => call.pathname.endsWith('/accounts:sendOobCode')), false);
 });
 
@@ -1014,6 +1146,9 @@ const publicProfileRequest = publicId => new Request(`https://worker.example/api
   headers: { Origin: 'https://admissionhub.pages.dev' }
 });
 
+/* AUTH V2.0: ownership is live, so a session is only ever created after the
+ * emailed code is proven. This helper walks that journey — hold, prove, session
+ * — because the account-first path it used before is gone. */
 const publishPublicProfile = async app => {
   app.env.VERIFICATION_AUTH_ACTIVATION = 'enabled';
   const email = 'shared.profile@gmail.com';
@@ -1027,12 +1162,13 @@ const publishPublicProfile = async app => {
     method: 'POST', cookie: cookies,
     body: { fullName: 'Shared Student', dob: '2007-05-12', school: null, higherInstitution: null }
   }), app.env, {});
-  app.firebase.users.get(email).emailVerified = true;
-  await app.handler(apiRequest(`${AUTH_API_PREFIX}/account-verification/email/start`, {
+  const started = await app.handler(apiRequest(`${AUTH_API_PREFIX}/email-ownership/start`, {
     method: 'POST', cookie: cookies, body: {}
   }), app.env, {});
-  const verified = await app.handler(apiRequest(`${AUTH_API_PREFIX}/account-verification/email/status`, {
-    method: 'POST', cookie: cookies, body: {}
+  const attemptId = (await started.json()).ownership?.attemptId;
+  const code = String(app.otpProvider.sends.at(-1)?.code || '');
+  const verified = await app.handler(apiRequest(`${AUTH_API_PREFIX}/email-ownership/verify`, {
+    method: 'POST', cookie: cookies, body: { attemptId, code }
   }), app.env, {});
   const sessionCookie = [
     extractCookiePair(verified, '__Host-ah_session'),
@@ -1092,7 +1228,7 @@ test('unrelated /api/public paths are still not claimed by the native handler', 
 });
 
 test('one email button falls back to the Firebase link once every OTP provider is out', async () => {
-  const app = handlerSetup({ backupCapabilities: { available: true, availabilityCode: 'READY', telegramAvailable: true } });
+  const app = handlerSetup({ backupCapabilities: { available: true, availabilityCode: 'READY', telegramAvailable: true }, otpDown: true });
   app.env.VERIFICATION_AUTH_ACTIVATION = 'enabled';
   const email = 'fallback.link@gmail.com';
   const signup = await app.handler(apiRequest(`${AUTH_API_PREFIX}/signup`, {
@@ -1107,11 +1243,14 @@ test('one email button falls back to the Firebase link once every OTP provider i
   const ticketCookies = [verification, device].filter(Boolean).join('; ');
 
   // Exhaust the OTP chain exactly as the orchestrator does: quota for every
-  // mailer is gone, so the authority answers BACKUP_UNAVAILABLE.
-  const authorityFetch = app.authority.fetch.bind(app.authority);
-  app.authority.fetch = request => new URL(request.url).pathname === '/internal/verification/ownership/request'
-    ? Response.json({ ok: false, error: { code: AUTH_ERROR_CODES.BACKUP_UNAVAILABLE } }, { status: 503 })
-    : authorityFetch(request);
+  // mailer is gone, so the held-signup store answers BACKUP_UNAVAILABLE and the
+  // handler falls back to the Firebase link. AUTH V2.0: the held path reaches
+  // its own DO route, so that is the one to break.
+  // Exhaust the OTP chain the way the orchestrator does — the mailer itself is
+  // down, so every slot fails and the store answers BACKUP_UNAVAILABLE, which
+  // the handler turns into the Firebase-link fallback. AUTH V2.0: driving the
+  // provider rather than stubbing the DO route is what exercises that fallback;
+  // a stub at the route would skip the catch that implements it.
 
   const start = await app.handler(apiRequest(`${AUTH_API_PREFIX}/email-ownership/start`, {
     method: 'POST', body: {}, cookie: ticketCookies
@@ -1159,7 +1298,7 @@ test('the Firebase link stays untouched while an OTP mailer still has quota', as
 });
 
 test('a fallback send is never followed by a second Firebase link for the same tap', async () => {
-  const app = handlerSetup({ backupCapabilities: { available: true, availabilityCode: 'READY', telegramAvailable: true } });
+  const app = handlerSetup({ backupCapabilities: { available: true, availabilityCode: 'READY', telegramAvailable: true }, otpDown: true });
   app.env.VERIFICATION_AUTH_ACTIVATION = 'enabled';
   const email = 'no.double.send@gmail.com';
   const signup = await app.handler(apiRequest(`${AUTH_API_PREFIX}/signup`, {
@@ -1170,10 +1309,11 @@ test('a fallback send is never followed by a second Firebase link for the same t
     extractCookiePair(signup, '__Host-ah_verification'),
     extractCookiePair(signup, '__Host-ah_device')
   ].filter(Boolean).join('; ');
-  const authorityFetch = app.authority.fetch.bind(app.authority);
-  app.authority.fetch = request => new URL(request.url).pathname === '/internal/verification/ownership/request'
-    ? Response.json({ ok: false, error: { code: AUTH_ERROR_CODES.BACKUP_UNAVAILABLE } }, { status: 503 })
-    : authorityFetch(request);
+  // Exhaust the OTP chain the way the orchestrator does — the mailer itself is
+  // down, so every slot fails and the store answers BACKUP_UNAVAILABLE, which
+  // the handler turns into the Firebase-link fallback. AUTH V2.0: driving the
+  // provider rather than stubbing the DO route is what exercises that fallback;
+  // a stub at the route would skip the catch that implements it.
 
   // One user tap is one POST. The response must already state that the link
   // went out, so the browser has no reason to ask for a second send.
@@ -1188,7 +1328,9 @@ test('a fallback send is never followed by a second Firebase link for the same t
   const oobCalls = () => app.firebase.calls.filter(call => call.pathname.endsWith('/accounts:sendOobCode')).length;
   assert.equal(oobCalls(), 1);
   // Re-reading the result, as a retry or a status poll would, must not resend.
-  await app.handler(apiRequest(`${AUTH_API_PREFIX}/account-verification/email/status`, {
+  // AUTH V2.0: the held ticket is polled through its own status route; the
+  // Firebase-link one it used before belongs to the account-first path.
+  await app.handler(apiRequest(`${AUTH_API_PREFIX}/email-ownership/status`, {
     method: 'POST', body: {}, cookie: ticketCookies
   }), app.env, {});
   assert.equal(oobCalls(), 1, 'a status poll must not trigger another verification email');
@@ -1260,4 +1402,69 @@ test('a verified human check lets the ownership OTP proceed', async () => {
   assert.equal(start.status, 202);
   assert.equal(body.delivery.method, 'email-otp');
   assert.ok(body.ownership?.attemptId, 'a good human check must reach the OTP form');
+});
+
+/* ── AUTH V2.0 step 6 — the social routes run the shared guard ──────────────
+ *
+ * /google/link and /facebook were the two credential-taking routes that never
+ * called guardSend. /google/link takes an email AND a password, so guessing
+ * there leaned on the rate limiter alone. These tests hold the two halves that
+ * have to ship together: the server refuses a caller with no human check, and
+ * the client sends the token that lets a real student through. Shipping only
+ * the server half would fail closed and lock every student out of social
+ * sign-in — which is why the guard is asserted here rather than assumed.
+ */
+
+test('V2.0-৬: /google/link refuses a caller with no human check', async () => {
+  /* The route takes an email AND a password, so before this it leaned on the
+   * rate limiter alone against password guessing. */
+  const app = handlerSetup();
+  app.env.GOOGLE_AUTH_ACTIVATION = 'enabled';
+  app.env.TURNSTILE_SECRET_KEY = 'turnstile-secret-key';
+  const response = await app.handler(apiRequest(`${AUTH_API_PREFIX}/google/link`, {
+    method: 'POST',
+    body: { email: 'link.target@gmail.com', password: 'Correct-Horse-42', accessToken: 'a'.repeat(40) }
+  }), app.env, {});
+  const payload = await response.json();
+  assert.equal(response.status, 400);
+  assert.equal(payload.error.code, AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
+  // The refusal happens before the credential is used, so no password was ever
+  // compared against Firebase.
+  assert.equal(app.firebase.calls.some(call => call.pathname.endsWith('/accounts:signInWithPassword')), false,
+    'a token-less caller must not reach Firebase');
+});
+
+test('V2.0-৬: /facebook refuses a caller with no human check', async () => {
+  // The second of the two routes that took credentials unguarded.
+  const app = handlerSetup();
+  app.env.GOOGLE_AUTH_ACTIVATION = 'enabled';
+  app.env.TURNSTILE_SECRET_KEY = 'turnstile-secret-key';
+  const response = await app.handler(apiRequest(`${AUTH_API_PREFIX}/facebook`, {
+    method: 'POST', body: { accessToken: 'a'.repeat(40) }
+  }), app.env, {});
+  const payload = await response.json();
+  assert.equal(response.status, 400);
+  assert.equal(payload.error.code, AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
+  assert.equal(app.firebase.calls.some(call => call.pathname.endsWith('/accounts:signInWithIdp')), false,
+    'a token-less caller must not reach the identity provider exchange');
+});
+
+test('V2.0-৬: the client sends the human-check token on every social call site', () => {
+  /* The other half. A guard without a token is an outage, so this pins the
+   * client the same way the server tests pin the handler. Read as source
+   * because the call sites live in four places across two flows (inline shell
+   * and the Sky bridge) and a fifth added later would otherwise slip through.
+   *
+   * Line-based rather than a brace-matching regex: the body contains a call,
+   * so `[^}]*` stops at the first `}` inside `humanToken()` and silently
+   * under-counts. The count assertion is what makes that visible. */
+  const client = readFileSync(new URL('./account-access.js', import.meta.url), 'utf8');
+  const lines = client.split('\n');
+  const calls = lines.filter(line => /(?:sky)?[Aa]pi\('(\/facebook|\/google\/link)'/.test(line));
+  assert.equal(calls.length, 4, 'every social call site is covered by this assertion');
+  for (const line of calls) {
+    const path = line.match(/[Aa]pi\('([^']+)'/)[1];
+    assert.match(line, /turnstileToken:\s*await humanToken\(\)/, `${path} must send a human-check token`);
+    assert.match(line, /botSignals\(/, `${path} must send the honeypot and timing signals`);
+  }
 });

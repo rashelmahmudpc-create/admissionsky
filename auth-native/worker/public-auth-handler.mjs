@@ -948,8 +948,20 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         if (isDisposableEmail(input.email)) throw new NativeAuthError(AUTH_ERROR_CODES.DISPOSABLE_EMAIL);
         if (reservedTelegramLoginEmail(input.email)) throw new NativeAuthError(AUTH_ERROR_CODES.DISPOSABLE_EMAIL);
         const prepared = await callAuthority(env, '/internal/firebase/rate', { input: { operation: 'signup', email: input.email }, context });
-        // AUTH-ROADMAP step 1: an opted-in dual-choice signup holds the credentials; no account until the code is proven.
-        if (emailOwnershipRequested(env, url) && pendingSignup.pendingSignupRequested(request)) return pendingSignup.beginPendingSignup({ request, env, context, prepared, password: input.password, deps: pendingDeps() });
+        /* AUTH V2.0 (owner 2026-10-31): holding the credentials is the signup
+         * path, not an opt-in. It used to require `X-AH-Signup-Flow`, so a
+         * caller that omitted the header reached `provider.signUp` below and
+         * learned from 409-vs-202 whether an address already had an account —
+         * an enumeration oracle on an endpoint anyone can call. With the header
+         * gone the answer is the same 202 for a new address and a taken one.
+         *
+         * The gate is `verificationPublished`, NOT `emailOwnershipRequested`.
+         * The latter is also true for `?telegramCanary=1`, and the held path has
+         * no Telegram option — it answers `telegram: { available: false }` by
+         * design. Gating on it therefore pulled the Telegram canary off its own
+         * flow and into a path that cannot serve it. Only a genuinely published
+         * ownership flow may claim signup. */
+        if (verificationPublished(env)) return await pendingSignup.beginPendingSignup({ request, env, context, prepared, password: input.password, deps: pendingDeps() });
         let signed;
         try { signed = await provider.signUp(prepared.email, input.password); } catch (cause) { throw providerError(cause, 'signup'); }
 
@@ -1395,6 +1407,20 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
       if (request.method === 'POST' && url.pathname === `${AUTH_API_PREFIX}/google/link`) {
         if (!provider.configured || !googleEndpointReady(env)) throw new NativeAuthError(AUTH_ERROR_CODES.GOOGLE_UNAVAILABLE);
         const body = await readJson(request);
+        /* AUTH V2.0 (owner 2026-10-31): this route takes an email AND a
+         * password, and it was one of two that never ran the shared guard — so
+         * password guessing here leaned on the rate limiter alone. Every other
+         * send and password route goes through guardSend; this one now does too.
+         *
+         * Order matters and is deliberate: the guard runs BEFORE credentials are
+         * parsed, so a bot is turned away without its input being read. The
+         * client change that ships with this sends `turnstileToken` and the bot
+         * signals, which is why the two must land together — the guard is
+         * fail-closed once the secret is bound, and it is bound in production. */
+        {
+          const denied = await guardSend({ request, env, context, body, fetchImpl });
+          if (denied) return denied;
+        }
         const input = credentials(body);
         const credential = googleCredential(body);
         if (!credential.accessToken) throw new NativeAuthError(AUTH_ERROR_CODES.INVALID_INPUT);
@@ -1475,7 +1501,18 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         // idpConfig is not returned by this Firebase project's /v1/projects
         // endpoint, so only the createAuthUri probe proves facebook.com is live.
         try { await provider.inspectFacebookProvider(); } catch (cause) { throw providerError(cause, 'facebook-config'); }
-        const credential = facebookCredential(await readJson(request));
+        const body = await readJson(request);
+        /* AUTH V2.0 (owner 2026-10-31): the second of the two routes that took
+         * credentials without the shared guard. The provider probe above is a
+         * configuration check, not a caller check — it says facebook.com is
+         * live, nothing about who is asking. The guard runs before the
+         * credential is parsed, and the client half that sends `turnstileToken`
+         * ships in the same change because the guard fails closed. */
+        {
+          const denied = await guardSend({ request, env, context, body, fetchImpl });
+          if (denied) return denied;
+        }
+        const credential = facebookCredential(body);
         await callAuthority(env, '/internal/firebase/rate', { input: { operation: 'facebook' }, context });
         let signed;
         let user;
@@ -1611,7 +1648,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
           const denied = await guardSend({ request, env, context, body: startBody, fetchImpl });
           if (denied) return denied;
         }
-        if (isPendingSignupTicket(verificationTicket)) return pendingSignup.startPendingSignupCode({ request, env, provider, context, ticket: verificationTicket, magicLink, deps: pendingDeps() });
+        if (isPendingSignupTicket(verificationTicket)) return await pendingSignup.startPendingSignupCode({ request, env, provider, context, ticket: verificationTicket, magicLink, deps: pendingDeps() });
         const material = await callAuthority(env, '/internal/firebase/account-verification/material', {
           verificationTicket,
           context
@@ -1688,7 +1725,12 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         }
         if (isPendingSignupTicket(verificationTicket)) {
           if (magicToken) throw new NativeAuthError(AUTH_ERROR_CODES.INVALID_INPUT);
-          return pendingSignup.verifyPendingSignupCodeAndCreate({ request, env, provider, context, ticket: verificationTicket, attemptId, code, deps: pendingDeps() });
+          // `await` is load-bearing, not style: without it the rejection escapes
+          // this try block and the catch below never sees it, so a wrong code
+          // surfaced as an unhandled 500 instead of OTP_INVALID. With ownership
+          // live this is the only path a signup can take, so a bad code is the
+          // common case, not an edge one.
+          return await pendingSignup.verifyPendingSignupCodeAndCreate({ request, env, provider, context, ticket: verificationTicket, attemptId, code, deps: pendingDeps() });
         }
         const material = await callAuthority(env, '/internal/firebase/account-verification/material', {
           verificationTicket,
@@ -1859,7 +1901,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         if (!verificationTicket) throw new NativeAuthError(AUTH_ERROR_CODES.TELEGRAM_VERIFICATION_INVALID);
         const profile = await readJson(request);
         await callAuthority(env, '/internal/firebase/rate', { input: { operation: 'pending-profile-write' }, context });
-        if (isPendingSignupTicket(verificationTicket)) return pendingSignup.savePendingSignupProfile({ request, env, context, ticket: verificationTicket, profile, deps: pendingDeps() });
+        if (isPendingSignupTicket(verificationTicket)) return await pendingSignup.savePendingSignupProfile({ request, env, context, ticket: verificationTicket, profile, deps: pendingDeps() });
         const result = await callAuthority(env, '/internal/profile/save-pending', {
           verificationTicket,
           input: profile,

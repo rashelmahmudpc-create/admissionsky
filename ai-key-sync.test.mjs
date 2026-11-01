@@ -200,7 +200,10 @@ test('the shape probe says WHY the file is unusable, without showing it', async 
   assert.equal((await aiKeyBlobShape({ PUB_KV: kvStore({ 'secret:AI_KEYS': '{oops' }) })).reason, 'unparseable');
   assert.equal((await aiKeyBlobShape({ PUB_KV: kvStore({ 'secret:AI_KEYS': '[1,2]' }) })).reason, 'not-an-object');
   const ok = await aiKeyBlobShape({ PUB_KV: kvStore({ 'secret:AI_KEYS': JSON.stringify({ GEMINI_KEYS: 'SECRET', OTHER_THING: 'x' }) }) });
-  assert.deepEqual(ok, { present: true, count: 2, providers: ['GEMINI_KEYS'] });
+  /* F1.2: the shape reports CATALOG IDs, the same vocabulary providerReadiness
+     uses, so the two can be compared without a translation table. `count` stays
+     the raw name count — that is the file's size, not a provider list. */
+  assert.deepEqual(ok, { present: true, count: 2, providers: ['gemini'] });
   assert.equal(JSON.stringify(ok).includes('SECRET'), false, 'the shape never carries a value');
 });
 

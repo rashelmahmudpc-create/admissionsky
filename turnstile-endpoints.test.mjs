@@ -14,7 +14,14 @@ import { readFileSync } from 'node:fs';
 const HANDLER = readFileSync(new URL('./auth-native/worker/public-auth-handler.mjs', import.meta.url), 'utf8');
 const CLIENT = readFileSync(new URL('./account-access.js', import.meta.url), 'utf8');
 
-const ENDPOINTS = ['/signup', '/login', '/password-reset', '/email-ownership/start', '/verification/resend', '/telegram/verification/start', '/backup/request'];
+/* AUTH V2.0 (owner 2026-10-31): /google/link and /facebook were the two
+ * credential-taking routes missing from this list. /google/link takes an email
+ * AND a password, so password guessing there leaned on the rate limiter alone.
+ * Both are here now, and the client sends the token on all four of their call
+ * sites (two for /facebook, one for /google/link, one on the Sky bridge) — the
+ * two halves ship together because the guard fails closed once the secret is
+ * bound, and it is bound in production. */
+const ENDPOINTS = ['/signup', '/login', '/password-reset', '/email-ownership/start', '/verification/resend', '/telegram/verification/start', '/backup/request', '/google/link', '/facebook'];
 
 const routeBlock = path => {
   const marker = "request.method === 'POST' && url.pathname === `${AUTH_API_PREFIX}" + path + '`';
@@ -58,7 +65,9 @@ test('every guarded route answers the gate short-circuit instead of falling thro
 });
 
 test('client sends a fresh Turnstile token on every guarded call', () => {
-  for (const path of ['/signup', '/login', '/password-reset', '/email-ownership/start', '/verification/resend', '/telegram/verification/start', '/backup/request']) {
+  // Every guarded endpoint, so a route added to ENDPOINTS without its client
+  // half fails here rather than locking students out in production.
+  for (const path of ENDPOINTS) {
     const needle = `'${path}'`;
     let at = CLIENT.indexOf(needle);
     let seen = 0;

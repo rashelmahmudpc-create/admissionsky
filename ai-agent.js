@@ -28,7 +28,7 @@ import { bumpDailyStats, statsFromTiming } from './sky-daily-report.mjs';
 /* F1.1: the model catalog is the single source of truth for which models the
    router knows. GEMINI_MODELS and COMPAT_PROVIDERS below are DERIVED from it,
    so a model can never be "known to the router" and absent from the catalog. */
-import { COMPAT_PROVIDERS as CATALOG_COMPAT, tierModels } from './sky-ai/catalog/models.mjs';
+import { CATALOG, COMPAT_PROVIDERS as CATALOG_COMPAT, tierModels, CAPABILITY, capabilityOf } from './sky-ai/catalog/models.mjs';
 import { buildRecall, sanitizeRecent, RECALL_VERSION } from './sky-recall.mjs';
 /* Sky goal (owner plan step 3): advice shaped around the admission goal. Pure. */
 import { isGoalQuestion, resolveGoal, renderGoalContext } from './sky-goal.mjs';
@@ -68,6 +68,34 @@ export const INTENTS = {
 };
 
 const TIER = { FAST: 'FAST', SMART: 'SMART' };
+
+/* F1.3 — task-based chains. A task names the capability it needs, and the chain
+   is filtered by what the CATALOG says a provider can do.
+ *
+ * Before this, vision was the literal test `c.provider === 'gemini'`: true while
+ * Gemini is the only vision model, and silently wrong the day a second one is
+ * added, the image would have been sent to a text-only model. The requirement
+ * now comes from the task and the answer comes from the catalog, so the two
+ * cannot drift.
+ *
+ * Only capabilities that are a CORRECTNESS requirement are used as a filter. A
+ * text-only model asked about an image cannot answer at all, so VISION filters.
+ * REASONING is a preference, not a requirement, so it is deliberately NOT a
+ * filter, filtering on it would drop working providers from the chain and cost
+ * availability for no correctness gain. */
+export function requiredCapability(intent, hasImage) {
+  if (hasImage) return CAPABILITY.VISION;
+  return CAPABILITY.CHAT;
+}
+
+/** Keep only the chain entries whose catalog provider declares `need`. An entry
+ *  with no catalog id is dropped when a requirement is set: an unknown provider
+ *  cannot be proven capable, and guessing in favour of sending is the wrong way
+ *  to be wrong. */
+export function filterByCapability(chain, need) {
+  if (!need) return chain;
+  return chain.filter((c) => capabilityOf(c.catalogId).includes(need));
+}
 
 /* ── Intent Engine v1: rule-based (Bangla+English+Banglish) ────────────── */
 const RE = {
@@ -817,25 +845,52 @@ export async function aiKeyBlobShape(env) {
   try { parsed = JSON.parse(raw); } catch (_) { return { present: true, reason: 'unparseable' }; }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { present: true, reason: 'not-an-object' };
   const names = Object.keys(parsed).filter((k) => parsed[k] && String(parsed[k]).trim());
+  /* Report catalog IDs, the same vocabulary providerReadiness uses, so the two
+     can be compared without a translation table in between. */
+  const idOfKey = (name) => {
+    const rule = PROVIDER_READY_RULES.find((r) => r.keys.includes(name));
+    return rule ? rule.id : null;
+  };
   return {
     present: true,
     count: names.length,
-    providers: names.filter((k) => PROVIDER_KEY_NAMES.includes(k)).sort()
+    providers: [...new Set(names.map(idOfKey).filter(Boolean))].sort()
   };
 }
+
+/* F1.2 — the key vault reads the catalog.
+ *
+ * This used to NAME each provider by stripping a suffix off its credential name
+ * (`OPENROUTER_API_KEYS` -> `openrouter`). The names it produced were mostly
+ * right and quietly wrong for the rest: `aimlapi` came out `aiml`,
+ * `vercel-ai-gateway` came out `vercel_ai_gateway`, `gemini` came out
+ * `gemini_keys`. Nothing broke, because the same function ran on both Workers
+ * and the parity check compares it to itself — a shared mistake compares equal.
+ *
+ * That is the property worth keeping: a name here is a CATALOG ID, so the
+ * provider the router will really use and the provider the health report names
+ * are the same string by construction. Cloudflare is the one provider needing
+ * two credentials, which is why it keeps an explicit predicate. */
+const READY_EXPLICIT = Object.freeze([
+  { id: 'gemini', keys: ['GEMINI_KEYS'] },
+  { id: 'groq', keys: ['GROQ_API_KEY'] },
+  /* Cloudflare needs TWO credentials and its catalog entry names only the token.
+     A catalog rule for it would OVERWRITE this one and report the provider ready
+     on the token alone — so the catalog contributes only the ids not listed
+     here. (A guard test covers exactly this.) */
+  { id: 'cloudflare', keys: ['CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_AI_API_KEY'] }
+]);
+export const PROVIDER_READY_RULES = Object.freeze([
+  ...READY_EXPLICIT,
+  ...CATALOG.filter((c) => !READY_EXPLICIT.some((r) => r.id === c.id))
+    .map((c) => ({ id: c.id, keys: [c.key] }))
+]);
 
 export async function providerReadiness(env) {
   const kv = await aiKeyOverlay(env);
   const has = (name) => !!pickKey(env, kv, name);
-  const out = {
-    gemini: has('GEMINI_KEYS'),
-    groq: has('GROQ_API_KEY'),
-    cloudflare: has('CLOUDFLARE_ACCOUNT_ID') && has('CLOUDFLARE_AI_API_KEY')
-  };
-  for (const p of COMPAT_PROVIDERS) {
-    // Name it after the key so a comma-separated list of ready providers stays short.
-    out[p.key.toLowerCase().replace(/_api_keys?$|_key$|_token$/, '')] = has(p.key);
-  }
+  const out = {};
+  for (const rule of PROVIDER_READY_RULES) out[rule.id] = rule.keys.every(has);
   return out;
 }
 
@@ -855,7 +910,7 @@ export function routerChain(env, tier, badSet = new Set(), kv = {}) {
     for (const key of k) {
       const sig = String(key).slice(0, 12) + ':' + m;
       if (badSet.has(sig)) continue;
-      chain.push({ provider: 'gemini', key, model: m });
+      chain.push({ provider: 'gemini', catalogId: 'gemini', key, model: m });
     }
   };
   if (geminiModels.length) geminiModels.forEach(addGem);
@@ -873,7 +928,7 @@ export function routerChain(env, tier, badSet = new Set(), kv = {}) {
     const groqModels = String((env && env.AGENT_GROQ_MODELS) || kv.AGENT_GROQ_MODELS || '')
       .split(',').map(s => s.trim()).filter(Boolean);
     for (const m of (groqModels.length ? groqModels : ['openai/gpt-oss-120b', 'openai/gpt-oss-20b'])) {
-      chain.push({ provider: 'groq', key: groqKey, model: m });
+      chain.push({ provider: 'groq', catalogId: 'groq', key: groqKey, model: m });
     }
   }
   /* Cloudflare Workers AI backup (Phase 9 M2.5). Needs both the account id and
@@ -886,7 +941,7 @@ export function routerChain(env, tier, badSet = new Set(), kv = {}) {
     const cfModels = String((env && env.AGENT_CLOUDFLARE_MODELS) || kv.AGENT_CLOUDFLARE_MODELS || '')
       .split(',').map(s => s.trim()).filter(Boolean);
     const list = cfModels.length ? cfModels : ['@cf/meta/llama-3.3-70b-instruct-fp8-fast'];
-    for (const m of list) chain.push({ provider: 'cloudflare', key: cfKey, model: m });
+    for (const m of list) chain.push({ provider: 'cloudflare', catalogId: 'cloudflare', key: cfKey, model: m });
   }
   /* Extra OpenAI-compatible providers, each appears only when its key exists.
      A comma-separated value yields one chain entry per key, the same shape
@@ -901,7 +956,7 @@ export function routerChain(env, tier, badSet = new Set(), kv = {}) {
       for (const m of (models.length ? models : p.models)) {
         const sig = String(key).slice(0, 12) + ':' + m;
         if (badSet.has(sig)) continue;
-        chain.push({ provider: 'openai-compat', key, model: m, url: p.url });
+        chain.push({ provider: 'openai-compat', catalogId: p.id, key, model: m, url: p.url });
       }
     }
   }
@@ -1030,6 +1085,9 @@ export async function agentChat(request, env, uid, opts = {}) {
 
   const intentCls = classifyIntent(v.messages[v.messages.length - 1].content);
   const intent = intentCls.intent;
+  /* F1.3: the task's capability requirement is decided here, before the chain
+     is built, so both the chain and the empty-chain message read one value. */
+  const hasImage = v.messages.some(m => m.image);
   const baseTier = intentCls.tier;
   /* P26: a provably simple academic question goes to the FAST model even though
      the classifier called it academic. This can only lower spend, it never
@@ -1071,7 +1129,8 @@ export async function agentChat(request, env, uid, opts = {}) {
   const fullChain = routerChain(env, tier, new Set(), kvKeys)
     .map(c => ({ ...c, sig: String(c.key).slice(0, 12) + ':' + c.model }));
   let chain = healthyChain(fullChain, badMap, healthNow);
-  if (v.messages.some(m => m.image)) chain = chain.filter(c => c.provider === 'gemini');
+  /* F1.3: the task names the capability, the catalog decides who has it. */
+  chain = filterByCapability(chain, requiredCapability(intent, hasImage));
   /* P31: a working model is tried before a dead one. `healthyChain` already
      drops individually-cooling entries, so this matters when everything is
      cooling and the whole list comes back, the least-broken model then leads. */
@@ -1159,6 +1218,12 @@ export async function agentChat(request, env, uid, opts = {}) {
   if (verificationGuidance) return guidanceResponse(verificationGuidance, stream, request);
   const { kvKeys, badMap, badSet } = await providersP;
   let { chain } = await providersP;
+  if (!chain.length && hasImage) {
+    /* An image with no vision provider is a different fault from "no provider
+       at all": the fix is to add a vision-capable key, not to look for any key. */
+    const msg = { error: 'no_vision_provider', message: 'ছবি পড়ার মতো AI এখনো চালু হয়নি — মালিককে জানাও (GEMINI_KEYS)।' };
+    return stream ? sseError(msg, 503, request) : jsonResp(msg, 503, request);
+  }
   if (!chain.length) {
     const msg = { error: 'no_providers', message: 'AI-সেবা এখন কনফিগার করা নেই, দয়া করে মালিককে জানাও (GEMINI_KEYS)।' };
     return stream ? sseError(msg, 503, request) : jsonResp(msg, 503, request);
@@ -1864,7 +1929,11 @@ export async function agentStatus(request, env, uid) {
        routerChain, not providerChain: the latter filters to adapters with a
        one-shot path, which is Gemini alone, so it would report a two-entry
        chain while the chat really tries Gemini, then Groq, then Cloudflare. */
-    chain: routerChain(env, TIER.FAST, new Set(), kv).map(c => c.provider + ':' + c.model),
+    /* F1.2: name the CATALOG provider. Before this every OpenAI-compatible
+       provider reported as the adapter `openai-compat`, so a status with 16 such
+       keys could not say which one the chat would really try — the one thing the
+       field exists to answer. */
+    chain: routerChain(env, TIER.FAST, new Set(), kv).map(c => (c.catalogId || c.provider) + ':' + c.model),
     limits: { perDay: Math.max(1, Math.min(500, Number(env.AGENT_DAILY_CAP || 10))) },
     /* Which store the per-user state actually uses. Without this the migration
        off KV could only be inferred; here it is observable from the status
@@ -1920,7 +1989,7 @@ function sseCached(text, intent, startedAt, model, request = null) {
 
 export const __test = {
   classifyIntent, validateChatReq, capStats, buildSystemPrompt, summarizeTo, buildStudyRecommendation, buildImprovementLine,
-  safetyGate, authVerificationGuidance, routerChain, geminiTextFromChunk, sseParse, ProviderError,
+  safetyGate, authVerificationGuidance, routerChain, requiredCapability, filterByCapability, geminiTextFromChunk, sseParse, ProviderError,
   adapterFor, providerChain, PROVIDER_ADAPTERS, GEMINI_ADAPTER, GROQ_ADAPTER, CLOUDFLARE_ADAPTER,
   INTENTS, TIER, GEMINI_MODELS, AGENT_VERSION, SYSTEM_PROMPT_V,
   contextEngineEnabled, buildContext, renderContext, describeContext, CONTEXT_VERSION, sanitizeProfileContext,
