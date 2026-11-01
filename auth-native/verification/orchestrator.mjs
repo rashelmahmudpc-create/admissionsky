@@ -970,12 +970,38 @@ export class VerificationOrchestrator {
       if (probes[1].status === 'fulfilled') remoteQuota = probes[1].value;
       if (probes[2].status === 'fulfilled') remoteStatus = probes[2].value;
       const total = Number(state.successCount || 0) + Number(state.failureCount || 0);
+      /* AUTH V2.4 (owner 2026-10-31): say which slots have actually delivered.
+       *
+       * The blueprint's finding ২৫: `liveDeliveryVerified` is never true, so the
+       * dashboard cannot tell a slot that has carried a real code from one that
+       * has only ever been configured. The owner's decision on the chain is to
+       * keep the unproven slots and put them BEHIND the proven ones rather than
+       * delete them — and he cannot do that from a screen that shows both as
+       * merely "configured".
+       *
+       * `successCount` was already reported, but a count is not a verdict: an
+       * operator reading a table of 26 rows should not have to compare numbers to
+       * learn which three are carrying the mail. `proven` is that verdict in one
+       * word, and `deliveryEvidence` says what it is based on, so the claim can
+       * be checked rather than trusted.
+       *
+       * One accepted send is the bar, deliberately: it is the weakest evidence
+       * that is still real evidence, and a higher bar would keep a working slot
+       * labelled unproven for days. `never-tried` and `tried-and-failed` are kept
+       * apart because they mean different things to an operator — the first says
+       * "we have not tested this", the second says "this did not work". */
+      const successCount = Number(state.successCount || 0);
+      const failureCount = Number(state.failureCount || 0);
+      const deliveryEvidence = successCount > 0 ? 'proven' : (failureCount > 0 ? 'failed' : 'never-tried');
       return Object.freeze({
         id: entry.id,
         channel: entry.channel,
         enabled: entry.enabled,
         configured: remoteStatus?.configured === true,
         priority: entry.priority,
+        // The single word an operator needs, and what it rests on.
+        proven: successCount > 0,
+        deliveryEvidence,
         timeoutMs: entry.timeoutMs,
         availability: availability?.available === true,
         availabilityCode: reason(availability?.code || 'UNKNOWN'),
