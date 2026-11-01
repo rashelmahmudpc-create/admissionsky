@@ -1,6 +1,7 @@
 import { AUTH_ERROR_CODES } from '../core/errors.mjs';
 import { constantTimeEqual } from '../core/crypto.mjs';
 import { transitionAccount, isSessionUsable } from '../core/account-lifecycle.mjs';
+import { SECURITY_SESSION_IDLE_TTL_MS, SECURITY_SESSION_TOUCH_INTERVAL_MS } from '../core/security-config.mjs';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const EVENT_RETENTION_MS = 90 * DAY_MS;
@@ -892,7 +893,13 @@ export class SqliteAuthRepository {
       );
       if (!row || Number(row.expiresAt) <= now) return { error: AUTH_ERROR_CODES.SESSION_INVALID };
       if (row.status !== 'active') return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
-      if (now - Number(row.lastSeenAt) > 6 * 60 * 60 * 1000) {
+      /* AUTH V2.1 (owner 2026-10-31): an idle session ends. `last_seen_at` was
+       * written but never compared, so the absolute 30-day expiry was the only
+       * bound and a leaked cookie stayed valid for its whole month whether or
+       * not anyone was behind it. Checked before the touch, so the touch can
+       * never extend a session that has already gone idle. */
+      if (now - Number(row.lastSeenAt) > SECURITY_SESSION_IDLE_TTL_MS) return { error: AUTH_ERROR_CODES.SESSION_INVALID };
+      if (now - Number(row.lastSeenAt) > SECURITY_SESSION_TOUCH_INTERVAL_MS) {
         this.sql.exec('UPDATE auth_sessions SET last_seen_at=? WHERE session_ref=?', now, sessionRef);
       }
       if (trackRefresh) this.#event('session-refreshed', subjectRef, row.id, now);
@@ -1552,7 +1559,13 @@ export class SqliteAuthRepository {
       );
       if (!row || Number(row.expiresAt) <= now) return { error: AUTH_ERROR_CODES.SESSION_INVALID };
       if (row.status !== 'active') return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
-      if (now - Number(row.lastSeenAt) > 6 * 60 * 60 * 1000) {
+      /* AUTH V2.1 (owner 2026-10-31): an idle session ends. `last_seen_at` was
+       * written but never compared, so the absolute 30-day expiry was the only
+       * bound and a leaked cookie stayed valid for its whole month whether or
+       * not anyone was behind it. Checked before the touch, so the touch can
+       * never extend a session that has already gone idle. */
+      if (now - Number(row.lastSeenAt) > SECURITY_SESSION_IDLE_TTL_MS) return { error: AUTH_ERROR_CODES.SESSION_INVALID };
+      if (now - Number(row.lastSeenAt) > SECURITY_SESSION_TOUCH_INTERVAL_MS) {
         this.sql.exec('UPDATE auth_sessions SET last_seen_at=? WHERE session_ref=?', now, sessionRef);
       }
       return {

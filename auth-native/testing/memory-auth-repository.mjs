@@ -1,6 +1,7 @@
 import { AUTH_ERROR_CODES } from '../core/errors.mjs';
 import { constantTimeEqual } from '../core/crypto.mjs';
 import { transitionAccount, isSessionUsable } from '../core/account-lifecycle.mjs';
+import { SECURITY_SESSION_IDLE_TTL_MS, SECURITY_SESSION_TOUCH_INTERVAL_MS } from '../core/security-config.mjs';
 
 const copy = value => value == null ? value : structuredClone(value);
 
@@ -169,7 +170,10 @@ export class MemoryAuthRepository {
     const identity = this.externalIdentities.get(`${provider}:${subjectRef}`);
     if (!user || !identity || identity.userId !== user.id || user.emailRef !== emailRef) return { error: AUTH_ERROR_CODES.SESSION_INVALID };
     if (user.status !== 'active') return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
-    if (now - session.lastSeenAt > 6 * 60 * 60 * 1000) session.lastSeenAt = now;
+    // AUTH V2.1: the double must enforce the same idle bound as the real
+    // repository, or a test would pass against a rule production does not have.
+    if (now - session.lastSeenAt > SECURITY_SESSION_IDLE_TTL_MS) return { error: AUTH_ERROR_CODES.SESSION_INVALID };
+    if (now - session.lastSeenAt > SECURITY_SESSION_TOUCH_INTERVAL_MS) session.lastSeenAt = now;
     if (trackRefresh) this.events.push({ type: 'session-refreshed', subjectRef, userId: user.id, at: now });
     return { expiresAt: session.expiresAt, user: copy(user) };
   }
@@ -632,7 +636,10 @@ export class MemoryAuthRepository {
     const user = this.users.get(session.userId);
     if (!user) return { error: AUTH_ERROR_CODES.SESSION_INVALID };
     if (user.status !== 'active') return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
-    if (now - session.lastSeenAt > 6 * 60 * 60 * 1000) session.lastSeenAt = now;
+    // AUTH V2.1: the double must enforce the same idle bound as the real
+    // repository, or a test would pass against a rule production does not have.
+    if (now - session.lastSeenAt > SECURITY_SESSION_IDLE_TTL_MS) return { error: AUTH_ERROR_CODES.SESSION_INVALID };
+    if (now - session.lastSeenAt > SECURITY_SESSION_TOUCH_INTERVAL_MS) session.lastSeenAt = now;
     return { expiresAt: session.expiresAt, createdAt: session.createdAt, user: copy(user) };
   }
 

@@ -31,6 +31,28 @@ export const SECURITY_CHALLENGE_METHODS_V1 = Object.freeze(['email', 'telegram',
 export const SECURITY_TRUST_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 export const SECURITY_TRUST_MAX_DEVICES_PER_USER = 10;
 
+/* AUTH V2.1 (owner 2026-10-31): an idle session ends.
+ *
+ * The blueprint's finding ১২. The session table has carried `last_seen_at` since
+ * the beginning and the repository has always written it — but nothing ever
+ * compared it. The only bound was the absolute 30-day expiry, so a session a
+ * student stopped using three weeks ago was still fully valid: a leaked cookie
+ * stayed useful for the rest of its month whether or not anyone was behind it.
+ * 14 days is the blueprint's number (৪.৫). It is deliberately generous: a
+ * student revising for an admission test may well open the app weekly, and a
+ * timeout that logs real students out teaches them to distrust the app. The
+ * point is not to be strict, it is to have a second bound at all — a stolen
+ * cookie then expires by disuse as well as by clock.
+ *
+ * Applied as a sliding window: any request inside the window refreshes it, so
+ * an active student is never interrupted. */
+export const SECURITY_SESSION_IDLE_TTL_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
+
+// The write-throttle for `last_seen_at`. Writing on every request would make
+// each read a write and turn a cheap session check into a hot row; the column
+// only needs to be accurate to the idle window, so a coarse interval is enough.
+export const SECURITY_SESSION_TOUCH_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
+
 // Repeated-failure protection (§13-§14): escalating cooldowns, never a
 // permanent lockout. The Nth consecutive failure in the window applies the
 // cooldown at index min(failures - threshold, steps.length - 1).
