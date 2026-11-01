@@ -4637,6 +4637,8 @@ async function agentChat(request, env, uid, opts = {}) {
     return stream ? sseError(msg, 403, request) : jsonResp(msg, 403, request);
   }
   const early = { sent: /* @__PURE__ */ new Set(), push: null, seq: { n: 0 } };
+  early.remaining = quota ? quota.remaining : null;
+  early.cap = cap;
   const earlyStream = skyStream((chunk) => {
     if (early.push) early.push(chunk);
   }, early.seq);
@@ -4822,9 +4824,9 @@ async function agentChat(request, env, uid, opts = {}) {
           await settleBackground();
           emitTiming({ cache: cacheMode });
           if (!stream) {
-            return jsonResp({ text: cachedText, structured: hit.payload.structured ?? null, model: cachedModel || null, intent, cached: true, pv: SYSTEM_PROMPT_V, latencyMs: Date.now() - startedAt, agent: AGENT_VERSION }, 200, request);
+            return jsonResp({ text: cachedText, structured: hit.payload.structured ?? null, model: cachedModel || null, intent, cached: true, pv: SYSTEM_PROMPT_V, latencyMs: Date.now() - startedAt, agent: AGENT_VERSION, remaining: quota ? quota.remaining : null, cap }, 200, request);
           }
-          return sseCached(cachedText, intent, startedAt, cachedModel, request);
+          return sseCached(cachedText, intent, startedAt, cachedModel, request, quota ? quota.remaining : null, cap);
         }
       } catch (_) {
       }
@@ -5021,7 +5023,7 @@ async function agentChat(request, env, uid, opts = {}) {
                   const toStore = check.text || full;
                   later(() => chatStore.putCache(cacheKey, "summary", { text: toStore, structured: check.structured ?? null, model: c.model, intent }, { ttlMs: chatCacheTtl(intent), model: c.model }));
                 }
-                s.done({ rid: rid2, model: c.model, provider: c.provider, intent, quiz: quizMode, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt, structured: check.structured });
+                s.done({ rid: rid2, model: c.model, provider: c.provider, intent, quiz: quizMode, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt, structured: check.structured, remaining: early.remaining, cap: early.cap });
                 later(() => finalize2(c.model, c.provider, full));
                 await settleBackground();
                 emitTrace({ provider: c.provider, model: c.model, text: full, responseType: check.structured?.type, validated: !check.enforced });
@@ -5304,7 +5306,7 @@ data: ${JSON.stringify(msg)}
     }
   }), { status, headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache", ...corsHeaders(request) } });
 }
-function sseCached(text, intent, startedAt, model, request = null) {
+function sseCached(text, intent, startedAt, model, request = null, remaining = null, cap = null) {
   const enc = new TextEncoder();
   return new Response(new ReadableStream({
     start(controller) {
@@ -5317,7 +5319,7 @@ function sseCached(text, intent, startedAt, model, request = null) {
       const s = skyStream(push);
       s.hello();
       s.text(text);
-      s.done({ rid, model: model || null, provider: "cache", intent, cached: true, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt });
+      s.done({ rid, model: model || null, provider: "cache", intent, cached: true, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt, remaining, cap });
       try {
         controller.close();
       } catch (_) {

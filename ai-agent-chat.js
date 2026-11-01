@@ -500,7 +500,7 @@
        gap, and `sawDone` tells a complete answer from one the network cut. An
        older server sends neither, so both stay null/false and behaviour is
        exactly what it was before — the version is additive. */
-    let seq = -1, seqGap = false, sawDone = false, streamV = null, structured = null;
+    let seq = -1, seqGap = false, sawDone = false, streamV = null, structured = null, left = null, capN = null;
     while (true) {
       let step;
       try { step = await reader.read(); } catch (_) { break; }
@@ -526,6 +526,8 @@
                optional: an older server sends no `structured`, and callers that
                ignore it behave exactly as before. */
             if (j.structured && typeof j.structured === 'object') structured = j.structured;
+            if (typeof j.remaining === 'number') left = j.remaining;
+            if (typeof j.cap === 'number') capN = j.cap;
           }
           if (evt === 'replace' && typeof j.text === 'string') { full = j.text; if (onReplace) onReplace(full); else onChunk(full, true); }
           else if (j.text) { full += j.text; onChunk(full, false); }
@@ -540,8 +542,8 @@
        is what let a truncated answer look like a short one, so it is reported
        as incomplete. `truncated` is new, so callers that ignore it are no worse
        off than before. */
-    if (streamV && !sawDone) return { ok: true, text: full, meta: meta, truncated: true, stream: streamV, reqId, structured };
-    return { ok: true, text: full, meta: meta, stream: streamV || undefined, reqId, structured };
+    if (streamV && !sawDone) return { ok: true, text: full, meta: meta, truncated: true, stream: streamV, reqId, structured, remaining: left, cap: capN };
+    return { ok: true, text: full, meta: meta, stream: streamV || undefined, reqId, structured, remaining: left, cap: capN };
   }
 
   /* The server may correct text that already streamed (event: replace). A
@@ -590,6 +592,7 @@
       'লগইন করলে স্কাই তোমার নিজের তথ্য অনুযায়ী উত্তর দিতে পারবে, কোন বিষয়ে দুর্বল, কী অনুশীলন করা দরকার, কোনটা আগে পড়া উচিত।'
     ].join('\n'),
     stopped: 'থামানো হয়েছে', stop: 'থামাও', send: 'পাঠাও', menu: 'মেনু',
+    quotaLeft: 'আজ বাকি', quotaOf: 'টি প্রশ্ন',
     /* F2: a stream that was cut mid-answer. F0.4 taught the parser to notice it
        (`truncated`), but nothing read the flag, so the student still saw a
        chopped answer as if it were a short one. This is the sentence that makes
@@ -609,6 +612,7 @@
     actApplied: 'Saved', actCancelled: 'Cancelled', actExpired: 'Expired',
     actFail: 'Could not save', actOffline: 'Offline', actOnly: 'Only for you', actPending: 'Pending',
     cutOff: 'The answer was cut off — the rest never arrived.', retry: 'Try again',
+    quotaLeft: 'Left today', quotaOf: 'questions',
     needLogin: 'Please sign in for this'
   };
   const lang = (() => { try { return localStorage.getItem('ahLang') === 'en' ? 'en' : 'bn'; } catch (_) { return 'bn'; } })();
@@ -809,6 +813,11 @@
 #app.sky .faqm{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:12.5px;color:var(--mute)}
 #app.sky .faqm button{padding:7px 12px;border-radius:999px;background:var(--soft);color:var(--pri);font-weight:600;font-size:13px}
 #app.sky .faqm.cut span{color:var(--bad);font-weight:600}
+#app.sky .qrow{display:flex;align-items:center;gap:8px;padding:0 14px 6px;font-size:12px;color:var(--mute)}
+#app.sky .qrow .qbar{flex:1;height:4px;border-radius:99px;background:var(--soft);overflow:hidden;max-width:120px}
+#app.sky .qrow .qbar b{display:block;height:100%;background:var(--pri);border-radius:99px;transition:width .3s}
+#app.sky .qrow.low{color:var(--bad)}
+#app.sky .qrow.low .qbar b{background:var(--bad)}
 #app.sky .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 #app.sky .cta a{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:999px;background:var(--soft);color:var(--pri);font-weight:600;font-size:13.5px;text-decoration:none}
 #app.sky .acts button{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:var(--mute);transition:.15s}
@@ -970,7 +979,8 @@
       '<div class="bub"><div class="say" id="say"></div></div>' +
       '<div class="hbig" id="hbig"></div>' +
       '</section><div id="msgs"></div></main>' +
-      '<div class="dock"><div class="comp">' +
+      '<div class="dock"><div class="qrow" id="qrow" hidden><span id="qtxt"></span><i class="qbar"><b id="qfill"></b></i></div>' +
+      '<div class="comp">' +
       '<button class="cb" id="plusB" aria-label="' + T.attach + '">' + ic('plus') + '</button>' +
       '<textarea id="inp" rows="1" placeholder="' + T.ph + '"></textarea>' +
       '<button class="cb" id="actB" aria-label="' + T.send + '">' + ic('mic') + '</button>' +
@@ -1154,6 +1164,28 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
      rendered — the student saw a chopped answer with no sign anything was wrong.
      The note says so plainly and re-sends the same question through the existing
      data-q path, so the one useful action is one tap away. */
+  /* F2.5: quota comes off the `done` frame. Refuses to render without one — a
+     guessed count is false information. textContent/style only: server data. */
+  function quotaNote(remaining, cap) {
+    if (typeof remaining !== 'number' || typeof cap !== 'number' || !(cap > 0)) return null;
+    const left = Math.max(0, Math.min(cap, remaining));
+    const bn = (n) => String(n).replace(/[0-9]/g, (d) => '০১২৩৪৫৬৭৮৯'[d]);
+    const n = lang === 'en' ? left : bn(left);
+    const c = lang === 'en' ? cap : bn(cap);
+    return { text: T.quotaLeft + ' ' + n + '/' + c + ' ' + T.quotaOf, pct: Math.round((left / cap) * 100), low: left <= Math.max(1, Math.round(cap * 0.15)) };
+  }
+  function paintQuota(remaining, cap) {
+    const row = document.getElementById('qrow');
+    if (!row) return;
+    const note = quotaNote(remaining, cap);
+    if (!note) { row.hidden = true; return; }
+    const txt = document.getElementById('qtxt'), fill = document.getElementById('qfill');
+    if (txt) txt.textContent = note.text;
+    if (fill) fill.style.width = note.pct + '%';
+    row.classList.toggle('low', note.low);
+    row.hidden = false;
+  }
+
   function cutNote(m) {
     if (!m.cutOff || m.pending) return '';
     return '<div class="faqm cut"><span>⚠️ ' + esc(T.cutOff) + '</span><button data-q="' + esc(String(m.q || '').slice(0, 200)) + '">' + esc(T.retry) + ' →</button></div>';
@@ -1303,8 +1335,6 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
 
     const node = msgsEl.querySelector('.ai[data-i="' + (sessions[cur].msgs.length - 1) + '"]');
     liveNode = node;
-    /* F2.1: stop() needs the live holder to mark the turn as deliberately
-       stopped, so a stop is not reported as a cut connection. */
     activeHolder = holder;
     setBusy(true); mood('think');
 
@@ -1341,6 +1371,7 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
          the flag, so it never reached the student. Recorded on the message so the
          note renders from the saved history too, not just this render pass. */
       if (res.truncated && !holder.stopped) holder.cutOff = true;
+      paintQuota(res.remaining, res.cap);
       mood('happy', 1200);
     } else {
       const needLogin = res.status === 401 || (res.meta && /sign_in_required/.test(String(res.meta.error || '')));
@@ -1381,11 +1412,9 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
   }
 
   function stop() {
-    /* F2.1: a deliberate stop is not a cut stream. abort() ends the read before
-       `done`, so the parser returns `truncated: true` — the same value the
-       cutoff notice shows for a genuinely broken connection. Marking the holder
-       here is what keeps the two apart: the student pressed stop, so they must
-       not be told the answer was cut off. */
+    /* abort() ends the read before `done`, so the parser returns the same
+       `truncated: true` a broken connection returns. Marking the holder first is
+       what stops a deliberate stop being reported as a cut answer. */
     if (activeHolder) activeHolder.stopped = true;
     try { if (activeReq) activeReq.abort(); } catch (_) {}
     setBusy(false); say(T.stopped, 1600);

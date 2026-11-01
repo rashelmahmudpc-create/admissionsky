@@ -68,7 +68,7 @@ test('the client keeps the envelope instead of throwing it away', () => {
      drop it; every caller then saw prose only. */
   assert.ok(/structured/.test(client), 'the client must handle the field at all');
   assert.ok(/structured = j\.structured/.test(client), 'it must store the envelope from the done event');
-  assert.ok(/reqId, structured \}/.test(client), 'and return it to its caller');
+  assert.ok(/reqId, structured[,}]/.test(client), 'and return it to its caller');
 });
 
 test('the envelope stays optional, so an older server changes nothing', () => {
