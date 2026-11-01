@@ -468,6 +468,7 @@
 
   /* ───────── live backend: SSE tutor ───────── */
   let activeReq = null;
+  let activeHolder = null;
   let streaming = false;
 
   async function ask(messages, onChunk, opts, onReplace) {
@@ -1302,6 +1303,9 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
 
     const node = msgsEl.querySelector('.ai[data-i="' + (sessions[cur].msgs.length - 1) + '"]');
     liveNode = node;
+    /* F2.1: stop() needs the live holder to mark the turn as deliberately
+       stopped, so a stop is not reported as a cut connection. */
+    activeHolder = holder;
     setBusy(true); mood('think');
 
     /* slice(0,-1) drops the pending AI placeholder, so the history ends with the
@@ -1336,7 +1340,7 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
          that so a chopped answer could stop passing for a short one. Nothing read
          the flag, so it never reached the student. Recorded on the message so the
          note renders from the saved history too, not just this render pass. */
-      if (res.truncated) holder.cutOff = true;
+      if (res.truncated && !holder.stopped) holder.cutOff = true;
       mood('happy', 1200);
     } else {
       const needLogin = res.status === 401 || (res.meta && /sign_in_required/.test(String(res.meta.error || '')));
@@ -1347,6 +1351,7 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
       else if (limited) holder.errorKind = 'limit';
       mood('sad', 1400);
     }
+    activeHolder = null;
     save(); renderMsgs();
   }
 
@@ -1375,7 +1380,16 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
     return lines.join('\n');
   }
 
-  function stop() { try { if (activeReq) activeReq.abort(); } catch (_) {} setBusy(false); say(T.stopped, 1600); }
+  function stop() {
+    /* F2.1: a deliberate stop is not a cut stream. abort() ends the read before
+       `done`, so the parser returns `truncated: true` — the same value the
+       cutoff notice shows for a genuinely broken connection. Marking the holder
+       here is what keeps the two apart: the student pressed stop, so they must
+       not be told the answer was cut off. */
+    if (activeHolder) activeHolder.stopped = true;
+    try { if (activeReq) activeReq.abort(); } catch (_) {}
+    setBusy(false); say(T.stopped, 1600);
+  }
 
   function newChat() {
     sessions.unshift({ name: '', msgs: [], ts: Date.now() });
