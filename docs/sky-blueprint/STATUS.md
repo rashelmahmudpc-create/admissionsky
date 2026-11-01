@@ -15,8 +15,30 @@ Source of truth: Notion "Sky AI v1.0" → main page section **"🚦 এজেন
    "🟡 Doing — where I stopped, which branch/PR".
 4. **Mismatch:** repo / live URL wins over Notion. Fix Notion first, log it as a correction.
 
-## Current status (2026-10-31, main 85a81fd)
-- Phase: **F0 — Doing**
+## Current status (2026-11-01, main 7b3898a)
+- Phase: **F1 — ✅ Done. F0 — Done except two owner-held items.**
+
+- **F1 / Brain ও মডেল — ✅ Done (2026-11-01).** Its Done-condition, **routing
+  accuracy ≥ 90%**, was never measured before; it is now measured and guarded at
+  **100% (52/52 tuned, 36/36 holdout)**. Every F1 item is merged:
+  F1.1 catalog, F1.2 key vault, F1.3 task chains, F1.4 JSON output,
+  F1.5 Router v2, F1.7 Agent Loop, F1.8 Clarify, F1.9 Trace v2 + budget guard,
+  F1.10 Degraded Mode, F1.12 Auto-probe. AI guard suite **377/377**.
+  **Two F1 items are parked by the owner's own decision, not skipped:**
+  **F1.6** (mode selector L0–L3 — the L0–L3 semantics are nowhere defined) and
+  **F1.11** (Plan/Entitlement — no plan/subscription/paid-tier source exists in
+  the repo at all; the only entitlement-like knob is `AGENT_DAILY_CAP`, env,
+  default 10/day). Both need a product decision from him. Asked 2026-11-01; he
+  answered **৩ — leave for now** (msg 10514). **Do not start F2 without asking.**
+- **Next phase: F2 (Chat UI v3).** Not started: its definition lives only on the
+  Notion page ০৭ (roadmap F0–F10), and **no Notion token is available in this
+  environment** (checked 2026-11-01: `NOTION_TOKEN`, `NOTION_API_KEY`,
+  `NOTION_INTEGRATION_TOKEN` all unset). Owner holds it. See
+  `brain/knowledge/notion-sky-ai-blueprint-2026-10-24.md` §৩.
+- **Two F0 items still open, both blocked on owner-held credentials:**
+  F0.1 step 4 remaining routes need provider secrets on sky-ai, and F0.2 needs the
+  `SKY_FLAGS` KV namespace + binding created in Cloudflare. Neither is a code
+  change I can make here.
 
 - **F0.8 / repo cleanliness — ✅ Done (2026-10-31).** List at `docs/sky-blueprint/F0.8-repo-cleanliness.md`; the four objective rules are locked by `repo-cleanliness.test.mjs` (wired into `test:shell-guards` and the App Shell Guard triggers). Measured: 0 junk files, 0 unnamed workflows, 2 orphan files (one a deliberate stub), 0 one-shot workflows on an auto trigger, 131 remote branches (35 merged) — branch/doc cleanup left as owner decisions. F0.1–F0.8 all Done; next is F1 (Brain ও মডেল).
 - **F0.1 / DV-01 — Doing.** Steps 1–3 ✅: `sky-ai/` Worker live
@@ -223,3 +245,5 @@ Source of truth: Notion "Sky AI v1.0" → main page section **"🚦 এজেন
   all-off defaults), listed the route in `SKY_AI_IDENTITY_ROUTES`, +2 pins, worker bundle rebuilt,
   sky-ai suites 24/24 · `4b467b3` on `cline/yc69z6y0` · next: deploy (worker creds absent in that
   session) + `SKY_FLAGS` KV binding.
+- 2026-11-01 · F1 complete · F1.7/F1.8/F1.9/F1.12 shipped (PRs #260/#262/#258/#264 → `15f8144`/`cb57c8d`/`9691742`/`7b3898a`); F1.6+F1.11 parked on the owner's
+  decision (msg 10514); STATUS.md corrected from a stale "F0 — Doing, main 85a81fd" to "F1 Done" · `7b3898a` · next: ask the owner for F2 (needs the Notion token).
