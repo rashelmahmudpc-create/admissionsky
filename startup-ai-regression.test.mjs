@@ -18,7 +18,7 @@ const bootBlock = (H.match(/async function boot\(\)\{[\s\S]*?\n\}/) || [''])[0];
 const coordinator = (H.match(/const startFinalRender = \(options\) => \{[\s\S]*?else modulesParsed\(\);/) || [''])[0];
 const appShellBlock = (SW.match(/const APP_SHELL = \[[\s\S]*?\n\];/) || [''])[0];
 const shellAssets = [...appShellBlock.matchAll(/^\s*['"]\.\/[^'"]+['"],?$/gm)].length;
-const dashboardTag = H.indexOf('./dashboard-v2.js?v=dash2f19-orb54');
+const dashboardTag = H.indexOf('./dashboard-v2.js?v=dash2f20-orb-inline');
 const firstOptionalTag = H.indexOf('qbank-redesign.js?v=practice15');
 
 /* Startup deadline and race fix */

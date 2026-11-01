@@ -48,7 +48,7 @@ const APP_SHELL = [
   './profile-v2.html?v=profile-v2-7',
   './profile-v2-mount.js?v=profile-v2-7',
   './data-protection.js?v=dp-v3-fastboot',
-  './dashboard-v2.js?v=dash2f19-orb54',
+  './dashboard-v2.js?v=dash2f20-orb-inline',
   './sky-smalltalk.js?v=st2',
   './sky-replies.json?v=r1',
   './sky-tools-client.js?v=tools1',
@@ -92,7 +92,7 @@ const APP_SHELL = [
 // A truncated/corrupt download is NEVER written to the shell cache.
 const ASSET_DIGESTS = {
 /* sw-manifest:start */
-  "./index.html": "9e82443a6bce40f652f233f58ad26da264e32d8a96258cf5162d4ebb720d52a7",
+  "./index.html": "da7000e235d49466c4f96cb3cafeea03185d029cd24a0dc20ac08c237da98da5",
   "./manifest.json": "6dcf0e0c6f7671750549e53558ba8b9f0c2c83b0c6759072a6b5e2276331f491",
   "./manifest.webmanifest": "abcd26174710f6df3e183889a5a9da182f73ee8cdcc543b43db8fb4070cad54f",
   "./dashboard-v2.css?v=dash2f13-theme": "4541bc1e65fd158c593443562975400d128b8f1d3b636595df3c235b99e8cced",
@@ -114,7 +114,7 @@ const ASSET_DIGESTS = {
   "./profile-v2.html?v=profile-v2-7": "b9b8325f372c6bdb822a8c19b39d7f459baf2aa868f36f174a9b932c90164d2f",
   "./profile-v2-mount.js?v=profile-v2-7": "45ffae2bdc26107148eaa1a7c04365c9c983e4c1a1a73935666c8d92c8e63665",
   "./data-protection.js?v=dp-v3-fastboot": "359dc907ade4bcb3a6a722385969ebb6af47f7e436e6cdf2cce0dd6b7343723d",
-  "./dashboard-v2.js?v=dash2f19-orb54": "09e96f87f5c7faf8fafba4b976190c874c16c6844041414792645d67c79345bc",
+  "./dashboard-v2.js?v=dash2f20-orb-inline": "35b72befa33db6bbdb28b73d863ba8234b50b6c1f03ab65b19a095869a02aaae",
   "./sky-smalltalk.js?v=st2": "114b0b0ebead92de93c11063196323f3218a82259067ad05b0fadbf924fe6fa5",
   "./sky-replies.json?v=r1": "f5e97d43641a1dbedbe3d17f24c740ebb38b761a79c833a902b8876b7ead5a9f",
   "./sky-tools-client.js?v=tools1": "dc88322912df86a210bca7fe5c0fa3c1f1ddc3481eaddddcf155f987fae1f558",

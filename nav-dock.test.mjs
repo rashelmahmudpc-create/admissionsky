@@ -73,7 +73,7 @@ test('dock art and size match the Dashboard frame exactly (drift guard)', () => 
     'M22 7l4.2 11.3L37.5 22.5 26.2 26.7 22 38l-4.2-11.3L6.5 22.5l11.3-4.2z',
     'width:min(440px,calc(100% - 32px))',
     'height:70px;border-radius:30px',
-    'top:-20px;transform:translateX(-50%);width:54px;height:54px',
+    'top:3px;transform:translateX(-50%);width:40px;height:40px',
     'conic-gradient(from 0deg,#6C95FF,#B07BFF,#FF7CC8,#FFC857,#6C95FF)'
   ]) {
     assert.ok(DASH.includes(frag), 'dashboard frame has: ' + frag);
@@ -93,5 +93,5 @@ test('AI chat stays full screen: no dock and no dock padding there (owner 2026-1
   assert.ok(SRC.includes("'html.ai-chat-open body #navRoot .bottomnav.ahd-host{display:none!important}'"), 'dock hidden on the AI screen');
   assert.ok(SRC.includes("'html:not(.ai-chat-open) body #app:not(.no-nav){padding-bottom:calc(112px + var(--safe-b,0px))!important}'"), 'dock padding skipped on the AI screen');
   assert.ok(!SRC.includes("'html body #app:not(.no-nav){padding-bottom"), 'old unconditional padding rule is gone');
-  assert.ok(HTML.includes('src="nav-dock.js?v=dock-v2-20261101-orb54"'), 'cache-busted script tag');
+  assert.ok(HTML.includes('src="nav-dock.js?v=dock-v2-20261101-inline"'), 'cache-busted script tag');
 });
