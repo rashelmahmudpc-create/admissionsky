@@ -1359,6 +1359,10 @@ export async function agentChat(request, env, uid, opts = {}) {
      stream, so the student sees the first byte at once and each stage is sent
      the moment that work really happens (not all together at the end). */
   const early = { sent: new Set(), push: null, seq: { n: 0 } };
+  /* F2.5: the quota is decided before the stream opens but only ever travelled on
+     the 429; carried here so the `done` frame can show it. */
+  early.remaining = quota ? quota.remaining : null;
+  early.cap = cap;
   /* F0.4: the early stages and the model's text are written by two different
      stream controllers but are one answer, so they share one `seq` counter.
      Without that, the inner stream would restart at 0 mid-answer and a client
@@ -1589,9 +1593,9 @@ export async function agentChat(request, env, uid, opts = {}) {
         await settleBackground();
         emitTiming({ cache: cacheMode });
         if (!stream) {
-          return jsonResp({ text: cachedText, structured: hit.payload.structured ?? null, model: cachedModel || null, intent, cached: true, pv: SYSTEM_PROMPT_V, latencyMs: Date.now() - startedAt, agent: AGENT_VERSION }, 200, request);
+          return jsonResp({ text: cachedText, structured: hit.payload.structured ?? null, model: cachedModel || null, intent, cached: true, pv: SYSTEM_PROMPT_V, latencyMs: Date.now() - startedAt, agent: AGENT_VERSION, remaining: quota ? quota.remaining : null, cap }, 200, request);
         }
-        return sseCached(cachedText, intent, startedAt, cachedModel, request);
+        return sseCached(cachedText, intent, startedAt, cachedModel, request, quota ? quota.remaining : null, cap);
       }
     } catch (_) { /* a cache fault never breaks chat, fall through to the live path */ }
   }
@@ -1848,7 +1852,7 @@ export async function agentChat(request, env, uid, opts = {}) {
                  this request (the stream closes only after it lands). */
               /* F0.5: `rid` on the frame too, so a client that only keeps the parsed
                  events still has the id the quota decision and the log line used. */
-              s.done({ rid, model: c.model, provider: c.provider, intent, quiz: quizMode, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt, structured: check.structured });
+              s.done({ rid, model: c.model, provider: c.provider, intent, quiz: quizMode, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt, structured: check.structured, remaining: early.remaining, cap: early.cap });
               later(() => finalize(c.model, c.provider, full));
               await settleBackground();
               emitTrace({ provider: c.provider, model: c.model, text: full, responseType: check.structured?.type, validated: !check.enforced });
@@ -2125,7 +2129,7 @@ function sseError(msg, status, request = null) {
 /* P25: replay a cached answer on the SSE contract the client already parses.
    No provider was called, so no stage events are emitted, the text and the
    `done` event are the whole exchange, exactly as the client expects. */
-function sseCached(text, intent, startedAt, model, request = null) {
+function sseCached(text, intent, startedAt, model, request = null, remaining = null, cap = null) {
   const enc = new TextEncoder();
   return new Response(new ReadableStream({
     start(controller) {
@@ -2136,7 +2140,7 @@ function sseCached(text, intent, startedAt, model, request = null) {
       const s = skyStream(push);
       s.hello();
       s.text(text);
-      s.done({ rid, model: model || null, provider: 'cache', intent, cached: true, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt });
+      s.done({ rid, model: model || null, provider: 'cache', intent, cached: true, pv: SYSTEM_PROMPT_V, agent: AGENT_VERSION, latencyMs: Date.now() - startedAt, remaining, cap });
       try { controller.close(); } catch (_) {}
     }
   }), { status: 200, headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache', ...corsHeaders(request) } });
