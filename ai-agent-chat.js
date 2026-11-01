@@ -589,6 +589,12 @@
       'লগইন করলে স্কাই তোমার নিজের তথ্য অনুযায়ী উত্তর দিতে পারবে, কোন বিষয়ে দুর্বল, কী অনুশীলন করা দরকার, কোনটা আগে পড়া উচিত।'
     ].join('\n'),
     stopped: 'থামানো হয়েছে', stop: 'থামাও', send: 'পাঠাও', menu: 'মেনু',
+    /* F2: a stream that was cut mid-answer. F0.4 taught the parser to notice it
+       (`truncated`), but nothing read the flag, so the student still saw a
+       chopped answer as if it were a short one. This is the sentence that makes
+       the difference visible, and the button offers the one useful action. */
+    cutOff: 'উত্তরটা মাঝপথে কেটে গেছে — পুরোটা আসেনি।',
+    retry: 'আবার চেষ্টা করো',
     clear: 'সব মুছো', del: 'ডিলিট', pin: 'পিন', ren: 'নাম বদলাও', search: 'খুঁজুন',
     actTitle: 'নিশ্চিত করো', actConfirmQ: 'সেভ করবো?', actYes: 'হ্যাঁ', actNo: 'না',
     actApplied: 'সেভ হয়েছে', actCancelled: 'বাতিল', actExpired: 'সময় শেষ',
@@ -601,6 +607,7 @@
     actTitle: 'Confirm', actConfirmQ: 'Save this?', actYes: 'Yes', actNo: 'No',
     actApplied: 'Saved', actCancelled: 'Cancelled', actExpired: 'Expired',
     actFail: 'Could not save', actOffline: 'Offline', actOnly: 'Only for you', actPending: 'Pending',
+    cutOff: 'The answer was cut off — the rest never arrived.', retry: 'Try again',
     needLogin: 'Please sign in for this'
   };
   const lang = (() => { try { return localStorage.getItem('ahLang') === 'en' ? 'en' : 'bn'; } catch (_) { return 'bn'; } })();
@@ -800,6 +807,7 @@
 #app.sky .acts{display:flex;gap:2px;margin-top:10px}
 #app.sky .faqm{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:12.5px;color:var(--mute)}
 #app.sky .faqm button{padding:7px 12px;border-radius:999px;background:var(--soft);color:var(--pri);font-weight:600;font-size:13px}
+#app.sky .faqm.cut span{color:var(--bad);font-weight:600}
 #app.sky .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 #app.sky .cta a{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:999px;background:var(--soft);color:var(--pri);font-weight:600;font-size:13.5px;text-decoration:none}
 #app.sky .acts button{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:var(--mute);transition:.15s}
@@ -1140,6 +1148,15 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
     if (!m.go || m.pending || !/^[a-z0-9-]{2,40}$/.test(String(m.go))) return '';
     return '<div class="faqm"><span>🧭 ' + esc(m.goName || '') + '</span><button data-tgo="' + esc(m.go) + '">খুলে দাও →</button></div>';
   }
+  /* F2: the answer was cut mid-stream. F0.4 made the parser flag it so a
+     truncated reply could stop passing for a short one, but the flag was never
+     rendered — the student saw a chopped answer with no sign anything was wrong.
+     The note says so plainly and re-sends the same question through the existing
+     data-q path, so the one useful action is one tap away. */
+  function cutNote(m) {
+    if (!m.cutOff || m.pending) return '';
+    return '<div class="faqm cut"><span>⚠️ ' + esc(T.cutOff) + '</span><button data-q="' + esc(String(m.q || '').slice(0, 200)) + '">' + esc(T.retry) + ' →</button></div>';
+  }
   function bubble(m, idx) {
     if (m.role === 'user') return '<div class="u"><span>' + esc(m.text) + '</span></div>';
     let inner;
@@ -1160,7 +1177,7 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
       '<button data-r="' + idx + '" aria-label="' + T.regen + '">' + ic('redo') + '</button>' +
       '<button data-g="' + idx + '" aria-label="' + T.good + '">' + ic('up') + '</button>' +
       '</div>' : '';
-    return '<div class="ai" data-i="' + idx + '"><div class="who">' + av('xs') + 'Sky</div>' + procHtml(m) + '<div class="bw">' + inner + '</div>' + goNote(m) + faqNote(m) + contactNote(m) + acts + '</div>';
+    return '<div class="ai" data-i="' + idx + '"><div class="who">' + av('xs') + 'Sky</div>' + procHtml(m) + '<div class="bw">' + inner + '</div>' + cutNote(m) + goNote(m) + faqNote(m) + contactNote(m) + acts + '</div>';
   }
   function procStage(node, holder, next) {
     if (holder.stage) (holder.steps = holder.steps || []).push(holder.stage);
@@ -1277,7 +1294,7 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
         return;
       }
     }
-    const holder = { role: 'ai', text: '', ts: Date.now(), pending: true, stage: T.stageRead, steps: [] };
+    const holder = { role: 'ai', text: '', ts: Date.now(), pending: true, stage: T.stageRead, steps: [], q: t };
     const t0 = Date.now();
     let gotFirst = false;
     sessions[cur].msgs.push(holder);
@@ -1315,6 +1332,11 @@ const ACT_ACTIONS = { 'prefs.write': { bn: 'তোমার AI পছন্দ �
     holder.secs = ((Date.now() - t0) / 1000).toFixed(1);
     if (res.ok && res.text) {
       holder.pending = false; holder.text = res.text;
+      /* F2: the parser flags a stream cut before `done` (`truncated`); F0.4 added
+         that so a chopped answer could stop passing for a short one. Nothing read
+         the flag, so it never reached the student. Recorded on the message so the
+         note renders from the saved history too, not just this render pass. */
+      if (res.truncated) holder.cutOff = true;
       mood('happy', 1200);
     } else {
       const needLogin = res.status === 401 || (res.meta && /sign_in_required/.test(String(res.meta.error || '')));
