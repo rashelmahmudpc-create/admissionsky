@@ -270,11 +270,44 @@ export function renderSimpleAnswer(results, firstName) {
 }
 
 /** Block appended to the system prompt when a model still writes the answer. */
+/* F1.7 — Agent Loop: a tool that failed must be VISIBLE to the model as a
+ * failure, not as silence.
+ *
+ * `renderToolContext` skipped every failed tool except web_search. So a
+ * `get_exam_history` that timed out or exhausted the tool budget was dropped on
+ * the floor, and the model saw exactly what it sees when no tool was planned at
+ * all. Told nothing, it does the reasonable thing with what it has and says
+ * "তোমার কোনো তথ্য নেই" — a confident claim about the student's own data that is
+ * simply wrong, and the student has no way to tell.
+ *
+ * The fix is not to invent data, and not to retry blindly: it is to say plainly
+ * that the tool ran and did not return, so the model can say "এটা এই মুহূর্তে
+ * পড়তে পারিনি" instead of "তোমার কিছু নেই".
+ */
+const FAILURE_NOTE = {
+  timeout: 'it timed out',
+  budget: 'it ran out of the tool time budget',
+  failed: 'it failed',
+  'unknown-tool': 'it is not a known tool',
+  'owner-from-args-rejected': 'the request was rejected'
+};
+
+export function renderToolFailure(r) {
+  const name = String((r && r.name) || '');
+  const label = TOOL_LABELS[name] || name || 'tool';
+  const why = FAILURE_NOTE[String((r && r.error) || '')] || 'it failed';
+  return 'TOOL ' + name + ' FAILED (' + label + '): ' + why + '. No data was returned. '
+    + 'Say you could not read it just now and invite the student to try again shortly; '
+    + 'do NOT say there is no such information about them.';
+}
+
 export function renderToolContext(results) {
   const out = [];
   for (const r of results) {
     if (!r.ok && r.name === 'web_search') { out.push(renderSearchFailure(r)); continue; }
-    if (!r.ok) continue;
+    /* F1.7: every other failure used to be dropped, so a timed-out tool read to
+       the model as "no tool was planned". Silence is not a result. */
+    if (!r.ok) { out.push(renderToolFailure(r)); continue; }
     if (r.name === 'get_app_features') out.push(renderAppFeatures(r.data));
     else if (r.name === 'calculate') out.push('TOOL calculate: ' + r.expression + ' = ' + r.value + ' (exact; use this number).');
     else if (r.name === 'get_exam_history' && !r.empty) out.push('TOOL get_exam_history (this student only): exams ' + r.exams + ', questions ' + r.questions + ', accuracy ' + r.accuracy + '%, streak ' + r.streak + ', mistakes ' + r.mistakes + '.');

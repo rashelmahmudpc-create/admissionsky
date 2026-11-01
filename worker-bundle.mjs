@@ -1273,6 +1273,19 @@ function renderSimpleAnswer(results, firstName) {
   }
   return parts.join("\n\n") || null;
 }
+var FAILURE_NOTE = {
+  timeout: "it timed out",
+  budget: "it ran out of the tool time budget",
+  failed: "it failed",
+  "unknown-tool": "it is not a known tool",
+  "owner-from-args-rejected": "the request was rejected"
+};
+function renderToolFailure(r) {
+  const name = String(r && r.name || "");
+  const label = TOOL_LABELS[name] || name || "tool";
+  const why = FAILURE_NOTE[String(r && r.error || "")] || "it failed";
+  return "TOOL " + name + " FAILED (" + label + "): " + why + ". No data was returned. Say you could not read it just now and invite the student to try again shortly; do NOT say there is no such information about them.";
+}
 function renderToolContext(results) {
   const out = [];
   for (const r of results) {
@@ -1280,7 +1293,10 @@ function renderToolContext(results) {
       out.push(renderSearchFailure(r));
       continue;
     }
-    if (!r.ok) continue;
+    if (!r.ok) {
+      out.push(renderToolFailure(r));
+      continue;
+    }
     if (r.name === "get_app_features") out.push(renderAppFeatures(r.data));
     else if (r.name === "calculate") out.push("TOOL calculate: " + r.expression + " = " + r.value + " (exact; use this number).");
     else if (r.name === "get_exam_history" && !r.empty) out.push("TOOL get_exam_history (this student only): exams " + r.exams + ", questions " + r.questions + ", accuracy " + r.accuracy + "%, streak " + r.streak + ", mistakes " + r.mistakes + ".");
