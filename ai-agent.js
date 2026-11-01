@@ -1004,6 +1004,42 @@ export function rankChainByBanglaQuality(entries, bangla = false) {
     .map((x) => x.e);
 }
 
+/* F1.10 — Degraded Mode: when the whole chain fails, say WHICH failure it was.
+ *
+ * Every exhausted-chain path reported `provider_failed` with "AI একটু ব্যস্ত,
+ * কয়েক সেকেন্ড পরে আবার চেষ্টা করো" — a busy/transient message — whatever had
+ * actually happened. When the failures were credential failures (401/402/403) the
+ * AI is not busy: its keys are dead. Telling the student to retry in a few
+ * seconds sends them into a loop that cannot succeed, and it hides a real
+ * operations problem behind a reassuring sentence.
+ *
+ * So classify the exhaustion. `bad` cannot be the test: it is true for 429 and
+ * 5xx as well, which really are transient. The status is what separates a dead
+ * key from a busy provider.
+ */
+export const CREDENTIAL_STATUSES = Object.freeze([401, 402, 403]);
+
+export function degradedOutcome(attempts = 0, credFails = 0) {
+  const n = Number(attempts) || 0;
+  const cred = Number(credFails) || 0;
+  /* Every provider that was tried failed on its credential, and at least one was
+     tried. One working key anywhere means this is not that case. */
+  if (n > 0 && cred === n) {
+    return {
+      error: 'provider_unconfigured',
+      message: 'AI-সেবা এখন বন্ধ আছে, দয়া করে মালিককে জানাও।',
+      retryable: false,
+      status: 503
+    };
+  }
+  return {
+    error: 'provider_failed',
+    message: 'AI একটু ব্যস্ত, কয়েক সেকেন্ড পরে আবার চেষ্টা করো।',
+    retryable: true,
+    status: 502
+  };
+}
+
 /* ── helpers: KV (best-effort) -------------------------------------------- */
 const dayKey = () => new Date().toISOString().slice(0, 10);
 /* Rolling quota window: a student gets `cap` messages, then `cap` more 24h after
@@ -1626,6 +1662,9 @@ export async function agentChat(request, env, uid, opts = {}) {
 
   if (!stream) {
     let lastErr = '';
+    /* F1.10: count what was tried and how it failed, so exhaustion can be
+       reported honestly instead of always as "busy". */
+    let attempts = 0, credFails = 0;
     /* P28: same health-aware chain as the streaming path (Gemini-only here, since
        it is the only adapter with a one-shot path). Never empty when keys exist. */
     const oneShot = chain.filter(c => { const a = adapterFor(c); return Boolean(a) && a.oneShot === true; });
@@ -1657,6 +1696,7 @@ export async function agentChat(request, env, uid, opts = {}) {
           return jsonResp({ text: check.text, structured: check.structured, model: c.model, intent, pv: SYSTEM_PROMPT_V, latencyMs: Date.now() - startedAt, agent: AGENT_VERSION }, 200, request);
         }
         lastErr = 'empty-' + c.model;
+        attempts++;
       } catch (e) {
         lastErr = String(e.message || e);
         /* P28: a transient 5xx earns a short cooldown and recovers on its own;
@@ -1668,13 +1708,16 @@ export async function agentChat(request, env, uid, opts = {}) {
             : (oneShotFails.get(c.model) || 0) + 1);
           if (e.bad) await markEntryFailed(env.PUB_KV, c.key, c.model, e.status);
         }
+        attempts++;
+        if (e instanceof ProviderError && CREDENTIAL_STATUSES.includes(Number(e.status))) credFails++;
       }
     }
     await settleBackground();
     await refundQuota();
+    const degraded = degradedOutcome(attempts, credFails);
     emitTrace({ fallbackReason: FALLBACK.PROVIDER_ERROR, validated: false });
     emitTiming({ failed: true });
-    return jsonResp({ error: 'provider_failed', message: 'AI একটু ব্যস্ত, কয়েক সেকেন্ড পরে আবার চেষ্টা করো।', retryable: true }, 502, request);
+    return jsonResp({ error: degraded.error, message: degraded.message, retryable: degraded.retryable }, degraded.status, request);
   }
 
   /* ── STREAMING (SSE) ── */
@@ -1698,6 +1741,9 @@ export async function agentChat(request, env, uid, opts = {}) {
         if (hasImage) stage('image', 'ছবিটা বিশ্লেষণ করছি');
         stage('think', 'ভাবছি, উত্তর সাজাচ্ছি');
         let ok = false;
+        /* F1.10: same honest-exhaustion accounting as the one-shot path, so a
+           dead-key outage and a busy provider do not read the same to a student. */
+        let attempts = 0, credFails = 0;
         let lastErr = '';
         /* P31: a model that fails is not retried once per key inside this same
            request. Measured 2026-10-16: a globally busy `gemini-3.1-flash-lite`
@@ -1780,14 +1826,17 @@ export async function agentChat(request, env, uid, opts = {}) {
                 : (modelFails.get(c.model) || 0) + 1);
               if (e.bad) await markEntryFailed(env.PUB_KV, c.key, c.model, e.status);
             } else lastErr = String(e.message || e);
+            attempts++;
+            if (e instanceof ProviderError && CREDENTIAL_STATUSES.includes(Number(e.status))) credFails++;
           }
         }
         if (!ok) {
           await settleBackground();
           await refundQuota();
+          const degraded = degradedOutcome(attempts, credFails);
           emitTrace({ fallbackReason: FALLBACK.PROVIDER_ERROR, validated: false });
           emitTiming({ failed: true });
-          s.error({ error: 'provider_failed', message: 'AI একটু ব্যস্ত, কয়েক সেকেন্ড পরে আবার চেষ্টা করো।', retryable: true });
+          s.error({ error: degraded.error, message: degraded.message, retryable: degraded.retryable });
         }
       } catch (e) {
         await settleBackground();

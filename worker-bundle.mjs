@@ -4303,6 +4303,25 @@ function rankChainByBanglaQuality(entries, bangla = false) {
     return a.i - b.i;
   }).map((x) => x.e);
 }
+var CREDENTIAL_STATUSES = Object.freeze([401, 402, 403]);
+function degradedOutcome(attempts = 0, credFails = 0) {
+  const n = Number(attempts) || 0;
+  const cred = Number(credFails) || 0;
+  if (n > 0 && cred === n) {
+    return {
+      error: "provider_unconfigured",
+      message: "AI-সেবা এখন বন্ধ আছে, দয়া করে মালিককে জানাও।",
+      retryable: false,
+      status: 503
+    };
+  }
+  return {
+    error: "provider_failed",
+    message: "AI একটু ব্যস্ত, কয়েক সেকেন্ড পরে আবার চেষ্টা করো।",
+    retryable: true,
+    status: 502
+  };
+}
 var dayKey2 = () => (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
 var RL_WINDOW_MS2 = 24 * 60 * 60 * 1e3;
 function limitMessage(cap, resetAt, now) {
@@ -4834,6 +4853,7 @@ async function agentChat(request, env, uid, opts = {}) {
     };
     if (!stream) {
       let lastErr = "";
+      let attempts = 0, credFails = 0;
       const oneShot = chain.filter((c) => {
         const a = adapterFor(c);
         return Boolean(a) && a.oneShot === true;
@@ -4859,6 +4879,7 @@ async function agentChat(request, env, uid, opts = {}) {
             return jsonResp({ text: check.text, structured: check.structured, model: c.model, intent, pv: SYSTEM_PROMPT_V, latencyMs: Date.now() - startedAt, agent: AGENT_VERSION }, 200, request);
           }
           lastErr = "empty-" + c.model;
+          attempts++;
         } catch (e) {
           lastErr = String(e.message || e);
           if (e instanceof ProviderError) {
@@ -4866,13 +4887,16 @@ async function agentChat(request, env, uid, opts = {}) {
             oneShotFails.set(c.model, st >= 500 || st === 429 ? ONESHOT_FAIL_LIMIT : (oneShotFails.get(c.model) || 0) + 1);
             if (e.bad) await markEntryFailed(env.PUB_KV, c.key, c.model, e.status);
           }
+          attempts++;
+          if (e instanceof ProviderError && CREDENTIAL_STATUSES.includes(Number(e.status))) credFails++;
         }
       }
       await settleBackground();
       await refundQuota();
+      const degraded = degradedOutcome(attempts, credFails);
       emitTrace({ fallbackReason: FALLBACK.PROVIDER_ERROR, validated: false });
       emitTiming({ failed: true });
-      return jsonResp({ error: "provider_failed", message: "AI একটু ব্যস্ত, কয়েক সেকেন্ড পরে আবার চেষ্টা করো।", retryable: true }, 502, request);
+      return jsonResp({ error: degraded.error, message: degraded.message, retryable: degraded.retryable }, degraded.status, request);
     }
     const encoder8 = new TextEncoder();
     const streamOut = new ReadableStream({
@@ -4899,6 +4923,7 @@ async function agentChat(request, env, uid, opts = {}) {
           if (hasImage2) stage("image", "ছবিটা বিশ্লেষণ করছি");
           stage("think", "ভাবছি, উত্তর সাজাচ্ছি");
           let ok2 = false;
+          let attempts = 0, credFails = 0;
           let lastErr = "";
           const modelFails = /* @__PURE__ */ new Map();
           const MODEL_FAIL_LIMIT = 2;
@@ -4949,14 +4974,17 @@ async function agentChat(request, env, uid, opts = {}) {
                 modelFails.set(c.model, st >= 500 || st === 429 ? MODEL_FAIL_LIMIT : (modelFails.get(c.model) || 0) + 1);
                 if (e.bad) await markEntryFailed(env.PUB_KV, c.key, c.model, e.status);
               } else lastErr = String(e.message || e);
+              attempts++;
+              if (e instanceof ProviderError && CREDENTIAL_STATUSES.includes(Number(e.status))) credFails++;
             }
           }
           if (!ok2) {
             await settleBackground();
             await refundQuota();
+            const degraded = degradedOutcome(attempts, credFails);
             emitTrace({ fallbackReason: FALLBACK.PROVIDER_ERROR, validated: false });
             emitTiming({ failed: true });
-            s.error({ error: "provider_failed", message: "AI একটু ব্যস্ত, কয়েক সেকেন্ড পরে আবার চেষ্টা করো।", retryable: true });
+            s.error({ error: degraded.error, message: degraded.message, retryable: degraded.retryable });
           }
         } catch (e) {
           await settleBackground();
