@@ -8,7 +8,8 @@
  *   1. no temp/junk file is tracked,
  *   2. every workflow has a name,
  *   3. no new orphan root source file (a .js/.mjs no tracked file mentions),
- *   4. a one-shot ops workflow is never reachable from push/PR/schedule.
+ *   4. a one-shot ops workflow is never reachable from push/PR/schedule,
+ *   5. no tracked file carries an unresolved git conflict marker.
  *
  * It does NOT try to enforce the judgement calls (branch count, doc sprawl,
  * which one-shot workflow to archive). Those stay on the list for the owner.
@@ -75,6 +76,31 @@ test('rule 4: a one-shot ops workflow is never on an automatic trigger', () => {
   }
   assert.deepEqual(bad, [],
     `a one-shot ops workflow must be workflow_dispatch only, it can mutate live state: ${bad.join(', ')}`);
+});
+
+test('rule 5: no tracked file carries a git conflict marker', () => {
+  // PR #284 merged with its markers still in place. Nothing noticed, because a
+  // marker is ordinary text everywhere: one file made GitHub refuse to run the
+  // workflow (every push failed in 0s), another turned a guard into a syntax
+  // error, and a third made the release-pin guard compare pins that no longer
+  // ship. The map below is the one marker that is already known and owned by a
+  // pending fix; the second assertion deletes an entry the moment its file is
+  // clean, so the exception cannot rot into a permanent blind spot.
+  const PENDING_FIX = {
+    '.github/workflows/telegram-auth-canary-activate.yml':
+      '#284 left markers here; removing them needs the workflow scope, which no agent token has',
+  };
+  const MARKER = /^(?:<{7}|>{7})(?: |$)/m;
+  const SCANNED = /\.(js|mjs|cjs|json|md|yml|yaml|html|css|txt|toml|py|sh|ts)$/;
+  const marked = tracked()
+    .filter((f) => SCANNED.test(f))
+    .filter((f) => { try { return MARKER.test(readFileSync(join(ROOT, f), 'utf8')); } catch { return false; } });
+  const unexpected = marked.filter((f) => !PENDING_FIX[f]);
+  assert.deepEqual(unexpected, [],
+    `resolve these conflict markers before merging: ${unexpected.join(', ')}`);
+  const stale = Object.keys(PENDING_FIX).filter((f) => !marked.includes(f));
+  assert.deepEqual(stale, [],
+    `these files no longer carry markers — delete their PENDING_FIX entry so the guard covers them again: ${stale.join(', ')}`);
 });
 
 test('the guard is not vacuous', () => {
