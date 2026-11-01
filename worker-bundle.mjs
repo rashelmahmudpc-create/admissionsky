@@ -27795,12 +27795,18 @@ var VerificationOrchestrator = class {
       if (probes[1].status === "fulfilled") remoteQuota = probes[1].value;
       if (probes[2].status === "fulfilled") remoteStatus = probes[2].value;
       const total = Number(state.successCount || 0) + Number(state.failureCount || 0);
+      const successCount = Number(state.successCount || 0);
+      const failureCount = Number(state.failureCount || 0);
+      const deliveryEvidence = successCount > 0 ? "proven" : failureCount > 0 ? "failed" : "never-tried";
       return Object.freeze({
         id: entry.id,
         channel: entry.channel,
         enabled: entry.enabled,
         configured: remoteStatus?.configured === true,
         priority: entry.priority,
+        // The single word an operator needs, and what it rests on.
+        proven: successCount > 0,
+        deliveryEvidence,
         timeoutMs: entry.timeoutMs,
         availability: availability?.available === true,
         availabilityCode: reason(availability?.code || "UNKNOWN"),
