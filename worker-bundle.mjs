@@ -30745,12 +30745,15 @@ async function dispatchSecurityNotifications({
   now = Date.now
 } = {}) {
   const rendered = [];
+  const envelopes = [];
   for (const event of events) {
     try {
       const item = renderSecurityNotification({ ...event, at: event.at ?? now() });
       if (item) rendered.push(item);
+      envelopes.push(Object.freeze({ recipient: String(event?.recipient || "").trim() }));
     } catch (error) {
       rendered.push(Object.freeze({ skipped: true, eventType: String(event?.eventType || "unknown"), reason: "pii-contract" }));
+      envelopes.push(Object.freeze({ recipient: "" }));
     }
   }
   const sent = [];
@@ -30760,7 +30763,8 @@ async function dispatchSecurityNotifications({
         if (!item.skipped) sent.push(Object.freeze({ template: item.template, ok: false, reason: "sender-not-configured" }));
       }
     } else {
-      for (const item of rendered) {
+      for (let index = 0; index < rendered.length; index += 1) {
+        const item = rendered[index];
         if (item.skipped) {
           sent.push(item);
           continue;
@@ -30768,7 +30772,7 @@ async function dispatchSecurityNotifications({
         let ok2 = false;
         let reason2 = null;
         try {
-          const result = await sendSecurityEmail(item);
+          const result = await sendSecurityEmail(item, envelopes[index]);
           ok2 = result?.ok !== false;
           reason2 = ok2 ? null : String(result?.reason || "send-failed");
         } catch (_) {
@@ -30785,6 +30789,70 @@ async function dispatchSecurityNotifications({
     skipped: rendered.filter((item) => item.skipped === true).length,
     sent: Object.freeze(sent)
   });
+}
+
+// auth-native/core/security-notification-sender.mjs
+var SECURITY_ALERT_EMAIL_TYPE = "SECURITY_ALERT";
+var SEND_TIMEOUT_MS = 8e3;
+var REQUEST_ID = /^[A-Za-z0-9][A-Za-z0-9:_-]{15,127}$/;
+var EMAIL_SHAPE2 = /^[^@\s]{1,64}@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
+function notificationRequestId({ eventType, at, recipientRef }) {
+  const seed = `${String(eventType || "security")}:${Number(at) || 0}:${String(recipientRef || "")}`;
+  let hash = 0;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = hash * 31 + seed.charCodeAt(index) >>> 0;
+  }
+  return `sec-${String(eventType || "event").replace(/[^A-Za-z0-9]/g, "").slice(0, 20)}-${hash.toString(36)}-${String(Number(at) || 0).toString(36)}`.slice(0, 127);
+}
+function createSecurityNotificationSender({
+  send: send2,
+  now = () => Date.now(),
+  timeoutMs = SEND_TIMEOUT_MS,
+  setTimer = setTimeout,
+  clearTimer = clearTimeout
+} = {}) {
+  if (typeof send2 !== "function") return null;
+  return async function sendSecurityNotification(item = {}, envelope = {}) {
+    const address = String(envelope?.recipient || "").trim();
+    if (!EMAIL_SHAPE2.test(address)) return Object.freeze({ ok: false, reason: "recipient-unavailable" });
+    const at = Number(item.at) || now();
+    const requestId = notificationRequestId({
+      eventType: item.eventType,
+      at,
+      recipientRef: item.emailMasked || ""
+    });
+    if (!REQUEST_ID.test(requestId)) return Object.freeze({ ok: false, reason: "request-id-invalid" });
+    let timer = null;
+    try {
+      const result = await Promise.race([
+        send2({
+          type: SECURITY_ALERT_EMAIL_TYPE,
+          recipient: address,
+          subject: String(item.subject || "").slice(0, 200),
+          template: SECURITY_ALERT_EMAIL_TYPE,
+          // The gateway's SECURITY_ALERT template accepts exactly these three.
+          // `name` is deliberately omitted: the masked address is not a name,
+          // and the template already falls back to a neutral salutation.
+          variables: {
+            activity: String(item.body || "").slice(0, 600),
+            time: new Date(at).toISOString()
+          },
+          requestId,
+          idempotencyKey: requestId,
+          priority: "HIGH"
+        }),
+        new Promise((resolve) => {
+          timer = setTimer(() => resolve({ __timeout__: true }), timeoutMs);
+        })
+      ]);
+      if (result && result.__timeout__ === true) return Object.freeze({ ok: false, reason: "send-timeout" });
+      return Object.freeze({ ok: true });
+    } catch (error) {
+      return Object.freeze({ ok: false, reason: String(error?.code || "send-failed").slice(0, 40) });
+    } finally {
+      if (timer !== null) clearTimer(timer);
+    }
+  };
 }
 
 // auth-native/verification/sqlite-verification-repository.mjs
@@ -32292,6 +32360,20 @@ var AdmissionAuthAuthority = class {
       }
       this.securityNotificationsDryRun = String(env.SECURITY_NOTIFICATIONS_ACTIVATION || "dry-run") !== "enabled";
       this.securityNotificationSender = null;
+      if (!this.securityNotificationsDryRun) {
+        try {
+          const gateway = await createEmailGateway({
+            config: safeParseEmailGatewayConfig(env.EMAIL_GATEWAY_CONFIG),
+            store: new DurableObjectEmailStore(env.EMAIL_COORDINATOR, {}),
+            env,
+            privatePepper: env.EMAIL_RECIPIENT_HASH_PEPPER
+          });
+          this.securityNotificationSender = createSecurityNotificationSender({ send: gateway.send });
+        } catch (error) {
+          this.securityNotificationSender = null;
+          this.securityNotificationFailure = String(error?.code || error?.name || "gateway-unavailable").slice(0, 60);
+        }
+      }
     });
   }
   // Fire-and-forget: a notification failure must never break the auth path.
@@ -32372,6 +32454,7 @@ var AdmissionAuthAuthority = class {
           this.#dispatchSecurityEvents([{
             eventType: "new-device-login",
             emailMasked: result.user.emailMasked,
+            recipient: String(body.input?.email || ""),
             browserClass: body.context?.userAgent || null
           }]);
         }
@@ -32641,6 +32724,7 @@ var AdmissionAuthAuthority = class {
           this.#dispatchSecurityEvents([{
             eventType: "suspicious-activity",
             emailMasked: result.emailMasked,
+            recipient: String(body.input?.email || ""),
             browserClass: result.browserClass || null
           }]);
         }
@@ -32674,6 +32758,7 @@ var AdmissionAuthAuthority = class {
           this.#dispatchSecurityEvents([{
             eventType: "suspicious-activity",
             emailMasked: result.emailMasked,
+            recipient: String(body.input?.email || ""),
             browserClass: result.browserClass || null
           }]);
         }

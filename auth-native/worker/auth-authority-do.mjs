@@ -6,6 +6,10 @@ import { VerificationOrchestrator } from '../verification/orchestrator.mjs';
 import { createOtpDeliverySink } from '../../observability/otp-alert.mjs';
 import { createConfiguredVerificationProviders } from '../verification/providers.mjs';
 import { dispatchSecurityNotifications } from '../core/security-notifications.mjs';
+import { createSecurityNotificationSender } from '../core/security-notification-sender.mjs';
+import { createEmailGateway } from '../../email-gateway/create-email-gateway.mjs';
+import { safeParseEmailGatewayConfig } from '../../email-gateway/core/config.mjs';
+import { DurableObjectEmailStore } from '../../email-gateway/storage/durable-object-store.mjs';
 import { SqliteVerificationRepository } from '../verification/sqlite-verification-repository.mjs';
 import { D1ProfileStore } from '../storage/d1-profile-repository.mjs';
 import { migrateStudentDirectory } from '../storage/student-directory-schema.mjs';
@@ -85,11 +89,42 @@ export class AdmissionAuthAuthority {
       this.engine.bindVerification(this.verification);
       // AUTH-ROADMAP step 1: account-less signup rows (DO KV, prefix psu:).
       try { this.pendingSignups = new PendingSignupStore({ storage: state.storage, hmacSecret: env.AUTH_HMAC_SECRET }); } catch { this.pendingSignups = null; }
-      // Phase 6 Chunk 4, security notifications. Phase 6 ships DRY-RUN:
-      // nothing is sent live unless the deployment explicitly enables it AND
-      // a sender is configured (none is wired yet, so it stays inert).
+      /* Phase 6 Chunk 4 + AUTH V2.1 (owner 2026-10-31): security notifications.
+       *
+       * Phase 6 shipped this dry-run with `securityNotificationSender = null`,
+       * so the notice was rendered, counted and dropped — the blueprint's
+       * finding ৩, a feature that exists in name only. A security notice that
+       * never arrives is not security.
+       *
+       * The sender is built here, at the composition root, because this is the
+       * one place that holds both halves: the real recipient (from the event)
+       * and the Email Gateway the OTP chain already delivers through. Building
+       * it anywhere else would either duplicate the gateway or hand an address
+       * to a module whose contract is to refuse one.
+       *
+       * Still gated: nothing is sent unless the deployment opts in with
+       * SECURITY_NOTIFICATIONS_ACTIVATION=enabled, AND a gateway is reachable.
+       * An unbound EMAIL_COORDINATOR leaves the sender null and the behaviour
+       * exactly as it was before this change. */
       this.securityNotificationsDryRun = String(env.SECURITY_NOTIFICATIONS_ACTIVATION || 'dry-run') !== 'enabled';
       this.securityNotificationSender = null;
+      if (!this.securityNotificationsDryRun) {
+        try {
+          const gateway = await createEmailGateway({
+            config: safeParseEmailGatewayConfig(env.EMAIL_GATEWAY_CONFIG),
+            store: new DurableObjectEmailStore(env.EMAIL_COORDINATOR, {}),
+            env,
+            privatePepper: env.EMAIL_RECIPIENT_HASH_PEPPER
+          });
+          this.securityNotificationSender = createSecurityNotificationSender({ send: gateway.send });
+        } catch (error) {
+          // A notification must never be able to take sign-in down: a gateway
+          // that cannot be built leaves the sender null and the notice
+          // unsent, which is exactly the pre-V2.1 behaviour.
+          this.securityNotificationSender = null;
+          this.securityNotificationFailure = String(error?.code || error?.name || 'gateway-unavailable').slice(0, 60);
+        }
+      }
     });
   }
 
@@ -179,12 +214,15 @@ export class AdmissionAuthAuthority {
       if (url.pathname === '/internal/firebase/session/create') {
         const result = await this.engine.establishFirebaseSession(body.input, body.context);
         await this.#scheduleExpiry();
-        // Phase 6 Chunk 4, a login the policy flags as a new device earns
-        // the new-device-login notice (dry-run in Phase 6).
+        // Phase 6 Chunk 4, a login the policy flags as a new device earns the
+        // new-device-login notice. AUTH V2.1: the real recipient travels in the
+        // event so the sender can address it; the rendered body still carries
+        // only the mask.
         if (result?.security?.trustOffer === true && result?.security?.trusted !== true && result?.user?.emailMasked) {
           this.#dispatchSecurityEvents([{
             eventType: 'new-device-login',
             emailMasked: result.user.emailMasked,
+            recipient: String(body.input?.email || ''),
             browserClass: body.context?.userAgent || null
           }]);
         }
@@ -482,6 +520,7 @@ export class AdmissionAuthAuthority {
           this.#dispatchSecurityEvents([{
             eventType: 'suspicious-activity',
             emailMasked: result.emailMasked,
+            recipient: String(body.input?.email || ''),
             browserClass: result.browserClass || null
           }]);
         }
@@ -518,6 +557,7 @@ export class AdmissionAuthAuthority {
           this.#dispatchSecurityEvents([{
             eventType: 'suspicious-activity',
             emailMasked: result.emailMasked,
+            recipient: String(body.input?.email || ''),
             browserClass: result.browserClass || null
           }]);
         }
