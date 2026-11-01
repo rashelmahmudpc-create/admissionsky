@@ -9080,18 +9080,47 @@ function constantTimeEqual(left, right) {
   }
   return mismatch === 0;
 }
+function parseHmacKeyring(secret) {
+  const value = String(secret || "");
+  if (!value.trim()) return [];
+  return value.split(":").map((part) => part.trim());
+}
 var AuthHmac = class {
   constructor(secret, cryptoImpl = globalThis.crypto) {
-    const value = String(secret || "");
-    if (value.length < 32 || /[\r\n\u0000]/.test(value)) failAuth(AUTH_ERROR_CODES.NOT_CONFIGURED);
+    const keys2 = parseHmacKeyring(secret);
+    if (!keys2.length || keys2.some((key) => key.length < 32 || /[\r\n\u0000]/.test(key))) {
+      failAuth(AUTH_ERROR_CODES.NOT_CONFIGURED);
+    }
     if (!cryptoImpl?.subtle) failAuth(AUTH_ERROR_CODES.NOT_CONFIGURED);
     this.crypto = cryptoImpl;
-    this.key = cryptoImpl.subtle.importKey("raw", encoder2.encode(value), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    this.keys = keys2.map((key) => cryptoImpl.subtle.importKey(
+      "raw",
+      encoder2.encode(key),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    ));
+    this.key = this.keys[0];
   }
+  /** Sign with the CURRENT key. Unchanged output: no prefix, same digest. */
   async hex(context, value) {
     const key = await this.key;
     const signature = await this.crypto.subtle.sign("HMAC", key, encoder2.encode(`${String(context)}\0${String(value)}`));
     return [...new Uint8Array(signature)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+  /** Every digest this value could have, current key first.
+   *
+   *  A caller that must FIND a row rather than write one tries these in order.
+   *  With one key this is a single-element list and costs nothing extra — the
+   *  cost only appears during a rotation, which is exactly when it is wanted. */
+  async candidates(context, value) {
+    const payload = encoder2.encode(`${String(context)}\0${String(value)}`);
+    const digests = [];
+    for (const key of this.keys) {
+      const signature = await this.crypto.subtle.sign("HMAC", await key, payload);
+      digests.push([...new Uint8Array(signature)].map((byte) => byte.toString(16).padStart(2, "0")).join(""));
+    }
+    return digests;
   }
 };
 function coarseUserAgent(value) {
