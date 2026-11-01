@@ -251,10 +251,15 @@ test('L5: the automated answer is a silent 202, not a 400 that teaches the bot',
 
 test('L5: a drop reaches the owner through the throttled alert sink, not a console', () => {
   const gate = HANDLER.slice(HANDLER.indexOf('const botGate ='), HANDLER.indexOf('const requiresHardHumanCheck'));
-  // The auth runtime has no console (native-auth-protection.test.mjs), so the
-  // alert sink is the only channel. It must be the throttled one: an unthrottled
-  // alert here would let an attacker page the owner once per dropped request.
-  assert.match(gate, /sendThrottledSecurityAlert\(env, shadowGuardStore\(env\)/, 'the throttled sink');
+  /* AUTH V2.1: the call now goes through deliverSecurityAlert, which still uses
+   * the throttled sink — it wraps it, so the throttle is inside — and adds the
+   * two things finding ৪ was about: the promise is handed to waitUntil (a Worker
+   * cancels pending work when the response returns, so the alert could be
+   * dropped before the fetch was made) and the outcome is reported instead of
+   * being thrown away. The throttle assertion is unchanged in substance. */
+  assert.match(gate, /deliverSecurityAlert\(\{/, 'the alert goes through the surviving-send helper');
+  assert.match(gate, /store: shadowGuardStore\(env\)/, 'and keeps the throttled sink');
+  assert.match(gate, /waitUntil:/, 'and is registered so the Worker cannot cancel it');
   assert.match(gate, /event: SECURITY_ALERT_EVENTS\.BOT_GATE_DROP/);
   // `reasons` is the field renderSecurityAlert actually reads; `reason` alone
   // would produce an alert with no detail in it.

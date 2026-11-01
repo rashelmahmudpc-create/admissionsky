@@ -13297,6 +13297,27 @@ function sendThrottledSecurityAlert(env, store, input = {}, options = {}) {
     return sendSecurityAlert(env, input, options);
   }).catch(() => "failed");
 }
+function deliverSecurityAlert({ env, store, input = {}, options = {}, waitUntil = null, onOutcome = null } = {}) {
+  const report = (outcome) => {
+    if (typeof onOutcome !== "function") return outcome;
+    try {
+      onOutcome(outcome, input);
+    } catch {
+    }
+    return outcome;
+  };
+  let job;
+  try {
+    job = sendThrottledSecurityAlert(env, store, input, options).then(report, () => report("failed"));
+  } catch {
+    return Promise.resolve(report("failed"));
+  }
+  try {
+    if (typeof waitUntil === "function") waitUntil(job);
+  } catch {
+  }
+  return job;
+}
 
 // observability/otp-delivery-log.mjs
 var OTP_PROVIDER_NAMES = Object.freeze({
@@ -13471,18 +13492,23 @@ var clientContext = (request, existingDeviceId = "") => {
   });
 };
 var shadowGuardMode = (env) => resolveGuardMode(env?.SHADOW_GUARD_ACTIVATION);
-var botGate = (request, env, context, body) => {
+var botGate = (request, env, context, body, executionContext = null) => {
   const verdict = looksAutomated({
     honeypot: body?.[HONEYPOT_FIELD],
     elapsedMs: body?.formElapsedMs
   });
   if (verdict.automated) {
-    sendThrottledSecurityAlert(env, shadowGuardStore(env), {
-      event: SECURITY_ALERT_EVENTS.BOT_GATE_DROP,
-      // `reasons` is the field the renderer reads; the path is added to it so
-      // the owner can see which endpoint is being hit without a second field.
-      reasons: [verdict.reason, new URL(request.url).pathname.slice(0, 40)],
-      at: Date.now()
+    deliverSecurityAlert({
+      env,
+      store: shadowGuardStore(env),
+      waitUntil: typeof executionContext?.waitUntil === "function" ? (promise) => executionContext.waitUntil(promise) : null,
+      input: {
+        event: SECURITY_ALERT_EVENTS.BOT_GATE_DROP,
+        // `reasons` is the field the renderer reads; the path is added to it so
+        // the owner can see which endpoint is being hit without a second field.
+        reasons: [verdict.reason, new URL(request.url).pathname.slice(0, 40)],
+        at: Date.now()
+      }
     });
     return json4(request, 202, { ok: true, accepted: true, deliveryDisclosed: false });
   }
@@ -13503,8 +13529,8 @@ var fuzzBandNow = async (env) => {
     return "normal";
   }
 };
-var guardSend = async ({ request, env, context, body, fetchImpl }) => {
-  const gate = botGate(request, env, context, body);
+var guardSend = async ({ request, env, context, body, fetchImpl, executionContext = null }) => {
+  const gate = botGate(request, env, context, body, executionContext);
   if (gate) return gate;
   const required = requiresHardHumanCheck(context) || await fuzzBandNow(env) === "hard";
   await verifyTurnstile({
@@ -13517,7 +13543,7 @@ var guardSend = async ({ request, env, context, body, fetchImpl }) => {
   return null;
 };
 var shadowGuardStore = (env) => env?.GK_KV || env?.PUB_KV || null;
-var flagCanaryHit = (env, email, context) => {
+var flagCanaryHit = (env, email, context, executionContext = null) => {
   const list2 = parseCanaryEmails(env?.CANARY_EMAILS);
   if (!isCanaryEmail(email, list2)) return false;
   const store = shadowGuardStore(env);
@@ -13526,10 +13552,11 @@ var flagCanaryHit = (env, email, context) => {
     Promise.resolve().then(() => flags.flag(context.ip, context.deviceId)).catch(() => {
     });
   }
-  sendThrottledSecurityAlert(env, store, {
-    event: SECURITY_ALERT_EVENTS.CANARY_HIT,
-    email,
-    at: Date.now()
+  deliverSecurityAlert({
+    env,
+    store,
+    waitUntil: typeof executionContext?.waitUntil === "function" ? (promise) => executionContext.waitUntil(promise) : null,
+    input: { event: SECURITY_ALERT_EVENTS.CANARY_HIT, email, at: Date.now() }
   });
   return true;
 };
@@ -14145,7 +14172,7 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         }
         const turnstileBody = await readJson(request);
         {
-          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl });
+          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl, executionContext });
           if (denied) return denied;
         }
         const input = credentials(turnstileBody);
@@ -14225,7 +14252,7 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         if (!provider.configured) throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
         const body = await readJson(request);
         {
-          const denied = await guardSend({ request, env, context, body, fetchImpl });
+          const denied = await guardSend({ request, env, context, body, fetchImpl, executionContext });
           if (denied) return denied;
         }
         const email = normalizeAuthEmail(body?.email);
@@ -14253,7 +14280,7 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         if (!provider.configured) throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
         const turnstileBody = await readJson(request);
         {
-          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl });
+          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl, executionContext });
           if (denied) return denied;
         }
         const input = credentials(turnstileBody);
@@ -14288,7 +14315,7 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         if (!provider.configured) throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
         const turnstileBody = await readJson(request);
         {
-          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl });
+          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl, executionContext });
           if (denied) return denied;
         }
         const input = credentials(turnstileBody);
@@ -14296,7 +14323,7 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         if (Number(prepared?.retryAfter) > 0) {
           return json4(request, 429, { ok: false, error: { code: "RATE_LIMITED", message: "অনেকবার চেষ্টা হয়েছে, একটু পরে আবার চেষ্টা করুন।" } }, { "Retry-After": String(prepared.retryAfter) });
         }
-        const canaryHit = flagCanaryHit(env, prepared.email, context);
+        const canaryHit = flagCanaryHit(env, prepared.email, context, executionContext);
         const mode = shadowGuardMode(env);
         const guardActive = mode !== SHADOW_GUARD_MODES.OFF || canaryHit;
         const enforcing = mode === SHADOW_GUARD_MODES.ENFORCE || canaryHit;
@@ -14340,12 +14367,17 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
             accountState: canaryHit ? "suspended" : void 0
           });
           if (shadow.shadowBan) {
-            sendThrottledSecurityAlert(env, guardStore, {
-              event: SECURITY_ALERT_EVENTS.SHADOW_BAN,
-              email: prepared.email,
-              band: shadow.band,
-              reasons: enforcing ? shadow.reasons : [...shadow.reasons, "observe-only"],
-              at: Date.now()
+            deliverSecurityAlert({
+              env,
+              store: guardStore,
+              waitUntil: typeof executionContext?.waitUntil === "function" ? (promise) => executionContext.waitUntil(promise) : null,
+              input: {
+                event: SECURITY_ALERT_EVENTS.SHADOW_BAN,
+                email: prepared.email,
+                band: shadow.band,
+                reasons: enforcing ? shadow.reasons : [...shadow.reasons, "observe-only"],
+                at: Date.now()
+              }
             });
             if (enforcing) {
               await sleep(shadowDelayMs());
@@ -14390,11 +14422,16 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
           }
         }
         if (guardActive && context.isNewDevice && (enforcing || shadow?.band === "high")) {
-          sendThrottledSecurityAlert(env, guardStore, {
-            event: SECURITY_ALERT_EVENTS.NEW_DEVICE,
-            email: prepared.email,
-            band: shadow ? shadow.band : "low",
-            at: Date.now()
+          deliverSecurityAlert({
+            env,
+            store: guardStore,
+            waitUntil: typeof executionContext?.waitUntil === "function" ? (promise) => executionContext.waitUntil(promise) : null,
+            input: {
+              event: SECURITY_ALERT_EVENTS.NEW_DEVICE,
+              email: prepared.email,
+              band: shadow ? shadow.band : "low",
+              at: Date.now()
+            }
           });
         }
         const telegramRequested = telegramVerificationRequested(env, url);
@@ -14566,7 +14603,7 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         if (!provider.configured || !googleEndpointReady(env)) throw new NativeAuthError(AUTH_ERROR_CODES.GOOGLE_UNAVAILABLE);
         const body = await readJson(request);
         {
-          const denied = await guardSend({ request, env, context, body, fetchImpl });
+          const denied = await guardSend({ request, env, context, body, fetchImpl, executionContext });
           if (denied) return denied;
         }
         const input = credentials(body);
@@ -14678,7 +14715,7 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         }
         const body = await readJson(request);
         {
-          const denied = await guardSend({ request, env, context, body, fetchImpl });
+          const denied = await guardSend({ request, env, context, body, fetchImpl, executionContext });
           if (denied) return denied;
         }
         const credential = facebookCredential(body);
@@ -14829,7 +14866,7 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         const startBody = await readJson(request);
         const magicLink = startBody?.method === "magic-link";
         {
-          const denied = await guardSend({ request, env, context, body: startBody, fetchImpl });
+          const denied = await guardSend({ request, env, context, body: startBody, fetchImpl, executionContext });
           if (denied) return denied;
         }
         if (isPendingSignupTicket(verificationTicket)) return await startPendingSignupCode({ request, env, provider, context, ticket: verificationTicket, magicLink, deps: pendingDeps() });
@@ -14992,7 +15029,7 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         if (!verificationTicket) throw new NativeAuthError(AUTH_ERROR_CODES.TELEGRAM_VERIFICATION_INVALID);
         const turnstileBody = await readJson(request);
         {
-          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl });
+          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl, executionContext });
           if (denied) return denied;
         }
         const result = await callAuthority(env, "/internal/verification/preauth/request", {
@@ -15481,7 +15518,7 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         }
         const body = await readJson(request);
         {
-          const denied = await guardSend({ request, env, context, body, fetchImpl });
+          const denied = await guardSend({ request, env, context, body, fetchImpl, executionContext });
           if (denied) return denied;
         }
         const contact = String(body.contact || "").trim();
