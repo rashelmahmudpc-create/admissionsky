@@ -1408,3 +1408,34 @@ body.ah-account-page-active>.ah-account-page[data-current-view="sky"]:not([data-
 .ah-telegram-logo{width:30px;display:grid;place-items:center}.ah-telegram-logo svg{width:24px;height:24px;display:block}
 /* Owner 2026-10-18: native Telegram anchor never shows above the Welcome Story. */
 .ah-welcome-view > .ah-account-telegram,.ah-account-telegram.ah-welcome-telegram{display:none!important}
+
+/* ---- Human check (Turnstile) ----
+   Owner 2026-11-01: "make it visible for everyone so students can click", and
+   make it modern. The box used to be interaction-only and pinned to the bottom
+   of the screen, so on a phone the keyboard covered the one control a
+   challenged student had to tap: the timer expired, the token came back empty,
+   and the server refused with "human check did not complete" -- whose own
+   advice is to refresh, which re-rendered the box in the same covered spot. */
+.ah-human-check{position:fixed;right:12px;bottom:12px;z-index:2147483647;
+  width:min(320px,calc(100vw - 24px));padding:14px 14px 12px;border-radius:16px;
+  background:var(--ah-surface,#fff);border:1px solid var(--ah-line,#d7dce3);
+  box-shadow:0 18px 44px rgba(15,23,42,.22);
+  font:600 13px/1.45 system-ui,sans-serif;color:var(--ah-ink,#0f172a);
+  animation:ah-hc-in .32s cubic-bezier(.22,1,.36,1)}
+@keyframes ah-hc-in{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+.ah-hc-head{display:flex;align-items:center;gap:8px;margin:0 0 4px}
+.ah-hc-shield{display:grid;place-items:center;flex:0 0 auto;width:22px;height:22px;
+  border-radius:7px;background:var(--ah-accent-soft,#eee8fa);color:var(--ah-accent-fill,#6d5bd0)}
+.ah-hc-shield svg{width:14px;height:14px}
+.ah-hc-sub{margin:0 0 10px;font-weight:500;font-size:11.5px;color:var(--ah-ink-soft,#51705f)}
+.ah-hc-mount{display:grid;place-items:center;min-height:66px}
+.ah-hc-mount iframe{border-radius:8px}
+.ah-hc-bar{margin-top:10px;height:3px;border-radius:99px;background:var(--ah-line,#e5e9f0);overflow:hidden}
+.ah-hc-bar i{display:block;height:100%;width:100%;border-radius:99px;
+  background:linear-gradient(90deg,var(--ah-accent-fill,#6d5bd0),var(--ah-mint,#22c55e));
+  animation:ah-hc-drain 120s linear forwards}
+@keyframes ah-hc-drain{from{width:100%}to{width:0}}
+@media(prefers-reduced-motion:reduce){
+  .ah-human-check{animation:none}
+  .ah-hc-bar i{animation:none;width:100%}
+}
