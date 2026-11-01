@@ -121,7 +121,8 @@ export function estimateCost({ provider, model, tokensIn = 0, tokensOut = 0, pri
 export const TRACE_FIELDS = Object.freeze([
   'rid', 'at', 'callerRef', 'provider', 'model', 'intent', 'tier', 'stream',
   'latencyMs', 'tokensIn', 'tokensOut', 'costUsd', 'priced', 'fallbackReason',
-  'promptVersion', 'contextVersion', 'agentVersion', 'responseType', 'validated'
+  'promptVersion', 'contextVersion', 'agentVersion', 'responseType', 'validated',
+  'budgetState'
 ]);
 
 /** Fields that must never appear in a trace, whatever a call site passes. */
@@ -141,6 +142,31 @@ const str = (v, max = 120) => String(v == null ? '' : v).slice(0, max);
  * `renderTrace()`, so the guarantee holds even if a caller passes a whole
  * message object by mistake.
  */
+/* F1.9 — Trace v2: the trace carries a budget verdict.
+ *
+ * The trace already counted tokensIn/tokensOut, so the numbers to catch an
+ * over-budget request were there and nothing compared them to a limit. A request
+ * that blew past the context window was recorded, after the fact, as if it were
+ * normal — the one place that should have warned said nothing.
+ *
+ * So the same numbers now yield a verdict. This is a guard, not a truncator: it
+ * decides and reports, it never silently rewrites a student's message.
+ */
+export const BUDGET = Object.freeze({ OK: 'OK', CONTEXT: 'CONTEXT', OUTPUT: 'OUTPUT' });
+
+export function budgetGuard({ tokensIn = 0, tokensOut = 0, maxContext = 0, maxOutput = 0 } = {}) {
+  const ti = num(tokensIn);
+  const to = num(tokensOut);
+  const mc = num(maxContext);
+  const mo = num(maxOutput);
+  /* A zero or missing limit means "not configured", not "zero allowed" — a limit
+     of 0 would otherwise mark every single request over budget. */
+  const state = (mc > 0 && ti > mc) ? BUDGET.CONTEXT
+    : (mo > 0 && to > mo) ? BUDGET.OUTPUT
+    : BUDGET.OK;
+  return { state, tokensIn: ti, tokensOut: to, maxContext: mc, maxOutput: mo };
+}
+
 export function makeTrace(input = {}) {
   const src = input && typeof input === 'object' ? input : {};
   const tokensIn = num(src.tokensIn);
@@ -167,6 +193,7 @@ export function makeTrace(input = {}) {
     contextVersion: str(src.contextVersion, 32),
     agentVersion: str(src.agentVersion, 32),
     responseType: str(src.responseType, 32),
+    budgetState: str(src.budgetState, 16),
     validated: src.validated !== false
   });
 }
@@ -280,6 +307,9 @@ export function validateObservability() {
   if (!(MAX_TRACES > 0)) problems.push('maxTraces');
   if (Object.values(FALLBACK).length !== 8) problems.push('fallback-reasons');
   if (TRACE_FIELDS.includes('uid') || TRACE_FIELDS.includes('text')) problems.push('whitelist-leaks-content');
+  /* F1.9: a verdict that cannot be recorded is a verdict nobody sees. */
+  if (!TRACE_FIELDS.includes('budgetState')) problems.push('budget-state-not-recorded');
+  if (Object.values(BUDGET).length !== 3) problems.push('budget-states');
   for (const forbidden of FORBIDDEN_TRACE_KEYS) {
     if (TRACE_FIELDS.includes(forbidden)) problems.push('forbidden-in-whitelist:' + forbidden);
   }

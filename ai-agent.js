@@ -37,7 +37,7 @@ import { checkInstruction, parseStoredInstruction, storedInstruction, renderInst
 import { extractMemoryCandidates, makeMemory, upsertMemory, parseMemory, renderMemory, resolveMemoryOwner, isPiiFree, statedWeakTopics, KIND, SOURCE, MEMORY_VERSION } from './memory-engine.js';
 import { validateResponse, describeResponseValidation, RESPONSE_VALIDATION_VERSION, buildEnvelope } from './response-validator.js';
 import { describeActions, ACTION_VERSION } from './action-engine.js';
-import { makeTrace, makeRequestId, callerRef, quotaState, renderTrace, estimateTokens, FALLBACK, OBSERVABILITY_VERSION, describeObservability, parseTraces, appendTrace, addUsage, emptyUsage, estimateCost, validateObservability } from './observability.js';
+import { makeTrace, makeRequestId, callerRef, quotaState, renderTrace, estimateTokens, FALLBACK, OBSERVABILITY_VERSION, describeObservability, parseTraces, appendTrace, addUsage, emptyUsage, estimateCost, validateObservability, budgetGuard, BUDGET } from './observability.js';
 import { aiStateStore, AI_STATE_VERSION } from './ai-state-do.mjs';
 /* P25, chat response cache (step 1 of the owner's AI cost plan). The store is
  * the existing analytics one, which already owns the `ai_cache` table. */
@@ -1596,12 +1596,24 @@ export async function agentChat(request, env, uid, opts = {}) {
   };
   const emitTrace = (extra = {}) => {
     try {
+      const tokensIn = estimateTokens(sys);
+      const tokensOut = estimateTokens(extra.text || '');
+      /* F1.9: the numbers were already counted and never compared to a limit, so
+         an over-budget request was logged as if it were normal. The verdict is
+         recorded alongside them. Limits are env-tunable and default to unset,
+         which means "not configured" rather than "zero allowed". */
+      const budget = budgetGuard({
+        tokensIn, tokensOut,
+        maxContext: Number(env && env.AGENT_MAX_CONTEXT_TOKENS) || 0,
+        maxOutput: Number(env && env.AGENT_MAX_OUTPUT_TOKENS) || 0
+      });
       console.log(renderTrace(makeTrace({
         ...traceCtx,
         at: Date.now(),
         latencyMs: Date.now() - startedAt,
-        tokensIn: estimateTokens(sys),
-        tokensOut: estimateTokens(extra.text || ''),
+        tokensIn,
+        tokensOut,
+        budgetState: budget.state,
         ...extra
       })));
     } catch (_) {}
