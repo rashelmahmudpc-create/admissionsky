@@ -463,6 +463,7 @@ var requiredRepositoryMethods = Object.freeze([
   "getSession",
   "revokeSession",
   "revokeUserSessions",
+  "rotateSession",
   "getAccountState",
   "setAccountState",
   "identitySnapshot",
