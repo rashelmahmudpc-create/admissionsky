@@ -9095,6 +9095,8 @@ var SECURITY_CHALLENGE_MAX_ATTEMPTS = 5;
 var SECURITY_CHALLENGE_METHODS_V1 = Object.freeze(["email", "telegram", "passkey"]);
 var SECURITY_TRUST_TTL_MS = 30 * 24 * 60 * 60 * 1e3;
 var SECURITY_TRUST_MAX_DEVICES_PER_USER = 10;
+var SECURITY_SESSION_IDLE_TTL_MS = 14 * 24 * 60 * 60 * 1e3;
+var SECURITY_SESSION_TOUCH_INTERVAL_MS = 6 * 60 * 60 * 1e3;
 var SECURITY_FAILED_LOGIN_WINDOW_MS = 15 * 60 * 1e3;
 var SECURITY_COOLDOWN_THRESHOLD_FAILURES = 5;
 var SECURITY_COOLDOWN_STEPS_MS = Object.freeze([
@@ -26023,7 +26025,8 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
       );
       if (!row || Number(row.expiresAt) <= now) return { error: AUTH_ERROR_CODES.SESSION_INVALID };
       if (row.status !== "active") return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
-      if (now - Number(row.lastSeenAt) > 6 * 60 * 60 * 1e3) {
+      if (now - Number(row.lastSeenAt) > SECURITY_SESSION_IDLE_TTL_MS) return { error: AUTH_ERROR_CODES.SESSION_INVALID };
+      if (now - Number(row.lastSeenAt) > SECURITY_SESSION_TOUCH_INTERVAL_MS) {
         this.sql.exec("UPDATE auth_sessions SET last_seen_at=? WHERE session_ref=?", now, sessionRef);
       }
       if (trackRefresh) this.#event("session-refreshed", subjectRef, row.id, now);
@@ -26726,7 +26729,8 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
       );
       if (!row || Number(row.expiresAt) <= now) return { error: AUTH_ERROR_CODES.SESSION_INVALID };
       if (row.status !== "active") return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
-      if (now - Number(row.lastSeenAt) > 6 * 60 * 60 * 1e3) {
+      if (now - Number(row.lastSeenAt) > SECURITY_SESSION_IDLE_TTL_MS) return { error: AUTH_ERROR_CODES.SESSION_INVALID };
+      if (now - Number(row.lastSeenAt) > SECURITY_SESSION_TOUCH_INTERVAL_MS) {
         this.sql.exec("UPDATE auth_sessions SET last_seen_at=? WHERE session_ref=?", now, sessionRef);
       }
       return {
