@@ -29,6 +29,42 @@
 
 export const SKY_STREAM_VERSION = 'sky-stream-v1';
 
+/* F2 Done-condition: the stream is never silent for 3 seconds. The provider's
+ * first token may take up to AGENT_FIRST_CHUNK_MS (5 s by default), and a retry
+ * after a dead key adds more on top, so between `hello` and the first text the
+ * connection can sit idle well past that budget. A comment frame on a timer
+ * keeps it moving.
+ *
+ * A comment is the right frame for this because it carries no `data:` line, so
+ * every client — the pre-v1 parser and a v1 one — ignores it. The keep-alive is
+ * additive in exactly the sense the rest of this file is: it changes what the
+ * transport does, never what the client understands.
+ *
+ * It is a comment rather than a `stage` event on purpose. A stage claims work
+ * happened, and inventing one to fill a gap would be a lie the student reads.
+ */
+export const SKY_HEARTBEAT_MS = 2000;
+
+/**
+ * Write `: hb` every `ms` until the returned function is called.
+ *
+ * A non-positive or unparseable `ms` falls back to the default rather than being
+ * used: `setInterval(fn, 0)` fires on a tight loop, so a caller passing 0 (or a
+ * garbage env value) would turn a keep-alive into a flood. A throwing `push` is
+ * swallowed — a heartbeat exists to protect the stream, so it must never be the
+ * thing that breaks it.
+ *
+ * @param {(chunk: string) => void} push
+ * @param {number} [ms]
+ * @returns {() => void} stop
+ */
+export function startHeartbeat(push, ms = SKY_HEARTBEAT_MS) {
+  const wanted = Number(ms);
+  const every = wanted > 0 ? wanted : SKY_HEARTBEAT_MS;
+  const timer = setInterval(() => { try { push(': hb\n\n'); } catch (_) {} }, every);
+  return () => { try { clearInterval(timer); } catch (_) {} };
+}
+
 /** One SSE frame. `event` may be '' for the bare `data:` text event the client
  *  has always understood. */
 export function skySse(event, payload) {
