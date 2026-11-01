@@ -533,8 +533,17 @@ export class SqliteAuthRepository {
   // Read-only reconciliation snapshot (Phase 3). HMAC refs only, never
   // emails, tokens or raw provider subjects.
   async identitySnapshot() {
-    const users = this.#rows('SELECT user_id AS id, status FROM auth_users')
-      .map(row => Object.freeze({ id: row.id, status: row.status }));
+    /* AUTH V2.4 (owner 2026-11-01): this feeds `reconcileIdentitySnapshot`, which
+     * reports a user whose status is outside the canonical set as
+     * `invalid-user-status`. Reading the raw column made that finding vacuous:
+     * the column is written once at INSERT, always to 'active', so it can never
+     * hold an invalid value and the health check could only ever be green. The
+     * status that can go wrong lives in the account-state table, so that is what
+     * the reconciliation has to be shown. */
+    const users = this.#rows(
+      `SELECT u.user_id AS id, COALESCE(st.status,u.status) AS status
+       FROM auth_users u LEFT JOIN auth_account_state st ON st.user_id=u.user_id`
+    ).map(row => Object.freeze({ id: row.id, status: row.status }));
     const externalIdentities = this.#rows(
       'SELECT provider, subject_ref AS subjectRef, user_id AS userId FROM auth_external_identities'
     ).map(row => Object.freeze({ provider: row.provider, subjectRef: row.subjectRef, userId: row.userId }));
@@ -759,11 +768,21 @@ export class SqliteAuthRepository {
   }
 
   #canonicalSession({ sessionRef, subjectRef, emailRef, now }) {
+    /* AUTH V2.4: the status this authorises on is the one that is actually
+     * written. Suspension lives in `auth_account_state`, never in
+     * `auth_users.status`, so a bare `u.status` here was always 'active' and
+     * this guard could not fire. Eight public methods — profile read and write,
+     * passkey registration and removal, the security surface — all authorise
+     * through this one query, so the fix belongs here rather than at each
+     * caller. `COALESCE(st.status,'active')` matches getAccountState's own
+     * default: no row means never suspended. */
     const row = this.#one(
-      `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,u.status,
+      `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,
+        COALESCE(st.status,u.status) AS status,
         u.created_at AS createdAt,s.expires_at AS expiresAt
        FROM auth_sessions s
        JOIN auth_users u ON u.user_id=s.user_id
+       LEFT JOIN auth_account_state st ON st.user_id=u.user_id
        JOIN auth_external_identities x ON x.user_id=u.user_id AND x.provider='firebase' AND x.subject_ref=?
        WHERE s.session_ref=? AND s.revoked_at IS NULL AND s.expires_at>? AND u.email_ref=?`,
       subjectRef, sessionRef, now, emailRef
@@ -809,12 +828,16 @@ export class SqliteAuthRepository {
         input.provider, input.subjectRef
       );
       let user = identity ? this.#one(
-        `SELECT user_id AS id,email_ref AS emailRef,email_mask AS emailMask,status,created_at AS createdAt
-         FROM auth_users WHERE user_id=?`,
+        `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,
+          COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
+         FROM auth_users u LEFT JOIN auth_account_state st ON st.user_id=u.user_id
+         WHERE u.user_id=?`,
         identity.userId
       ) : this.#one(
-        `SELECT user_id AS id,email_ref AS emailRef,email_mask AS emailMask,status,created_at AS createdAt
-         FROM auth_users WHERE email_ref=?`,
+        `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,
+          COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
+         FROM auth_users u LEFT JOIN auth_account_state st ON st.user_id=u.user_id
+         WHERE u.email_ref=?`,
         input.emailRef
       );
       if (identity && !user) return { error: AUTH_ERROR_CODES.STORAGE_UNAVAILABLE };
@@ -936,10 +959,16 @@ export class SqliteAuthRepository {
         input.subjectRef
       );
       let user = identity ? this.#one(
-        'SELECT user_id AS id,email_ref AS emailRef,email_mask AS emailMask,status,created_at AS createdAt FROM auth_users WHERE user_id=?',
+        `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,
+          COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
+         FROM auth_users u LEFT JOIN auth_account_state st ON st.user_id=u.user_id
+         WHERE u.user_id=?`,
         identity.userId
       ) : this.#one(
-        'SELECT user_id AS id,email_ref AS emailRef,email_mask AS emailMask,status,created_at AS createdAt FROM auth_users WHERE email_ref=?',
+        `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,
+          COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
+         FROM auth_users u LEFT JOIN auth_account_state st ON st.user_id=u.user_id
+         WHERE u.email_ref=?`,
         input.emailRef
       );
       if (identity && !user) return { error: AUTH_ERROR_CODES.STORAGE_UNAVAILABLE };
@@ -995,9 +1024,10 @@ export class SqliteAuthRepository {
       const row = this.#one(
         `SELECT t.user_id AS userId,t.subject_ref AS subjectRef,t.email_ref AS emailRef,
           t.refresh_cipher AS refreshCipher,t.state,t.expires_at AS expiresAt,
-          u.email_mask AS emailMask,u.status,u.created_at AS createdAt
+          u.email_mask AS emailMask,COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
          FROM auth_account_verification_tickets t
          JOIN auth_users u ON u.user_id=t.user_id
+         LEFT JOIN auth_account_state st ON st.user_id=u.user_id
          WHERE t.ticket_ref=? AND t.device_ref=?`,
         input.ticketRef, input.deviceRef
       );
@@ -1015,8 +1045,10 @@ export class SqliteAuthRepository {
     return this.#transaction(() => {
       const row = this.#one(
         `SELECT t.user_id AS userId,t.subject_ref AS subjectRef,t.email_ref AS emailRef,
-          t.state,t.purpose AS purpose,t.expires_at AS expiresAt,u.email_mask AS emailMask,u.status,u.created_at AS createdAt
+          t.state,t.purpose AS purpose,t.expires_at AS expiresAt,u.email_mask AS emailMask,
+          COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
          FROM auth_account_verification_tickets t JOIN auth_users u ON u.user_id=t.user_id
+         LEFT JOIN auth_account_state st ON st.user_id=u.user_id
          WHERE t.ticket_ref=? AND t.device_ref=?`,
         input.ticketRef, input.deviceRef
       );
@@ -1069,13 +1101,28 @@ export class SqliteAuthRepository {
 
   async getFirebaseIdentity(input) {
     const row = this.#one(
-      `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,u.status,u.created_at AS createdAt
+      `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,
+        COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
        FROM auth_external_identities x JOIN auth_users u ON u.user_id=x.user_id
+       LEFT JOIN auth_account_state st ON st.user_id=u.user_id
        WHERE x.provider='firebase' AND x.subject_ref=? AND u.email_ref=?`,
       input.subjectRef, input.emailRef
     );
     if (!row) return { error: AUTH_ERROR_CODES.SESSION_INVALID };
-    if (row.status !== 'active') return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
+    /* AUTH V2.4: this is a LOOKUP, not an authorisation check, and the
+     * difference is load-bearing.
+     *
+     * `#loginRiskDecision` calls it to learn WHO is signing in, then reads the
+     * account state itself and turns a suspension into a CRITICAL block. A
+     * lookup that refused instead would return no `user`, the risk path's
+     * `if (identity.user)` guard would skip, and the suspension would be
+     * silently dropped — a suspended student would be let in unchallenged.
+     * (Found by `device-trust-step6` A6-৫ while making this very change.)
+     *
+     * The status is still returned, and it is now the status that is actually
+     * written, so a caller that does want to check can. Refusing here was never
+     * what stopped a suspended account: the status check below it was dead, and
+     * the real protection is the risk decision. */
     return { user: row };
   }
 
@@ -1096,8 +1143,9 @@ export class SqliteAuthRepository {
   async savePendingProfile(input) {
     return this.#transaction(() => {
       const row = this.#one(
-        `SELECT t.user_id AS userId,t.state,t.expires_at AS expiresAt,u.status
+        `SELECT t.user_id AS userId,t.state,t.expires_at AS expiresAt,COALESCE(st.status,u.status) AS status
          FROM auth_account_verification_tickets t JOIN auth_users u ON u.user_id=t.user_id
+         LEFT JOIN auth_account_state st ON st.user_id=u.user_id
          WHERE t.ticket_ref=? AND t.device_ref=?`,
         input.ticketRef, input.deviceRef
       );
@@ -1251,8 +1299,10 @@ export class SqliteAuthRepository {
   // limited = name + ID + avatar; public = + target + joined year + bio.
   // Never includes email, mobile, DOB, school details or internal refs.
   async getPublicProfile(input) {
-    // Phase 6 fact: suspension lives in auth_account_state (auth_users.status
-    // is the deactivation path), both must be active for a public surface.
+    /* AUTH V2.4: suspension lives in auth_account_state, and that is the status
+     * read here. The `u.status='active'` this used to carry alongside it was a
+     * constant — the column is written once at INSERT and never updated — so it
+     * narrowed nothing while reading like a second check. */
     const row = this.#one(
       `SELECT p.user_id AS userId,p.full_name AS fullName,p.bio AS bio,p.targets AS targets,p.visibility AS visibility,
         u.created_at AS createdAt,
@@ -1261,7 +1311,7 @@ export class SqliteAuthRepository {
        JOIN auth_users u ON u.user_id=p.user_id
        JOIN auth_public_identities x ON x.user_id=p.user_id
        LEFT JOIN auth_account_state st ON st.user_id=p.user_id
-       WHERE x.public_id=? AND u.status='active' AND COALESCE(st.status,'active')='active'`,
+       WHERE x.public_id=? AND COALESCE(st.status,u.status)='active'`,
       input.publicId
     );
     if (!row) return { error: AUTH_ERROR_CODES.PUBLIC_PROFILE_NOT_FOUND };
@@ -1411,8 +1461,10 @@ export class SqliteAuthRepository {
       const row = this.#one(
         `SELECT p.credential_id AS credentialId,p.user_id AS userId,p.subject_ref AS subjectRef,
           p.user_handle AS userHandle,p.public_key_jwk AS publicKeyJwk,p.sign_count AS counter,
-          p.refresh_cipher AS refreshCipher,p.status,u.status AS userStatus
+          p.refresh_cipher AS refreshCipher,p.status,
+          COALESCE(st.status,u.status) AS userStatus
          FROM auth_passkey_credentials p JOIN auth_users u ON u.user_id=p.user_id
+         LEFT JOIN auth_account_state st ON st.user_id=u.user_id
          WHERE p.credential_id=?`,
         input.credentialId
       );
@@ -1484,8 +1536,10 @@ export class SqliteAuthRepository {
         return { error: AUTH_ERROR_CODES.PASSKEY_INVALID };
       }
       const identity = this.#one(
-        `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,u.status,u.created_at AS createdAt
+        `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,
+          COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
          FROM auth_users u JOIN auth_external_identities x ON x.user_id=u.user_id
+         LEFT JOIN auth_account_state st ON st.user_id=u.user_id
          WHERE u.user_id=? AND x.provider='firebase' AND x.subject_ref=?`,
         ticket.userId, input.subjectRef
       );
@@ -1569,8 +1623,9 @@ export class SqliteAuthRepository {
     return this.#transaction(() => {
       const row = this.#one(
         `SELECT s.expires_at AS expiresAt,s.last_seen_at AS lastSeenAt,s.created_at AS sessionCreatedAt,
-          u.user_id AS id,u.email_mask AS emailMask,u.status,u.created_at AS createdAt
+          u.user_id AS id,u.email_mask AS emailMask,COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
          FROM auth_sessions s JOIN auth_users u ON u.user_id=s.user_id
+         LEFT JOIN auth_account_state st ON st.user_id=u.user_id
          WHERE s.session_ref=? AND s.revoked_at IS NULL`,
         sessionRef
       );
