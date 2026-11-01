@@ -2649,7 +2649,8 @@ var TRACE_FIELDS = Object.freeze([
   "contextVersion",
   "agentVersion",
   "responseType",
-  "validated"
+  "validated",
+  "budgetState"
 ]);
 var FORBIDDEN_TRACE_KEYS = Object.freeze([
   "uid",
@@ -2669,6 +2670,15 @@ var num = (v, min = 0) => {
   return Number.isFinite(n) && n >= min ? n : 0;
 };
 var str = (v, max = 120) => String(v == null ? "" : v).slice(0, max);
+var BUDGET = Object.freeze({ OK: "OK", CONTEXT: "CONTEXT", OUTPUT: "OUTPUT" });
+function budgetGuard({ tokensIn = 0, tokensOut = 0, maxContext = 0, maxOutput = 0 } = {}) {
+  const ti = num(tokensIn);
+  const to = num(tokensOut);
+  const mc = num(maxContext);
+  const mo = num(maxOutput);
+  const state = mc > 0 && ti > mc ? BUDGET.CONTEXT : mo > 0 && to > mo ? BUDGET.OUTPUT : BUDGET.OK;
+  return { state, tokensIn: ti, tokensOut: to, maxContext: mc, maxOutput: mo };
+}
 function makeTrace(input = {}) {
   const src = input && typeof input === "object" ? input : {};
   const tokensIn = num(src.tokensIn);
@@ -2699,6 +2709,7 @@ function makeTrace(input = {}) {
     contextVersion: str(src.contextVersion, 32),
     agentVersion: str(src.agentVersion, 32),
     responseType: str(src.responseType, 32),
+    budgetState: str(src.budgetState, 16),
     validated: src.validated !== false
   });
 }
@@ -4803,12 +4814,21 @@ async function agentChat(request, env, uid, opts = {}) {
     };
     const emitTrace = (extra = {}) => {
       try {
+        const tokensIn = estimateTokens(sys);
+        const tokensOut = estimateTokens(extra.text || "");
+        const budget = budgetGuard({
+          tokensIn,
+          tokensOut,
+          maxContext: Number(env && env.AGENT_MAX_CONTEXT_TOKENS) || 0,
+          maxOutput: Number(env && env.AGENT_MAX_OUTPUT_TOKENS) || 0
+        });
         console.log(renderTrace(makeTrace({
           ...traceCtx,
           at: Date.now(),
           latencyMs: Date.now() - startedAt,
-          tokensIn: estimateTokens(sys),
-          tokensOut: estimateTokens(extra.text || ""),
+          tokensIn,
+          tokensOut,
+          budgetState: budget.state,
           ...extra
         })));
       } catch (_) {
