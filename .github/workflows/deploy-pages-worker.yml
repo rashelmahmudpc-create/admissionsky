@@ -454,7 +454,7 @@ jobs:
           echo "::notice title=Alert proxy wired::ALERT_PROXY_SECRET is bound to admission-gk and both Pages projects."
 
       # The sender name is a provider-account value, not Worker code, so a secret
-      # left over from the old brand keeps showing "Admission Sky" even after the
+      # left over from the old brand keeps showing "Admission Hub" even after the
       # templates changed. Overwrite the existing from-name secrets only: this
       # Worker already sits on Cloudflare's 64-variable free-tier ceiling, so
       # creating a name that is absent would fail the deploy.
