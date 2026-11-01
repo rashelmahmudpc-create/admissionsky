@@ -244,3 +244,45 @@ test('V2.4-১৪: no authorisation query reads the never-written column on its 
   assert.match(source, /COALESCE\(st\.status,u\.status\) AS status/, 'the written status is read');
   assert.match(source, /LEFT JOIN auth_account_state st ON st\.user_id=u\.user_id/, 'and the state table is joined');
 });
+
+test('V2.4-১৪: the reconciliation health check is shown the status that can be wrong', async () => {
+  /* `identitySnapshot` feeds `reconcileIdentitySnapshot`, which reports a user
+   * whose status is outside the canonical set as `invalid-user-status`. Reading
+   * the raw column made that finding vacuous — the column is written once at
+   * INSERT, always to 'active', so it can never hold an invalid value and the
+   * health check could only ever be green. A suspended account was reported as
+   * 'active', which is the one thing the check exists to notice.
+   *
+   * Asserted through the double because that is what every suite runs against,
+   * and asserted at all because the gap survived the first pass over this
+   * finding: the guards were enumerated one at a time and this read is not a
+   * guard, so it was not on the list. */
+  const repository = new MemoryAuthRepository();
+  const now = START;
+  await repository.establishExternalSession({
+    provider: 'firebase', subjectRef: 'sub-snapshot', emailRef: 'email-ref-snapshot',
+    emailMask: 's***@example.com', userIdCandidate: 'usr_snapshot', sessionRef: 'session-ref-snapshot',
+    sessionExpiresAt: now + 30 * 24 * 60 * 60 * 1000, ipRef: 'ip-ref', deviceRef: 'device-ref',
+    userAgent: 'Chrome', now
+  });
+  const user = [...repository.users.values()][0];
+  await repository.setAccountState({ userId: user.id, toStatus: 'suspended', now: now + 1000 });
+
+  const snapshot = await repository.identitySnapshot();
+  assert.equal(snapshot.users[0].status, 'suspended',
+    'the snapshot must carry the status that is written, or the reconciliation can never see a wrong one');
+});
+
+test('V2.4-১৪: the public-profile query does not lean on the constant column', async () => {
+  /* The one query that carried the dead column as a WHERE clause rather than a
+   * guard: `u.status='active' AND COALESCE(st.status,'active')='active'`. The
+   * first half is a constant — true for every row ever inserted — so it read
+   * like a second, independent check while narrowing nothing. The account-state
+   * clause is the one that decides, and it is the one that should be read. */
+  const raw = readFileSync(new URL('./auth-native/storage/sqlite-auth-repository.mjs', import.meta.url), 'utf8');
+  // Comments are stripped first: the note explaining why the clause was removed
+  // quotes it, and a check that cannot tell prose from code is not a check.
+  const source = raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  assert.doesNotMatch(source, /u\.status\s*=\s*'active'/,
+    "a query filters on the constant column — it can never narrow anything; compare COALESCE(st.status,u.status) instead");
+});

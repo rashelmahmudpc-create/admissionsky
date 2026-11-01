@@ -256,7 +256,7 @@ export class MemoryAuthRepository {
     if (row.expiresAt <= input.now) { row.state = 'expired'; row.refreshCipher = ''; return { error: AUTH_ERROR_CODES.TELEGRAM_VERIFICATION_INVALID }; }
     const user = this.users.get(row.userId);
     if (!user || !this.#statusIsActive(user)) return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
-    return { ...copy(row), emailMask: user.emailMask, status: user.status, createdAt: user.createdAt };
+    return { ...copy(row), emailMask: user.emailMask, status: this.#effectiveStatus(user), createdAt: user.createdAt };
   }
 
   async completeFirebaseAccountVerification(input) {
@@ -895,7 +895,10 @@ export class MemoryAuthRepository {
   async identitySnapshot() {
     const users = [...this.users.values()]
       .filter(user => user && user.id)
-      .map(user => Object.freeze({ id: user.id, status: user.status }));
+      // AUTH V2.4: the effective status, not the write-once column — otherwise
+      // the `invalid-user-status` finding can never fire. Kept in step with the
+      // SQLite repository, which this double stands in for.
+      .map(user => Object.freeze({ id: user.id, status: this.#effectiveStatus(user) }));
     const externalIdentities = [...this.externalIdentities.values()]
       .filter(row => row && row.provider && row.subjectRef)
       .map(row => Object.freeze({ provider: row.provider, subjectRef: row.subjectRef, userId: row.userId }));

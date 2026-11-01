@@ -25722,7 +25722,10 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
   // Read-only reconciliation snapshot (Phase 3). HMAC refs only, never
   // emails, tokens or raw provider subjects.
   async identitySnapshot() {
-    const users = this.#rows("SELECT user_id AS id, status FROM auth_users").map((row) => Object.freeze({ id: row.id, status: row.status }));
+    const users = this.#rows(
+      `SELECT u.user_id AS id, COALESCE(st.status,u.status) AS status
+       FROM auth_users u LEFT JOIN auth_account_state st ON st.user_id=u.user_id`
+    ).map((row) => Object.freeze({ id: row.id, status: row.status }));
     const externalIdentities = this.#rows(
       "SELECT provider, subject_ref AS subjectRef, user_id AS userId FROM auth_external_identities"
     ).map((row) => Object.freeze({ provider: row.provider, subjectRef: row.subjectRef, userId: row.userId }));
@@ -26494,7 +26497,7 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
        JOIN auth_users u ON u.user_id=p.user_id
        JOIN auth_public_identities x ON x.user_id=p.user_id
        LEFT JOIN auth_account_state st ON st.user_id=p.user_id
-       WHERE x.public_id=? AND u.status='active' AND COALESCE(st.status,'active')='active'`,
+       WHERE x.public_id=? AND COALESCE(st.status,u.status)='active'`,
       input.publicId
     );
     if (!row) return { error: AUTH_ERROR_CODES.PUBLIC_PROFILE_NOT_FOUND };

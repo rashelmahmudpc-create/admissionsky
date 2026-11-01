@@ -533,8 +533,17 @@ export class SqliteAuthRepository {
   // Read-only reconciliation snapshot (Phase 3). HMAC refs only, never
   // emails, tokens or raw provider subjects.
   async identitySnapshot() {
-    const users = this.#rows('SELECT user_id AS id, status FROM auth_users')
-      .map(row => Object.freeze({ id: row.id, status: row.status }));
+    /* AUTH V2.4 (owner 2026-11-01): this feeds `reconcileIdentitySnapshot`, which
+     * reports a user whose status is outside the canonical set as
+     * `invalid-user-status`. Reading the raw column made that finding vacuous:
+     * the column is written once at INSERT, always to 'active', so it can never
+     * hold an invalid value and the health check could only ever be green. The
+     * status that can go wrong lives in the account-state table, so that is what
+     * the reconciliation has to be shown. */
+    const users = this.#rows(
+      `SELECT u.user_id AS id, COALESCE(st.status,u.status) AS status
+       FROM auth_users u LEFT JOIN auth_account_state st ON st.user_id=u.user_id`
+    ).map(row => Object.freeze({ id: row.id, status: row.status }));
     const externalIdentities = this.#rows(
       'SELECT provider, subject_ref AS subjectRef, user_id AS userId FROM auth_external_identities'
     ).map(row => Object.freeze({ provider: row.provider, subjectRef: row.subjectRef, userId: row.userId }));
@@ -1290,8 +1299,10 @@ export class SqliteAuthRepository {
   // limited = name + ID + avatar; public = + target + joined year + bio.
   // Never includes email, mobile, DOB, school details or internal refs.
   async getPublicProfile(input) {
-    // Phase 6 fact: suspension lives in auth_account_state (auth_users.status
-    // is the deactivation path), both must be active for a public surface.
+    /* AUTH V2.4: suspension lives in auth_account_state, and that is the status
+     * read here. The `u.status='active'` this used to carry alongside it was a
+     * constant — the column is written once at INSERT and never updated — so it
+     * narrowed nothing while reading like a second check. */
     const row = this.#one(
       `SELECT p.user_id AS userId,p.full_name AS fullName,p.bio AS bio,p.targets AS targets,p.visibility AS visibility,
         u.created_at AS createdAt,
@@ -1300,7 +1311,7 @@ export class SqliteAuthRepository {
        JOIN auth_users u ON u.user_id=p.user_id
        JOIN auth_public_identities x ON x.user_id=p.user_id
        LEFT JOIN auth_account_state st ON st.user_id=p.user_id
-       WHERE x.public_id=? AND u.status='active' AND COALESCE(st.status,'active')='active'`,
+       WHERE x.public_id=? AND COALESCE(st.status,u.status)='active'`,
       input.publicId
     );
     if (!row) return { error: AUTH_ERROR_CODES.PUBLIC_PROFILE_NOT_FOUND };
