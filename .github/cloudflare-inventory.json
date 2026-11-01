@@ -67,6 +67,10 @@
       {
         "name": "hermes-ask",
         "reason": "Hermes assistant Worker for the owner's bot fleet (2026-11-01). Not deployed by this repo. Sibling-bot/fleet tooling — waive; do not retire."
+      },
+      {
+        "name": "zozo-vault",
+        "reason": "Owner-bot secret vault Worker for the fleet (2026-11-01). Not deployed by this repo. Sibling-bot/fleet tooling — waive; do not retire."
       }
     ]
   },
