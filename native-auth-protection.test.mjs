@@ -363,11 +363,31 @@ test('credentials remain in server-managed HttpOnly cookies and are never return
   assert.doesNotMatch(client, /firebase(?:Refresh|Id)?Token/i);
 });
 
-test('legacy standalone account implementation remains absent while secure multi-method routes stay guarded', () => {
+/* AUTH V2.1 (owner 2026-10-31): the old form of this test asserted that the
+ * retired route strings are ABSENT FROM THE FILE — `worker.includes(route)`
+ * === false. A file that never mentions `/api/auth/login` is not the same claim
+ * as "a request to it is refused": the route could be assembled at runtime, or
+ * claimed by a prefix rule, and the string check would still pass. It also
+ * duplicated account-retirement.test.mjs, which already proves every retired
+ * route answers 404 against the real worker.
+ *
+ * What is asserted here instead is the property the auth surface itself owns:
+ * the handler must not CLAIM a retired path. `claimsAuthPath` is the single
+ * predicate admission-gk consults before forwarding to this handler, so if it
+ * says no, no retired route can ever reach the auth code — whatever the file
+ * does or does not contain. The source checks that remain are the ones about
+ * absence of a whole implementation, which no request can exercise. */
+test('the handler refuses to claim any retired route, and still claims the live ones', async () => {
+  const { claimsAuthPath } = await import('./auth-native/worker/public-auth-handler.mjs');
   for (const route of forbiddenLegacyRoutes) {
-    assert.equal(worker.includes(route), false, route);
-    assert.equal(bundle.includes(route), false, route);
+    assert.equal(claimsAuthPath(route), false, `${route} must not be claimed`);
   }
+  // And the claim is not vacuous: the live surface must still be claimed, or
+  // "nothing is claimed" would pass this test while breaking every student.
+  for (const live of ['/api/auth/v1/signup', '/api/auth/v1/login', '/api/auth/v1', '/api/public/profile/abc']) {
+    assert.equal(claimsAuthPath(live), true, `${live} must be claimed`);
+  }
+
   assert.doesNotMatch(worker, /premium-auth|hashPassword|verifyPassword/);
   assert.doesNotMatch(runtime, /prepareOtp\s*\(|verifyOtp\s*\(|\/internal\/otp\/|CREATE TABLE IF NOT EXISTS auth_challenges/);
   assert.match(runtime, /DROP TABLE IF EXISTS auth_challenges/);
