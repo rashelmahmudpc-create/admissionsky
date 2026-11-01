@@ -363,12 +363,55 @@ export function researchGaps() {
   return out;
 }
 
+/* F1.12 — Auto-probe: a recorded verification date nobody reads goes stale in
+ * silence.
+ *
+ * ML-06 writes `verifiedAt` when a field was measured against the provider, and
+ * nothing ever compared that date to today. A rate limit captured last year is
+ * presented with the same confidence as one captured yesterday, so the catalog
+ * quietly drifts away from the providers it describes — and every routing
+ * decision reads it as current.
+ *
+ * So the date now yields a verdict. Two deliberate choices:
+ *   - The threshold is a parameter with a default, not a constant buried in the
+ *     comparison, so a caller (a test, a report) can ask about another horizon.
+ *   - An entry with no date at all is STALE, not fresh. "Never verified" is the
+ *     oldest state there is; treating unknown as current is how drift hides.
+ */
+export const STALE_AFTER_DAYS = 90;
+
+export function catalogFreshness(today = new Date(), maxAgeDays = STALE_AFTER_DAYS) {
+  const now = today instanceof Date ? today.getTime() : new Date(today).getTime();
+  const limit = Math.max(0, Number(maxAgeDays) || 0) * 24 * 60 * 60 * 1000;
+  const days = (t) => Math.floor((now - t) / (24 * 60 * 60 * 1000));
+  const entries = CATALOG.map((c) => {
+    const at = c.verifiedAt ? Date.parse(c.verifiedAt) : NaN;
+    /* A date in the future is not evidence of freshness — it is a typo or a
+       clock problem, and either way the entry has not been checked. */
+    if (!Number.isFinite(at) || at > now) {
+      return { id: c.id, verifiedAt: c.verifiedAt || null, ageDays: null, stale: true, reason: 'never-verified' };
+    }
+    const age = days(at);
+    return { id: c.id, verifiedAt: c.verifiedAt, ageDays: age, stale: age > Number(maxAgeDays), reason: null };
+  });
+  return {
+    maxAgeDays: Number(maxAgeDays) || 0,
+    stale: entries.filter((e) => e.stale).map((e) => e.id),
+    entries
+  };
+}
+
 /** A short, owner-facing summary of catalog coverage. */
-export function catalogSummary() {
+export function catalogSummary(today = new Date()) {
   const gaps = researchGaps();
+  /* F1.12: `verified` counts entries that carry a date; `stale` counts entries
+     whose date has expired. Reporting only the first would read as "all good"
+     for a catalog verified a year ago. */
+  const fresh = catalogFreshness(today);
   return {
     providers: CATALOG.length,
     verified: CATALOG.filter((c) => c.verifiedAt).length,
+    stale: fresh.stale.length,
     withLimits: CATALOG.filter((c) => c.limits != null).length,
     withTos: CATALOG.filter((c) => c.tos != null).length,
     withBanglaScore: CATALOG.filter((c) => c.banglaScore != null).length,
