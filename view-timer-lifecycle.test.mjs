@@ -80,11 +80,21 @@ test('V2.1-৭: a countdown interval is tracked, and clearViewTimers is reachabl
   const assign = CLIENT.indexOf('state.currentView = name;', guard - 200);
   assert.ok(guard > 0, 'the view change clears the view timers');
   assert.ok(assign > guard, 'and it reads the previous view, so it runs before the assignment');
-  // Every timer the client starts must be reachable from that one hook.
+  /* Every countdown interval must be stoppable from that one hook. The resend
+   * countdown is stopped by clearing its interval directly rather than through
+   * clearResendCooldown, because that helper also zeroes
+   * `verification.resendUntil` — and the resend form lives INSIDE the verify
+   * view, so wiping the deadline on the way in would cancel the very countdown
+   * the view is about to show. A tick is cheap to stop; a deadline is state.
+   * That distinction is asserted here because getting it wrong is silent: the
+   * countdown simply reads as expired, which looks like a working clock. */
   const helper = CLIENT.slice(CLIENT.indexOf('const clearViewTimers'), CLIENT.indexOf('};', CLIENT.indexOf('const clearViewTimers')));
-  for (const clear of ['clearTelegramTimer', 'clearOwnershipTimer', 'clearResendCooldown']) {
+  for (const clear of ['clearTelegramTimer', 'clearOwnershipTimer']) {
     assert.ok(helper.includes(clear), `${clear} must be cleared with the view`);
   }
+  assert.match(helper, /clearInterval\(state\.resendTimer\)/, 'the resend interval is stopped too');
+  assert.doesNotMatch(helper, /clearResendCooldown\(\)/,
+    'but not through clearResendCooldown, which would zero the deadline the verify view displays');
 });
 
 test('V2.1-৭: every interval the client starts has a clearInterval path', () => {

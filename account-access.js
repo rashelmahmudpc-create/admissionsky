@@ -549,21 +549,29 @@
     if (state.ownershipTimer) clearInterval(state.ownershipTimer);
     state.ownershipTimer = null;
   };
-  /* AUTH V2.1 (owner 2026-10-31): every countdown timer is bound to the view
-   * that owns it. The blueprint's finding ৭: the Telegram resend interval was
-   * only cleared when the countdown reached zero or the flow finished, so a
+  /* AUTH V2.1 (owner 2026-10-31): a countdown interval is bound to the view that
+   * shows it. The blueprint's finding ৭: the Telegram resend interval was
+   * cleared only when the countdown reached zero or the flow finished, so a
    * student who navigated away left a 1-second interval running for the rest of
-   * the session. The ownership countdown had the same shape, and it is the live
-   * one — the Telegram *verification* flow was retired on 2026-10-18
-   * (capabilities.telegram is hardcoded false), so that timer now only exists in
+   * the session. The ownership countdown had the same shape, and that one is
+   * live — the Telegram *verification* flow was retired on 2026-10-18
+   * (capabilities.telegram is hardcoded false), so its timer now sits in
    * unreachable code, but the leak it demonstrated is real in the timer that
-   * still runs. Clearing them at the one place that knows the view changed beats
-   * remembering to clear each timer at each exit — which is how the leak
-   * happened in the first place. */
+   * still runs.
+   *
+   * This stops the INTERVALS only. It deliberately does not call
+   * clearResendCooldown, which also zeroes `verification.resendUntil`: the
+   * resend form lives inside the verify view, so wiping the deadline on the way
+   * in would cancel the countdown the view is about to display. A timer tick is
+   * cheap to stop and cheap to restart; a deadline is state, and state outlives
+   * a view change. The countdown resumes from the same deadline when its view
+   * comes back, because `startResendCooldown`/`updateResendCooldown` recompute
+   * the remaining time from `resendUntil` rather than from a counter. */
   const clearViewTimers = () => {
     clearTelegramTimer();
     clearOwnershipTimer();
-    clearResendCooldown();
+    if (state.resendTimer) clearInterval(state.resendTimer);
+    state.resendTimer = null;
   };
   const telegramResendRemaining = () => Math.max(0, Math.ceil((Number(state.telegram?.resendUntil || 0) - Date.now()) / 1000));
   const renderTelegramDigits = () => {
