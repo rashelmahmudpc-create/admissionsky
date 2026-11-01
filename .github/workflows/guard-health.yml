@@ -75,7 +75,7 @@ jobs:
             const when = new Date().toLocaleString('bn-BD', { timeZone: 'Asia/Dhaka', dateStyle: 'medium', timeStyle: 'short' });
             const L = [];
             if (red.length) {
-              L.push('<b>🔴 Admission Sky — গার্ড লাল</b>');
+              L.push('<b>🔴 Admission Hub — গার্ড লাল</b>');
               L.push(`<i>${esc(when)}</i>`);
               L.push('');
               L.push(`main-এ ${bn(red.length)}টা গার্ড লাল:`);

@@ -94,6 +94,6 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           ADMISSION_HUB_NOTIFICATION_STATUS: DEPLOYED
-          ADMISSION_HUB_NOTIFICATION_SUMMARY: Admission Sky Email Gateway Worker deployment completed and verified.
+          ADMISSION_HUB_NOTIFICATION_SUMMARY: Admission Hub Email Gateway Worker deployment completed and verified.
           ADMISSION_HUB_NOTIFICATION_DETAILS: Email suite passed|Worker bundle exact-match passed|Protected deployment completed
         run: npm run notify:telegram

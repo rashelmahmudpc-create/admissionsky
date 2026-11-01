@@ -93,7 +93,7 @@ jobs:
           head -c 200 dist/sitemap.xml | grep -Fq 'https://admissionsky.pages.dev/'
 
           # Root page must carry its own title, canonical, OG and JSON-LD.
-          grep -Fq '<title>Admission Sky' dist/index.html
+          grep -Fq '<title>Admission Hub' dist/index.html
           grep -Fq '<link rel="canonical" href="https://admissionsky.pages.dev/">' dist/index.html
           grep -Fq 'property="og:image" content="https://admissionsky.pages.dev/og-image.png"' dist/index.html
           grep -Fq 'name="twitter:card" content="summary_large_image"' dist/index.html

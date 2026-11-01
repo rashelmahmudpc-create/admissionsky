@@ -62,7 +62,7 @@ jobs:
 
             const when = now.toLocaleString('bn-BD', { timeZone: 'Asia/Dhaka', dateStyle: 'full', timeStyle: 'short' });
             const L = [];
-            L.push('<b>🌙 Admission Sky — রাতের রিপোর্ট</b>');
+            L.push('<b>🌙 Admission Hub — রাতের রিপোর্ট</b>');
             L.push(`<i>${esc(when)}</i>`);
             L.push('');
             L.push(redMain.length ? `🔴 <b>main-এ এখন ${bn(redMain.length)}টা গার্ড লাল</b>` : '🟢 <b>main-এর সব গার্ড সবুজ (গত ২৪ ঘণ্টায় যেগুলো চলেছে)</b>');
