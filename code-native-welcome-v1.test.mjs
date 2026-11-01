@@ -12,10 +12,10 @@ const HTML = read('index.html');
 const SW = read('sw.js');
 const PAGES_GUARD = read('.github/workflows/cf-pages.yml');
 const RELEASE_WORKFLOW = read('.github/workflows/telegram-auth-canary-activate.yml');
-const UI_VERSION = '20261018-allowlist-v1';
-const UI_JS_VERSION = '20261021-turnstile-v1';
+const UI_VERSION = '20261101-humancheck-v1';
+const UI_JS_VERSION = '20261101-humancheck-v1';
 
-const SHELL_VERSION = 'v364-sky-goal';
+const SHELL_VERSION = 'v365-human-check';
 
 const between = (source, start, end) => {
   const from = source.indexOf(start);

@@ -92,8 +92,14 @@ test('a failed human check carries its own error code end to end', () => {
   assert.ok(!/INVALID_INPUT:\s*'[^']*মানব যাচাই/.test(CLIENT), 'the human-check message is not attached to INVALID_INPUT');
 });
 
+// Owner order 2026-11-01 (voice): "make it visible for everyone so students can
+// click". The previous shape only enlarged itself *after* Cloudflare announced a
+// challenge, and it was pinned to the bottom of the screen -- on a phone the
+// keyboard covered it, so the tap could not be made and the check timed out.
+// The box is now always visible and pinned above the keyboard.
 test('the human check can actually be completed when Cloudflare asks for a tap', () => {
-  assert.ok(CLIENT.includes("'before-interactive-callback'"), 'the widget enlarges itself before a challenge');
-  assert.ok(CLIENT.includes("'after-interactive-callback'"), 'the widget shrinks again afterwards');
+  assert.ok(CLIENT.includes("appearance: 'always'"), 'the widget is visible before a challenge, not only after one');
+  assert.ok(CLIENT.includes('visualViewport'), 'the box is pinned above the on-screen keyboard');
   assert.ok(!/size: 'invisible'/.test(CLIENT), 'an invisible widget cannot show an interaction challenge');
+  assert.ok(!/appearance: 'interaction-only'/.test(CLIENT), 'an interaction-only widget renders nothing until challenged, so a covered box has no second chance');
 });

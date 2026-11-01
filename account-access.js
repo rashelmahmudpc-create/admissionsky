@@ -1497,53 +1497,76 @@
     }
     return tsApiPromise.then(api => new Promise((resolve, reject) => {
       const host = document.createElement('div');
-      host.setAttribute('aria-hidden', 'true');
-      // Owner report 2026-10-24: signup stopped at "তথ্যটি ভুল" right after the
-      // confirm-password field. A 1px, near-transparent host is fine while the
-      // check passes silently, but when Cloudflare decides a human must tap, the
-      // challenge has nowhere to render — the widget times out, the token comes
-      // back empty, and the server refuses the send. So the host starts collapsed
-      // and expands into a real, clickable box for the duration of a challenge.
-      const collapsed = 'position:fixed;right:0;bottom:0;width:1px;height:1px;overflow:hidden;opacity:.01;z-index:2147483647;';
-      const expanded = 'position:fixed;right:12px;bottom:12px;min-width:300px;min-height:70px;padding:10px;overflow:visible;opacity:1;z-index:2147483647;background:#ffffff;border:1px solid #d7dce3;border-radius:12px;box-shadow:0 10px 30px rgba(15,23,42,.18);';
-      host.style.cssText = collapsed;
-      const label = document.createElement('p');
-      label.textContent = 'মানব যাচাই সম্পন্ন করো।';
-      label.style.cssText = 'margin:0 0 8px;font:600 13px/1.4 system-ui,sans-serif;color:#0f172a;';
-      label.hidden = true;
-      host.appendChild(label);
+      host.className = 'ah-human-check';
+      host.setAttribute('role', 'dialog');
+      host.setAttribute('aria-label', 'মানব যাচাই');
+      const head = document.createElement('p');
+      head.className = 'ah-hc-head';
+      const shield = document.createElement('span');
+      shield.className = 'ah-hc-shield';
+      shield.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5.5c0 4.3-2.9 7.9-7 9.5-4.1-1.6-7-5.2-7-9.5V6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 12l2.2 2.2L15.5 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const heading = document.createElement('b');
+      heading.textContent = 'মানব যাচাই';
+      head.append(shield, heading);
+      const sub = document.createElement('p');
+      sub.className = 'ah-hc-sub';
+      sub.textContent = 'নিচের বাক্সে একবার ট্যাপ করো।';
       const mount = document.createElement('div');
-      mount.style.cssText = 'width:300px;height:65px;';
-      host.appendChild(mount);
+      mount.className = 'ah-hc-mount';
+      const bar = document.createElement('div');
+      bar.className = 'ah-hc-bar';
+      bar.appendChild(document.createElement('i'));
+      host.append(head, sub, mount, bar);
       document.body.appendChild(host);
-      let done = false, widgetId = null;
+      /* visualViewport is the only thing that reports the on-screen keyboard:
+         innerHeight does not change when it opens, so a bottom-pinned box lands
+         in the covered strip and cannot be tapped -- the whole bug. */
+      const pin = () => {
+        const vv = window.visualViewport;
+        if (!vv) { host.style.top = 'auto'; host.style.bottom = '12px'; return; }
+        const covered = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+        const above = vv.offsetTop + 12;
+        if (window.innerHeight - covered - above >= 190) {
+          host.style.top = 'auto';
+          host.style.bottom = (covered + 12) + 'px';
+        } else {
+          host.style.bottom = 'auto';
+          host.style.top = above + 'px';
+        }
+      };
+      pin();
+      let done = false, widgetId = null, timer = null;
       const finish = (fn, value) => {
         if (done) return;
         done = true;
         clearTimeout(timer);
+        if (window.visualViewport) {
+          window.visualViewport.removeEventListener('resize', onViewport);
+          window.visualViewport.removeEventListener('scroll', onViewport);
+        }
         try { api.remove(widgetId); } catch (_) {}
         try { host.remove(); } catch (_) {}
         fn(value);
       };
-      // A challenge needs a human: it gets 60s, not the 15s a silent pass needs.
-      let timer = setTimeout(() => finish(resolve, ''), 15000);
-      const expand = () => {
-        host.setAttribute('aria-hidden', 'false');
-        host.style.cssText = expanded;
-        label.hidden = false;
-        clearTimeout(timer);
-        timer = setTimeout(() => finish(resolve, ''), 60000);
-      };
-      const collapse = () => {
-        host.setAttribute('aria-hidden', 'true');
-        host.style.cssText = collapsed;
-        label.hidden = true;
-      };
+      /* Cloudflare can hand back a non-interactive widget that only later
+         decides a human is needed. Re-running execute on a viewport change is
+         the only nudge available to make it re-present inside the box we just
+         moved, and it is a no-op once a token has arrived. */
+      function onViewport() {
+        try { pin(); } catch (_) {}
+        if (done) return;
+        try { api.execute(widgetId); } catch (_) {}
+      }
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', onViewport, { passive: true });
+        window.visualViewport.addEventListener('scroll', onViewport, { passive: true });
+      }
+      /* The student has to tap, so the box waits for them instead of expiring
+         on the old 15s silent-pass window. */
+      timer = setTimeout(() => finish(resolve, ''), 120000);
       try {
         widgetId = api.render(mount, {
-          sitekey: siteKey, action: 'email_ownership', size: 'normal', appearance: 'interaction-only',
-          'before-interactive-callback': expand,
-          'after-interactive-callback': collapse,
+          sitekey: siteKey, action: 'email_ownership', size: 'normal', appearance: 'always',
           callback: token => finish(resolve, String(token || '')),
           'error-callback': () => finish(resolve, ''),
           'expired-callback': () => finish(resolve, '')
