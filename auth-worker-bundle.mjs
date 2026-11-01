@@ -1471,9 +1471,6 @@ var isPendingSignupTicket = (value) => typeof value === "string" && TICKET_PATTE
 
 // auth-native/worker/pending-signup-public.mjs
 var PENDING = "/internal/signup/pending";
-var PENDING_SIGNUP_HEADER = "X-AH-Signup-Flow";
-var PENDING_SIGNUP_FLOW = "pending-v1";
-var pendingSignupRequested = (request) => request?.headers?.get(PENDING_SIGNUP_HEADER) === PENDING_SIGNUP_FLOW;
 var TICKET_SECONDS = Math.floor(PENDING_SIGNUP_TTL_MS / 1e3);
 var deviceHeaders = (context, deps, cookies2 = []) => {
   const list = [...context.isNewDevice ? [deps.deviceCookie(context.deviceId)] : [], ...cookies2];
@@ -2957,7 +2954,7 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         if (isDisposableEmail(input.email)) throw new NativeAuthError(AUTH_ERROR_CODES.DISPOSABLE_EMAIL);
         if (reservedTelegramLoginEmail(input.email)) throw new NativeAuthError(AUTH_ERROR_CODES.DISPOSABLE_EMAIL);
         const prepared = await callAuthority(env, "/internal/firebase/rate", { input: { operation: "signup", email: input.email }, context });
-        if (emailOwnershipRequested(env, url) && pendingSignupRequested(request)) return beginPendingSignup({ request, env, context, prepared, password: input.password, deps: pendingDeps() });
+        if (verificationPublished(env)) return await beginPendingSignup({ request, env, context, prepared, password: input.password, deps: pendingDeps() });
         let signed;
         try {
           signed = await provider.signUp(prepared.email, input.password);
@@ -3628,7 +3625,7 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
           const denied = await guardSend({ request, env, context, body: startBody, fetchImpl });
           if (denied) return denied;
         }
-        if (isPendingSignupTicket(verificationTicket)) return startPendingSignupCode({ request, env, provider, context, ticket: verificationTicket, magicLink, deps: pendingDeps() });
+        if (isPendingSignupTicket(verificationTicket)) return await startPendingSignupCode({ request, env, provider, context, ticket: verificationTicket, magicLink, deps: pendingDeps() });
         const material = await callAuthority(env, "/internal/firebase/account-verification/material", {
           verificationTicket,
           context
@@ -3709,7 +3706,7 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         }
         if (isPendingSignupTicket(verificationTicket)) {
           if (magicToken) throw new NativeAuthError(AUTH_ERROR_CODES.INVALID_INPUT);
-          return verifyPendingSignupCodeAndCreate({ request, env, provider, context, ticket: verificationTicket, attemptId, code, deps: pendingDeps() });
+          return await verifyPendingSignupCodeAndCreate({ request, env, provider, context, ticket: verificationTicket, attemptId, code, deps: pendingDeps() });
         }
         const material = await callAuthority(env, "/internal/firebase/account-verification/material", {
           verificationTicket,
@@ -3896,7 +3893,7 @@ function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         if (!verificationTicket) throw new NativeAuthError(AUTH_ERROR_CODES.TELEGRAM_VERIFICATION_INVALID);
         const profile = await readJson(request);
         await callAuthority(env, "/internal/firebase/rate", { input: { operation: "pending-profile-write" }, context });
-        if (isPendingSignupTicket(verificationTicket)) return savePendingSignupProfile({ request, env, context, ticket: verificationTicket, profile, deps: pendingDeps() });
+        if (isPendingSignupTicket(verificationTicket)) return await savePendingSignupProfile({ request, env, context, ticket: verificationTicket, profile, deps: pendingDeps() });
         const result = await callAuthority(env, "/internal/profile/save-pending", {
           verificationTicket,
           input: profile,

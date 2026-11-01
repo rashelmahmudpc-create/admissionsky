@@ -948,8 +948,20 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         if (isDisposableEmail(input.email)) throw new NativeAuthError(AUTH_ERROR_CODES.DISPOSABLE_EMAIL);
         if (reservedTelegramLoginEmail(input.email)) throw new NativeAuthError(AUTH_ERROR_CODES.DISPOSABLE_EMAIL);
         const prepared = await callAuthority(env, '/internal/firebase/rate', { input: { operation: 'signup', email: input.email }, context });
-        // AUTH-ROADMAP step 1: an opted-in dual-choice signup holds the credentials; no account until the code is proven.
-        if (emailOwnershipRequested(env, url) && pendingSignup.pendingSignupRequested(request)) return pendingSignup.beginPendingSignup({ request, env, context, prepared, password: input.password, deps: pendingDeps() });
+        /* AUTH V2.0 (owner 2026-10-31): holding the credentials is the signup
+         * path, not an opt-in. It used to require `X-AH-Signup-Flow`, so a
+         * caller that omitted the header reached `provider.signUp` below and
+         * learned from 409-vs-202 whether an address already had an account —
+         * an enumeration oracle on an endpoint anyone can call. With the header
+         * gone the answer is the same 202 for a new address and a taken one.
+         *
+         * The gate is `verificationPublished`, NOT `emailOwnershipRequested`.
+         * The latter is also true for `?telegramCanary=1`, and the held path has
+         * no Telegram option — it answers `telegram: { available: false }` by
+         * design. Gating on it therefore pulled the Telegram canary off its own
+         * flow and into a path that cannot serve it. Only a genuinely published
+         * ownership flow may claim signup. */
+        if (verificationPublished(env)) return await pendingSignup.beginPendingSignup({ request, env, context, prepared, password: input.password, deps: pendingDeps() });
         let signed;
         try { signed = await provider.signUp(prepared.email, input.password); } catch (cause) { throw providerError(cause, 'signup'); }
 
@@ -1611,7 +1623,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
           const denied = await guardSend({ request, env, context, body: startBody, fetchImpl });
           if (denied) return denied;
         }
-        if (isPendingSignupTicket(verificationTicket)) return pendingSignup.startPendingSignupCode({ request, env, provider, context, ticket: verificationTicket, magicLink, deps: pendingDeps() });
+        if (isPendingSignupTicket(verificationTicket)) return await pendingSignup.startPendingSignupCode({ request, env, provider, context, ticket: verificationTicket, magicLink, deps: pendingDeps() });
         const material = await callAuthority(env, '/internal/firebase/account-verification/material', {
           verificationTicket,
           context
@@ -1688,7 +1700,12 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         }
         if (isPendingSignupTicket(verificationTicket)) {
           if (magicToken) throw new NativeAuthError(AUTH_ERROR_CODES.INVALID_INPUT);
-          return pendingSignup.verifyPendingSignupCodeAndCreate({ request, env, provider, context, ticket: verificationTicket, attemptId, code, deps: pendingDeps() });
+          // `await` is load-bearing, not style: without it the rejection escapes
+          // this try block and the catch below never sees it, so a wrong code
+          // surfaced as an unhandled 500 instead of OTP_INVALID. With ownership
+          // live this is the only path a signup can take, so a bad code is the
+          // common case, not an edge one.
+          return await pendingSignup.verifyPendingSignupCodeAndCreate({ request, env, provider, context, ticket: verificationTicket, attemptId, code, deps: pendingDeps() });
         }
         const material = await callAuthority(env, '/internal/firebase/account-verification/material', {
           verificationTicket,
@@ -1859,7 +1876,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         if (!verificationTicket) throw new NativeAuthError(AUTH_ERROR_CODES.TELEGRAM_VERIFICATION_INVALID);
         const profile = await readJson(request);
         await callAuthority(env, '/internal/firebase/rate', { input: { operation: 'pending-profile-write' }, context });
-        if (isPendingSignupTicket(verificationTicket)) return pendingSignup.savePendingSignupProfile({ request, env, context, ticket: verificationTicket, profile, deps: pendingDeps() });
+        if (isPendingSignupTicket(verificationTicket)) return await pendingSignup.savePendingSignupProfile({ request, env, context, ticket: verificationTicket, profile, deps: pendingDeps() });
         const result = await callAuthority(env, '/internal/profile/save-pending', {
           verificationTicket,
           input: profile,

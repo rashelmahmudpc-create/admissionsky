@@ -7,11 +7,22 @@ import { AUTH_ERROR_CODES, NativeAuthError } from '../core/errors.mjs';
 import { PENDING_SIGNUP_TTL_MS } from './pending-signup.mjs';
 
 const PENDING = '/internal/signup/pending';
-// Opt-in per request so cached frontends keep the old account-first signup
-// (STEP1 plan item 8) until the new frontend sends this header.
-export const PENDING_SIGNUP_HEADER = 'X-AH-Signup-Flow';
-export const PENDING_SIGNUP_FLOW = 'pending-v1';
-export const pendingSignupRequested = request => request?.headers?.get(PENDING_SIGNUP_HEADER) === PENDING_SIGNUP_FLOW;
+/* AUTH V2.0 (owner 2026-10-31): the per-request opt-in header is gone.
+ *
+ * STEP1 shipped the held signup behind `X-AH-Signup-Flow: pending-v1` so a
+ * cached bundle kept the old account-first path until the new frontend sent it.
+ * Both live frontends send it now, but "sends it" was the whole check — so a
+ * caller that simply omitted the header fell through to `provider.signUp`,
+ * whose EMAIL_EXISTS answer is 409 for an address that exists and 202 for one
+ * that does not. That is a user-enumeration oracle on an unauthenticated
+ * endpoint, and it was the one leak the rest of this path was built to avoid.
+ *
+ * Holding the credentials is now the only signup path whenever ownership can be
+ * verified, so the answer no longer depends on anything the caller chooses to
+ * send. The 409 still exists, but only after the code is proven — at that point
+ * the caller has demonstrated they own the mailbox, so "you already have an
+ * account" tells them nothing they could not already learn by logging in.
+ */
 const TICKET_SECONDS = Math.floor(PENDING_SIGNUP_TTL_MS / 1000);
 const deviceHeaders = (context, deps, cookies = []) => {
   const list = [...(context.isNewDevice ? [deps.deviceCookie(context.deviceId)] : []), ...cookies];
