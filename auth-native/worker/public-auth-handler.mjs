@@ -382,6 +382,29 @@ async function seedGoogleProfile(env, context, established, googleUser) {
   }
 }
 
+/* AUTH V2.1 (owner 2026-10-31): the authority call is bounded. The blueprint's
+ * finding ২৪.
+ *
+ * The Durable Object is a single-threaded actor, and some of its routes reach a
+ * third party — Telegram's API, above all. A call that hangs there holds the
+ * object, and every request waiting behind it, for as long as the platform
+ * allows. The handler had no ceiling on the wait, so a hung third party became
+ * a hung signup: not a wrong answer, no answer.
+ *
+ * The ceiling is deliberately generous. This is a safety net against a hang, not
+ * a latency budget: the DO does real work (SQLite writes, provider calls with
+ * their own 12s ceiling) and a tight bound here would turn a slow-but-working
+ * deployment into a broken one. 15 seconds is past every internal budget the
+ * orchestrator enforces and short enough that a student gets an error rather
+ * than a spinner that never ends.
+ *
+ * A timeout is reported as STORAGE_UNAVAILABLE, the same code the catch below
+ * already uses for an unreachable authority: from the caller's side an
+ * unreachable and an unresponsive authority are the same fact, and the client
+ * already knows how to show it.
+ */
+const AUTHORITY_TIMEOUT_MS = 15_000;
+
 async function callAuthority(env, path, body, method = 'POST') {
   if (!env?.AUTH_AUTHORITY || typeof env.AUTH_AUTHORITY.idFromName !== 'function') {
     throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
@@ -390,11 +413,33 @@ async function callAuthority(env, path, body, method = 'POST') {
   try {
     const id = env.AUTH_AUTHORITY.idFromName(AUTHORITY_NAME);
     const stub = env.AUTH_AUTHORITY.get(id, { locationHint: 'apac' });
-    response = await stub.fetch(`https://auth.internal${path}`, method === 'GET' ? { method } : {
+    const call = stub.fetch(`https://auth.internal${path}`, method === 'GET' ? { method } : {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body || {})
     });
+    // Racing a timer rather than passing an AbortSignal: a Durable Object stub
+    // is not a plain fetch, and the platform does not document signal support
+    // for it. The race gives the caller its answer back on time, which is the
+    // property that matters here; the abandoned call is the platform's to
+    // reclaim, and a request that would have hung forever is now an error.
+    //
+    // The timer is deliberately NOT unref-ed. `unref` lets a runtime exit with
+    // the timer still pending, which is the opposite of what is wanted here —
+    // and in the test harness it stopped the race from ever settling, turning a
+    // working authority into a 503. The timer is cleared in the finally below
+    // instead, so it cannot outlive the call it bounds.
+    let timer = null;
+    try {
+      response = await Promise.race([
+        call,
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error('authority-timeout')), AUTHORITY_TIMEOUT_MS);
+        })
+      ]);
+    } finally {
+      if (timer !== null) clearTimeout(timer);
+    }
   } catch {
     throw new NativeAuthError(AUTH_ERROR_CODES.STORAGE_UNAVAILABLE);
   }

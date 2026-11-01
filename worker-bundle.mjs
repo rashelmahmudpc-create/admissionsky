@@ -13750,6 +13750,7 @@ async function seedGoogleProfile(env, context, established, googleUser) {
     }
   }
 }
+var AUTHORITY_TIMEOUT_MS = 15e3;
 async function callAuthority(env, path, body, method = "POST") {
   if (!env?.AUTH_AUTHORITY || typeof env.AUTH_AUTHORITY.idFromName !== "function") {
     throw new NativeAuthError(AUTH_ERROR_CODES.NOT_CONFIGURED);
@@ -13758,11 +13759,22 @@ async function callAuthority(env, path, body, method = "POST") {
   try {
     const id = env.AUTH_AUTHORITY.idFromName(AUTHORITY_NAME);
     const stub = env.AUTH_AUTHORITY.get(id, { locationHint: "apac" });
-    response3 = await stub.fetch(`https://auth.internal${path}`, method === "GET" ? { method } : {
+    const call2 = stub.fetch(`https://auth.internal${path}`, method === "GET" ? { method } : {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body || {})
     });
+    let timer = null;
+    try {
+      response3 = await Promise.race([
+        call2,
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error("authority-timeout")), AUTHORITY_TIMEOUT_MS);
+        })
+      ]);
+    } finally {
+      if (timer !== null) clearTimeout(timer);
+    }
   } catch {
     throw new NativeAuthError(AUTH_ERROR_CODES.STORAGE_UNAVAILABLE);
   }
