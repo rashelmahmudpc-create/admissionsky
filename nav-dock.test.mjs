@@ -73,7 +73,7 @@ test('dock art and size match the Dashboard frame exactly (drift guard)', () => 
     'M22 7l4.2 11.3L37.5 22.5 26.2 26.7 22 38l-4.2-11.3L6.5 22.5l11.3-4.2z',
     'width:min(440px,calc(100% - 32px))',
     'height:70px;border-radius:30px',
-    'top:-26px;transform:translateX(-50%);width:66px;height:66px',
+    'top:-20px;transform:translateX(-50%);width:54px;height:54px',
     'conic-gradient(from 0deg,#6C95FF,#B07BFF,#FF7CC8,#FFC857,#6C95FF)'
   ]) {
     assert.ok(DASH.includes(frag), 'dashboard frame has: ' + frag);
