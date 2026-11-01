@@ -1586,6 +1586,50 @@ export class SqliteAuthRepository {
     });
   }
 
+  /* AUTH V2.1 (owner 2026-10-31): rotate a session's token. The blueprint's
+   * finding ১২.
+   *
+   * Until now a session token was created once and never changed, so a leaked
+   * cookie stayed exactly as powerful as a live one for its whole life — 30
+   * days, or until the student happened to log out. Rotation is what makes a
+   * leak recoverable: the old token dies at the moment the session continues
+   * under a new one, so the copy an attacker holds stops working while the real
+   * student notices nothing.
+   *
+   * Both halves happen in ONE transaction, which is the whole point. Writing the
+   * new row before revoking the old would leave two live tokens; revoking first
+   * and failing to insert would log the student out. There is no window in
+   * between because a transaction is the only thing that gives that guarantee.
+   *
+   * The caller supplies the new ref — it is derived from the new token by the
+   * same HMAC the engine uses everywhere, so this layer never sees a raw token.
+   */
+  async rotateSession({ sessionRef, nextSessionRef, now, expiresAt = null }) {
+    return this.#transaction(() => {
+      const row = this.#one(
+        `SELECT s.user_id AS userId,s.created_at AS createdAt,s.expires_at AS expiresAt,s.ip_ref AS ipRef,
+          s.device_ref AS deviceRef,s.user_agent AS userAgent,s.revoked_at AS revokedAt
+         FROM auth_sessions s WHERE s.session_ref=?`,
+        sessionRef
+      );
+      // A revoked or missing session cannot be rotated into a live one: that
+      // would be a way to revive a session the student ended.
+      if (!row || row.revokedAt) return { rotated: false };
+      if (nextSessionRef === sessionRef) return { rotated: false, error: AUTH_ERROR_CODES.INVALID_INPUT };
+      // Revoke the old and insert the new in the same transaction.
+      this.sql.exec('UPDATE auth_sessions SET revoked_at=? WHERE session_ref=?', now, sessionRef);
+      this.sql.exec(
+        `INSERT INTO auth_sessions(
+          session_ref,user_id,created_at,expires_at,last_seen_at,revoked_at,ip_ref,device_ref,user_agent
+        ) VALUES(?,?,?,?,?,NULL,?,?,?)`,
+        nextSessionRef, row.userId, now, Number(expiresAt) > now ? Number(expiresAt) : row.expiresAt, now,
+        row.ipRef, row.deviceRef, row.userAgent
+      );
+      this.#event('session-rotated', null, row.userId, now);
+      return { rotated: true, userId: row.userId, expiresAt: Number(expiresAt) > now ? Number(expiresAt) : row.expiresAt };
+    });
+  }
+
   // Phase 5, logout-all: revoke every session for one user. Other users'
   // sessions are untouched (multi-device isolation, blueprint §10-12).
   async revokeUserSessions({ userId, now }) {

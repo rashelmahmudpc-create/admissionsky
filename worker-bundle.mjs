@@ -9776,6 +9776,7 @@ var requiredRepositoryMethods = Object.freeze([
   "getSession",
   "revokeSession",
   "revokeUserSessions",
+  "rotateSession",
   "getAccountState",
   "setAccountState",
   "identitySnapshot",
@@ -10873,6 +10874,45 @@ var CloudflareNativeAuthEngine = class {
     const sessionRef = await this.hmac.hex("session-ref-v1", token);
     const result = await this.repository.revokeSession({ sessionRef, now: Number(this.now()) });
     return Object.freeze({ revoked: Boolean(result?.revoked) });
+  }
+  /* AUTH V2.1 (owner 2026-10-31): rotate a session's token. The blueprint's
+   * finding ১২.
+   *
+   * A session token was created once and never changed, so a leaked cookie
+   * stayed exactly as powerful as a live one for its whole life. Rotation makes
+   * a leak recoverable: the old token dies as the session continues under a new
+   * one, and the copy an attacker holds stops working while the real student
+   * notices nothing.
+   *
+   * The new token is minted here and returned ONCE, to the caller that will put
+   * it in the response cookie. It is never stored — only its HMAC ref is — so
+   * this method is the only moment the raw value exists, exactly like a login.
+   *
+   * Refuses to rotate a session that is not currently valid: rotating a dead
+   * session would be a way to revive one the student ended. */
+  async rotateSession(sessionToken, requestContext = {}) {
+    const token = String(sessionToken || "").trim();
+    if (!/^[A-Za-z0-9_-]{40,96}$/.test(token)) return Object.freeze({ rotated: false });
+    const now = Number(this.now());
+    const sessionRef = await this.hmac.hex("session-ref-v1", token);
+    const identity = await this.#firebaseIdentity(
+      { email: requestContext.email, subject: requestContext.subject, sessionToken: token },
+      requestContext,
+      AUTH_ERROR_CODES.SESSION_INVALID
+    );
+    const current = await this.repository.getExternalSession({
+      sessionRef: identity.sessionRef,
+      provider: "firebase",
+      subjectRef: identity.subjectRef,
+      emailRef: identity.refs.emailRef,
+      now
+    });
+    if (current?.error || !current?.user) return Object.freeze({ rotated: false });
+    const nextToken = randomToken(32, this.crypto);
+    const nextSessionRef = await this.hmac.hex("session-ref-v1", nextToken);
+    const result = await this.repository.rotateSession({ sessionRef, nextSessionRef, now });
+    if (!result?.rotated) return Object.freeze({ rotated: false });
+    return Object.freeze({ rotated: true, sessionToken: nextToken, expiresAt: result.expiresAt });
   }
   // Phase 6, device trust management (§5-§7). All three require a valid
   // session for the caller's own account; trust never touches other users.
@@ -26747,6 +26787,52 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
       this.sql.exec("UPDATE auth_sessions SET revoked_at=? WHERE session_ref=?", now, sessionRef);
       this.#event("logout", null, null, now);
       return { revoked: true };
+    });
+  }
+  /* AUTH V2.1 (owner 2026-10-31): rotate a session's token. The blueprint's
+   * finding ১২.
+   *
+   * Until now a session token was created once and never changed, so a leaked
+   * cookie stayed exactly as powerful as a live one for its whole life — 30
+   * days, or until the student happened to log out. Rotation is what makes a
+   * leak recoverable: the old token dies at the moment the session continues
+   * under a new one, so the copy an attacker holds stops working while the real
+   * student notices nothing.
+   *
+   * Both halves happen in ONE transaction, which is the whole point. Writing the
+   * new row before revoking the old would leave two live tokens; revoking first
+   * and failing to insert would log the student out. There is no window in
+   * between because a transaction is the only thing that gives that guarantee.
+   *
+   * The caller supplies the new ref — it is derived from the new token by the
+   * same HMAC the engine uses everywhere, so this layer never sees a raw token.
+   */
+  async rotateSession({ sessionRef, nextSessionRef, now, expiresAt = null }) {
+    return this.#transaction(() => {
+      const row = this.#one(
+        `SELECT s.user_id AS userId,s.created_at AS createdAt,s.expires_at AS expiresAt,s.ip_ref AS ipRef,
+          s.device_ref AS deviceRef,s.user_agent AS userAgent,s.revoked_at AS revokedAt
+         FROM auth_sessions s WHERE s.session_ref=?`,
+        sessionRef
+      );
+      if (!row || row.revokedAt) return { rotated: false };
+      if (nextSessionRef === sessionRef) return { rotated: false, error: AUTH_ERROR_CODES.INVALID_INPUT };
+      this.sql.exec("UPDATE auth_sessions SET revoked_at=? WHERE session_ref=?", now, sessionRef);
+      this.sql.exec(
+        `INSERT INTO auth_sessions(
+          session_ref,user_id,created_at,expires_at,last_seen_at,revoked_at,ip_ref,device_ref,user_agent
+        ) VALUES(?,?,?,?,?,NULL,?,?,?)`,
+        nextSessionRef,
+        row.userId,
+        now,
+        Number(expiresAt) > now ? Number(expiresAt) : row.expiresAt,
+        now,
+        row.ipRef,
+        row.deviceRef,
+        row.userAgent
+      );
+      this.#event("session-rotated", null, row.userId, now);
+      return { rotated: true, userId: row.userId, expiresAt: Number(expiresAt) > now ? Number(expiresAt) : row.expiresAt };
     });
   }
   // Phase 5, logout-all: revoke every session for one user. Other users'

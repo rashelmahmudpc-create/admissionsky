@@ -159,7 +159,7 @@ const FIREBASE_OPERATION_LIMITS = Object.freeze({
 
 const requiredRepositoryMethods = Object.freeze([
   'consumeLimits', 'establishExternalSession',
-  'getExternalSession', 'getSession', 'revokeSession', 'revokeUserSessions',
+  'getExternalSession', 'getSession', 'revokeSession', 'revokeUserSessions', 'rotateSession',
   'getAccountState', 'setAccountState',
   'identitySnapshot', 'listLinkedIdentities',
   'beginFirebaseAccountVerification', 'getFirebaseAccountVerification',
@@ -1306,6 +1306,51 @@ export class CloudflareNativeAuthEngine {
     const sessionRef = await this.hmac.hex('session-ref-v1', token);
     const result = await this.repository.revokeSession({ sessionRef, now: Number(this.now()) });
     return Object.freeze({ revoked: Boolean(result?.revoked) });
+  }
+
+  /* AUTH V2.1 (owner 2026-10-31): rotate a session's token. The blueprint's
+   * finding ১২.
+   *
+   * A session token was created once and never changed, so a leaked cookie
+   * stayed exactly as powerful as a live one for its whole life. Rotation makes
+   * a leak recoverable: the old token dies as the session continues under a new
+   * one, and the copy an attacker holds stops working while the real student
+   * notices nothing.
+   *
+   * The new token is minted here and returned ONCE, to the caller that will put
+   * it in the response cookie. It is never stored — only its HMAC ref is — so
+   * this method is the only moment the raw value exists, exactly like a login.
+   *
+   * Refuses to rotate a session that is not currently valid: rotating a dead
+   * session would be a way to revive one the student ended. */
+  async rotateSession(sessionToken, requestContext = {}) {
+    const token = String(sessionToken || '').trim();
+    if (!/^[A-Za-z0-9_-]{40,96}$/.test(token)) return Object.freeze({ rotated: false });
+    const now = Number(this.now());
+    const sessionRef = await this.hmac.hex('session-ref-v1', token);
+    /* Confirm the session is live before minting anything, so a refusal cannot
+     * leave a new token in the caller's hands for a session that is already
+     * gone. The refs are DERIVED here rather than taken from the caller: the
+     * repository matches on HMAC refs, so a raw subject or address would never
+     * match and every rotation would be silently refused. */
+    const identity = await this.#firebaseIdentity(
+      { email: requestContext.email, subject: requestContext.subject, sessionToken: token },
+      requestContext,
+      AUTH_ERROR_CODES.SESSION_INVALID
+    );
+    const current = await this.repository.getExternalSession({
+      sessionRef: identity.sessionRef,
+      provider: 'firebase',
+      subjectRef: identity.subjectRef,
+      emailRef: identity.refs.emailRef,
+      now
+    });
+    if (current?.error || !current?.user) return Object.freeze({ rotated: false });
+    const nextToken = randomToken(32, this.crypto);
+    const nextSessionRef = await this.hmac.hex('session-ref-v1', nextToken);
+    const result = await this.repository.rotateSession({ sessionRef, nextSessionRef, now });
+    if (!result?.rotated) return Object.freeze({ rotated: false });
+    return Object.freeze({ rotated: true, sessionToken: nextToken, expiresAt: result.expiresAt });
   }
 
   // Phase 6, device trust management (§5-§7). All three require a valid

@@ -657,6 +657,29 @@ export class MemoryAuthRepository {
     return { revoked: true };
   }
 
+  /* AUTH V2.1: the double must rotate exactly as the real repository does, or a
+   * test would pass against a rule production does not have. Same two rules: a
+   * revoked session cannot be revived by rotating it, and the old ref is dead
+   * the moment the new one exists. The real repository gets that atomicity from
+   * a transaction; this one gets it from being single-threaded, which is the
+   * property the double is standing in for. */
+  async rotateSession({ sessionRef, nextSessionRef, now, expiresAt = null }) {
+    const session = this.sessions.get(sessionRef);
+    if (!session || session.revokedAt) return { rotated: false };
+    if (nextSessionRef === sessionRef) return { rotated: false, error: AUTH_ERROR_CODES.INVALID_INPUT };
+    const nextExpiry = Number(expiresAt) > now ? Number(expiresAt) : session.expiresAt;
+    session.revokedAt = now;
+    this.sessions.set(nextSessionRef, {
+      ...session,
+      sessionRef: nextSessionRef,
+      createdAt: now,
+      lastSeenAt: now,
+      expiresAt: nextExpiry,
+      revokedAt: null
+    });
+    return { rotated: true, userId: session.userId, expiresAt: nextExpiry };
+  }
+
   async revokeUserSessions({ userId, now }) {
     if (!this.users.has(userId)) return { error: AUTH_ERROR_CODES.ACCOUNT_NOT_FOUND };
     let revoked = 0;
