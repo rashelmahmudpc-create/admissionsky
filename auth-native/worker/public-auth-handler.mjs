@@ -38,6 +38,43 @@ export function claimsAuthPath(pathname) {
   const path = String(pathname || '');
   return path === AUTH_API_PREFIX || path.startsWith(`${AUTH_API_PREFIX}/`) || path.startsWith(PUBLIC_PROFILE_PREFIX);
 }
+
+/* AUTH V2.3 (owner 2026-10-31): the redirect table for consolidated routes.
+ *
+ * The blueprint's own mitigation for endpoint consolidation: "প্রতিটা মুছে ফেলা
+ * route-এর জন্য এক লাইন redirect". A cached client — a service worker holding an
+ * older shell, a phone that has not reloaded — will keep calling the old path
+ * for as long as its cache lives, and a 404 is not something that client can
+ * recover from. A redirect is.
+ *
+ * Deliberately EMPTY, and that is the point of shipping it now. A table that
+ * exists and is tested before the first route moves means the first route that
+ * moves has somewhere to land; a mechanism invented during the risky change is
+ * a mechanism written under pressure. The guard in route-inventory.test.mjs
+ * fails if a pinned route disappears, so the first removal has to add an entry
+ * here — which makes the redirect a required part of the change rather than a
+ * follow-up someone might forget.
+ *
+ * Shape: old path → the path that now serves it. Kept as plain data so a test
+ * can read it, and so a reader can see every route that ever moved in one
+ * screen. A redirect is permanent by definition here: the old path is gone, so
+ * answering 308 tells the client to stop asking. */
+export const AUTH_ROUTE_ALIASES = Object.freeze({
+  // (empty — no route has been consolidated yet)
+});
+
+/** The path a request should be served by, following the alias table once.
+ *  Returns the input unchanged when the path has not moved, so a caller can
+ *  always call this without checking first.
+ *
+ *  `table` is injectable for one reason: with the real table empty by design,
+ *  there is otherwise no way to test that a redirect works. A test that cannot
+ *  exercise the mechanism is not evidence the mechanism is correct — and this
+ *  one has to be correct BEFORE the first route moves, not after. */
+export function resolveAuthAlias(pathname, table = AUTH_ROUTE_ALIASES) {
+  const path = String(pathname || '');
+  return Object.prototype.hasOwnProperty.call(table, path) ? table[path] : path;
+}
 export const AUTH_SESSION_COOKIE = '__Host-ah_session';
 export const AUTH_FIREBASE_COOKIE = '__Host-ah_firebase';
 export const AUTH_DEVICE_COOKIE = '__Host-ah_device';
@@ -733,10 +770,26 @@ const passkeyCanaryRequested = (env, url) =>
 
 const pendingDeps = () => ({ callAuthority, json, authSuccess, verificationCookie, deviceCookie, providerError });
 
-export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
+export function createNativeAuthHandler({ fetchImpl = globalThis.fetch, routeAliases = AUTH_ROUTE_ALIASES } = {}) {
   const publicConfigCache = new WeakMap();
   return async function handleNativeAuthRequest(request, env, executionContext) {
     const url = new URL(request.url);
+    /* AUTH V2.3: a consolidated route answers at its old address too.
+     *
+     * Checked before anything else, so a redirect behaves exactly like the route
+     * it moved to — same origin rules, same guards, same answer. A client on a
+     * cached shell keeps working, and 308 (permanent) tells it to stop asking.
+     *
+     * Only the PATH is rewritten; the query string is carried over untouched, so
+     * a `?telegramCanary=1` or a pagination cursor survives the move. Getting
+     * that wrong would silently change which branch a request takes, which is
+     * the kind of bug that looks like a permissions problem. */
+    const aliasedPath = resolveAuthAlias(url.pathname, routeAliases);
+    if (aliasedPath !== url.pathname) {
+      const target = new URL(request.url);
+      target.pathname = aliasedPath;
+      return Response.redirect(target.toString(), 308);
+    }
     // The public-safe profile projection lives further down in this handler but
     // sits OUTSIDE the /api/auth/v1 prefix. Gating on the auth prefix alone made
     // it unreachable: the request fell through to the product API, which

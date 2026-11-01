@@ -13489,6 +13489,13 @@ function claimsAuthPath(pathname) {
   const path = String(pathname || "");
   return path === AUTH_API_PREFIX || path.startsWith(`${AUTH_API_PREFIX}/`) || path.startsWith(PUBLIC_PROFILE_PREFIX);
 }
+var AUTH_ROUTE_ALIASES = Object.freeze({
+  // (empty — no route has been consolidated yet)
+});
+function resolveAuthAlias(pathname, table = AUTH_ROUTE_ALIASES) {
+  const path = String(pathname || "");
+  return Object.prototype.hasOwnProperty.call(table, path) ? table[path] : path;
+}
 var AUTH_SESSION_COOKIE = "__Host-ah_session";
 var AUTH_FIREBASE_COOKIE = "__Host-ah_firebase";
 var AUTH_DEVICE_COOKIE = "__Host-ah_device";
@@ -14027,10 +14034,16 @@ var passkeyEndpointReady = (env) => ["canary", "enabled"].includes(String(env?.P
 var passkeyPublished = (env) => env?.PASSKEY_AUTH_ACTIVATION === "enabled";
 var passkeyCanaryRequested = (env, url) => env?.PASSKEY_AUTH_ACTIVATION === "canary" && url.searchParams.get("passkeyCanary") === "1";
 var pendingDeps = () => ({ callAuthority, json: json4, authSuccess, verificationCookie, deviceCookie, providerError });
-function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
+function createNativeAuthHandler({ fetchImpl = globalThis.fetch, routeAliases = AUTH_ROUTE_ALIASES } = {}) {
   const publicConfigCache = /* @__PURE__ */ new WeakMap();
   return async function handleNativeAuthRequest(request, env, executionContext) {
     const url = new URL(request.url);
+    const aliasedPath = resolveAuthAlias(url.pathname, routeAliases);
+    if (aliasedPath !== url.pathname) {
+      const target = new URL(request.url);
+      target.pathname = aliasedPath;
+      return Response.redirect(target.toString(), 308);
+    }
     const isPublicProfileRoute = url.pathname.startsWith(PUBLIC_PROFILE_PREFIX);
     if (!claimsAuthPath(url.pathname)) return null;
     const origin = request.headers.get("Origin") || "";
