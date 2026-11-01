@@ -3665,6 +3665,15 @@ var RE = {
 function lower(s) {
   return String(s || "").toLowerCase();
 }
+var HAS_CONTENT = /[\p{L}\p{N}]/u;
+function needsClarification(text) {
+  const t = String(text == null ? "" : text).trim();
+  if (!t) return false;
+  return !HAS_CONTENT.test(t);
+}
+function clarifyMessage() {
+  return "তোমার প্রশ্নটা ঠিক বুঝতে পারিনি। একটু লিখে বলবে কী জানতে চাও?";
+}
 function classifyIntent(text) {
   const t = lower(text);
   if (!t.trim()) return { intent: INTENTS.GENERAL_CHAT, tier: TIER.FAST, confidence: 0.4 };
@@ -4549,6 +4558,7 @@ async function agentChat(request, env, uid, opts = {}) {
       return tr;
     }
   }
+  if (needsClarification(toolText)) return guidanceResponse(clarifyMessage(), stream, request);
   const cap = Math.max(1, Math.min(500, Number(env && env.AGENT_DAILY_CAP || 10)));
   const now = Date.now();
   let quota = null;
