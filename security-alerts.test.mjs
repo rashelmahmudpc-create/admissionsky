@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  deliverSecurityAlert,
   maskAlertEmail,
   renderSecurityAlert,
   sendSecurityAlert,
@@ -173,4 +174,82 @@ test('a store that cannot read never swallows an alert', async () => {
 test('without a store the alert is still sent', async () => {
   const fetchImpl = async () => ({ ok: true });
   assert.equal(await sendThrottledSecurityAlert(env, null, { event: SECURITY_ALERT_EVENTS.CANARY_HIT, email: 'a@example.com' }, { fetchImpl }), 'sent');
+});
+
+/* ── AUTH V2.1: a lost alert is no longer a silence ─────────────────────────
+ *
+ * The blueprint's finding ৪. Every call site fired the alert promise and threw
+ * the result away, so a failure became the string 'failed' that nobody read.
+ * The handler sites did not even hand the promise to waitUntil — and a
+ * Cloudflare Worker cancels work still pending when the response returns, so an
+ * alert could be dropped before the fetch was ever made. The owner's whole
+ * security channel could go quiet and nothing would say so.
+ *
+ * These tests hold the two halves of the fix: the promise is registered with
+ * waitUntil where the runtime offers one, and the outcome is reported —
+ * including 'failed' — so a dropped alert is a fact somebody can count.
+ */
+
+test('V2.1: the send is registered with waitUntil, so the Worker cannot cancel it', async () => {
+  const registered = [];
+  const waitUntil = promise => registered.push(promise);
+  const fetchImpl = async () => ({ ok: true });
+  const job = deliverSecurityAlert({
+    env, store: null, waitUntil, options: { fetchImpl },
+    input: { event: SECURITY_ALERT_EVENTS.CANARY_HIT, email: 'a@example.com' }
+  });
+  assert.equal(registered.length, 1, 'the promise must be handed to the runtime');
+  assert.equal(await job, 'sent');
+  assert.equal(await registered[0], 'sent', 'and it is the same promise, not a copy');
+});
+
+test('V2.1: a failed alert is reported, not swallowed', async () => {
+  const outcomes = [];
+  const fetchImpl = async () => { throw new Error('telegram down'); };
+  const result = await deliverSecurityAlert({
+    env, store: null, options: { fetchImpl },
+    onOutcome: (outcome, input) => outcomes.push([outcome, input.event]),
+    input: { event: SECURITY_ALERT_EVENTS.CANARY_HIT, email: 'a@example.com' }
+  });
+  assert.equal(result, 'failed', 'the caller still gets the value it always got');
+  assert.deepEqual(outcomes, [['failed', SECURITY_ALERT_EVENTS.CANARY_HIT]],
+    'and the failure is now a fact somebody can count');
+});
+
+test('V2.1: a throttled repeat is reported as throttled, not as a failure', async () => {
+  const outcomes = [];
+  const store = { async get() { return '1'; }, async put() {} };
+  const fetchImpl = async () => ({ ok: true });
+  const result = await deliverSecurityAlert({
+    env, store, options: { fetchImpl },
+    onOutcome: outcome => outcomes.push(outcome),
+    input: { event: SECURITY_ALERT_EVENTS.CANARY_HIT, email: 'a@example.com' }
+  });
+  assert.equal(result, 'throttled');
+  assert.deepEqual(outcomes, ['throttled'], 'the throttle is visible too, and distinct from a loss');
+});
+
+test('V2.1: a reporter that throws cannot break the alert or the request', async () => {
+  // The whole point is that alerting never takes a student down, so a broken
+  // reporter must be as harmless as a broken provider.
+  const fetchImpl = async () => ({ ok: true });
+  const result = await deliverSecurityAlert({
+    env, store: null, options: { fetchImpl },
+    onOutcome: () => { throw new Error('reporter exploded'); },
+    input: { event: SECURITY_ALERT_EVENTS.CANARY_HIT, email: 'a@example.com' }
+  });
+  assert.equal(result, 'sent');
+});
+
+test('V2.1: a broken sender is a value, never an exception', async () => {
+  // sendThrottledSecurityAlert is written not to throw, but a future edit could
+  // change that, and an alert that throws into a login path is the failure this
+  // helper exists to prevent.
+  const outcomes = [];
+  const result = await deliverSecurityAlert({
+    env, store: null, options: { fetchImpl: null },
+    onOutcome: outcome => outcomes.push(outcome),
+    input: { event: SECURITY_ALERT_EVENTS.CANARY_HIT, email: 'a@example.com' }
+  });
+  assert.equal(typeof result, 'string', 'it resolves, it does not reject');
 });

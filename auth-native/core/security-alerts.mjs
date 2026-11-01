@@ -177,3 +177,42 @@ export function sendThrottledSecurityAlert(env, store, input = {}, options = {})
     })
     .catch(() => 'failed');
 }
+
+/* AUTH V2.1 (owner 2026-10-31): an alert that cannot be sent must leave a mark.
+ *
+ * The blueprint's finding ৪: every alert call site fired the promise and threw
+ * the result away, so a failure became the string 'failed' that nobody read.
+ * Worse, the handler sites did not even hand the promise to `waitUntil` — and a
+ * Cloudflare Worker cancels work that is still pending when the response
+ * returns, so an alert could be dropped before the fetch was ever made. The
+ * owner's whole security-alerting channel could go quiet and nothing would say
+ * so: the one failure mode an alerting system must not have.
+ *
+ * This wraps a send so that both halves are fixed at once: the promise is
+ * registered with `waitUntil` where the runtime offers one, and the outcome —
+ * including 'failed' — is reported to `onOutcome`. A dropped alert is then a
+ * fact somebody can count, not a silence.
+ *
+ * Deliberately not making the send awaited: a login must not wait on Telegram.
+ * The alert stays off the response path; it just stops being invisible.
+ */
+export function deliverSecurityAlert({ env, store, input = {}, options = {}, waitUntil = null, onOutcome = null } = {}) {
+  const report = outcome => {
+    if (typeof onOutcome !== 'function') return outcome;
+    try { onOutcome(outcome, input); } catch { /* a reporter must never throw */ }
+    return outcome;
+  };
+  let job;
+  try {
+    job = sendThrottledSecurityAlert(env, store, input, options).then(report, () => report('failed'));
+  } catch {
+    // A synchronous throw from the sender itself: report and carry on, because
+    // an alert must never break the request that raised it.
+    return Promise.resolve(report('failed'));
+  }
+  // `waitUntil` is what keeps the promise alive past the response. Without it a
+  // Worker may cancel the fetch mid-flight, which is the failure this exists to
+  // stop being silent.
+  try { if (typeof waitUntil === 'function') waitUntil(job); } catch { /* best-effort */ }
+  return job;
+}

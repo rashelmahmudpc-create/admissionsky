@@ -14,7 +14,7 @@ import { shadowVerdict, shadowDelayMs, sleep, resolveGuardMode, SHADOW_GUARD_MOD
 import { parseCanaryEmails, isCanaryEmail, createKvCanaryFlags } from '../core/canary-accounts.mjs';
 import { createKvPasswordGuard, passwordGuardKey, passwordFailuresSoFar } from '../core/password-guard.mjs';
 import { createKvLoginFacts, createKvIpBreadth } from '../core/login-facts.mjs';
-import { sendThrottledSecurityAlert, SECURITY_ALERT_EVENTS } from '../core/security-alerts.mjs';
+import { deliverSecurityAlert, sendThrottledSecurityAlert, SECURITY_ALERT_EVENTS } from '../core/security-alerts.mjs';
 /* D-5 / A1.5 ②: one shared CORS policy for every auth surface. This handler
  * used to keep its own copy that still accepted http://localhost and any
  * *.admissionhub.pages.dev preview host, so production served credentialed
@@ -152,7 +152,7 @@ const shadowGuardMode = env => resolveGuardMode(env?.SHADOW_GUARD_ACTIVATION);
  * even where no Turnstile secret is bound, and is reported to the caller so
  * the routes below can tighten their quotas. Blocking a datacenter ASN would
  * eventually block a student on a VPN, which the owner's rules forbid. */
-const botGate = (request, env, context, body) => {
+const botGate = (request, env, context, body, executionContext = null) => {
   const verdict = looksAutomated({
     honeypot: body?.[HONEYPOT_FIELD],
     elapsedMs: body?.formElapsedMs
@@ -164,12 +164,20 @@ const botGate = (request, env, context, body) => {
     // auth runtime is held to a no-console rule
     // (native-auth-protection.test.mjs), so the shared alert sink is the only
     // channel available here — and the one the security dashboard already reads.
-    sendThrottledSecurityAlert(env, shadowGuardStore(env), {
-      event: SECURITY_ALERT_EVENTS.BOT_GATE_DROP,
-      // `reasons` is the field the renderer reads; the path is added to it so
-      // the owner can see which endpoint is being hit without a second field.
-      reasons: [verdict.reason, new URL(request.url).pathname.slice(0, 40)],
-      at: Date.now()
+    // AUTH V2.1: registered with waitUntil, so the Worker cannot cancel the
+    // fetch when the response returns — which is how this alert could be lost
+    // without a trace (blueprint finding ৪).
+    deliverSecurityAlert({
+      env,
+      store: shadowGuardStore(env),
+      waitUntil: typeof executionContext?.waitUntil === 'function' ? promise => executionContext.waitUntil(promise) : null,
+      input: {
+        event: SECURITY_ALERT_EVENTS.BOT_GATE_DROP,
+        // `reasons` is the field the renderer reads; the path is added to it so
+        // the owner can see which endpoint is being hit without a second field.
+        reasons: [verdict.reason, new URL(request.url).pathname.slice(0, 40)],
+        at: Date.now()
+      }
     });
     return json(request, 202, { ok: true, accepted: true, deliveryDisclosed: false });
   }
@@ -214,8 +222,8 @@ const fuzzBandNow = async env => {
  * hosting caller gets the strict version.
  *
  * Returns a Response to answer with, or null to continue. */
-const guardSend = async ({ request, env, context, body, fetchImpl }) => {
-  const gate = botGate(request, env, context, body);
+const guardSend = async ({ request, env, context, body, fetchImpl, executionContext = null }) => {
+  const gate = botGate(request, env, context, body, executionContext);
   if (gate) return gate;
   // L8: at the hard band every caller gets the strict human check, not just
   // the ones the edge already distrusts. The band read is cached per isolate
@@ -240,7 +248,7 @@ const shadowGuardStore = env => env?.GK_KV || env?.PUB_KV || null;
 // A canary hit is a deliberate act, so it is worth a record even though the
 // response says nothing. The flag is raised in the background: an attacker
 // must not be able to measure the extra write.
-const flagCanaryHit = (env, email, context) => {
+const flagCanaryHit = (env, email, context, executionContext = null) => {
   const list = parseCanaryEmails(env?.CANARY_EMAILS);
   if (!isCanaryEmail(email, list)) return false;
   const store = shadowGuardStore(env);
@@ -252,10 +260,13 @@ const flagCanaryHit = (env, email, context) => {
   }
   // The owner is told at once: a canary hit is the clearest signal the app
   // has that someone is probing it on purpose.
-  sendThrottledSecurityAlert(env, store, {
-    event: SECURITY_ALERT_EVENTS.CANARY_HIT,
-    email,
-    at: Date.now()
+  // AUTH V2.1: registered with waitUntil so the Worker cannot cancel it, and
+  // the outcome is reported rather than discarded (blueprint finding ৪).
+  deliverSecurityAlert({
+    env,
+    store,
+    waitUntil: typeof executionContext?.waitUntil === 'function' ? promise => executionContext.waitUntil(promise) : null,
+    input: { event: SECURITY_ALERT_EVENTS.CANARY_HIT, email, at: Date.now() }
   });
   return true;
 };
@@ -939,7 +950,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         // A1.5 / AU-SEC-01 L4+L3+L5: bot gate, then human check, before any
         // Firebase or OTP work.
         {
-          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl });
+          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl, executionContext });
           if (denied) return denied;
         }
         const input = credentials(turnstileBody);
@@ -1034,7 +1045,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         const body = await readJson(request);
         // A1.5 / AU-SEC-01 L4+L3+L5: bot gate, then human check, before any send.
         {
-          const denied = await guardSend({ request, env, context, body, fetchImpl });
+          const denied = await guardSend({ request, env, context, body, fetchImpl, executionContext });
           if (denied) return denied;
         }
         const email = normalizeAuthEmail(body?.email);
@@ -1070,7 +1081,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         const turnstileBody = await readJson(request);
         // A1.5 / AU-SEC-01 L4+L3+L5: bot gate, then human check, before any work.
         {
-          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl });
+          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl, executionContext });
           if (denied) return denied;
         }
         const input = credentials(turnstileBody);
@@ -1095,7 +1106,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         const turnstileBody = await readJson(request);
         // A1.5 / AU-SEC-01 L4+L3+L5: bot gate, then human check, before any work.
         {
-          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl });
+          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl, executionContext });
           if (denied) return denied;
         }
         const input = credentials(turnstileBody);
@@ -1111,7 +1122,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         // then treated as a high-risk attempt: it must look exactly like a
         // wrong password, otherwise the decoy teaches the attacker it was a
         // decoy.
-        const canaryHit = flagCanaryHit(env, prepared.email, context);
+        const canaryHit = flagCanaryHit(env, prepared.email, context, executionContext);
         const mode = shadowGuardMode(env);
         const guardActive = mode !== SHADOW_GUARD_MODES.OFF || canaryHit;
         // A canary is a decoy, so it is enforced even while the guard is only
@@ -1180,12 +1191,17 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
           // In observe mode the verdict is reported and then ignored: the
           // attempt continues exactly as it would with the guard absent.
           if (shadow.shadowBan) {
-            sendThrottledSecurityAlert(env, guardStore, {
-              event: SECURITY_ALERT_EVENTS.SHADOW_BAN,
-              email: prepared.email,
-              band: shadow.band,
-              reasons: enforcing ? shadow.reasons : [...shadow.reasons, 'observe-only'],
-              at: Date.now()
+            deliverSecurityAlert({
+              env,
+              store: guardStore,
+              waitUntil: typeof executionContext?.waitUntil === 'function' ? promise => executionContext.waitUntil(promise) : null,
+              input: {
+                event: SECURITY_ALERT_EVENTS.SHADOW_BAN,
+                email: prepared.email,
+                band: shadow.band,
+                reasons: enforcing ? shadow.reasons : [...shadow.reasons, 'observe-only'],
+                at: Date.now()
+              }
             });
             if (enforcing) {
               // The delay is spent before the answer, so the response time
@@ -1232,11 +1248,16 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         // is hundreds of students, not an attack. Only the high band - a
         // would-be ban - is reported while the guard is watching.
         if (guardActive && context.isNewDevice && (enforcing || shadow?.band === 'high')) {
-          sendThrottledSecurityAlert(env, guardStore, {
-            event: SECURITY_ALERT_EVENTS.NEW_DEVICE,
-            email: prepared.email,
-            band: shadow ? shadow.band : 'low',
-            at: Date.now()
+          deliverSecurityAlert({
+            env,
+            store: guardStore,
+            waitUntil: typeof executionContext?.waitUntil === 'function' ? promise => executionContext.waitUntil(promise) : null,
+            input: {
+              event: SECURITY_ALERT_EVENTS.NEW_DEVICE,
+              email: prepared.email,
+              band: shadow ? shadow.band : 'low',
+              at: Date.now()
+            }
           });
         }
         const telegramRequested = telegramVerificationRequested(env, url);
@@ -1418,7 +1439,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
          * signals, which is why the two must land together — the guard is
          * fail-closed once the secret is bound, and it is bound in production. */
         {
-          const denied = await guardSend({ request, env, context, body, fetchImpl });
+          const denied = await guardSend({ request, env, context, body, fetchImpl, executionContext });
           if (denied) return denied;
         }
         const input = credentials(body);
@@ -1509,7 +1530,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
          * credential is parsed, and the client half that sends `turnstileToken`
          * ships in the same change because the guard fails closed. */
         {
-          const denied = await guardSend({ request, env, context, body, fetchImpl });
+          const denied = await guardSend({ request, env, context, body, fetchImpl, executionContext });
           if (denied) return denied;
         }
         const credential = facebookCredential(body);
@@ -1645,7 +1666,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         const magicLink = startBody?.method === 'magic-link';
         // A1.5 / AU-SEC-01 L4+L3+L5: bot gate, then human check, before any send.
         {
-          const denied = await guardSend({ request, env, context, body: startBody, fetchImpl });
+          const denied = await guardSend({ request, env, context, body: startBody, fetchImpl, executionContext });
           if (denied) return denied;
         }
         if (isPendingSignupTicket(verificationTicket)) return await pendingSignup.startPendingSignupCode({ request, env, provider, context, ticket: verificationTicket, magicLink, deps: pendingDeps() });
@@ -1797,7 +1818,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         // A1.5 / AU-SEC-01 L4: human check before a Telegram code is issued.
         // A1.5 / AU-SEC-01 L4+L3+L5: bot gate, then human check, before any send.
         {
-          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl });
+          const denied = await guardSend({ request, env, context, body: turnstileBody, fetchImpl, executionContext });
           if (denied) return denied;
         }
         const result = await callAuthority(env, '/internal/verification/preauth/request', {
@@ -2258,7 +2279,7 @@ export function createNativeAuthHandler({ fetchImpl = globalThis.fetch } = {}) {
         // A1.5 / AU-SEC-01 L4: human check before any send.
         // A1.5 / AU-SEC-01 L4+L3+L5: bot gate, then human check, before any send.
         {
-          const denied = await guardSend({ request, env, context, body, fetchImpl });
+          const denied = await guardSend({ request, env, context, body, fetchImpl, executionContext });
           if (denied) return denied;
         }
         const contact = String(body.contact || '').trim();
