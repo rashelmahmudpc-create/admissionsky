@@ -10,6 +10,10 @@ on:
       - 'telegram-notifier.test.mjs'
       - 'email-gateway/**'
       - 'email-gateway*.test.mjs'
+      # test:auth runs these three, and they sit at the repo root — so the
+      # `auth/**` entry beside this one does not cover them, and a change
+      # to one of them started no workflow at all.
+      - 'auth-*.test.mjs'
       - 'auth/**'
       - 'gk-agent-worker.js'
       - 'worker-bundle.mjs'
@@ -27,6 +31,10 @@ on:
       - 'telegram-notifier.test.mjs'
       - 'email-gateway/**'
       - 'email-gateway*.test.mjs'
+      # test:auth runs these three, and they sit at the repo root — so the
+      # `auth/**` entry beside this one does not cover them, and a change
+      # to one of them started no workflow at all.
+      - 'auth-*.test.mjs'
       - 'auth/**'
       - 'gk-agent-worker.js'
       - 'worker-bundle.mjs'

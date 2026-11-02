@@ -110,3 +110,81 @@ test('the wiring check itself is not vacuous', () => {
   assert.ok(!isWired('definitely-not-a-suite.test.mjs', haystack), 'an unknown suite must not be detected');
   assert.ok(testFiles().length > 100, `expected the audit to see every suite, saw ${testFiles().length}`);
 });
+
+/* Reachability: a suite that some workflow RUNS must also be a file that can
+ * START that workflow.
+ *
+ * The check above asks "is this suite run anywhere", and it passed while 171
+ * suite files across five workflows could not trigger the workflow that runs
+ * them. Each of those workflows chose with a hand-written list of names and
+ * partial globs; the lists were accurate when written and stopped growing when
+ * the suites did. Editing one of the unlisted files started no workflow at all,
+ * so the suite that covers it never ran — and every guard in this repository
+ * reported green, because nothing was failing. Nothing was running.
+ *
+ * That is a different failure from the one above, and it needs its own check:
+ * "run" and "reachable" are two claims, and the first is worth little without
+ * the second.
+ */
+function pushFiltersFor(text) {
+  const m = text.match(/^  push:\n((?:[ ]{4,}.*\n|\n)*)/m);
+  if (!m || !m[1].includes('main')) return null;
+  return [...m[1].matchAll(/^\s+-\s+'([^']+)'/gm)].map(x => x[1]);
+}
+
+function filterMatches(entry, file) {
+  if (entry === file) return true;
+  // `dir/**` covers everything under dir, at any depth — the check has to know
+  // that, or it reports a gap that is already closed. (It did: `sky-ai/**` was
+  // read as covering nothing, and eleven catalog suites were flagged as
+  // unreachable when they are covered.)
+  if (entry.endsWith('/**')) return file.startsWith(entry.slice(0, -2));
+  if (entry.includes('*')) {
+    // A single `*` does not cross a `/` in GitHub's path filters.
+    const rx = new RegExp(`^${entry.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*/g, '\u0000').replace(/\*/g, '[^/]*').replace(/\u0000/g, '.*')}$`);
+    return rx.test(file);
+  }
+  return false;
+}
+
+function scriptsOf() {
+  return JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).scripts || {};
+}
+
+test('a suite a workflow runs can also trigger that workflow', () => {
+  const scripts = scriptsOf();
+  const scriptFiles = new Map();
+  for (const [name, cmd] of Object.entries(scripts)) {
+    if (!cmd.includes('.test.mjs')) continue;
+    scriptFiles.set(name, [...cmd.matchAll(/([A-Za-z0-9_./-]+\.test\.mjs)/g)].map(m => m[1]));
+  }
+
+  const unreachable = [];
+  for (const name of readdirSync(WORKFLOW_DIR)) {
+    if (!name.endsWith('.yml') && !name.endsWith('.yaml')) continue;
+    const text = readFileSync(join(WORKFLOW_DIR, name), 'utf8');
+    const filters = pushFiltersFor(text);
+    if (!filters) continue; // manual-only, or no push trigger: nothing to check
+    const invoked = [...scriptFiles.keys()].filter(s => text.includes(`npm run ${s}`));
+    for (const script of invoked) {
+      for (const file of scriptFiles.get(script)) {
+        if (!filters.some(entry => filterMatches(entry, file))) {
+          unreachable.push(`${name} runs ${script} but '${file}' cannot trigger it`);
+        }
+      }
+    }
+  }
+  assert.deepEqual(unreachable, [],
+    'these suites run in a workflow that their own file cannot start — add the file to the trigger, or a glob that covers it');
+
+  /* Non-vacuity. The check is only worth anything if it is looking at real
+   * workflows with real filters; if the parsing stops matching, this must fail
+   * rather than report a clean tree. (The scan this one replaces reported clean
+   * for exactly that reason.) */
+  const withFilters = readdirSync(WORKFLOW_DIR)
+    .filter(n => n.endsWith('.yml'))
+    .map(n => readFileSync(join(WORKFLOW_DIR, n), 'utf8'))
+    .filter(t => pushFiltersFor(t) && [...scriptFiles.keys()].some(s => t.includes(`npm run ${s}`)));
+  assert.ok(withFilters.length >= 4,
+    `only ${withFilters.length} workflows were analysed; if the workflow layout moved, fix this check rather than letting it go quiet`);
+});
