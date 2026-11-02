@@ -188,3 +188,55 @@ test('a suite a workflow runs can also trigger that workflow', () => {
   assert.ok(withFilters.length >= 4,
     `only ${withFilters.length} workflows were analysed; if the workflow layout moved, fix this check rather than letting it go quiet`);
 });
+
+/* A skipped test is a suite that does not run — the same blind spot as a suite
+ * no workflow runs, one level down.
+ *
+ * Five tests carry `test.skip`, all for one documented reason (the owner removed
+ * the post-signup "verify with Telegram" flow on 2026-10-18, so they drive UI
+ * that cannot exist). Keeping the assertions is right: if that flow returns,
+ * the tests should come back with it. What is wrong is that nothing counts
+ * them. A skip added for a quick reason and never revisited is indistinguishable
+ * from one added deliberately, and the count can only be trusted if it is
+ * pinned.
+ *
+ * Pinned by NAME, not by count: a swap (one skip removed, another added) keeps
+ * the total the same and would pass a count check while losing a test that
+ * someone meant to restore. */
+const PINNED_SKIPS = Object.freeze([
+  'telegram-otp-auth.test.mjs: wrong, expired, locked, used, and superseded Telegram OTPs fail closed without another delivery',
+  'telegram-otp-ui.test.mjs: mobile-first signup presents Verify with Telegram, START link, OTP box, checking, and authoritative success states',
+  'telegram-otp-ui.test.mjs: existing unverified login offers the Telegram alternative without creating a frontend session',
+  'telegram-otp-ui.test.mjs: Telegram UI renders wrong, expired, locked, unavailable, and resend states without guessing or retaining a code',
+  'telegram-otp-ui.test.mjs: refresh and reopen recover both pre-START links and post-START code-entry state on Mobile Safari'
+]);
+
+test('every skipped test is named, and the list only shrinks', () => {
+  const found = [];
+  for (const file of testFiles()) {
+    const path = join(ROOT, file);
+    if (!existsSync(path)) continue;
+    const source = readFileSync(path, 'utf8');
+    /* `test.skip('name'` and `test.skip("name"` — the name is what identifies it.
+     *
+     * This file is skipped when scanning itself: the pattern above is written as
+     * a literal in this source, so a scan that reads its own text finds the
+     * pattern rather than a use of it and reports two phantom skips named
+     * "name". (It did, on the first run.) The check is about tests, not about
+     * the checker. */
+    if (file === 'test-wiring-guard.test.mjs') continue;
+    for (const m of source.matchAll(/test\.skip\(\s*['"]([^'"]+)['"]/g)) {
+      found.push(`${file}: ${m[1]}`);
+    }
+  }
+  const added = found.filter(entry => !PINNED_SKIPS.includes(entry));
+  assert.deepEqual(added, [],
+    `a test was skipped without being recorded here: ${added.join(' | ')}. A skip is a suite that does not run — either restore it or pin it deliberately.`);
+  const restored = PINNED_SKIPS.filter(entry => !found.includes(entry));
+  assert.deepEqual(restored, [],
+    `these are no longer skipped — remove them from the list so the pin stays true: ${restored.join(' | ')}`);
+
+  // Non-vacuity: the scan must actually be reading files that contain skips.
+  assert.ok(found.length >= 5,
+    `only ${found.length} skipped tests were found; if the syntax moved, fix this check rather than letting it go quiet`);
+});
