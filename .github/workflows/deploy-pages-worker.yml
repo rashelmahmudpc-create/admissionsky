@@ -26,6 +26,12 @@ on:
       - 'index.html'
       - 'sw.js'
       - 'account-access.*'
+      # The crawler files ship to Pages like any other asset, but neither was
+      # listed — so the sitemap date fix pushed 2026-11-03 published nothing,
+      # and the live sitemap kept the stale dates it was written to correct.
+      # Same shape as the course-document gap two lines below.
+      - 'sitemap.xml'
+      - 'robots.txt'
       # A change to a course document or the tool that loads it is a change to
       # the live Pages UI, but neither path was listed, so the course fix pushed
       # 2026-10-24 published nothing until the filter was widened.
