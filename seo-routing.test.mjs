@@ -349,3 +349,31 @@ test('every sitemap lastmod is the date its file actually changed', () => {
   assert.deepEqual(wrong, [],
     'these sitemap dates do not match when the file last changed — run: python3 scripts/build-sitemap.py');
 });
+
+test('every indexable page has a description and a share card', () => {
+  /* Measured on the live site 2026-11-03: privacy.html and data-deletion.html
+   * had no `<meta name="description">` at all, so a search result for either
+   * showed whatever sentence a crawler chose to lift from the middle of the
+   * policy. None of the four small pages had any Open Graph or Twitter tag, so a
+   * shared link rendered as a bare URL while the course pages rendered a card.
+   *
+   * Both are the kind of thing that stays wrong because nobody looks at these
+   * pages — which is exactly why the check belongs here rather than in a habit. */
+  const PAGES = ['index.html', 'about.html', 'contact.html', 'privacy.html', 'data-deletion.html',
+    'courses/prottoy/index.html', 'courses/prottoy-master/index.html',
+    'courses/sandhi/index.html', 'courses/somas/index.html'];
+  for (const file of PAGES) {
+    const page = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8');
+    const head = page.slice(0, page.indexOf('</head>'));
+
+    const descriptions = head.match(/<meta name="description"/g) || [];
+    assert.equal(descriptions.length, 1, `${file} must have exactly one meta description, saw ${descriptions.length}`);
+
+    for (const tag of ['og:title', 'og:description', 'og:url', 'og:image']) {
+      assert.ok(head.includes(`property="${tag}"`), `${file} is missing ${tag}`);
+    }
+    for (const tag of ['twitter:card', 'twitter:title']) {
+      assert.ok(head.includes(`name="${tag}"`), `${file} is missing ${tag}`);
+    }
+  }
+});
