@@ -30,6 +30,15 @@ Source of truth: Notion "Sky AI v1.0" → main page section **"🚦 এজেন
   the repo at all; the only entitlement-like knob is `AGENT_DAILY_CAP`, env,
   default 10/day). Both need a product decision from him. Asked 2026-11-01; he
   answered **৩ — leave for now** (msg 10514). **Do not start F2 without asking.**
+- **F2.1 / module split — 🟡 Doing (started 2026-11-02).** F2 could not start:
+  `ai-agent-chat.js` sat at 145,950 B against `p32-size-budget.test.mjs`'s hard
+  146,000 B ceiling, and the repo rule is never to raise a ceiling. First step
+  done (PR #304, merged, deployed, live 200): Sky's 29 KB stylesheet moved to
+  `sky-chat.css`, loaded lazily on first render. 145,950 -> 117,379 B; ceiling
+  lowered to 121,000. Four guards asserted that CSS lived in the JS file and
+  were pointed at the new sheet (their rules unchanged). ai-guard 399/399,
+  visual guard green on CI, `sky-chat.css?v=skyv1` live 200 and precached.
+  **Left in F2.1:** the remaining split (core/stream/cards/upload/settings).
 - **Next phase: F2 (Chat UI v3).** Not started: its definition lives only on the
   Notion page ০৭ (roadmap F0–F10), and **no Notion token is available in this
   environment** (checked 2026-11-01: `NOTION_TOKEN`, `NOTION_API_KEY`,
