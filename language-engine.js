@@ -364,6 +364,7 @@
     'Account verification এখনো শেষ হয়নি।': 'Account verification is not finished yet.',
     'কমপক্ষে ৮ অক্ষরের একটু শক্তিশালী Password দাও।': 'Use a slightly stronger password of at least 8 characters.',
     'মানব যাচাই সম্পন্ন হয়নি। পেজটি একবার রিফ্রেশ করে আবার চেষ্টা করো; তারপরেও না হলে ব্রাউজারের বিজ্ঞাপন ব্লকার বন্ধ করো।': 'The human check did not complete. Refresh the page once and try again; if it still fails, turn off your browser ad blocker.',
+    'মানব যাচাই': 'Human check',
     'অনেকবার চেষ্টা হয়েছে, একটু অপেক্ষা করে আবার চেষ্টা করো।': 'Too many attempts, wait a moment and try again.',
     'Verification এখন শুরু করা যাচ্ছে না। কিছু পাঠানো হয়নি, একটু পরে আবার চেষ্টা করো।': 'Verification cannot start right now. Nothing was sent, try again shortly.',
     'Telegram verification এখন পাওয়া যাচ্ছে না-Email ব্যবহার করো।': 'Telegram verification is unavailable, use email.',

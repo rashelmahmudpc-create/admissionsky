@@ -79,8 +79,29 @@ export class MemoryAuthRepository {
     const user = this.users.get(session.userId);
     const identity = this.externalIdentities.get(`firebase:${subjectRef}`);
     if (!user || !identity || identity.userId !== user.id || user.emailRef !== emailRef) return { error: AUTH_ERROR_CODES.SESSION_INVALID };
-    if (user.status !== 'active') return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
-    return { user };
+    if (!this.#statusIsActive(user)) return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
+    return { user: { ...user, status: this.#effectiveStatus(user) } };
+  }
+
+  /* AUTH V2.4: the status an authorisation decision reads must be the status
+   * that is actually written. Suspension goes to `accountStates`, while
+   * `users.status` is only ever set at INSERT — so a bare `user.status` check
+   * is always 'active' and can never refuse anybody. Kept in step with the
+   * SQLite repository, which this double stands in for: a fix that lived only
+   * there would pass its own tests and change nothing in production. */
+  #effectiveStatus(user) {
+    return this.accountStates.get(user.id)?.status || user.status || 'active';
+  }
+
+  #statusIsActive(user) {
+    return this.#effectiveStatus(user) === 'active';
+  }
+
+  /* The user object a caller sees must carry the status that was actually
+   * decided on, not the never-written column — a caller that re-checks
+   * `user.status` would otherwise read 'active' for a suspended account. */
+  #publicUser(user) {
+    return { ...copy(user), status: this.#effectiveStatus(user) };
   }
 
   #passkeyChallenge({ challengeId, candidateChallengeMac, deviceRef, kind, now }) {
@@ -125,7 +146,7 @@ export class MemoryAuthRepository {
       this.users.set(user.id, user);
       created = true;
     }
-    if (user.status !== 'active') return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
+    if (!this.#statusIsActive(user)) return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
     if (identity && user.emailRef !== input.emailRef) {
       const emailOwner = this.usersByEmail.get(input.emailRef);
       if (emailOwner && emailOwner.id !== user.id) return { error: AUTH_ERROR_CODES.ACCOUNT_CONFLICT };
@@ -160,7 +181,7 @@ export class MemoryAuthRepository {
       subjectRef: input.subjectRef, userId: user.id, at: input.now,
       ...(input.eventExtras || {})
     });
-    return { established: true, created, user: copy(user) };
+    return { established: true, created, user: this.#publicUser(user) };
   }
 
   async getExternalSession({ sessionRef, provider, subjectRef, emailRef, now, trackRefresh = false }) {
@@ -169,13 +190,13 @@ export class MemoryAuthRepository {
     const user = this.users.get(session.userId);
     const identity = this.externalIdentities.get(`${provider}:${subjectRef}`);
     if (!user || !identity || identity.userId !== user.id || user.emailRef !== emailRef) return { error: AUTH_ERROR_CODES.SESSION_INVALID };
-    if (user.status !== 'active') return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
+    if (!this.#statusIsActive(user)) return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
     // AUTH V2.1: the double must enforce the same idle bound as the real
     // repository, or a test would pass against a rule production does not have.
     if (now - session.lastSeenAt > SECURITY_SESSION_IDLE_TTL_MS) return { error: AUTH_ERROR_CODES.SESSION_INVALID };
     if (now - session.lastSeenAt > SECURITY_SESSION_TOUCH_INTERVAL_MS) session.lastSeenAt = now;
     if (trackRefresh) this.events.push({ type: 'session-refreshed', subjectRef, userId: user.id, at: now });
-    return { expiresAt: session.expiresAt, user: copy(user) };
+    return { expiresAt: session.expiresAt, user: this.#publicUser(user) };
   }
 
   async beginFirebaseAccountVerification(input) {
@@ -201,7 +222,7 @@ export class MemoryAuthRepository {
       this.users.set(user.id, user);
       this.usersByEmail.set(user.emailRef, user);
     }
-    if (user.status !== 'active') return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
+    if (!this.#statusIsActive(user)) return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
     if (user.emailRef !== input.emailRef) return { error: AUTH_ERROR_CODES.ACCOUNT_CONFLICT };
     if (!identity) {
       this.externalIdentities.set(`firebase:${input.subjectRef}`, {
@@ -226,7 +247,7 @@ export class MemoryAuthRepository {
       ipRef: input.ipRef,
       deviceRef: input.deviceRef
     });
-    return { prepared: true, user: copy(user) };
+    return { prepared: true, user: this.#publicUser(user) };
   }
 
   async getFirebaseAccountVerification(input) {
@@ -234,8 +255,8 @@ export class MemoryAuthRepository {
     if (!row || row.deviceRef !== input.deviceRef || row.state !== 'active') return { error: AUTH_ERROR_CODES.TELEGRAM_VERIFICATION_INVALID };
     if (row.expiresAt <= input.now) { row.state = 'expired'; row.refreshCipher = ''; return { error: AUTH_ERROR_CODES.TELEGRAM_VERIFICATION_INVALID }; }
     const user = this.users.get(row.userId);
-    if (!user || user.status !== 'active') return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
-    return { ...copy(row), emailMask: user.emailMask, status: user.status, createdAt: user.createdAt };
+    if (!user || !this.#statusIsActive(user)) return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
+    return { ...copy(row), emailMask: user.emailMask, status: this.#effectiveStatus(user), createdAt: user.createdAt };
   }
 
   async completeFirebaseAccountVerification(input) {
@@ -245,7 +266,7 @@ export class MemoryAuthRepository {
       return { error: AUTH_ERROR_CODES.TELEGRAM_VERIFICATION_INVALID };
     }
     const user = this.users.get(row.userId);
-    if (!user || user.status !== 'active') return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
+    if (!user || !this.#statusIsActive(user)) return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
     row.state = 'consumed'; row.refreshCipher = ''; row.consumedAt = input.now;
     this.sessions.set(input.sessionRef, {
       sessionRef: input.sessionRef, userId: user.id, createdAt: input.now,
@@ -266,15 +287,20 @@ export class MemoryAuthRepository {
       subjectRef: input.subjectRef, userId: user.id, at: input.now,
       ...(row.purpose ? { deviceRef: input.deviceRef, purpose: row.purpose, policyVersion: input.trust?.policyVersion } : {})
     });
-    return { established: true, trusted, user: copy(user) };
+    return { established: true, trusted, user: this.#publicUser(user) };
   }
 
   async getFirebaseIdentity(input) {
+    /* A LOOKUP, not an authorisation check — mirrors SqliteAuthRepository. The
+     * risk decision uses this to learn WHO is signing in and then reads the
+     * account state itself; refusing here would return no `user`, the risk
+     * path's `if (identity.user)` guard would skip, and a suspension would be
+     * silently dropped. The status is returned so a caller that wants to check
+     * can, and it is the status that is actually written. */
     const identity = this.externalIdentities.get(`firebase:${input.subjectRef}`);
     const user = identity ? this.users.get(identity.userId) : null;
     if (!user || user.emailRef !== input.emailRef) return { error: AUTH_ERROR_CODES.SESSION_INVALID };
-    if (user.status !== 'active') return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
-    return { user: copy(user) };
+    return { user: this.#publicUser(user) };
   }
 
   // Mirrors SqliteAuthRepository: greeting name comes from the saved profile,
@@ -291,7 +317,7 @@ export class MemoryAuthRepository {
       return { error: AUTH_ERROR_CODES.TELEGRAM_VERIFICATION_INVALID };
     }
     const user = this.users.get(ticket.userId);
-    if (!user || user.status !== 'active') return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
+    if (!user || !this.#statusIsActive(user)) return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
     const previous = this.profiles.get(user.id);
     const profile = { ...copy(input.profile), createdAt: previous?.createdAt || input.now, updatedAt: input.now };
     this.profiles.set(user.id, profile);
@@ -416,10 +442,11 @@ export class MemoryAuthRepository {
     const entry = [...this.publicIdentities.entries()].find(([, id]) => id === input.publicId);
     if (!entry) return { error: AUTH_ERROR_CODES.PUBLIC_PROFILE_NOT_FOUND };
     const user = this.users.get(entry[0]);
-    const accountState = this.accountStates.get(entry[0]);
     // Phase 6 fact: suspension lives in the account state, deactivation in
-    // auth_users.status, both must be active for a public surface.
-    if (!user || user.status !== 'active' || (accountState?.status && accountState.status !== 'active')) {
+    // auth_users.status, both must be active for a public surface. The
+    // account-state half is the one that is actually written, so it is read
+    // first and a missing row means "never suspended".
+    if (!user || !this.#statusIsActive(user)) {
       return { error: AUTH_ERROR_CODES.PUBLIC_PROFILE_NOT_FOUND };
     }
     const profile = this.profiles.get(entry[0]);
@@ -478,7 +505,7 @@ export class MemoryAuthRepository {
     const credentials = [...this.passkeys.values()]
       .filter(row => row.userId === session.user.id && row.status === 'active')
       .map(row => ({ credentialId: row.credentialId, transports: row.transports }));
-    return { user: copy(session.user), userHandle, credentials: copy(credentials) };
+    return { user: this.#publicUser(session.user), userHandle, credentials: copy(credentials) };
   }
 
   async getPasskeyRegistrationChallenge(input) {
@@ -487,7 +514,7 @@ export class MemoryAuthRepository {
     const session = this.#canonicalSession(input);
     if (session.error) return session;
     if (session.user.id !== selected.challenge.userId || input.subjectRef !== selected.challenge.subjectRef) return { error: AUTH_ERROR_CODES.ACCOUNT_CONFLICT };
-    return { ...copy(selected.challenge), user: copy(session.user) };
+    return { ...copy(selected.challenge), user: this.#publicUser(session.user) };
   }
 
   async finishPasskeyRegistration(input) {
@@ -508,7 +535,7 @@ export class MemoryAuthRepository {
     challenge.state = 'consumed'; challenge.challengeMac = ''; challenge.refreshCipher = ''; challenge.consumedAt = input.now;
     const user = this.users.get(challenge.userId);
     const count = [...this.passkeys.values()].filter(row => row.userId === challenge.userId && row.status === 'active').length;
-    return { registered: true, credentialCount: count, user: copy(user) };
+    return { registered: true, credentialCount: count, user: this.#publicUser(user) };
   }
 
   async beginPasskeyAuthentication(input) {
@@ -542,7 +569,7 @@ export class MemoryAuthRepository {
     const credential = this.passkeys.get(input.credentialId);
     if (!credential || credential.status !== 'active') return { error: AUTH_ERROR_CODES.PASSKEY_NOT_FOUND };
     const user = this.users.get(credential.userId);
-    if (!user || user.status !== 'active') return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
+    if (!user || !this.#statusIsActive(user)) return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
     return { credential: copy({
       credentialId: credential.credentialId,
       userHandle: credential.userHandle,
@@ -582,7 +609,7 @@ export class MemoryAuthRepository {
     const user = this.users.get(ticket.userId);
     const identity = this.externalIdentities.get(`firebase:${input.subjectRef}`);
     if (!user || !identity || identity.userId !== user.id) return { error: AUTH_ERROR_CODES.ACCOUNT_CONFLICT };
-    if (user.status !== 'active') return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
+    if (!this.#statusIsActive(user)) return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
     if (user.emailRef !== input.emailRef) {
       const owner = this.usersByEmail.get(input.emailRef);
       if (owner && owner.id !== user.id) return { error: AUTH_ERROR_CODES.ACCOUNT_CONFLICT };
@@ -607,7 +634,7 @@ export class MemoryAuthRepository {
       userAgent: input.userAgent
     });
     user.lastLoginAt = input.now;
-    return { established: true, user: copy(user) };
+    return { established: true, user: this.#publicUser(user) };
   }
 
   async getPasskeyStatus(input) {
@@ -635,12 +662,12 @@ export class MemoryAuthRepository {
     if (!session || session.revokedAt || session.expiresAt <= now) return { error: AUTH_ERROR_CODES.SESSION_INVALID };
     const user = this.users.get(session.userId);
     if (!user) return { error: AUTH_ERROR_CODES.SESSION_INVALID };
-    if (user.status !== 'active') return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
+    if (!this.#statusIsActive(user)) return { error: AUTH_ERROR_CODES.ACCOUNT_DISABLED };
     // AUTH V2.1: the double must enforce the same idle bound as the real
     // repository, or a test would pass against a rule production does not have.
     if (now - session.lastSeenAt > SECURITY_SESSION_IDLE_TTL_MS) return { error: AUTH_ERROR_CODES.SESSION_INVALID };
     if (now - session.lastSeenAt > SECURITY_SESSION_TOUCH_INTERVAL_MS) session.lastSeenAt = now;
-    return { expiresAt: session.expiresAt, createdAt: session.createdAt, user: copy(user) };
+    return { expiresAt: session.expiresAt, createdAt: session.createdAt, user: this.#publicUser(user) };
   }
 
   recordSecurityEvent({ eventType, subjectRef, userId, now, deviceRef, purpose, policyVersion }) {
@@ -868,7 +895,10 @@ export class MemoryAuthRepository {
   async identitySnapshot() {
     const users = [...this.users.values()]
       .filter(user => user && user.id)
-      .map(user => Object.freeze({ id: user.id, status: user.status }));
+      // AUTH V2.4: the effective status, not the write-once column — otherwise
+      // the `invalid-user-status` finding can never fire. Kept in step with the
+      // SQLite repository, which this double stands in for.
+      .map(user => Object.freeze({ id: user.id, status: this.#effectiveStatus(user) }));
     const externalIdentities = [...this.externalIdentities.values()]
       .filter(row => row && row.provider && row.subjectRef)
       .map(row => Object.freeze({ provider: row.provider, subjectRef: row.subjectRef, userId: row.userId }));
