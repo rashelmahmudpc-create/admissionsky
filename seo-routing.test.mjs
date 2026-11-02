@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import worker from './_worker.js';
 
 /* Emulates Cloudflare Pages static-asset behaviour: known files are served with
@@ -302,4 +303,34 @@ test('every course page describes itself completely, with nothing dangling', () 
       assert.ok(course[key], `${slug}: Course is missing ${key}`);
     }
   }
+});
+
+test('every sitemap lastmod is the date its file actually changed', () => {
+  /* The defect this guards, measured 2026-11-03: all nine `lastmod` values were
+   * wrong. The five highest-priority URLs said 2026-09-15 while their files had
+   * changed on 2026-11-02. A crawler reads that date to decide when to come
+   * back, so a stale one means the new content waits — and nothing on the site
+   * showed a problem, because a sitemap that is wrong still parses.
+   *
+   * The date is taken from git rather than the filesystem: a checkout sets every
+   * mtime to the clone time, which would tell every crawler that everything
+   * changed just now, every time. */
+  const sitemap = readFileSync(new URL('./sitemap.xml', import.meta.url), 'utf8');
+  const entries = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>\s*<lastmod>([^<]+)<\/lastmod>/g)];
+  assert.ok(entries.length >= 9, `expected the sitemap to list the site's pages, saw ${entries.length}`);
+
+  const wrong = [];
+  for (const [, loc, lastmod] of entries) {
+    const urlPath = loc.replace('https://admissionsky.pages.dev', '');
+    // A directory URL is served by its index.html.
+    const disk = urlPath === '/' ? 'index.html'
+      : urlPath.endsWith('/') ? `${urlPath.slice(1)}index.html`
+      : urlPath.slice(1);
+    const real = execFileSync('git', ['log', '-1', '--format=%cs', '--', disk], {
+      cwd: new URL('./', import.meta.url).pathname, encoding: 'utf8',
+    }).trim();
+    if (real && real !== lastmod) wrong.push(`${disk}: says ${lastmod}, changed ${real}`);
+  }
+  assert.deepEqual(wrong, [],
+    'these sitemap dates do not match when the file last changed — run: python3 scripts/build-sitemap.py');
 });
