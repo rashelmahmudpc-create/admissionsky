@@ -16,6 +16,11 @@ on:
   push:
     branches: [main]
     paths:
+      # Any suite file triggers this guard. The partial globs below were
+      # written as the suite grew and each new file had to be remembered;
+      # the ones nobody remembered could not start the workflow that runs
+      # them, so editing such a file ran nothing at all.
+      - '*.test.mjs'
       - 'auth-native/**'
       - 'auth-worker.js'
       - 'auth-worker-bundle.mjs'
@@ -29,6 +34,11 @@ on:
       - '.github/workflows/auth-identity-guard.yml'
   pull_request:
     paths:
+      # Any suite file triggers this guard. The partial globs below were
+      # written as the suite grew and each new file had to be remembered;
+      # the ones nobody remembered could not start the workflow that runs
+      # them, so editing such a file ran nothing at all.
+      - '*.test.mjs'
       - 'auth-native/**'
       - 'auth-worker.js'
       - 'auth-worker-bundle.mjs'
