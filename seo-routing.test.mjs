@@ -232,3 +232,30 @@ test('every course page serves real content without JavaScript', () => {
     assert.match(body, /<h1[^>]*>/, `${slug} has no server-rendered h1`);
   }
 });
+
+test('every course page links back to the site and to its siblings', () => {
+  /* The defect this guards, measured 2026-11-03: each course page linked to
+   * exactly one URL — its own canonical. No way home, no link to a sibling, no
+   * navigation at all, so a crawler arriving on one was at a dead end and could
+   * not tell the page belonged to a larger site.
+   *
+   * Three of the four pages DO have a sidebar full of section links, which is
+   * why this went unnoticed: those are `<a>` tags with no `href`, because they
+   * are JavaScript click targets. Counting `<a>` would have passed; counting
+   * `href` is what sees it. */
+  const slugs = ['prottoy', 'prottoy-master', 'sandhi', 'somas'];
+  for (const slug of slugs) {
+    const page = readFileSync(new URL(`./courses/${slug}/index.html`, import.meta.url), 'utf8');
+    const body = page.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '');
+    const hrefs = new Set([...body.matchAll(/<a[^>]*href="([^"]+)"/g)].map(m => m[1]));
+
+    assert.ok(hrefs.has('/'), `${slug} has no link back to the homepage`);
+    for (const other of slugs) {
+      if (other === slug) continue;
+      assert.ok(hrefs.has(`/courses/${other}/`), `${slug} does not link to /courses/${other}/`);
+    }
+    // And the page must not link to itself as a navigational entry — that is
+    // what the only previous link was.
+    assert.ok(hrefs.size >= slugs.length, `${slug} links to only ${hrefs.size} distinct URLs`);
+  }
+});
