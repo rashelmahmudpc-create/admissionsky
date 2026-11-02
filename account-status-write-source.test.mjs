@@ -305,6 +305,26 @@ test('V2.4-১৪: no authorisation query reads the never-written column on its 
   const repository = readFileSync(new URL('./auth-native/storage/sqlite-auth-repository.mjs', import.meta.url), 'utf8');
   assert.match(repository, /COALESCE\(st\.status,u\.status\) AS status/, 'the written status is read');
   assert.match(repository, /LEFT JOIN auth_account_state st ON st\.user_id=u\.user_id/, 'and the state table is joined');
+
+  /* The scan has to prove it is still LOOKING, not merely finding nothing.
+   *
+   * This is the flaw that cost the most today: the previous version of this
+   * scan read one file, reported no offenders, and was believed — while three
+   * reads of the dead column sat in files it never opened. "Passing" and
+   * "working" are different claims, and only the second one is worth anything.
+   *
+   * So: the walk must reach a plausible number of files, and the query pattern
+   * must still match the queries that are known to be there. If either silently
+   * stops working — a path changes, a regex stops matching a refactor — this
+   * fails instead of going quiet. */
+  assert.ok(files.length >= 20,
+    `the scan only reached ${files.length} files; if the layout moved, fix the walk rather than letting the scan go quiet`);
+  const scanned = files.reduce((n, file) => {
+    const source = stripComments(readFileSync(file, 'utf8'));
+    return n + [...source.matchAll(/[`'"]([^`'"]*\bSELECT\b[^`'"]*\bauth_users\b[^`'"]*)[`'"]/gis)].length;
+  }, 0);
+  assert.ok(scanned >= 20,
+    `the scan found only ${scanned} auth_users queries across ${files.length} files; the pattern has stopped matching the code it is meant to read`);
 });
 
 test('V2.4-১৪: the reconciliation health check is shown the status that can be wrong', async () => {
