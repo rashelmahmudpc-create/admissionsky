@@ -203,3 +203,32 @@ test('the legacy welcome template route is retired; the sky flow needs no templa
     assert.equal(res.status, 404, `${path} must stay retired`);
   }
 });
+
+test('every course page serves real content without JavaScript', () => {
+  /* The defect this guards, measured 2026-11-03: `/courses/prottoy-master/`
+   * builds every screen in JavaScript, so a crawler that does not run JS
+   * received 144 characters — the title, the burger button and the brand line.
+   * Its three siblings are static HTML and served 23k-49k characters of the
+   * same kind of content, so that one page was invisible to search while the
+   * others ranked.
+   *
+   * Asserted as a floor rather than an exact size: the content is generated
+   * from the page's own data, so it moves when the lessons do. What must not
+   * move is the property — a course page a crawler cannot read is not a page. */
+  const MIN = 2000;
+  for (const slug of ['prottoy', 'prottoy-master', 'sandhi', 'somas']) {
+    const page = readFileSync(new URL(`./courses/${slug}/index.html`, import.meta.url), 'utf8');
+    // What a crawler sees: markup with scripts and styles removed.
+    const visible = page
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    assert.ok(visible.length >= MIN,
+      `${slug} serves only ${visible.length} characters of crawlable text (floor ${MIN}) — is its content built in JavaScript?`);
+    // And a real heading, which is what a crawler uses to understand the page.
+    const body = page.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '');
+    assert.match(body, /<h1[^>]*>/, `${slug} has no server-rendered h1`);
+  }
+});
