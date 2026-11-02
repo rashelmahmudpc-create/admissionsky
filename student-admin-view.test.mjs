@@ -191,3 +191,32 @@ test('Students page: noindex, no storage, network-only in the service worker, CS
   assert.match(robots, /Disallow: \/students-control-center/);
   assert.match(sw, /requestUrl\.pathname === '\/students-control-center'/);
 });
+
+test('V2.4-১৪: the dashboard counts the suspension that is written, not the column that is not', async () => {
+  /* Found while sweeping the rest of finding ১৪, and it is the same shape as the
+   * guards: `active` read the effective status, but `disabled` and `suspended`
+   * beside it read `auth_users.status` — set once at INSERT, always to 'active',
+   * never updated. Both figures were therefore structurally zero.
+   *
+   * The existing tests could not see it, and the reason is worth keeping: the
+   * fixture above seeds `u-beta` with `status='disabled'` written straight into
+   * `auth_users`, which is a row production never creates. The test was
+   * asserting against its own fixture rather than against the system.
+   *
+   * So this seeds the way production does — suspension in `auth_account_state`,
+   * with the user row left 'active' — and checks the numbers an operator reads. */
+  const { sql } = fixture();
+  await seed(sql);
+  sql.exec("INSERT INTO auth_account_state(user_id,status,state_version,created_at,updated_at) VALUES(?,?,?,?,?)",
+    'u-alpha', 'suspended', 1, NOW, NOW);
+
+  const counts = studentCounts(sql, { now: NOW });
+  assert.equal(counts.total, 2, 'both users are counted');
+  assert.equal(counts.suspended, 1, 'the suspended student is reported as suspended');
+  // The property that was silently broken: a suspended student was counted as
+  // neither, so the figures did not add up to the total the dashboard also
+  // prints. Asserted as a partition rather than against a fixed number, because
+  // the fixture's other user is seeded as disabled and the point is the sum.
+  assert.equal(counts.active + counts.disabled + counts.suspended, counts.total,
+    'active + disabled + suspended must add up to the total, or the dashboard contradicts itself');
+});

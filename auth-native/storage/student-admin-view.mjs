@@ -29,11 +29,20 @@ const maskMobile = raw => { const digits = String(raw || '').replace(/\D/g, '');
 export function studentCounts(sql, { now = Date.now() } = {}) {
   if (!has(sql, 'auth_users')) return { total: 0, active: 0, disabled: 0, suspended: 0, last24h: 0, last7d: 0 };
   const stateJoin = has(sql, 'auth_account_state') ? 'LEFT JOIN auth_account_state st ON st.user_id=u.user_id' : '';
+  /* AUTH V2.4 (owner 2026-11-02): the effective status is the one that is
+   * written. `active` already read it, but the two counts beside it read
+   * `u.status` — the column set once at INSERT, always to 'active', and never
+   * updated. So the dashboard's "suspended" and "disabled" figures were
+   * structurally always zero: an operator looking at a suspended student saw
+   * them counted as neither, and the totals did not add up.
+   *
+   * Measured before fixing: two users, one suspended through the account-state
+   * table, gave {total: 2, active: 1, suspended: 0}. */
   const effective = stateJoin ? "CASE WHEN u.status<>'active' THEN u.status ELSE COALESCE(st.status,'active') END" : 'u.status';
   const row = one(sql, `SELECT COUNT(*) AS total,
       SUM(CASE WHEN ${effective}='active' THEN 1 ELSE 0 END) AS active,
-      SUM(CASE WHEN u.status='disabled' THEN 1 ELSE 0 END) AS disabled,
-      SUM(CASE WHEN u.status='suspended' THEN 1 ELSE 0 END) AS suspended,
+      SUM(CASE WHEN ${effective}='disabled' THEN 1 ELSE 0 END) AS disabled,
+      SUM(CASE WHEN ${effective}='suspended' THEN 1 ELSE 0 END) AS suspended,
       SUM(CASE WHEN u.created_at>=? THEN 1 ELSE 0 END) AS last24h,
       SUM(CASE WHEN u.created_at>=? THEN 1 ELSE 0 END) AS last7d
     FROM auth_users u ${stateJoin}`, Number(now) - DAY_MS, Number(now) - 7 * DAY_MS) || {};
