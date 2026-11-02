@@ -4,6 +4,13 @@ on:
   push:
     branches: [main]
     paths:
+      # Every suite file triggers this guard. The hand-written list below is kept
+      # for the files that ALSO need it for another reason (they ship to Pages,
+      # or they are the workflow's own definition), but it is no longer what
+      # decides whether a test change runs anything: 72 of the 96 files in
+      # `test:native-auth` were absent from it, so editing one of them alone
+      # started no workflow at all and the suite that covers it never ran.
+      - '*.test.mjs'
       - 'auth-native/**'
       - 'apps-script/**'
       - 'otp-b-lock.test.mjs'
@@ -47,6 +54,13 @@ on:
       - '.github/CODEOWNERS'
   pull_request:
     paths:
+      # Every suite file triggers this guard. The hand-written list below is kept
+      # for the files that ALSO need it for another reason (they ship to Pages,
+      # or they are the workflow's own definition), but it is no longer what
+      # decides whether a test change runs anything: 72 of the 96 files in
+      # `test:native-auth` were absent from it, so editing one of them alone
+      # started no workflow at all and the suite that covers it never ran.
+      - '*.test.mjs'
       - 'auth-native/**'
       - 'apps-script/**'
       - 'otp-b-lock.test.mjs'
