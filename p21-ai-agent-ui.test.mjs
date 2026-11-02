@@ -12,6 +12,9 @@ import { readFileSync, existsSync } from 'node:fs';
 const H = readFileSync('index.html', 'utf8');
 const SW = readFileSync('sw.js', 'utf8');
 const UI = existsSync('ai-agent-chat.js') ? readFileSync('ai-agent-chat.js', 'utf8') : '';
+/* F2.1: Sky's stylesheet was extracted to sky-chat.css, so a CSS assertion
+   must read both files — the rule it guards is unchanged, only its home is. */
+const SKYCSS = existsSync('sky-chat.css') ? readFileSync('sky-chat.css', 'utf8') : '';
 const V2 = readFileSync('dashboard-v2.js', 'utf8');
 
 const t = (name, cond) => test(name, () => assert.ok(cond, name));
@@ -31,7 +34,7 @@ t('১০. AI-msg: markdown body + copy/regen/👍 bar', UI.includes('function m
 t('১১. Live status panel (real request stages only) + streaming into the live node', UI.includes('class="proc run open"') && UI.includes('onStage: (label) => procStage(node, holder, label)') && !UI.includes('const FLOW') && !UI.includes('const PO') && UI.includes("node.querySelector('.bw')"));
 t('১২. প্রতি-বার্তায় রেগেন (আগের প্রশ্ন আবার) + কপি', UI.includes('sessions[cur].msgs.splice(i, 1)') && UI.includes('navigator.clipboard.writeText'));
 t('১৩. Guest identity + account-scoped store + error retry', UI.includes("'X-AH-Guest': guestId()") && UI.includes('aiSkyChat:v1') && UI.includes('T.offline') && UI.includes('T.failed'));
-t('১৪. Mobile-first: safe-area ব্যবহার', UI.includes('safe-area-inset'));
+t('১৪. Mobile-first: safe-area ব্যবহার', (UI + SKYCSS).includes('safe-area-inset'));
 t('১৫. কোনো API-key প্যাটার্ন নেই + কোনো demo/নকল উত্তর নেই', !/AIza[0-9A-Za-z_-]{30,}/.test(H + UI + V2) && !UI.includes('generativelanguage') && !UI.includes('elevenlabs.io') && !UI.includes('const R = {') && !UI.includes('মনে রাখার ট্রিক'));
 
 /* ── The live backend contract must stay intact ── */

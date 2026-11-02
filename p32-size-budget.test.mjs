@@ -29,7 +29,7 @@ const BUDGET = {
     'account-access.js': 275_000,
     'vocabulary-master-tool.js': 172_000,
     'profile-ui.js': 154_000,
-    'ai-agent-chat.js': 146_000,
+    'ai-agent-chat.js': 121_000,
   },
 };
 

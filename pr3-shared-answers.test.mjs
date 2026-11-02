@@ -41,13 +41,16 @@ t('PR3-৭. anything more than the topic goes to the AI', () =>
 t('PR3-৮. small talk is not a shared answer (PR-2 bank answers it first)', () =>
   ['hi', 'hello', 'ধন্যবাদ', 'তুমি কে'].every(q => id(q) === null && S.kind(q) !== ''));
 const chat = readFileSync('./ai-agent-chat.js', 'utf8');
+/* F2.1: Sky's stylesheet was extracted to sky-chat.css, so a CSS assertion
+   must read both files — the rule it guards is unchanged, only its home is. */
+const skyCss = readFileSync('./sky-chat.css', 'utf8');
 t('PR3-৯. chat: shared answer checked after small talk and before any server work', () => {
   const a = chat.indexOf('ST.replyMsg('), b = chat.indexOf('window.SkyFAQ.match(t)'), c = chat.indexOf("const holder = { role: 'ai', text: '', ts: Date.now(), pending: true");
   return a > 0 && b > a && c > b && /faq: faq\.id/.test(chat);
 });
 t('PR3-১০. chat: bubble shows the note and an "আরো বিস্তারিত" chip that goes to the AI', () =>
   /function faqNote\(m\)/.test(chat) && /\+ faqNote\(m\) \+ contactNote\(m\) \+ acts/.test(chat) && /data-q="' \+ esc\(more\)/.test(chat) &&
-  /আরো বিস্তারিত বুঝিয়ে বলো/.test(chat) && /#app\.sky \.faqm\{/.test(chat));
+  /আরো বিস্তারিত বুঝিয়ে বলো/.test(chat) && /#app\.sky \.faqm\{/.test(skyCss));
 const html = readFileSync('./index.html', 'utf8'), sw = readFileSync('./sw.js', 'utf8');
 t('PR3-১১. index.html loads and sw.js precaches all five files', () =>
   ['sky-faq.js', ...FILES].every(f => html.includes('<script type="application/x-ah-idle" data-ah-src="./' + f + '?v=faq1"></script>') && html.includes('"./' + f + '?v=faq1"') && sw.includes("'./" + f + "?v=faq1'") && sw.includes('"./' + f + '?v=faq1": "')));
