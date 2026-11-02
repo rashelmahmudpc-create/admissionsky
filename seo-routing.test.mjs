@@ -259,3 +259,47 @@ test('every course page links back to the site and to its siblings', () => {
     assert.ok(hrefs.size >= slugs.length, `${slug} links to only ${hrefs.size} distinct URLs`);
   }
 });
+
+test('every course page describes itself completely, with nothing dangling', () => {
+  /* Two defects this guards, both measured on the live site 2026-11-03:
+   *
+   * 1. Each Course said `provider: {@id: .../#organization}` and
+   *    `isPartOf: {@id: .../#website}`, but neither node was defined on the
+   *    page — they lived only in index.html. A schema.org `@id` resolves within
+   *    its own graph, not across pages, so to a consumer the provider was
+   *    empty and the course was part of nothing.
+   * 2. The Course nodes carried no `offers`, `image` or `hasCourseInstance`,
+   *    which is what the markup exists to earn — without them the page cannot
+   *    qualify for a course rich result.
+   *
+   * Asserted as a property, not a shape: every `@id` a node references must be
+   * defined in the same graph, and the three properties must be present. That
+   * catches a future edit that adds a reference without adding its target. */
+  const REQUIRED = ['name', 'description', 'provider', 'offers', 'image', 'hasCourseInstance'];
+  for (const slug of ['prottoy', 'prottoy-master', 'sandhi', 'somas']) {
+    const page = readFileSync(new URL(`./courses/${slug}/index.html`, import.meta.url), 'utf8');
+    const m = page.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+    assert.ok(m, `${slug} has no JSON-LD block`);
+
+    let graph;
+    let parsed; assert.doesNotThrow(() => { parsed = JSON.parse(m[1]); }, `${slug} JSON-LD must parse`); graph = parsed["@graph"];
+    const defined = new Set(graph.map(n => n['@id']).filter(Boolean));
+
+    for (const node of graph) {
+      for (const [key, value] of Object.entries(node)) {
+        // A reference is an object whose ONLY key is @id.
+        if (value && typeof value === 'object' && !Array.isArray(value)
+            && Object.keys(value).length === 1 && value['@id']) {
+          assert.ok(defined.has(value['@id']),
+            `${slug}: ${node['@type']}.${key} points at ${value['@id']}, which this page never defines`);
+        }
+      }
+    }
+
+    const course = graph.find(n => n['@type'] === 'Course');
+    assert.ok(course, `${slug} has no Course node`);
+    for (const key of REQUIRED) {
+      assert.ok(course[key], `${slug}: Course is missing ${key}`);
+    }
+  }
+});
