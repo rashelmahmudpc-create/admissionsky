@@ -32352,8 +32352,8 @@ function studentCounts(sql, { now = Date.now() } = {}) {
   const effective = stateJoin ? "CASE WHEN u.status<>'active' THEN u.status ELSE COALESCE(st.status,'active') END" : "u.status";
   const row = one(sql, `SELECT COUNT(*) AS total,
       SUM(CASE WHEN ${effective}='active' THEN 1 ELSE 0 END) AS active,
-      SUM(CASE WHEN u.status='disabled' THEN 1 ELSE 0 END) AS disabled,
-      SUM(CASE WHEN u.status='suspended' THEN 1 ELSE 0 END) AS suspended,
+      SUM(CASE WHEN ${effective}='disabled' THEN 1 ELSE 0 END) AS disabled,
+      SUM(CASE WHEN ${effective}='suspended' THEN 1 ELSE 0 END) AS suspended,
       SUM(CASE WHEN u.created_at>=? THEN 1 ELSE 0 END) AS last24h,
       SUM(CASE WHEN u.created_at>=? THEN 1 ELSE 0 END) AS last7d
     FROM auth_users u ${stateJoin}`, Number(now) - DAY_MS12, Number(now) - 7 * DAY_MS12) || {};
