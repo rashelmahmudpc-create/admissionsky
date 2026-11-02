@@ -33,7 +33,7 @@ const fakeFetch = captures => async (url, init) => {
   });
 };
 
-const renderedMessage = Object.freeze({ recipient: 'student@example.com', subject: 'Admission Hub test', text: 'Plain body', html: '<p>HTML body</p>' });
+const renderedMessage = Object.freeze({ recipient: 'student@example.com', subject: 'Admission Sky test', text: 'Plain body', html: '<p>HTML body</p>' });
 const providerContext = Object.freeze({ requestId: 'email-request-provider-0001', idempotencyKey: 'email-idempotency-provider-0001', deliveryAttemptId: 'attempt-provider-0001', requestRef: 'private-request-ref-01' });
 
 test('public Email Gateway contract and version are frozen', async () => {
@@ -358,7 +358,7 @@ test('observability records no raw recipient, OTP or rendered content', async ()
 test('all eight owner-selected adapters expose one normalized interface and truthful OTP capability', async () => {
   const captures = [];
   const fetchImpl = fakeFetch(captures);
-  const common = { apiKey: 'private-test-api-value', fromAddress: 'sender@example.com', fromName: 'Admission Hub', fetchImpl };
+  const common = { apiKey: 'private-test-api-value', fromAddress: 'sender@example.com', fromName: 'Admission Sky', fetchImpl };
   const sendable = [
     new ResendProvider(common),
     new BrevoProvider(common),

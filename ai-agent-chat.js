@@ -1,4 +1,4 @@
-/* ✦ ADMISSION HUB AI, Sky (student study partner)
+/* ✦ ADMISSION SKY AI, Sky (student study partner)
  * UI: owner-supplied Sky design v2 (sky-chat 2.html, 2026-10-15), animated
  *     Sky avatar with props (laptop, book, note, cup, magnifier, calculator,
  *     headphones, cap), hero, live status panel, drawer, bottom sheet, themes.

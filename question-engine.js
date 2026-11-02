@@ -1,4 +1,4 @@
-/* Admission Hub, P07 Intelligent Question Engine.
+/* Admission Sky, P07 Intelligent Question Engine.
  *
  * The question bank's own quality layer. It gives every question a difficulty,
  * a type, a concept tag and an expected solving time; checks that the answer

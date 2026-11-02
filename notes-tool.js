@@ -1,5 +1,5 @@
 /* ============================================================
-   ADMISSION HUB · NOTES DATA + NOTE EDITOR
+   ADMISSION SKY · NOTES DATA + NOTE EDITOR
    Question Bank / Flash Test / Mock থেকে নোট সেভ করার API ও editor modal।
    নোট স্ক্রিনের UI (route #notes) এখন notes-screen.js-এ।
    ============================================================ */

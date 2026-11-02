@@ -1,4 +1,4 @@
-/* Admission Hub, P18 Admission Intelligence: the visible panel.
+/* Admission Sky, P18 Admission Intelligence: the visible panel.
  *
  * The student taps "ভর্তি-বুদ্ধি" on the dashboard and sees what their own
  * practice says about their admission preparation: which official subjects they

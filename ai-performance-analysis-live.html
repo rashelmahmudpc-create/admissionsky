@@ -7,7 +7,7 @@
   <!-- Internal live preview of the analysis screen; never a public page. -->
   <meta name="robots" content="noindex,nofollow,noarchive">
   <meta name="referrer" content="no-referrer">
-  <title>AI Performance Analysis | Admission Hub</title>
+  <title>AI Performance Analysis | Admission Sky</title>
   <style>
     :root {
       --ink: #09201d;
@@ -235,7 +235,7 @@
       <div class="brand-lockup">
         <button class="icon-button" aria-label="Back to results" title="Back">←</button>
         <div class="brand-mark" aria-hidden="true">ah</div>
-        <div class="brand-copy"><strong>Admission Hub</strong><span>Intelligence workspace</span></div>
+        <div class="brand-copy"><strong>Admission Sky</strong><span>Intelligence workspace</span></div>
       </div>
       <div class="top-actions">
         <div class="saved-state" id="savedState"><span class="saved-dot"></span><span>Saved locally</span></div>
@@ -809,7 +809,7 @@
     async function requestLiveAI(requestPayload, onProgress) {
       const endpoint = String(sessionStorage.getItem("admission-hub-ai-endpoint") || "").trim();
       const siteKey = String(sessionStorage.getItem("admission-hub-ai-sitekey") || "").trim();
-      if (!endpoint) throw new Error("Secure AI endpoint পাওয়া যায়নি; Admission Hub app-এর result page থেকে tool-টি খোলো।");
+      if (!endpoint) throw new Error("Secure AI endpoint পাওয়া যায়নি; Admission Sky app-এর result page থেকে tool-টি খোলো।");
       const report = typeof onProgress === "function" ? onProgress : () => {};
       report({ phase: "token" });
       let token = "";
@@ -873,7 +873,7 @@
 function emptyAnalysis() { return { schemaVersion: AI_SCHEMA_VERSION, headline: '', summary: '', strengths: [], weaknesses: [], trends: [], topicInsights: [], mistakePatterns: [], recommendations: [], actionPlan: [], wrongAnswerInsights: [], comparison: '', mistakePattern: '', targetAdvice: '', plan1Day: '', plan3Days: '', plan7Days: '', motivation: '', visualInsights: [], focusQuestions: [] }; }
     function renderMissingResult() {
       clearInterval(state.thinkingTimer); thinkingScreen.hidden = true;
-      workspace.innerHTML = '<section class="live-empty-screen"><article class="live-empty-card"><small>REAL RESULT REQUIRED</small><h1>এই পেইজটি শুধু Admission Hub-এর বাস্তব result থেকে খোলা যাবে।</h1><p>Result page-এর ✦ Analysis button থেকে verified result নিয়ে আসো। এই tool-এ কোনো demo বা fake report কখনো দেখানো হয় না।</p></article></section>';
+      workspace.innerHTML = '<section class="live-empty-screen"><article class="live-empty-card"><small>REAL RESULT REQUIRED</small><h1>এই পেইজটি শুধু Admission Sky-এর বাস্তব result থেকে খোলা যাবে।</h1><p>Result page-এর ✦ Analysis button থেকে verified result নিয়ে আসো। এই tool-এ কোনো demo বা fake report কখনো দেখানো হয় না।</p></article></section>';
     }
     function renderFatalError(message) {
       clearInterval(state.thinkingTimer); thinkingScreen.hidden = true;
@@ -1142,7 +1142,7 @@ function emptyAnalysis() { return { schemaVersion: AI_SCHEMA_VERSION, headline: 
 
         <section class="section" id="coach" aria-labelledby="coach-title"><article class="coach-note"><span class="section-kicker"><i>10</i> Final coach note</span><blockquote id="coach-title">“${esc(aiUnavailable ? 'Live AI response আসার আগে কোনো coach note বানানো হচ্ছে না।' : (state.analysis.motivation || 'AI coach note পাওয়া যায়নি।'))}”</blockquote><cite>- ${aiUnavailable ? 'AI অপেক্ষমাণ · verified result preserved' : 'AI Coach · based on verified attempt data'}</cite></article></section>
 
-        <footer style="padding:50px 0 20px;color:var(--muted);font-size:11px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap"><span>Admission Hub · Personal Result Intelligence Report</span><span>schema ${AI_SCHEMA_VERSION} · analysis ${ANALYSIS_VERSION} · renderer ${RENDERER_VERSION}</span></footer>`;
+        <footer style="padding:50px 0 20px;color:var(--muted);font-size:11px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap"><span>Admission Sky · Personal Result Intelligence Report</span><span>schema ${AI_SCHEMA_VERSION} · analysis ${ANALYSIS_VERSION} · renderer ${RENDERER_VERSION}</span></footer>`;
       bindWorkspaceEvents();
     }
     function toast(message) {

@@ -1,5 +1,5 @@
 /*
- * Memorizing Match, native Admission Hub engine.
+ * Memorizing Match, native Admission Sky engine.
  * Design reminder: Question Bank only; Subject → Topic → Count → Time; fixed 5×5 pair batches; no reward/history system.
  */
 (() => {

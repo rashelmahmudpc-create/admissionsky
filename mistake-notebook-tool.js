@@ -1,5 +1,5 @@
 /*
- * Mistake Notebook, Admission Hub
+ * Mistake Notebook, Admission Sky
  * সব পরীক্ষার ভুল প্রশ্ন + AI ব্যাখ্যা এক জায়গায়; exam-এর আগে revision।
  * ব্যাখ্যা AI secure proxy (admission-hub-ai-proxy) থেকে আসে, কোনো API key এখানে নেই।
  * Explanation cache result-analysis tool-এর সাথে শেয়ার হয় (ah-explanation-cache)।

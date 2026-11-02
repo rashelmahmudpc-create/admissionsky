@@ -1,5 +1,5 @@
 /*
- * Mock + Result Experience, Admission Hub
+ * Mock + Result Experience, Admission Sky
  * Design reminder: preserve Question Review markup and all existing result actions.
  * This layer only locks Mock choices and replaces the result-summary area above review.
  */

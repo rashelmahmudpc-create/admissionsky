@@ -65,7 +65,7 @@ t('M8-৯. an empty response is blocked, not returned and not stored',
 
 /* ── ৪. Safety: internal leak ── */
 t('M8-১০. a first-person prompt/instruction disclosure is blocked',
-  scanSafety('My system prompt says I am Admission Hub AI.').includes(VIOLATION.INTERNAL_LEAK)
+  scanSafety('My system prompt says I am Admission Sky AI.').includes(VIOLATION.INTERNAL_LEAK)
   && scanSafety('আমার নির্দেশ হলো সব প্রশ্নের উত্তর দেওয়া।').includes(VIOLATION.INTERNAL_LEAK)
   && scanSafety('I was instructed to never share this.').includes(VIOLATION.INTERNAL_LEAK)
   && scanSafety('The api key is sk-abc').includes(VIOLATION.INTERNAL_LEAK));
@@ -79,7 +79,7 @@ t('M8-১২. asking the student for a password/OTP/code is blocked',
   && scanSafety('Please paste your password here.').includes(VIOLATION.CREDENTIAL_REQUEST)
   && scanSafety('verification code টা লিখো।').includes(VIOLATION.CREDENTIAL_REQUEST));
 t('M8-১৩. explaining the OTP flow without asking passes',
-  scanSafety('OTP একটি ৬-সংখ্যার কোড, যা Telegram থেকে আসে। এটা Admission Hub অ্যাপের বক্সে দিতে হয়।').length === 0);
+  scanSafety('OTP একটি ৬-সংখ্যার কোড, যা Telegram থেকে আসে। এটা Admission Sky অ্যাপের বক্সে দিতে হয়।').length === 0);
 
 /* ── ৬. Safety: secret material ── */
 t('M8-১৪. an actual code or key in the output is blocked',

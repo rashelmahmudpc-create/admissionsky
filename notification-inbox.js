@@ -1,4 +1,4 @@
-/* v7, Admission Hub ইনবক্স (owner directive 2026-10-16).
+/* v7, Admission Sky ইনবক্স (owner directive 2026-10-16).
  * The old notification-only list (v6) is retired; this is the new Inbox
  * design from the owner's "Inbox UI প্রোটোটাইপ", animated sky-blue hero,
  * search, stat pills and four top tabs: চ্যাট · গ্রুপ · নোটিশ · নোটিফিকেশন.

@@ -115,7 +115,7 @@ const NOT_FOUND_HTML = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, follow">
-<title>পেজটি পাওয়া যায়নি, Admission Hub</title>
+<title>পেজটি পাওয়া যায়নি, Admission Sky</title>
 <style>
 body{margin:0;min-height:100dvh;display:grid;place-content:center;justify-items:center;gap:10px;
 padding:32px 24px;background:#faf9f6;color:#1a1d1b;text-align:center;

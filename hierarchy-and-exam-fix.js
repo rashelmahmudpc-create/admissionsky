@@ -136,7 +136,7 @@
       migrationPromise = null;
       return changed;
     })).catch(error => {
-      console.warn('[Admission Hub] Sub-topic migration deferred.', error);
+      console.warn('[Admission Sky] Sub-topic migration deferred.', error);
       migrationState = 'idle';
       migrationPromise = null;
       return false;

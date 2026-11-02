@@ -1,4 +1,4 @@
-/* Admission Hub, P18 official question-pattern dataset.
+/* Admission Sky, P18 official question-pattern dataset.
  *
  * The engine (admission-intel-engine.js) already analyses the student's OWN
  * practice history. This file adds the other half of "question pattern": the

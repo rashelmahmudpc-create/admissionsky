@@ -1,4 +1,4 @@
-// Admission Hub current shell — retired account/profile/personalization-onboarding guard.
+// Admission Sky current shell — retired account/profile/personalization-onboarding guard.
 import { existsSync, readFileSync } from 'node:fs';
 import publicWorker, { publishGlobal } from './public-worker.js';
 import bundledWorker from './worker-bundle.mjs';

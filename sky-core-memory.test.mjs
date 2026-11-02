@@ -15,19 +15,19 @@ test('the core prompt is the AdmissionSky v2 memory', () => {
   assert.ok(p.includes('আমি Sky, AdmissionSky-এর AI সহায়ক।'));
   assert.ok(p.includes('Rashel Zayan'));
   assert.ok(p.includes('Always reply in Bengali'));
-  assert.ok(!p.includes('You are Admission Hub AI'));
+  assert.ok(!p.includes('You are Admission Sky AI'));
   assert.ok(p.length < 9000, 'memory stays inside the token budget');
   assert.equal(SYSTEM_PROMPT_V, 'sys-sky-v3-1-live-tools');
 });
 
 test('the old v1 prompt is kept, deprecated, never deleted', () => {
   const old = getPrompt('admission-hub-core');
-  assert.ok(old && old.status === 'deprecated' && old.text.includes('You are Admission Hub AI'));
+  assert.ok(old && old.status === 'deprecated' && old.text.includes('You are Admission Sky AI'));
   assert.deepEqual(validatePromptRegistry(), []);
 });
 
 test('student-facing agent text no longer uses the old name', () => {
-  assert.ok(!AGENT.includes('Admission Hub'));
+  assert.ok(!AGENT.includes('Admission Sky'));
 });
 
 test('get_app_features triggers only for questions about the app', () => {

@@ -1,4 +1,4 @@
-/* Admission Hub, Academic Catalog Engine (code-native, zero-raster)
+/* Admission Sky, Academic Catalog Engine (code-native, zero-raster)
    Owner spec: units/subjects come from the selected university + admission
    session, NEVER a generic A/B/C/D assumption in the UI.
    Source of truth: official admission portals / prospectuses

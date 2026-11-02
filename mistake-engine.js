@@ -1,4 +1,4 @@
-/* Admission Hub, P10 Smart Mistake & Revision: mistake engine.
+/* Admission Sky, P10 Smart Mistake & Revision: mistake engine.
  *
  * Pure and dependency-free (like question-engine.js / analytics-insight-engine.js),
  * so it runs in the browser as window.AhMistakeEngine and under node:test for

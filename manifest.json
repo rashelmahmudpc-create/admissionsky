@@ -1,6 +1,6 @@
 {
-  "name": "My Admission Hub",
-  "short_name": "Admission Hub",
+  "name": "My Admission Sky",
+  "short_name": "Admission Sky",
   "description": "Privacy-first admission preparation hub with smart importing and real progress tracking.",
   "start_url": "./?source=pwa#dashboard",
   "scope": "./",

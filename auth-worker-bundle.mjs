@@ -73,7 +73,7 @@ var AUTH_ERROR_CODES = Object.freeze({
 var DEFAULTS = Object.freeze({
   [AUTH_ERROR_CODES.INVALID_INPUT]: Object.freeze({ status: 400, message: "তথ্যটি সঠিকভাবে লিখুন।" }),
   [AUTH_ERROR_CODES.HUMAN_CHECK_FAILED]: Object.freeze({ status: 400, message: "মানব যাচাই সম্পন্ন হয়নি। পেজটি একবার রিফ্রেশ করে আবার চেষ্টা করুন।" }),
-  [AUTH_ERROR_CODES.CLIENT_UPDATE_REQUIRED]: Object.freeze({ status: 409, message: "Admission Hub-এর নতুন সংস্করণ চালু হয়েছে, পেজটি একবার রিফ্রেশ করে আবার চেষ্টা করুন।" }),
+  [AUTH_ERROR_CODES.CLIENT_UPDATE_REQUIRED]: Object.freeze({ status: 409, message: "Admission Sky-এর নতুন সংস্করণ চালু হয়েছে, পেজটি একবার রিফ্রেশ করে আবার চেষ্টা করুন।" }),
   [AUTH_ERROR_CODES.NOT_CONFIGURED]: Object.freeze({ status: 503, message: "অ্যাকাউন্ট সেবা এখনো প্রস্তুত নয়।" }),
   [AUTH_ERROR_CODES.RATE_LIMITED]: Object.freeze({ status: 429, message: "অনেকবার চেষ্টা হয়েছে, একটু পরে আবার চেষ্টা করুন।" }),
   [AUTH_ERROR_CODES.RESEND_COOLDOWN]: Object.freeze({ status: 429, message: "নতুন কোড পাঠাতে একটু অপেক্ষা করুন।" }),

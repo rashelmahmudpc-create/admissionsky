@@ -37,7 +37,7 @@ const nojs = [...doc.querySelectorAll('body noscript')]
   .map(n => n.textContent.replace(/\s+/g, ' ').trim()).join(' ');
 t('১৩. নো-JS ফলব্যাক ক্রলার-পাঠ্য কনটেন্ট দেয় (৮৪ অক্ষরের স্প্ল্যাশ নয়)', nojs.length > 300);
 t('১৪. নো-JS ফলব্যাক ব্র্যান্ড-শিরোনাম ও সারমর্ম দেয়',
-  /Admission Hub/.test(nojs) && /ভর্তি প্রস্তুতি/.test(nojs));
+  /Admission Sky/.test(nojs) && /ভর্তি প্রস্তুতি/.test(nojs));
 t('১৫. নো-JS ফলব্যাক প্রতিটি কোর্স-ল্যান্ডিং পেজে লিংক করে',
   ['prottoy', 'prottoy-master', 'sandhi', 'somas'].every(s => html.includes(`href="/courses/${s}/"`)));
 t('১৬. নো-JS ফলব্যাক বডিতেই থাকে (হেডের ফন্ট-ফলব্যাক অটুট)', doc.querySelectorAll('body noscript').length === 1);

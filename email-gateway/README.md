@@ -1,4 +1,4 @@
-# Admission Hub Email Gateway — Phase 2B
+# Admission Sky Email Gateway — Phase 2B
 
 Server-only, provider-agnostic transactional email infrastructure.
 

@@ -1,5 +1,5 @@
 /*
- * Weekly AI Report, Admission Hub
+ * Weekly AI Report, Admission Sky
  * Progress পেজে "এই সপ্তাহের রিপোর্ট" কার্ড। সপ্তাহ-কী cache: একই সপ্তাহে
  * একটাই নতুন AI call; AI secure proxy থেকে আসে (কোনো key client-side নেই)।
  */

@@ -65,7 +65,7 @@ const server = http.createServer(async (request, response) => {
     challengeId: 'browser-passkey-challenge-123456789',
     options: {
       challenge: 'AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE',
-      rp: { name: 'Admission Hub', id: 'localhost' },
+      rp: { name: 'Admission Sky', id: 'localhost' },
       user: { id: 'AgICAgICAgICAgICAgICAg', name: 'student@example.com', displayName: 'Browser Student' },
       pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
       timeout: 60000,

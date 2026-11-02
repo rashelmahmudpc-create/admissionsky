@@ -9,38 +9,38 @@
 export const SECURITY_NOTIFICATION_EVENTS = Object.freeze({
   'new-device-login': Object.freeze({
     template: 'security-new-device-login',
-    subject: 'Admission Hub: নতুন device থেকে লগইন',
-    body: 'তোমার Admission Hub account একটি নতুন device থেকে লগইন করেছে। যদি এটি তুমি না হও, তাহলে দ্রুত তোমার password পরিবর্তন করো এবং "সব device থেকে Log Out" ব্যবহার করো।'
+    subject: 'Admission Sky: নতুন device থেকে লগইন',
+    body: 'তোমার Admission Sky account একটি নতুন device থেকে লগইন করেছে। যদি এটি তুমি না হও, তাহলে দ্রুত তোমার password পরিবর্তন করো এবং "সব device থেকে Log Out" ব্যবহার করো।'
   }),
   'password-changed': Object.freeze({
     template: 'security-password-changed',
-    subject: 'Admission Hub: password পরিবর্তন হয়েছে',
-    body: 'তোমার Admission Hub account-এর password সম্প্রতি পরিবর্তন হয়েছে। যদি এটি তুমি না করো, দ্রুত password reset করো।'
+    subject: 'Admission Sky: password পরিবর্তন হয়েছে',
+    body: 'তোমার Admission Sky account-এর password সম্প্রতি পরিবর্তন হয়েছে। যদি এটি তুমি না করো, দ্রুত password reset করো।'
   }),
   'passkey-added': Object.freeze({
     template: 'security-passkey-added',
-    subject: 'Admission Hub: নতুন Passkey যুক্ত হয়েছে',
-    body: 'তোমার Admission Hub account-এ একটি নতুন Passkey যুক্ত হয়েছে। যদি এটি তুমি না করো, তাহলে Account-এ গিয়ে Passkey-গুলোর তালিকা দেখে নাও।'
+    subject: 'Admission Sky: নতুন Passkey যুক্ত হয়েছে',
+    body: 'তোমার Admission Sky account-এ একটি নতুন Passkey যুক্ত হয়েছে। যদি এটি তুমি না করো, তাহলে Account-এ গিয়ে Passkey-গুলোর তালিকা দেখে নাও।'
   }),
   'passkey-removed': Object.freeze({
     template: 'security-passkey-removed',
-    subject: 'Admission Hub: Passkey মুছে ফেলা হয়েছে',
-    body: 'তোমার Admission Hub account থেকে একটি Passkey মুছে ফেলা হয়েছে।'
+    subject: 'Admission Sky: Passkey মুছে ফেলা হয়েছে',
+    body: 'তোমার Admission Sky account থেকে একটি Passkey মুছে ফেলা হয়েছে।'
   }),
   'recovery-started': Object.freeze({
     template: 'security-recovery-started',
-    subject: 'Admission Hub: account recovery শুরু হয়েছে',
-    body: 'তোমার Admission Hub account-এর জন্য একটি recovery শুরু হয়েছে। Recovery code কেবল তোমাকেই ব্যবহার করো, এটি কারো সঙ্গে শেয়ার করো না।'
+    subject: 'Admission Sky: account recovery শুরু হয়েছে',
+    body: 'তোমার Admission Sky account-এর জন্য একটি recovery শুরু হয়েছে। Recovery code কেবল তোমাকেই ব্যবহার করো, এটি কারো সঙ্গে শেয়ার করো না।'
   }),
   'recovery-completed': Object.freeze({
     template: 'security-recovery-completed',
-    subject: 'Admission Hub: account recovery সম্পন্ন',
-    body: 'তোমার Admission Hub account-এর recovery সম্পন্ন হয়েছে। নিশ্চিত হতে তোমার security settings দেখে নাও।'
+    subject: 'Admission Sky: account recovery সম্পন্ন',
+    body: 'তোমার Admission Sky account-এর recovery সম্পন্ন হয়েছে। নিশ্চিত হতে তোমার security settings দেখে নাও।'
   }),
   'suspicious-activity': Object.freeze({
     template: 'security-suspicious-activity',
-    subject: 'Admission Hub: অস্বাভাবিক activity',
-    body: 'তোমার Admission Hub account-এ অস্বাভাবিক activity লক্ষ্য করা গেছে। নিশ্চিত হতে তোমার password, Passkey-গুলো এবং trusted devices দেখে নাও।'
+    subject: 'Admission Sky: অস্বাভাবিক activity',
+    body: 'তোমার Admission Sky account-এ অস্বাভাবিক activity লক্ষ্য করা গেছে। নিশ্চিত হতে তোমার password, Passkey-গুলো এবং trusted devices দেখে নাও।'
   })
 });
 

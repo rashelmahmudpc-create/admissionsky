@@ -1,4 +1,4 @@
-/* Admission Hub, P18 Admission Intelligence Engine.
+/* Admission Sky, P18 Admission Intelligence Engine.
  *
  * Turns what the app already knows about a student, their chosen university,
  * unit and session, plus their own exam history, into admission intelligence:

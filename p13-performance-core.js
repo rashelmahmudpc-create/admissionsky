@@ -1,4 +1,4 @@
-/* Admission Hub, P13 Performance Core.
+/* Admission Sky, P13 Performance Core.
  *
  * The "no loading" goal needs three things, and this file provides them as a
  * small, testable layer (window.AhPerf):

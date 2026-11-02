@@ -119,7 +119,7 @@ function setup({ methods = {}, signed = false, passkeyCredentials = null, backup
       challengeId: 'passkey-challenge-register',
       options: {
         challenge,
-        rp: { id: 'admissionhub.pages.dev', name: 'Admission Hub' },
+        rp: { id: 'admissionhub.pages.dev', name: 'Admission Sky' },
         user: { id: challenge, name: 'u***@example.com', displayName: 'শিক্ষার্থী' },
         pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
         excludeCredentials: []

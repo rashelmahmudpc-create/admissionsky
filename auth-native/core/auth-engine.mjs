@@ -908,7 +908,7 @@ export class CloudflareNativeAuthEngine {
       greeting = 'তোমার প্রোফাইলটা পূরণ করে নাও';
     } else if (ageDays < 7) {
       context = 'NEW_USER';
-      greeting = 'Admission Hub-এ স্বাগতম!';
+      greeting = 'Admission Sky-এ স্বাগতম!';
     } else if (hasTarget) {
       context = 'GOAL_SET';
       greeting = 'লক্ষ্যে অগ্রসর হও';
@@ -1107,8 +1107,8 @@ export class CloudflareNativeAuthEngine {
       challengeId,
       options: Object.freeze({
         challenge,
-        rp: Object.freeze({ id: this.#passkeyRpId(identity.context), name: 'Admission Hub' }),
-        user: Object.freeze({ id: prepared.userHandle, name: prepared.user.emailMask, displayName: 'Admission Hub শিক্ষার্থী' }),
+        rp: Object.freeze({ id: this.#passkeyRpId(identity.context), name: 'Admission Sky' }),
+        user: Object.freeze({ id: prepared.userHandle, name: prepared.user.emailMask, displayName: 'Admission Sky শিক্ষার্থী' }),
         pubKeyCredParams: Object.freeze([{ type: 'public-key', alg: PASSKEY_ALGORITHM }]),
         timeout: 120_000,
         attestation: 'none',

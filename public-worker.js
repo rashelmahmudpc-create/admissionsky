@@ -1,4 +1,4 @@
-// Admission Hub, Public Product Worker (account system retired, v221)
+// Admission Sky, Public Product Worker (account system retired, v221)
 // Active routes: public content · Firebase-account/ephemeral-guest AI · content admin.
 // The former login/profile/onboarding/session/state APIs are intentionally absent.
 import { agentChat, agentStatus, agentRecall, agentInstructions, sanitizeAiPrefs, AI_PREFS_DEFAULT, clearAiEverything, providerReadiness, readyProviderNames } from './ai-agent.js';

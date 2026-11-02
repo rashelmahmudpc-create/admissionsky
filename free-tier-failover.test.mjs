@@ -87,7 +87,7 @@ function harness({ brevoCredits = 3 } = {}) {
   };
 
   const brevo = new BrevoOtpVerificationProvider({
-    id: 'otp-a', apiKey: BREVO_KEY, fromAddress: 'sender@example.com', fromName: 'Admission Hub',
+    id: 'otp-a', apiKey: BREVO_KEY, fromAddress: 'sender@example.com', fromName: 'Admission Sky',
     declaredDailyQuota: BREVO_LIMIT, fetchImpl, now
   });
   const appsScript = new AppsScriptOtpVerificationProvider({

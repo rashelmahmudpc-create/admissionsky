@@ -1,4 +1,4 @@
-/* Admission Hub, per-user AI state in a Durable Object.
+/* Admission Sky, per-user AI state in a Durable Object.
  *
  * Why this exists: the AI chat path wrote to Workers KV three times per message
  * (a rate counter, a memory blob, and the abuse guard's per-network counter).

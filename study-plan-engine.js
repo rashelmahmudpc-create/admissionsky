@@ -1,4 +1,4 @@
-/* Admission Hub, P17 student-facing action agent: "prepare me".
+/* Admission Sky, P17 student-facing action agent: "prepare me".
  *
  * The student presses one button ("আমাকে প্রস্তুত করো") and this engine turns
  * what the app already knows, exam history, per-topic ability, mistakes, into

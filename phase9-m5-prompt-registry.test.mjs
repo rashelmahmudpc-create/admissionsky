@@ -39,7 +39,7 @@ t('M5-৫. the previous version constant is kept as a legacy alias',
 
 /* ── ৩. Zero behaviour change: the prompt is byte-identical ── */
 t('M5-৬. buildSystemPrompt reads its core text from the registry, not an inline literal',
-  SRC.includes('getPromptText(BASE_PROMPT_ID)') && !SRC.includes('let p = `You are Admission Hub AI.'));
+  SRC.includes('getPromptText(BASE_PROMPT_ID)') && !SRC.includes('let p = `You are Admission Sky AI.'));
 t('M5-৭. the composed base prompt equals the registry text exactly',
   buildSystemPrompt({}) === getPromptText(BASE_PROMPT_ID) && buildSystemPrompt({}).length === 6945);
 t('M5-৮. the base prompt hash is stable (locks the exact wording against drift)', (() => {

@@ -1,6 +1,6 @@
 # Free email OTP via Google Apps Script
 
-`apps-script/Code.gs` is a Google Apps Script web app that mails Admission Hub
+`apps-script/Code.gs` is a Google Apps Script web app that mails Admission Sky
 verification codes. It is the free tier of the generic backup channel: consumer
 Gmail allows **100 recipients/day** and Google Workspace allows **1,500**. No
 payment method is required and nothing is billed.

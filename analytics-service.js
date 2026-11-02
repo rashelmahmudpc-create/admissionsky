@@ -1,4 +1,4 @@
-/* Admission Hub, Analytics Foundation (Phase 1).
+/* Admission Sky, Analytics Foundation (Phase 1).
  *
  * The single choke point between the app and Firebase Analytics (GA4). UI and
  * feature code never touch the Firebase SDK directly; they call this service,

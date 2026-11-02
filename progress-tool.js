@@ -1,4 +1,4 @@
-/* Admission Hub, Progress 2.0
+/* Admission Sky, Progress 2.0
  * One central, data-first progress model. No XP, badges, or duplicate routine system.
  */
 (() => {

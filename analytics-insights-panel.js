@@ -1,4 +1,4 @@
-/* Admission Hub, P09 Advanced Analytics: insight panel.
+/* Admission Sky, P09 Advanced Analytics: insight panel.
  *
  * The visible half of P09. It feeds the student's own history, exam results,
  * questions and mistakes, to window.AhAnalyticsInsights (see

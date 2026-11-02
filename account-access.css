@@ -1,4 +1,4 @@
-/* Admission Hub Firebase-canonical Google, Passkey, Email/Password and generic backup access UI. */
+/* Admission Sky Firebase-canonical Google, Passkey, Email/Password and generic backup access UI. */
 .ah-account-launcher{position:fixed;top:max(12px,env(safe-area-inset-top));right:14px;z-index:1180;display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:8px 12px;border:1px solid rgba(31,100,82,.22);border-radius:999px;background:rgba(255,255,255,.93);color:var(--ah-ink-mid);box-shadow:0 8px 28px rgba(20,58,49,.14);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);font:700 13px/1.2 system-ui,-apple-system,"Noto Sans Bengali",sans-serif;cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
 .ah-account-launcher:hover{transform:translateY(-1px);box-shadow:0 10px 34px rgba(20,58,49,.2);border-color:rgba(31,100,82,.4)}
 .ah-account-launcher:focus-visible,.ah-account-shell button:focus-visible,.ah-account-shell input:focus-visible{outline:3px solid rgba(38,145,113,.32);outline-offset:2px}

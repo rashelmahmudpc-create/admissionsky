@@ -291,7 +291,7 @@ const shared = `
 `;
 
 const seed = `
-/* ===== ADMISSION HUB, PROFILE DATA SEED (runs before the UI) ===== */
+/* ===== ADMISSION SKY, PROFILE DATA SEED (runs before the UI) ===== */
 (function () {
   'use strict';
 ${shared}
@@ -318,7 +318,7 @@ ${shared}
 `;
 
 const wiring = `
-/* ===== ADMISSION HUB, PROFILE BACKEND WIRING =====
+/* ===== ADMISSION SKY, PROFILE BACKEND WIRING =====
    Routes every action this UI raises back to the existing backend, and
    refreshes from the server. The UI above is the owner's design, verbatim. */
 (function () {
@@ -632,7 +632,7 @@ const page = `<!DOCTYPE html>
      so it must not be offered to a crawler as a page of its own. -->
 <meta name="robots" content="noindex,nofollow,noarchive">
 <meta name="referrer" content="no-referrer">
-<title>প্রোফাইল, Admission Hub</title>
+<title>প্রোফাইল, Admission Sky</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap">

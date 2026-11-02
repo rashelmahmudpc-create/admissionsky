@@ -1,4 +1,4 @@
-/* Admission Hub, Phase 4 analytics dashboard (client).
+/* Admission Sky, Phase 4 analytics dashboard (client).
  *
  * Mobile-first surface for the Phase 4 engine in `analytics-engine.mjs`. It
  * shows the student their own learning picture and, for an admin, the platform
