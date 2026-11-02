@@ -23,7 +23,16 @@ on:
   push:
     branches: [main]
     paths:
-      - 'index.html'
+      # Every top-level page, not just the homepage. This filter listed
+      # `index.html` alone, so the four small pages (about, contact, privacy,
+      # data-deletion) could be edited — and merged, with every check green —
+      # without anything publishing. The meta fix pushed 2026-11-03 did exactly
+      # that: it shipped to the repository and never reached the site.
+      #
+      # A glob rather than four more names, because the next page added would
+      # otherwise need remembering here too, and that is how this list went
+      # wrong three times in one day (course documents, sitemap, these pages).
+      - '*.html'
       - 'sw.js'
       - 'account-access.*'
       # The crawler files ship to Pages like any other asset, but neither was
