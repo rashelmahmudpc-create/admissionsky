@@ -12,7 +12,6 @@ import { safeParseEmailGatewayConfig } from '../../email-gateway/core/config.mjs
 import { DurableObjectEmailStore } from '../../email-gateway/storage/durable-object-store.mjs';
 import { SqliteVerificationRepository } from '../verification/sqlite-verification-repository.mjs';
 import { D1ProfileStore } from '../storage/d1-profile-repository.mjs';
-import { migrateStudentDirectory } from '../storage/student-directory-schema.mjs';
 import { listStudents, studentProfile } from '../storage/student-admin-view.mjs';
 import { wipeAll, wipeConfirmPhrase, wipeCounts } from '../storage/student-wipe.mjs';
 import { normalizeAuthEmail } from '../core/crypto.mjs';
@@ -55,13 +54,21 @@ export class AdmissionAuthAuthority {
       this.repository.migrate();
       this.verificationRepository = new SqliteVerificationRepository(state.storage);
       this.verificationRepository.migrate();
-      // Fresh Start phase 2: additive, versioned student-directory schema.
-      // Isolated so a problem here can never take sign-in down.
-      try {
-        this.studentDirectorySchema = migrateStudentDirectory(state.storage);
-      } catch (error) {
-        this.studentDirectorySchema = { version: 0, applied: [], error: String(error?.message || error).slice(0, 200) };
-      }
+      /* AUTH V2.6 (owner 2026-11-02): the student-directory schema ran here on
+       * every Durable Object boot and produced eight tables no production code
+       * ever wrote to or read. Its result was assigned and never read — not by
+       * a route, not by a response, not by anything.
+       *
+       * Removed rather than kept-and-ignored, because the cost was real (eight
+       * CREATE TABLE statements on every cold start) and because the schema
+       * lied: a reader seeing `sessions` would reasonably conclude that is
+       * where sessions live, when they live in `auth_sessions`.
+       *
+       * The migration list is left in place with a v2 that drops the tables, so
+       * a database that already has them is cleaned up rather than left with
+       * orphans. Nothing is deleted from any database that holds data — the
+       * tables were never written to.
+       */
       this.engine = new CloudflareNativeAuthEngine({
         repository: this.repository,
         hmacSecret: env.AUTH_HMAC_SECRET,

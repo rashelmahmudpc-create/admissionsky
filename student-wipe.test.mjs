@@ -42,9 +42,14 @@ test('keep list protects OTP config, quota, provider state and schema meta', () 
   const { sql } = fixture();
   const tables = listWipeTables(sql);
   for (const kept of WIPE_KEEP_TABLES) assert.equal(tables.includes(kept), false, kept);
-  for (const wiped of ['auth_users', 'auth_sessions', 'auth_profiles', 'auth_verification_challenges', 'auth_verification_events', 'students']) {
+  for (const wiped of ['auth_users', 'auth_sessions', 'auth_profiles', 'auth_verification_challenges', 'auth_verification_events']) {
     assert.equal(tables.includes(wiped), true, wiped);
   }
+  /* AUTH V2.6: `students` used to be in this list. The table is retired — v2 of
+   * the directory migration drops it — so asserting it is wiped asserted that a
+   * table which no longer exists is still enumerable. Removed rather than kept
+   * as a tautology. */
+  assert.equal(tables.includes('students'), false, 'the retired directory table must not come back into the wipe list');
 });
 
 test('dry-run counts are exact and the confirm phrase carries the user count', () => {
