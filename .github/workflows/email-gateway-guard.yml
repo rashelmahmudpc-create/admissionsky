@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
     paths:
+      # The notifier suite lives outside the email-gateway prefix, so the
+      # partial glob below could not start the workflow that runs it.
+      - 'telegram-notifier.test.mjs'
       - 'email-gateway/**'
       - 'email-gateway*.test.mjs'
       - 'auth/**'
@@ -19,6 +22,9 @@ on:
       - 'docs/EMAIL-GATEWAY-*'
   pull_request:
     paths:
+      # The notifier suite lives outside the email-gateway prefix, so the
+      # partial glob below could not start the workflow that runs it.
+      - 'telegram-notifier.test.mjs'
       - 'email-gateway/**'
       - 'email-gateway*.test.mjs'
       - 'auth/**'

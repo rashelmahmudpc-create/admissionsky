@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
     paths:
+      # Any suite file triggers this guard. The partial globs below were
+      # written as the suite grew and each new file had to be remembered;
+      # the ones nobody remembered could not start the workflow that runs
+      # them, so editing such a file ran nothing at all.
+      - '*.test.mjs'
       - 'package.json'
       - 'package-lock.json'
       - 'honesty-guard.test.mjs'
@@ -37,6 +42,11 @@ on:
       - '.github/workflows/shell-guard.yml'
   pull_request:
     paths:
+      # Any suite file triggers this guard. The partial globs below were
+      # written as the suite grew and each new file had to be remembered;
+      # the ones nobody remembered could not start the workflow that runs
+      # them, so editing such a file ran nothing at all.
+      - '*.test.mjs'
       - 'package.json'
       - 'package-lock.json'
       - 'honesty-guard.test.mjs'
