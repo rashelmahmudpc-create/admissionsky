@@ -86,10 +86,7 @@ test('rule 5: no tracked file carries a git conflict marker', () => {
   // ship. The map below is the one marker that is already known and owned by a
   // pending fix; the second assertion deletes an entry the moment its file is
   // clean, so the exception cannot rot into a permanent blind spot.
-  const PENDING_FIX = {
-    '.github/workflows/telegram-auth-canary-activate.yml':
-      '#284 left markers here; removing them needs the workflow scope, which no agent token has',
-  };
+  const PENDING_FIX = {};
   const MARKER = /^(?:<{7}|>{7})(?: |$)/m;
   const SCANNED = /\.(js|mjs|cjs|json|md|yml|yaml|html|css|txt|toml|py|sh|ts)$/;
   const marked = tracked()
