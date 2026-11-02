@@ -127,6 +127,37 @@ export const STUDENT_DIRECTORY_MIGRATIONS = Object.freeze([
       )`,
       'CREATE INDEX IF NOT EXISTS idx_activity_log_student ON activity_log (student_id, created_at)'
     ])
+  }),
+  /* AUTH V2.6 (owner 2026-11-02): retire the eight tables v1 created.
+   *
+   * The blueprint's finding ১৩: they are created on every Durable Object boot
+   * and no production code writes or reads one of them. That is a real cost
+   * paid on every cold start, and worse, it makes the schema lie — a reader
+   * sees `sessions` and concludes that is where sessions live, when they live
+   * in `auth_sessions` under a different repository.
+   *
+   * A NEW migration rather than an edit to v1, because v1 has already been
+   * applied in production and the rule at the top of this file is that an
+   * applied migration is never edited. Dropping here is also what makes this
+   * reversible in the right direction: the tables come back by reverting this
+   * commit, and any database that already ran v1 loses nothing it was using.
+   *
+   * `schema_migrations` is deliberately NOT dropped — it is the table this
+   * migration mechanism reads to decide what to apply, so dropping it would
+   * make every future boot re-run v1 and recreate everything. */
+  Object.freeze({
+    version: 2,
+    name: 'retire_unused_student_directory',
+    statements: Object.freeze([
+      'DROP TABLE IF EXISTS activity_log',
+      'DROP TABLE IF EXISTS profiles',
+      'DROP TABLE IF EXISTS sessions',
+      'DROP TABLE IF EXISTS devices',
+      'DROP TABLE IF EXISTS otp_attempts',
+      'DROP TABLE IF EXISTS email_verifications',
+      'DROP TABLE IF EXISTS login_methods',
+      'DROP TABLE IF EXISTS students'
+    ])
   })
 ]);
 

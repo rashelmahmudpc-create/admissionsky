@@ -1,4 +1,18 @@
-// Fresh Start phase 2: versioned student-directory schema.
+/* AUTH V2.6 (owner 2026-11-02): the student-directory schema is retired.
+ *
+ * Fresh Start phase 2 created eight tables on every Durable Object boot, and no
+ * production code ever wrote to or read one of them. This file used to test
+ * those tables — their constraints, their cascades, their validation. All of
+ * that was correct, and all of it was testing code that did nothing.
+ *
+ * What is left is the part that still matters: the migration MECHANISM (order,
+ * idempotence, atomicity, refusal of a malformed list) and the retirement
+ * itself (v2 drops the eight tables, `schema_migrations` survives, nothing
+ * recreates them on the next boot).
+ *
+ * The table tests were deleted rather than adapted, because a test of a dropped
+ * table has nothing left to assert. Keeping them would have meant keeping the
+ * tables. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import Database from 'better-sqlite3';
@@ -13,7 +27,8 @@ import { SqliteAuthRepository } from './auth-native/storage/sqlite-auth-reposito
 import { SqliteVerificationRepository } from './auth-native/verification/sqlite-verification-repository.mjs';
 
 const NOW = 1_800_000_000_000;
-const TABLES = ['students', 'login_methods', 'email_verifications', 'otp_attempts', 'sessions', 'devices', 'profiles', 'activity_log'];
+// The eight tables v1 created and v2 drops.
+const RETIRED_TABLES = ['students', 'login_methods', 'email_verifications', 'otp_attempts', 'sessions', 'devices', 'profiles', 'activity_log'];
 
 // Same shape as the Durable Object storage: sql.exec + transactionSync, with
 // foreign keys ON (Durable Object SQLite always enforces them).
@@ -38,29 +53,61 @@ function addStudent(database, id, email, extra = {}) {
     .run(id, email, normalizeEmail(email), extra.status || 'pending', NOW, NOW);
 }
 
-test('fresh database gets every directory table and the latest version', () => {
+test('V2.6: a fresh database ends with no directory tables at all', () => {
+  /* The retirement, asserted from a clean database: v1 creates the eight tables
+   * and v2 drops them, so the net result of a full migration is nothing. This
+   * is the assertion that would have caught the cost — a fresh Durable Object
+   * used to pay eight CREATE TABLE statements on every cold start for tables it
+   * would never use. */
   const { database, storage } = storageFixture();
   assert.equal(currentStudentDirectoryVersion(storage), 0);
   const result = migrateStudentDirectory(storage, { now: NOW });
   assert.equal(result.version, STUDENT_DIRECTORY_LATEST_VERSION);
-  assert.deepEqual(result.applied, STUDENT_DIRECTORY_MIGRATIONS.map(m => m.version));
+  assert.deepEqual(result.applied, STUDENT_DIRECTORY_MIGRATIONS.map(m => m.version), 'both migrations ran');
+
   const names = tableNames(database);
-  for (const table of [...TABLES, 'schema_migrations']) assert.ok(names.includes(table), `missing table ${table}`);
-  const row = database.prepare('SELECT version, name, applied_at FROM schema_migrations WHERE version = 1').get();
-  assert.deepEqual(row, { version: 1, name: 'student_directory_v1', applied_at: NOW });
+  for (const table of RETIRED_TABLES) {
+    assert.equal(names.includes(table), false, `${table} must not exist after the full migration`);
+  }
+  // `schema_migrations` survives: it is what the mechanism reads to decide what
+  // to apply, so dropping it would make every future boot re-run v1.
+  assert.ok(names.includes('schema_migrations'), 'schema_migrations must survive');
+  const row = database.prepare('SELECT version, name, applied_at FROM schema_migrations WHERE version = 2').get();
+  assert.deepEqual(row, { version: 2, name: 'retire_unused_student_directory', applied_at: NOW });
 });
 
-test('migration is idempotent: a second run applies nothing and keeps data', () => {
+test('V2.6: a database that already has the tables is cleaned, not left with orphans', () => {
+  /* The upgrade path, which is the one production is actually on: a Durable
+   * Object that ran v1 before this change already holds the eight tables. v2
+   * must drop them there too, and the migration must be recorded so it does not
+   * run again. */
+  const { database, storage } = storageFixture();
+  // Apply v1 only, the way an existing deployment sits today.
+  const v1Only = STUDENT_DIRECTORY_MIGRATIONS.filter(m => m.version === 1);
+  migrateStudentDirectory(storage, { now: NOW, migrations: v1Only });
+  for (const table of RETIRED_TABLES) {
+    assert.ok(tableNames(database).includes(table), `precondition: v1 created ${table}`);
+  }
+  // Now the real list runs, as it will on the next boot.
+  const upgraded = migrateStudentDirectory(storage, { now: NOW + 1 });
+  assert.deepEqual(upgraded.applied, [2], 'only the retirement was pending');
+  for (const table of RETIRED_TABLES) {
+    assert.equal(tableNames(database).includes(table), false, `${table} must be dropped on upgrade`);
+  }
+});
+
+test('V2.6: a second run applies nothing — the retirement is idempotent', () => {
   const { database, storage } = storageFixture();
   migrateStudentDirectory(storage, { now: NOW });
-  addStudent(database, 's1', 'one@example.com');
   const again = migrateStudentDirectory(storage, { now: NOW + 1 });
-  assert.deepEqual(again.applied, []);
-  assert.equal(database.prepare('SELECT COUNT(*) AS n FROM students').get().n, 1);
+  assert.deepEqual(again.applied, [], 'nothing left to apply');
   assert.equal(database.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n, STUDENT_DIRECTORY_MIGRATIONS.length);
+  for (const table of RETIRED_TABLES) {
+    assert.equal(tableNames(database).includes(table), false, `${table} must stay dropped`);
+  }
 });
 
-test('existing auth tables with old data keep working next to the new schema', () => {
+test('existing auth tables with old data keep working next to the migration', () => {
   const { database, storage } = storageFixture();
   const auth = new SqliteAuthRepository(storage);
   auth.migrate();
@@ -72,11 +119,10 @@ test('existing auth tables with old data keep working next to the new schema', (
   const after = tableNames(database).filter(name => name.startsWith('auth_')).sort();
   assert.deepEqual(after, before, 'no auth_* table may be added, dropped or renamed');
   assert.equal(database.prepare('SELECT value FROM auth_meta WHERE key = ?').get('legacy-marker').value, 'kept');
-  // The legacy migrations still run cleanly afterwards (every Durable Object start).
+  // The auth migrations still run cleanly afterwards (every Durable Object start).
   auth.migrate();
   verification.migrate();
   migrateStudentDirectory(storage, { now: NOW + 5 });
-  for (const table of TABLES) assert.equal(database.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get().n, 0, `${table} must start empty (no data migrated)`);
 });
 
 test('normalizeEmail trims and lowercases but keeps plus aliases and dots', () => {
@@ -86,71 +132,26 @@ test('normalizeEmail trims and lowercases but keeps plus aliases and dots', () =
   for (const bad of ['', 'no-at', '@example.com', 'a@', 'a@@b.com', 'a b@c.com', null, undefined]) assert.equal(normalizeEmail(bad), '', String(bad));
 });
 
-test('email is unique after normalization; unnormalized values are rejected', () => {
-  const { database, storage } = storageFixture();
-  migrateStudentDirectory(storage, { now: NOW });
-  addStudent(database, 's1', 'Student@Example.com');
-  assert.throws(() => addStudent(database, 's2', '  student@EXAMPLE.com'), /UNIQUE/);
-  assert.throws(() => database.prepare('INSERT INTO students (id, email, email_normalized, created_at, updated_at) VALUES (?, ?, ?, ?, ?)')
-    .run('s3', 'X@Example.com', 'X@Example.com', NOW, NOW), /CHECK/);
-  assert.throws(() => database.prepare('INSERT INTO students (id, email, email_normalized, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
-    .run('s4', 'y@example.com', 'y@example.com', 'weird', NOW, NOW), /CHECK/);
-});
+test('V2.6: the retirement drops every table v1 created, and nothing else', () => {
+  /* A drop list is the one place a mistake is unrecoverable, so it is asserted
+   * as an exact set rather than sampled: a table added to v1 later and missed
+   * here would survive forever, and a table that is NOT in v1 must never appear
+   * — dropping `auth_sessions` would destroy live student sessions. */
+  const v2 = STUDENT_DIRECTORY_MIGRATIONS.find(m => m.version === 2);
+  assert.ok(v2, 'the retirement migration exists');
+  const dropped = v2.statements
+    .map(st => String(st).match(/^DROP TABLE IF EXISTS (\w+)$/)?.[1])
+    .filter(Boolean)
+    .sort();
+  assert.deepEqual(dropped, [...RETIRED_TABLES].sort(), 'exactly the eight tables v1 created');
 
-test('login methods are limited to the five supported kinds and one identity maps to one student', () => {
-  const { database, storage } = storageFixture();
-  migrateStudentDirectory(storage, { now: NOW });
-  addStudent(database, 's1', 'a@example.com');
-  addStudent(database, 's2', 'b@example.com');
-  const insert = database.prepare('INSERT INTO login_methods (student_id, method, provider_subject, created_at) VALUES (?, ?, ?, ?)');
-  for (const method of ['password', 'google', 'facebook', 'telegram', 'passkey']) insert.run('s1', method, method === 'password' ? '' : `${method}-sub-1`, NOW);
-  assert.throws(() => insert.run('s1', 'github', 'x', NOW), /CHECK/);
-  assert.throws(() => insert.run('s2', 'google', 'google-sub-1', NOW), /UNIQUE/);
-  insert.run('s2', 'password', '', NOW);
-  assert.throws(() => insert.run('s2', 'password', '', NOW), /UNIQUE/);
-  assert.throws(() => insert.run('missing', 'password', '', NOW), /FOREIGN KEY/);
-});
-
-test('deleting a student cascades to every child table', () => {
-  const { database, storage } = storageFixture();
-  migrateStudentDirectory(storage, { now: NOW });
-  addStudent(database, 's1', 'a@example.com');
-  addStudent(database, 's2', 'b@example.com');
-  for (const id of ['s1', 's2']) {
-    database.prepare('INSERT INTO login_methods (student_id, method, created_at) VALUES (?, ?, ?)').run(id, 'password', NOW);
-    const ev = database.prepare('INSERT INTO email_verifications (student_id, email_normalized, channel, provider_id, created_at) VALUES (?, ?, ?, ?, ?)').run(id, `${id}@x.com`, 'otp', 'otp-a', NOW);
-    database.prepare('INSERT INTO otp_attempts (student_id, email_verification_id, provider_id, outcome, latency_ms, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(id, ev.lastInsertRowid, 'otp-a', 'sent', 420, NOW);
-    database.prepare('INSERT INTO devices (id, student_id, device_hash, first_seen_at, last_seen_at) VALUES (?, ?, ?, ?, ?)').run(`d-${id}`, id, `h-${id}`, NOW, NOW);
-    database.prepare('INSERT INTO sessions (id, student_id, device_id, login_method, created_at, last_seen_at) VALUES (?, ?, ?, ?, ?, ?)').run(`x-${id}`, id, `d-${id}`, 'password', NOW, NOW);
-    database.prepare('INSERT INTO profiles (student_id, full_name, updated_at) VALUES (?, ?, ?)').run(id, 'Name', NOW);
-    database.prepare('INSERT INTO activity_log (student_id, kind, detail_json, created_at) VALUES (?, ?, ?, ?)').run(id, 'signup', '{"via":"password"}', NOW);
-  }
-  database.prepare('DELETE FROM students WHERE id = ?').run('s1');
-  for (const table of TABLES.filter(t => t !== 'students')) {
-    assert.equal(database.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE student_id = 's1'`).get().n, 0, `${table} kept s1 rows`);
-    assert.equal(database.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE student_id = 's2'`).get().n, 1, `${table} lost s2 rows`);
-  }
-});
-
-test('otp history and activity log validate their values', () => {
-  const { database, storage } = storageFixture();
-  migrateStudentDirectory(storage, { now: NOW });
-  addStudent(database, 's1', 'a@example.com');
-  const otp = database.prepare('INSERT INTO otp_attempts (student_id, provider_id, outcome, latency_ms, created_at) VALUES (?, ?, ?, ?, ?)');
-  for (const outcome of ['sent', 'failed', 'timeout', 'verified', 'wrong_code', 'expired', 'skipped']) otp.run('s1', 'otp-a', outcome, 10, NOW);
-  assert.throws(() => otp.run('s1', 'otp-a', 'delivered', 10, NOW), /CHECK/);
-  assert.throws(() => otp.run('s1', 'otp-a', 'sent', -1, NOW), /CHECK/);
-  assert.throws(() => database.prepare('INSERT INTO activity_log (student_id, kind, detail_json, created_at) VALUES (?, ?, ?, ?)').run('s1', 'x', '{bad json', NOW), /CHECK/);
-  assert.throws(() => database.prepare('INSERT INTO email_verifications (student_id, email_normalized, channel, created_at) VALUES (?, ?, ?, ?)').run('s1', 'a@example.com', 'sms', NOW), /CHECK/);
-});
-
-test('no column can hold a password, OTP code or session token', () => {
-  const { database, storage } = storageFixture();
-  migrateStudentDirectory(storage, { now: NOW });
-  for (const table of TABLES) {
-    const columns = database.prepare(`PRAGMA table_info(${table})`).all().map(c => c.name);
-    for (const column of columns) assert.doesNotMatch(column, /password|secret|token|code_hash|^code$|otp_code/i, `${table}.${column}`);
-  }
+  const v1 = STUDENT_DIRECTORY_MIGRATIONS.find(m => m.version === 1);
+  const created = v1.statements
+    .map(st => String(st).match(/CREATE TABLE IF NOT EXISTS (\w+)/)?.[1])
+    .filter(Boolean)
+    .sort();
+  assert.deepEqual(dropped, created,
+    'every table v1 creates must be dropped by v2 — a new v1 table would otherwise survive forever');
 });
 
 test('a failed migration rolls back completely and can be retried', () => {

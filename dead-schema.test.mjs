@@ -74,16 +74,30 @@ test('V2.4-১৩: no production file writes or reads any of them', () => {
     'a student-directory table is now used in production — either keep it deliberately (and update this test) or remove the write');
 });
 
-test('V2.4-১৩: the migration still runs on every boot, which is the cost', () => {
-  /* The other half of the finding: it is not merely dead, it is dead and
-   * executed. Asserted because "unused code" and "unused code that runs on every
-   * cold start" call for different urgency. */
+test('V2.6: the migration no longer runs on boot, which was the cost', () => {
+  /* This test used to assert the opposite — that the migration DID run on every
+   * cold start — and it was right to: "unused code" and "unused code that runs
+   * on every boot" call for different urgency, and the second is the one worth
+   * fixing. V2.6 fixed it, so the assertion flips rather than disappearing.
+   *
+   * Kept as an assertion at all because the failure it guards is silent in the
+   * other direction too: someone re-adding the call would pay the cost again
+   * with nothing to notice it. */
   const doSource = readFileSync(new URL('./auth-native/worker/auth-authority-do.mjs', import.meta.url), 'utf8');
-  assert.match(doSource, /migrateStudentDirectory\(state\.storage\)/, 'the migration runs on boot');
-  // And it is isolated, so a failure there cannot take sign-in down — which is
-  // the one thing the dead schema does get right.
-  assert.match(doSource, /this\.studentDirectorySchema = \{ version: 0, applied: \[\], error:/,
-    'a failure must be recorded, not thrown into the boot path');
+  assert.doesNotMatch(doSource, /migrateStudentDirectory\(state\.storage\)/,
+    'the dead schema must not run on boot again');
+  // The tables it created are dropped by a v2 migration, so a database that
+  // already has them is cleaned rather than left holding orphans.
+  const schema = readFileSync(new URL('./auth-native/storage/student-directory-schema.mjs', import.meta.url), 'utf8');
+  assert.match(schema, /version: 2,[\s\S]*?DROP TABLE IF EXISTS students/,
+    'v2 drops the tables v1 created');
+  for (const table of ['students', 'login_methods', 'email_verifications', 'otp_attempts', 'devices', 'sessions', 'profiles', 'activity_log']) {
+    assert.match(schema, new RegExp(`DROP TABLE IF EXISTS ${table}\\b`), `v2 drops ${table}`);
+  }
+  // `schema_migrations` must survive: it is what the mechanism reads to decide
+  // what to apply, so dropping it would make every boot re-run v1.
+  assert.doesNotMatch(schema, /DROP TABLE IF EXISTS schema_migrations/,
+    'dropping schema_migrations would make every boot recreate everything');
 });
 
 test('V2.4-১৩: the live session table is a different name, which is why this misleads', () => {
