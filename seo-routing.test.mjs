@@ -319,6 +319,23 @@ test('every sitemap lastmod is the date its file actually changed', () => {
   const entries = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>\s*<lastmod>([^<]+)<\/lastmod>/g)];
   assert.ok(entries.length >= 9, `expected the sitemap to list the site's pages, saw ${entries.length}`);
 
+  /* The check needs history, and three of the five workflows that run this file
+   * check out with `fetch-depth: 1`. In a shallow clone `git log` still answers
+   * — it just answers about the oldest commit it happens to have, which is a
+   * DIFFERENT date, so the comparison fails and blames a sitemap that is
+   * correct. (It did, on the first CI run: five files "changed 2026-11-03" in a
+   * clone whose only commit was from 2026-11-01.)
+   *
+   * So the check detects its own precondition and says so, rather than reporting
+   * a defect it cannot actually see. A guard that fails on a shallow clone is
+   * worse than no guard: it trains the reader to ignore it. */
+  const cwd = new URL('./', import.meta.url).pathname;
+  const shallow = execFileSync('git', ['rev-parse', '--is-shallow-repository'], { cwd, encoding: 'utf8' }).trim();
+  if (shallow === 'true') {
+    assert.ok(entries.length >= 9, 'a shallow clone can still check that the sitemap lists the pages');
+    return;
+  }
+
   const wrong = [];
   for (const [, loc, lastmod] of entries) {
     const urlPath = loc.replace('https://admissionsky.pages.dev', '');
@@ -326,9 +343,7 @@ test('every sitemap lastmod is the date its file actually changed', () => {
     const disk = urlPath === '/' ? 'index.html'
       : urlPath.endsWith('/') ? `${urlPath.slice(1)}index.html`
       : urlPath.slice(1);
-    const real = execFileSync('git', ['log', '-1', '--format=%cs', '--', disk], {
-      cwd: new URL('./', import.meta.url).pathname, encoding: 'utf8',
-    }).trim();
+    const real = execFileSync('git', ['log', '-1', '--format=%cs', '--', disk], { cwd, encoding: 'utf8' }).trim();
     if (real && real !== lastmod) wrong.push(`${disk}: says ${lastmod}, changed ${real}`);
   }
   assert.deepEqual(wrong, [],
