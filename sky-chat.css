@@ -1,0 +1,302 @@
+#app.sky{--bg:#F6F9FF;--surf:#fff;--ink:#0F1B3D;--mute:#6B7799;--line:#E4EAF7;--field:#fff;--field-line:#E4EAF7;--chart-grid:#DCE6FB;--pri:#3D6BFF;--pri2:#5AA9FF;--soft:#EDF2FF;--sun:#FFB63D;--ok:#12A36B;--bad:#E5484D;--grad:linear-gradient(135deg,#3D6BFF,#5AA9FF);--sh:0 8px 24px rgba(40,70,160,.08);--sh2:0 14px 34px rgba(61,107,255,.22);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
+#app.sky[data-sky-theme="dark"]{--bg:#0D1326;--surf:#151D3A;--ink:#EEF2FF;--mute:#A6B1D4;--line:#2A3566;--soft:#1C2750;--sh:0 8px 24px rgba(0,0,0,.35);--sh2:0 14px 34px rgba(61,107,255,.3);--field:#0F1730;--field-line:#2A3766;--chart-grid:#24305C}
+#app.sky *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+#app.sky,#app.sky{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:"Hind Siliguri",system-ui,sans-serif;font-size:16px;-webkit-font-smoothing:antialiased}
+#app.sky button,#app.sky input,#app.sky textarea{font:inherit;color:inherit}
+#app.sky{color-scheme:light}#app.sky[data-sky-theme="dark"]{color-scheme:dark}
+#app.sky button{background:none;border:0;cursor:pointer;padding:0}
+#app.sky svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+#app.sky{max-width:520px;height:100%;margin:0 auto;display:flex;flex-direction:column;position:relative;overflow:hidden;background:radial-gradient(90% 38% at 50% -6%,var(--soft),transparent 72%),var(--bg)}
+/* Sky has no bottom nav, so the shell's 82px nav reserve would float the composer
+   far above the true bottom. Drop only that reserve and keep a small breathing
+   margin: the shell's --safe-b must survive, or the composer lands under the
+   home indicator on a notched phone (owner: "এখন একদম বেশি নিচে হয়ে গেছে").
+   Uses the shell's variable, not env(), so the no-save-area guard still holds. */
+#app.sky{padding-bottom:calc(8px + var(--safe-b))}
+#app.sky header{display:flex;align-items:center;gap:8px;padding:calc(8px) 14px 6px;position:relative;z-index:3;background:transparent;color:var(--ink)}
+#app.sky .ib{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:var(--surf);box-shadow:0 0 0 1px var(--line),0 2px 6px rgba(40,70,160,.05);transition:transform .15s}
+#app.sky .ib:active{transform:scale(.88)}
+#app.sky .brand{flex:1;display:flex;align-items:center;gap:6px;min-width:0;padding-left:4px}
+#app.sky .hbw{width:0;opacity:0;transition:width .35s,opacity .35s}
+#app.sky.chatting .hbw{width:42px;opacity:1}
+#app.sky .hbw svg{width:42px;height:42px;cursor:pointer}
+#app.sky .brand b{display:block;font-size:18px;font-weight:700;line-height:1.1}
+#app.sky .brand small{display:flex;align-items:center;gap:5px;color:var(--mute);font-size:12px}
+#app.sky .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px rgba(18,163,107,.16)}
+#app.sky main{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:0 20px 24px;position:relative;z-index:2;display:flex;flex-direction:column;scroll-behavior:smooth}
+#app.sky #msgs{flex:none}
+#app.sky .hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding-bottom:7vh}
+#app.sky .bub{height:46px;display:flex;align-items:flex-end}
+#app.sky .say{position:relative;max-width:300px;padding:9px 18px;border-radius:999px;background:var(--surf);box-shadow:0 0 0 1px var(--line),var(--sh);font-size:14.5px;font-weight:600;text-align:center;line-height:1.4;opacity:0;transform:translateY(6px) scale(.96);transition:opacity .25s,transform .3s cubic-bezier(.3,1.4,.5,1)}
+#app.sky .say:after{content:"";position:absolute;left:50%;bottom:-5px;width:11px;height:11px;margin-left:-5px;background:var(--surf);transform:rotate(45deg);box-shadow:2px 2px 0 0 var(--line)}
+#app.sky .say.on{opacity:1;transform:none}
+#app.sky .say.long{border-radius:18px;max-width:330px}
+#app.sky .recallb{display:block;margin:12px auto 0;border:0;border-radius:999px;padding:8px 16px;font:inherit;font-size:13.5px;font-weight:700;background:var(--surf);box-shadow:0 0 0 1px var(--line),var(--sh);color:inherit;cursor:pointer;animation:drop .5s ease both}
+#app.sky .hbig{width:176px;height:176px;cursor:pointer;animation:drop .8s cubic-bezier(.3,1.5,.5,1) both}
+@keyframes drop{from{opacity:0;transform:translateY(-40px) scale(.8)}}
+#app.sky .av{display:block;overflow:visible}
+#app.sky .av .all{transform-origin:100px 190px;animation:fl 3.6s ease-in-out infinite}
+#app.sky .av .sh{transform-origin:100px 195px;animation:sd 3.6s ease-in-out infinite}
+#app.sky .av .wl{transform-origin:64px 120px;animation:wl 3.6s ease-in-out infinite}
+#app.sky .av .wr{transform-origin:136px 120px;animation:wr 3.6s ease-in-out infinite}
+#app.sky .av .eyes{transform-origin:100px 104px;animation:bl 5s infinite}
+#app.sky .av .pup{transition:transform .2s}
+#app.sky .av .br{transition:transform .25s}
+#app.sky .av .tas{transform-origin:150px 60px;animation:sw 2.6s ease-in-out infinite}
+#app.sky .av .cap{transform-origin:100px 70px}
+#app.sky .av .bulb{transform-origin:100px 20px}
+#app.sky .av .jaw{transform-origin:100px 134px}
+#app.sky .av .pgf{transform-origin:100px 160px}
+#app.sky .av .tk,#app.sky .av .sp,#app.sky .av .zz,#app.sky .av .bulb,#app.sky .av .hd{opacity:0}
+#app.sky .av .hd{transition:opacity .25s}
+#app.sky .av .pr{opacity:0;transform:translateY(12px) scale(.9);transform-origin:100px 170px;transition:opacity .3s,transform .4s cubic-bezier(.3,1.4,.5,1)}
+#app.sky .av[data-p=lap] .p-lap,#app.sky .av[data-p=book] .p-book,#app.sky .av[data-p=note] .p-note,#app.sky .av[data-p=cup] .p-cup,#app.sky .av[data-p=mag] .p-mag,#app.sky .av[data-p=calc] .p-calc,#app.sky .av[data-p=ph] .p-ph{opacity:1;transform:none}
+#app.sky .av[data-p] .hd{opacity:1}
+#app.sky .av[data-p=ph] .hd,#app.sky .av[data-p=zz] .hd,#app.sky .av[data-p=idea] .hd{opacity:0}
+#app.sky .av[data-p=cup] .hl2{opacity:0}
+#app.sky .av[data-p=zz] .zz{opacity:1;animation:zz 2.4s infinite}
+#app.sky .av .steam{animation:st 2s ease-in-out infinite}
+#app.sky .av .nt{animation:nt 1.8s ease-in-out infinite}
+@keyframes st{50%{transform:translateY(-4px);opacity:.4}}
+@keyframes nt{50%{transform:translateY(-10px)}}
+#app.sky .av .sp path,#app.sky .av .tk circle{transform-box:fill-box;transform-origin:center}
+@keyframes fl{50%{transform:translateY(-6px) rotate(-1.2deg)}}
+@keyframes sd{50%{transform:scale(.84);opacity:.08}}
+@keyframes wl{50%{transform:rotate(9deg)}}
+@keyframes wr{50%{transform:rotate(-9deg)}}
+@keyframes bl{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.08)}}
+@keyframes sw{50%{transform:rotate(16deg)}}
+#app.sky .av[data-s=type] .all{animation:ln 3s ease-in-out infinite}
+@keyframes ln{0%,100%{transform:rotate(4deg) translateY(3px)}50%{transform:rotate(2deg) translateY(1px)}}
+#app.sky .av[data-s=type] .br{transform:translateY(-5px)}
+#app.sky .av[data-s=think] .all{animation:tl 1.8s ease-in-out infinite}
+@keyframes tl{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(-6deg)}}
+#app.sky .av[data-s=think] .tk{opacity:1}
+#app.sky .av[data-s=think] .tk circle{animation:dt 1.2s infinite}
+#app.sky .av .tk circle:nth-child(2){animation-delay:.2s!important}
+#app.sky .av .tk circle:nth-child(3){animation-delay:.4s!important}
+@keyframes dt{50%{transform:scale(1.5);opacity:.4}}
+#app.sky .av[data-s=think] .wl{animation:none;transform:rotate(-10deg)}
+#app.sky .av[data-s=wave] .wr{animation:wv .4s infinite alternate}
+@keyframes wv{from{transform:rotate(-105deg)}to{transform:rotate(-70deg)}}
+#app.sky .av[data-s=happy] .all{animation:jp .8s cubic-bezier(.3,1.6,.5,1)}#app.sky .av[data-s=nod] .all{animation:sknod .5s ease-in-out 2}#app.sky .av[data-s=nod] .br{transform:translateY(-4px)}#app.sky .av[data-s=oops] .all{animation:skshake .6s ease-in-out}#app.sky .av[data-s=oops] .br{transform:translateY(3px)}#app.sky .av[data-s=cheer] .all{animation:skcheer .9s cubic-bezier(.3,1.6,.5,1) 2}#app.sky .av[data-s=cheer] .sp{opacity:1}#app.sky .av[data-s=cheer] .wl{animation:hl .2s infinite alternate}#app.sky .av[data-s=cheer] .wr{animation:hr .2s infinite alternate}#app.sky .av[data-s=listen] .all{transform:rotate(-4deg) translateY(-2px);transition:transform .3s}
+@keyframes sknod{30%{transform:translateY(4px) rotate(2deg)}60%{transform:translateY(-3px)}}@keyframes skshake{20%,60%{transform:translateX(-5px) rotate(-3deg)}40%,80%{transform:translateX(5px) rotate(3deg)}}@keyframes skcheer{30%{transform:translateY(-30px) rotate(-8deg) scale(1.06)}60%{transform:translateY(-14px) rotate(8deg)}}@keyframes jp{40%{transform:translateY(-26px) scale(1.04,.97)}70%{transform:none}}
+#app.sky .av[data-s=happy] .wl{animation:hl .25s infinite alternate}
+#app.sky .av[data-s=happy] .wr{animation:hr .25s infinite alternate}
+@keyframes hl{from{transform:rotate(100deg)}to{transform:rotate(75deg)}}
+@keyframes hr{from{transform:rotate(-100deg)}to{transform:rotate(-75deg)}}
+#app.sky .av[data-s=happy] .sp{opacity:1}
+#app.sky .av[data-s=happy] .sp path{animation:tw .45s infinite alternate}
+@keyframes tw{from{transform:scale(.4)}to{transform:scale(1.3)}}
+#app.sky .av[data-s=happy] .br{transform:translateY(-6px)}
+#app.sky .av[data-s=sad] .wl,#app.sky .av[data-s=sad] .wr{animation:none}
+#app.sky .av[data-s=sad] .wl{transform:rotate(-8deg)}
+#app.sky .av[data-s=sad] .wr{transform:rotate(8deg)}
+#app.sky .av[data-s=sad] .all{animation:sd2 2s ease-in-out infinite}
+@keyframes sd2{50%{transform:translateY(3px) scaleY(.98)}}
+#app.sky .av[data-s=sad] .br{transform:translateY(4px)}
+#app.sky .av[data-s=sleep] .eyes{animation:none;transform:scaleY(.1)}
+#app.sky .av[data-s=sleep] .all{animation:fl 5.5s ease-in-out infinite}
+#app.sky .av[data-s=sleep] .zz{opacity:1;animation:zz 2.4s infinite}
+@keyframes zz{0%{transform:translate(0,8px);opacity:0}50%{opacity:1}100%{transform:translate(8px,-14px);opacity:0}}
+#app.sky .av.xs *{animation:none!important}
+#app.sky .u{display:flex;justify-content:flex-end;margin:20px 0 6px;animation:up .3s both}
+#app.sky .u span{max-width:84%;padding:10px 16px;border-radius:20px 20px 6px 20px;background:var(--grad);color:#fff;line-height:1.5;font-size:15.5px;box-shadow:0 6px 16px rgba(61,107,255,.25)}
+@keyframes up{from{opacity:0;transform:translateY(8px)}}
+#app.sky .ai{margin:12px 0 26px;font-size:16px;line-height:1.7}
+#app.sky .who{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;margin-bottom:8px}
+#app.sky .who svg{width:30px;height:30px}
+#app.sky .blk{opacity:0;transform:translateY(8px);transition:opacity .3s,transform .35s}
+#app.sky .blk.in{opacity:1;transform:none}
+#app.sky .proc{border-radius:16px;background:var(--surf);box-shadow:0 0 0 1px var(--line);margin-bottom:14px;overflow:hidden}
+#app.sky .proc .ph{display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;text-align:left;font-size:14px;font-weight:600}
+#app.sky .proc .pt{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#app.sky .proc.run .pt{background:linear-gradient(90deg,var(--mute) 30%,var(--ink) 50%,var(--mute) 70%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shim 1.4s linear infinite}
+@keyframes shim{to{background-position:-200% 0}}
+#app.sky .spin{width:16px;height:16px;border-radius:50%;border:2.5px solid var(--soft);border-top-color:var(--pri);animation:rot .7s linear infinite;flex:none}
+#app.sky .proc:not(.run) .spin{animation:none;border:0;background:var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/100%}
+@keyframes rot{to{transform:rotate(360deg)}}
+#app.sky .chev{width:18px;height:18px;color:var(--mute);transition:transform .25s}
+#app.sky .proc.open .chev{transform:rotate(180deg)}
+#app.sky .ps{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s}
+#app.sky .proc.open .ps{grid-template-rows:1fr}
+#app.sky .ps>div{overflow:hidden;padding:0 14px}
+#app.sky .proc.open .ps>div{padding-bottom:10px}
+#app.sky .ps p{display:flex;align-items:center;gap:9px;margin:6px 0 0;font-size:13.5px;color:var(--mute);line-height:1.4;animation:up .25s both}
+#app.sky .ps p:before{content:"";width:6px;height:6px;border-radius:50%;background:var(--ok);flex:none}
+#app.sky .hd2{display:flex;align-items:center;gap:12px;margin:2px 0 12px}
+#app.sky .hd2>span{width:46px;height:46px;border-radius:16px;background:var(--grad);color:#fff;display:grid;place-items:center;box-shadow:var(--sh2);flex:none}
+#app.sky .hd2 small{display:block;color:var(--pri);font-weight:700;font-size:12.5px;letter-spacing:.02em}
+#app.sky .hd2 h2{margin:0;font-size:23px;line-height:1.3;font-weight:700}
+#app.sky .sum{padding:14px 16px;border-radius:20px;background:var(--soft);margin:10px 0}
+#app.sky .sum b{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--pri)}
+#app.sky .sum b svg{width:18px;height:18px}
+#app.sky .sum ul{margin:8px 0 0;padding:0;list-style:none}
+#app.sky .sum li{display:flex;gap:10px;margin:7px 0;font-size:15.5px;line-height:1.55}
+#app.sky .sum li:before{content:"";width:8px;height:8px;border-radius:50%;background:var(--grad);margin-top:9px;flex:none}
+#app.sky .sec{display:flex;align-items:center;gap:10px;margin:20px 0 8px;font-size:13px;font-weight:700;color:var(--mute);letter-spacing:.03em}
+#app.sky .sec:after{content:"";flex:1;height:1px;background:var(--line)}
+#app.sky .flow{padding-left:2px}
+#app.sky .st{display:flex;gap:14px;position:relative;padding-bottom:16px}
+#app.sky .st:last-child{padding-bottom:0}
+#app.sky .st i{width:14px;height:14px;border-radius:50%;background:var(--pri);margin-top:7px;flex:none;box-shadow:0 0 0 4px var(--soft);z-index:1}
+#app.sky .st:not(:last-child):before{content:"";position:absolute;left:6px;top:22px;bottom:-4px;width:2px;background:var(--line)}
+#app.sky .st b{display:block;font-size:15.5px}
+#app.sky .st span{color:var(--mute);font-size:14px;line-height:1.5}
+#app.sky .tbl{overflow-x:auto;border-radius:18px;box-shadow:0 0 0 1px var(--line);background:var(--surf);margin:4px 0}
+#app.sky table{border-collapse:collapse;width:100%;min-width:300px;font-size:14.5px}
+#app.sky th{background:var(--soft);text-align:left;padding:10px 14px;font-weight:600;font-size:13px;color:var(--mute)}
+#app.sky td{padding:11px 14px;border-top:1px solid var(--line)}
+#app.sky td:first-child{font-weight:700;color:var(--pri);white-space:nowrap}
+#app.sky .trick{display:flex;gap:12px;padding:14px 16px;border-radius:20px;background:linear-gradient(135deg,rgba(255,182,61,.16),rgba(255,182,61,.06));box-shadow:0 0 0 1px rgba(255,182,61,.4);margin:14px 0;font-size:15px}
+#app.sky .trick svg{color:#E89A0C;margin-top:2px}
+#app.sky .trick b{display:block;margin-bottom:2px}
+#app.sky .qs{display:flex;flex-direction:column;gap:8px}
+#app.sky .qs button{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:var(--surf);box-shadow:0 0 0 1px var(--line);text-align:left;font-size:15px;transition:.15s}
+#app.sky .qs button:active{background:var(--soft);transform:scale(.98)}
+#app.sky .qs svg{width:18px;height:18px;color:var(--pri)}
+#app.sky .qs span{flex:1}
+#app.sky .fu{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+#app.sky .fu button{padding:9px 15px;border-radius:999px;background:var(--surf);box-shadow:0 0 0 1px var(--line);font-size:14px;font-weight:600;color:var(--pri);transition:.15s}
+#app.sky .fu button:active{background:var(--soft);transform:scale(.96)}
+#app.sky .mh{display:flex;align-items:center;gap:12px;margin:2px 0 12px}
+#app.sky .mh .hd2{margin:0;flex:1}
+#app.sky .pg{height:6px;border-radius:9px;background:var(--soft);overflow:hidden;margin:0 0 10px}
+#app.sky .pg i{display:block;height:100%;width:0;background:var(--grad);border-radius:9px;transition:width .4s}
+#app.sky .mcq{background:var(--surf);box-shadow:0 0 0 1px var(--line),var(--sh);border-radius:22px;padding:16px;margin:12px 0}
+#app.sky .mcq .meta{font-size:12px;color:var(--pri);margin-bottom:6px;font-weight:700;letter-spacing:.04em}
+#app.sky .mcq .q{font-weight:700;margin-bottom:6px;font-size:16.5px;line-height:1.5}
+#app.sky .opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:11px 12px;border-radius:14px;box-shadow:0 0 0 1.5px var(--line);margin-top:8px;font-size:15px;transition:.2s}
+#app.sky .opt em{width:28px;height:28px;border-radius:50%;background:var(--soft);display:grid;place-items:center;font-style:normal;font-size:13px;font-weight:700;color:var(--pri);flex:none;transition:.2s}
+#app.sky .opt:active{background:var(--soft);transform:scale(.99)}
+#app.sky .opt.ok{background:rgba(18,163,107,.1);box-shadow:0 0 0 1.5px var(--ok)}
+#app.sky .opt.ok em{background:var(--ok);color:#fff}
+#app.sky .opt.no{background:rgba(229,72,77,.09);box-shadow:0 0 0 1.5px var(--bad);animation:shk .35s}
+#app.sky .opt.no em{background:var(--bad);color:#fff}
+@keyframes shk{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+#app.sky .exp{display:none;margin-top:12px;padding:11px 13px;border-radius:14px;background:var(--soft);font-size:14.5px;color:var(--mute);line-height:1.6}
+#app.sky .exp b{color:var(--ink)}
+#app.sky .mcq.done .exp{display:block;animation:up .3s both}
+#app.sky .mcq.done .opt{pointer-events:none}
+#app.sky .score{padding:16px;border-radius:22px;background:var(--grad);color:#fff;margin:12px 0;box-shadow:var(--sh2);animation:up .4s both}
+#app.sky .score b{font-size:20px}
+#app.sky .score p{margin:4px 0 0;opacity:.9;font-size:14.5px}
+#app.sky .bars{padding:14px 16px;border-radius:20px;background:var(--surf);box-shadow:0 0 0 1px var(--line);margin:4px 0}
+#app.sky .bar{margin:10px 0}
+#app.sky .bar div{display:flex;justify-content:space-between;font-size:14px;font-weight:600;margin-bottom:5px}
+#app.sky .bar i{display:block;height:8px;border-radius:9px;background:var(--soft);overflow:hidden}
+#app.sky .bar i b{display:block;height:100%;border-radius:9px;background:var(--grad);transition:width .8s .2s;width:0}
+#app.sky .bars small{color:var(--mute);font-size:12px}
+#app.sky .acts{display:flex;gap:2px;margin-top:10px}
+#app.sky .faqm{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:12.5px;color:var(--mute)}
+#app.sky .faqm button{padding:7px 12px;border-radius:999px;background:var(--soft);color:var(--pri);font-weight:600;font-size:13px}
+#app.sky .faqm.cut span{color:var(--bad);font-weight:600}
+#app.sky .qrow{display:flex;align-items:center;gap:8px;padding:0 14px 6px;font-size:12px;color:var(--mute)}
+#app.sky .qrow .qbar{flex:1;height:4px;border-radius:99px;background:var(--soft);overflow:hidden;max-width:120px}
+#app.sky .qrow .qbar b{display:block;height:100%;background:var(--pri);border-radius:99px;transition:width .3s}
+#app.sky .qrow.low{color:var(--bad)}
+#app.sky .qrow.low .qbar b{background:var(--bad)}
+#app.sky .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+#app.sky .cta a{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:999px;background:var(--soft);color:var(--pri);font-weight:600;font-size:13.5px;text-decoration:none}
+#app.sky .acts button{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:var(--mute);transition:.15s}
+#app.sky .acts button:active{background:var(--soft);color:var(--pri)}
+#app.sky .acts svg{width:19px;height:19px}
+#app.sky .say2{position:absolute;top:60px;left:60px;z-index:4;max-width:260px;padding:8px 15px;border-radius:14px 14px 14px 4px;background:var(--surf);box-shadow:0 0 0 1px var(--line),var(--sh);font-size:13.5px;font-weight:600;opacity:0;transform:translateY(-4px);transition:.25s;pointer-events:none}
+#app.sky .say2.on{opacity:1;transform:none}
+#app.sky .dock{padding:4px 14px 6px;position:relative;z-index:3;background:linear-gradient(transparent,var(--bg) 45%)}
+#app.sky .comp{display:flex;align-items:flex-end;gap:4px;padding:5px;border-radius:26px;background:var(--field,var(--surf));box-shadow:0 0 0 1px var(--field-line,var(--line)),var(--sh);transition:box-shadow .2s,background .2s}
+#app.sky .comp:focus-within{box-shadow:0 0 0 1.5px var(--pri),0 0 0 6px rgba(61,107,255,.12)}
+#app.sky .comp textarea{flex:1;min-width:0;min-height:0;height:auto;border:0;outline:0;background:transparent!important;color:var(--ink)!important;box-shadow:none!important;resize:none;font-size:15.5px;padding:8px 2px;max-height:132px;line-height:1.45;-webkit-appearance:none;appearance:none;color-scheme:inherit}
+#app.sky .comp textarea::placeholder{color:var(--mute);opacity:.85}
+#app.sky .cb{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:transparent;color:var(--mute);flex:none;transition:background .2s,color .2s,transform .15s,box-shadow .2s}
+#app.sky .cb.send{background:var(--ink);color:var(--bg);box-shadow:0 4px 14px rgba(15,27,61,.28)}#app.sky[data-sky-theme="dark"] .cb.send{background:#EAF0FF;color:#0B1020;box-shadow:0 4px 14px rgba(0,0,0,.4)}#app.sky .cb svg{width:20px;height:20px}
+#app.sky .cb:active{transform:scale(.88)}
+#app.sky .scrim{position:absolute;inset:0;background:rgba(10,16,38,.42);opacity:0;pointer-events:none;transition:opacity .25s;z-index:20}
+#app.sky .scrim.on{opacity:1;pointer-events:auto}
+#app.sky .drawer{position:absolute;top:0;bottom:0;left:0;width:86%;max-width:350px;background:var(--surf);z-index:30;transform:translateX(-102%);transition:transform .3s cubic-bezier(.2,.9,.25,1);display:flex;flex-direction:column;padding:calc(16px + env(safe-area-inset-top,0px)) 14px 16px;border-radius:0 28px 28px 0;box-shadow:var(--sh);will-change:transform}
+#app.sky .drawer.on{transform:none}
+#app.sky .drawer.drag{transition:none}
+#app.sky .dp{display:flex;align-items:center;gap:12px;padding:12px;border-radius:20px;background:linear-gradient(135deg,var(--soft),transparent);box-shadow:0 0 0 1px var(--line);margin-bottom:12px}
+#app.sky .dp svg.av{width:48px;height:48px;flex:none}
+#app.sky .dp div{flex:1}
+#app.sky .dp b{display:block;font-size:17px}
+#app.sky .dp small{display:flex;align-items:center;gap:5px;color:var(--mute);font-size:12.5px}
+#app.sky .new{display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 16px;border-radius:16px;background:var(--grad);color:#fff;font-weight:700;font-size:15.5px;box-shadow:var(--sh2);transition:transform .15s}
+#app.sky .new:active{transform:scale(.97)}
+#app.sky .sc{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+#app.sky .sc button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 4px;border-radius:16px;background:var(--bg);font-size:12.5px;font-weight:600;transition:.15s}
+#app.sky .sc button:active{background:var(--soft);transform:scale(.96)}
+#app.sky .sc svg{color:var(--pri);width:22px;height:22px}
+#app.sky .srch{display:flex;align-items:center;gap:8px;padding:0 12px;border-radius:999px;background:var(--field,var(--bg));box-shadow:inset 0 0 0 1px var(--field-line,var(--line));color:var(--mute)}
+#app.sky .srch svg{width:18px;height:18px}
+#app.sky .srch input{flex:1;min-width:0;border:0;outline:0;background:transparent!important;color:var(--ink)!important;box-shadow:none!important;padding:10px 0;font-size:14.5px;-webkit-appearance:none;appearance:none;color-scheme:inherit}#app.sky .srch input::placeholder{color:var(--mute);opacity:.85}#app.sky input,#app.sky textarea,#app.sky select{color-scheme:inherit}#app.sky .comp:focus-within{box-shadow:0 0 0 1.5px var(--pri),var(--sh)}
+#app.sky .dl{flex:1;overflow-y:auto;margin:4px -4px 0;padding:0 4px}
+#app.sky .gl{font-size:12.5px;color:var(--mute);font-weight:600;margin:14px 6px 4px}
+#app.sky .hi{border-radius:14px;transition:background .15s}
+#app.sky .hi.act{background:var(--soft)}
+#app.sky .hr1{display:flex;align-items:center;gap:6px}
+#app.sky .it{flex:1;display:flex;align-items:center;gap:10px;text-align:left;padding:11px 10px;min-width:0;font-size:15px}
+#app.sky .it span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#app.sky .hi.act .it{font-weight:600}
+#app.sky .it svg{width:18px;height:18px;color:var(--mute)}
+#app.sky .mo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--mute)}
+#app.sky .mo svg{width:18px;height:18px}
+#app.sky .ha{display:none;gap:6px;padding:0 8px 8px}
+#app.sky .hi.open .ha{display:flex;animation:up .2s both}
+#app.sky .ha button{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border-radius:12px;background:var(--bg);font-size:13px;font-weight:600}
+#app.sky .ha button:last-child{color:var(--bad)}
+#app.sky .ha svg{width:15px;height:15px}
+#app.sky .df{padding-top:8px}
+#app.sky .th{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;border-radius:14px;background:var(--bg)}
+#app.sky .th button{display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 0;border-radius:11px;font-size:13px;font-weight:600;color:var(--mute);transition:.2s}
+#app.sky .th button.on{background:var(--surf);color:var(--ink);box-shadow:0 0 0 1px var(--line),0 2px 6px rgba(40,70,160,.08)}
+#app.sky .th svg{width:16px;height:16px}
+#app.sky .exit{display:flex;align-items:center;gap:10px;width:100%;padding:13px 14px;border-radius:16px;box-shadow:0 0 0 1.5px var(--line);font-weight:600;margin-top:8px;transition:.15s}
+#app.sky .exit:active{background:var(--soft)}
+#app.sky .exit svg{color:var(--pri)}
+#app.sky .dnote{font-size:11.5px;color:var(--mute);text-align:center;margin:10px 4px 0;line-height:1.5}
+#app.sky .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--surf);z-index:30;border-radius:28px 28px 0 0;padding:10px 18px 22px;transform:translateY(105%);transition:transform .32s cubic-bezier(.2,.9,.25,1);box-shadow:var(--sh)}
+#app.sky .sheet.on{transform:none}
+#app.sky .grab{width:42px;height:5px;border-radius:9px;background:var(--line);margin:0 auto 14px}
+#app.sky .sheet h4{margin:4px 2px 10px;font-size:13px;color:var(--mute);font-weight:600}
+#app.sky .g{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+#app.sky .g button{display:flex;flex-direction:column;align-items:center;gap:7px;padding:8px 0;font-size:12.5px;font-weight:500}
+#app.sky .g button span{width:54px;height:54px;border-radius:18px;background:var(--soft);display:grid;place-items:center;color:var(--pri);transition:.15s}
+#app.sky .g button:active span{background:var(--pri);color:#fff;transform:scale(.94)}
+#app.sky .tools{display:flex;flex-wrap:wrap;gap:8px}
+#app.sky .tools button{display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;box-shadow:0 0 0 1px var(--line);font-size:14px;transition:.15s}
+#app.sky .tools button:active{background:var(--soft)}
+#app.sky .tools svg{width:17px;height:17px;color:var(--pri)}
+@media (prefers-reduced-motion:reduce){#app.sky *{animation:none!important;transition:none!important}}
+/* live-only additions: markdown answers, callouts, streaming dots */
+#app.sky .ai .bw{font-size:15px;line-height:1.75;word-break:break-word}
+#app.sky .ai .bw p{margin:0 0 10px}
+#app.sky .ai .bw ul{margin:6px 0 12px;padding-left:22px}
+#app.sky .ai .bw li{margin:4px 0}
+#app.sky .ai .bw h2,#app.sky .ai .bw h3{font-size:16.5px;margin:14px 0 8px;color:var(--pri)}
+#app.sky .ai .bw code{background:var(--soft);padding:2px 6px;border-radius:6px;font-size:13.5px}
+#app.sky .ai .bw pre{background:var(--field);color:var(--ink);box-shadow:inset 0 0 0 1px var(--field-line,var(--line));padding:12px 14px;border-radius:14px;overflow-x:auto;margin:10px 0;font-size:13.5px;line-height:1.6}
+#app.sky .ai .bw pre code{background:none;color:inherit;padding:0}
+#app.sky .cal{border-radius:12px;padding:10px 12px;margin:8px 0;font-size:14.5px;line-height:1.6}
+#app.sky .cal.tip{background:#FFF6E5}
+#app.sky .cal.warn{background:#FFECEC}
+#app.sky .cal.ok{background:#E9F9F1}
+#app.sky .cal.con{background:var(--soft)}
+#app.sky .cal.rev{background:#F1ECFF}
+#app.sky .cal.key{background:#EAF1FF}
+#app.sky[data-sky-theme="dark"] .cal.tip{background:#3A2E12}
+#app.sky[data-sky-theme="dark"] .cal.warn{background:#3A1A1C}
+#app.sky[data-sky-theme="dark"] .cal.ok{background:#123326}
+#app.sky[data-sky-theme="dark"] .cal.rev{background:#241C3D}
+#app.sky[data-sky-theme="dark"] .cal.key{background:#16224A}
+#app.sky .tw{overflow-x:auto;margin:10px 0}
+#app.sky .acts button.on{color:var(--pri)}
+#app.sky .typing{display:flex;gap:5px;padding:6px 2px}
+#app.sky .typing i{width:8px;height:8px;border-radius:50%;background:var(--mute);opacity:.35;animation:skyb 1.1s infinite}
+#app.sky .typing i:nth-child(2){animation-delay:.18s}
+#app.sky .typing i:nth-child(3){animation-delay:.36s}
+@keyframes skyb{0%,60%,100%{transform:translateY(0);opacity:.3}30%{transform:translateY(-5px);opacity:.85}}
+#app.sky .ha button:active{background:var(--soft)}
+/* host shell: fixed full-screen inside the SPA */
+#app.sky .comp textarea{-webkit-appearance:none;appearance:none}
+#app.sky{position:fixed;inset:0;height:auto;max-width:520px;margin:0 auto;display:flex;flex-direction:column;overflow:hidden;color:var(--ink);font-family:"Hind Siliguri",system-ui,-apple-system,"Noto Sans Bengali",sans-serif;font-size:16px;-webkit-font-smoothing:antialiased;padding-top:env(safe-area-inset-top,0px);box-sizing:border-box}

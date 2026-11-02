@@ -3,6 +3,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+
+/* F2.1: Sky's stylesheet was extracted to sky-chat.css. A CSS assertion must
+   read both files — the rule it guards is unchanged, only its home is. */
+const skyCss = () => readFileSync('sky-chat.css', 'utf8');
 import { validateChatReq } from './ai-agent.js';
 
 const q1 = { role: 'user', content: 'নিউটনের ১ম সূত্র কী?' };
@@ -51,7 +55,7 @@ test('the login explanation is multi-line and renders as paragraphs', () => {
 });
 test('no bottom save-area gap survives anywhere in the shell', () => {
   const UI = readFileSync('ai-agent-chat.js', 'utf8');
-  const uses = UI.match(/safe-area-inset-bottom/g) || [];
+  const uses = (UI + skyCss()).match(/safe-area-inset-bottom/g) || [];
   assert.equal(uses.length, 0,
     'owner ordered the composer flush at the very bottom, like ChatGPT and WhatsApp');
 });
@@ -88,19 +92,19 @@ test('opening the chat cannot wipe phase1 data-theme', () => {
 });
 test('the composer and drawer search beat phase1 global !important rule', () => {
   const UI = readFileSync('ai-agent-chat.js', 'utf8');
-  assert.match(UI, /#app\.sky \.comp textarea\{[^}]*background:transparent!important/,
+  assert.match(skyCss(), /#app\.sky \.comp textarea\{[^}]*background:transparent!important/,
     'phase1 sets background on every textarea with !important');
-  assert.match(UI, /#app\.sky \.srch input\{[^}]*background:transparent!important/);
+  assert.match(skyCss(), /#app\.sky \.srch input\{[^}]*background:transparent!important/);
 });
 test('the composer sits flush at the very bottom, with no save-area gap', () => {
   const UI = readFileSync('ai-agent-chat.js', 'utf8');
-  const dock = UI.match(/#app\.sky \.dock\{[^}]*\}/)[0];
+  const dock = skyCss().match(/#app\.sky \.dock\{[^}]*\}/)[0];
   assert.ok(!/env\(safe-area-inset-bottom/.test(dock),
     'owner asked for no save area under the composer, like ChatGPT');
 });
 test('the drawer clears the notch in a PWA', () => {
   const UI = readFileSync('ai-agent-chat.js', 'utf8');
-  assert.match(UI, /#app\.sky \.drawer\{[^}]*padding:calc\(16px \+ env\(safe-area-inset-top/,
+  assert.match(skyCss(), /#app\.sky \.drawer\{[^}]*padding:calc\(16px \+ env\(safe-area-inset-top/,
     'the fixed shell ignores body padding, so the drawer must add the top inset itself');
 });
 test('the chat theme buttons move phase1 too', () => {

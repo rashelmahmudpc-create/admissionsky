@@ -7,6 +7,9 @@ const SW = readFileSync('sw.js', 'utf8');
 const NW = readFileSync('notification-worker.js', 'utf8');
 const DASH = readFileSync('dashboard-v2.js', 'utf8');
 const AI = readFileSync('ai-agent-chat.js', 'utf8');
+/* F2.1: Sky's stylesheet moved to sky-chat.css; the composer's 16px and
+   -webkit-appearance rules are asserted against it there. */
+const SKYCSS = readFileSync('sky-chat.css', 'utf8');
 let pass = 0;
 let fail = 0;
 function test(name, condition) {
@@ -129,7 +132,7 @@ test('১৬. PWA updates are in-place; active worker is never unregistered firs
 test('১৭. composer ইনপুট iOS-এ আলাদা ফ্রেম বানায় না (textarea + ১৬px, no contenteditable)',
   /* Sky uses a plain textarea. A font below 16px makes iOS Safari zoom the
      whole page on focus, which is the frame this guard exists to prevent. */
-  !AI.includes('contenteditable') && AI.includes('id="inp"') && AI.includes('font-size:16px') && AI.includes('-webkit-appearance:none;appearance:none'));
+  !AI.includes('contenteditable') && AI.includes('id="inp"') && SKYCSS.includes('font-size:16px') && SKYCSS.includes('-webkit-appearance:none;appearance:none'));
 test('১৮. rich and plain AI messages render their complete bodies directly',
   /* Escape-first, then markdown: every message body goes through md() whole
      (mdRich wraps it for charts/flows), with no fold step between the model
