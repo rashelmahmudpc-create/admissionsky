@@ -27,7 +27,8 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import Database from 'better-sqlite3';
 
 import { SqliteAuthRepository } from './auth-native/storage/sqlite-auth-repository.mjs';
@@ -228,21 +229,82 @@ test('V2.4-১৪: the in-memory double enforces the same rule as the real repos
   assert.ok(session.sessionToken, 'the session was real before the suspension');
 });
 
+/* Every production .mjs under auth-native, excluding the doubles and the ops
+ * scripts — the same scope `native-auth-protection` uses for its runtime scan,
+ * so the two agree on what counts as shipped code. */
+function walkProduction(dir) {
+  const out = [];
+  for (const name of readdirSync(dir)) {
+    const full = join(dir, name);
+    if (statSync(full).isDirectory()) { out.push(...walkProduction(full)); continue; }
+    if (!full.endsWith('.mjs')) continue;
+    if (full.includes('/testing/') || full.includes('/operations/')) continue;
+    out.push(full);
+  }
+  return out;
+}
+
+/* A comment is not code. The note explaining this rule quotes the very query it
+ * forbids, so a scan that cannot tell prose from code would flag its own
+ * documentation — and the first version of this test did exactly that. */
+const stripComments = source => source
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/^\s*\/\/.*$/gm, '');
+
 test('V2.4-১৪: no authorisation query reads the never-written column on its own', async () => {
   /* The rule at the source level, and the only assertion here that can see an
    * absence. A behavioural test cannot notice a NEW query that reintroduces the
    * bare read until someone constructs the scenario again — which is how this
    * one was missed for as long as it was. Every status a guard compares must be
    * the COALESCE'd alias, or the status column of a different table. */
-  const source = readFileSync(new URL('./auth-native/storage/sqlite-auth-repository.mjs', import.meta.url), 'utf8');
-  const bare = [...source.matchAll(/SELECT[^`'"]*?\bu\.status\b(?!\s*\))/g)]
-    .map(match => match[0])
-    .filter(select => !select.includes('COALESCE'));
-  assert.deepEqual(bare, [],
-    'a query selects the never-written column on its own — it can never refuse anybody; use COALESCE(st.status,u.status)');
+  /* REPO-WIDE, not one file. The first version of this scan read only
+   * `sqlite-auth-repository.mjs`, and that scope is exactly why the same bug was
+   * found three separate times: `identitySnapshot` (same file, different shape),
+   * the public-profile query, and finally `studentCounts` in
+   * `student-admin-view.mjs` — a file the scan never opened. A rule enforced on
+   * one file is a rule the next file silently opts out of. */
+  const files = walkProduction(new URL('./auth-native/', import.meta.url).pathname);
+  const offenders = [];
+  for (const file of files) {
+    const source = stripComments(readFileSync(file, 'utf8'));
+    // Every SELECT that touches auth_users. If it projects a `status` and does
+    // not also name the account-state table, the status it reads is the column
+    // nothing writes.
+    for (const match of source.matchAll(/[`'"]([^`'"]*\bSELECT\b[^`'"]*\bauth_users\b[^`'"]*)[`'"]/gis)) {
+      const query = match[1];
+      if (query.includes('auth_account_state')) continue;
+      if (!/(?:^|[\s,(])(?:u\.)?status(?![\w.])/i.test(query)) continue;
+      /* One allowance, and it has to be exact: a query chosen by a ternary on
+       * `has(sql, 'auth_account_state')`, where the false branch is the whole
+       * query. There the raw column is genuinely the only status the database
+       * has, so reading it is correct rather than a guard that cannot fire.
+       *
+       * "Exact" is doing real work here. The first version looked back a fixed
+       * distance for the `has(...)` call, and a planted dead-column read 40
+       * lines earlier was waved through because an unrelated query's own
+       * `has(...)` happened to fall inside the window. The check now requires
+       * the call to be the ternary condition immediately preceding this query,
+       * which is a shape a stray match cannot imitate. */
+      const before = source.slice(Math.max(0, match.index - 600), match.index);
+      /* The shape: `has(sql, 'auth_account_state') ? <joined query> : <this
+       * query>`. So this query is allowed when it is the FALSE branch — the
+       * text before it ends at a `:` — and the same ternary's condition is in
+       * the window. Both halves are required, so an unrelated `has(...)` cannot
+       * vouch for a query that is not its own false branch. (The first attempt
+       * tried to match `? ... query` in one regex; the joined query contains a
+       * `?` placeholder, which broke it.) */
+      if (/[:]\s*$/.test(before) && /has\(\s*sql\s*,\s*['"]auth_account_state['"]\s*\)/.test(before)) continue;
+      const line = source.slice(0, match.index).split('\n').length;
+      offenders.push(`${relative(new URL('./', import.meta.url).pathname, file)}:${line}`);
+    }
+  }
+  assert.deepEqual(offenders, [],
+    'these queries read auth_users.status without joining auth_account_state — that column is written once at INSERT and never updated, so the read can never see a suspension. Use COALESCE(st.status,u.status).');
+
   // And the fix is present, so this cannot pass by the queries having vanished.
-  assert.match(source, /COALESCE\(st\.status,u\.status\) AS status/, 'the written status is read');
-  assert.match(source, /LEFT JOIN auth_account_state st ON st\.user_id=u\.user_id/, 'and the state table is joined');
+  const repository = readFileSync(new URL('./auth-native/storage/sqlite-auth-repository.mjs', import.meta.url), 'utf8');
+  assert.match(repository, /COALESCE\(st\.status,u\.status\) AS status/, 'the written status is read');
+  assert.match(repository, /LEFT JOIN auth_account_state st ON st\.user_id=u\.user_id/, 'and the state table is joined');
 });
 
 test('V2.4-১৪: the reconciliation health check is shown the status that can be wrong', async () => {

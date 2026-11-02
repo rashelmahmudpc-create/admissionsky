@@ -858,9 +858,14 @@ export class SqliteAuthRepository {
            VALUES(?,?,?,'active',?,?)`,
           input.userIdCandidate, input.emailRef, input.emailMask, input.now, input.now
         );
+        /* AUTH V2.4 (owner 2026-11-02): read through the account-state join —
+         * the guard below compares this status, and the raw column is written
+         * once at INSERT and never updated, so it could only answer 'active'. */
         user = this.#one(
-          `SELECT user_id AS id,email_ref AS emailRef,email_mask AS emailMask,status,created_at AS createdAt
-           FROM auth_users WHERE email_ref=?`,
+          `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,
+            COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
+           FROM auth_users u LEFT JOIN auth_account_state st ON st.user_id=u.user_id
+           WHERE u.email_ref=?`,
           input.emailRef
         );
         created = user?.id === input.userIdCandidate;
@@ -985,8 +990,15 @@ export class SqliteAuthRepository {
            VALUES(?,?,?,'active',?,?)`,
           input.userIdCandidate, input.emailRef, input.emailMask, input.now, input.now
         );
+        /* AUTH V2.4 (owner 2026-11-02): read through the account-state join like
+         * every other authorization read. The guard two lines below compares
+         * this status, and the raw column is written once at INSERT and never
+         * updated — so it could only ever answer 'active'. */
         user = this.#one(
-          'SELECT user_id AS id,email_ref AS emailRef,email_mask AS emailMask,status,created_at AS createdAt FROM auth_users WHERE email_ref=?',
+          `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,
+            COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
+           FROM auth_users u LEFT JOIN auth_account_state st ON st.user_id=u.user_id
+           WHERE u.email_ref=?`,
           input.emailRef
         );
       }
@@ -1425,7 +1437,10 @@ export class SqliteAuthRepository {
         input.now, input.challengeId
       );
       const user = this.#one(
-        'SELECT user_id AS id,email_mask AS emailMask,status,created_at AS createdAt FROM auth_users WHERE user_id=?',
+        `SELECT u.user_id AS id,u.email_mask AS emailMask,
+          COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
+         FROM auth_users u LEFT JOIN auth_account_state st ON st.user_id=u.user_id
+         WHERE u.user_id=?`,
         challenge.userId
       );
       const count = this.#one("SELECT COUNT(*) AS count FROM auth_passkey_credentials WHERE user_id=? AND status='active'", challenge.userId);

@@ -114,7 +114,18 @@ function loginMethodLabels(row) {
 export function studentProfile(sql, userId, { now = Date.now() } = {}) {
   const id = String(userId || '').trim();
   if (!id || id.length > 128 || !has(sql, 'auth_users')) return null;
-  const user = one(sql, 'SELECT user_id AS userId, email_mask AS emailMask, status, created_at AS createdAt, last_login_at AS lastLoginAt FROM auth_users WHERE user_id=?', id);
+  /* AUTH V2.4 (owner 2026-11-02): the status is read through the account-state
+   * join, like every other read of it. It used to select the raw column and
+   * patch it up at the display site (`user.status !== 'active' ? user.status :
+   * lifecycle`), which worked but left a bare read of the write-once column in
+   * the tree — and a bare read is what a scanner cannot tell apart from a guard
+   * that can never fire. One shape, everywhere, so the rule stays checkable. */
+  const user = one(sql, has(sql, 'auth_account_state')
+    ? `SELECT u.user_id AS userId,u.email_mask AS emailMask,
+        COALESCE(st.status,u.status) AS status,u.created_at AS createdAt,u.last_login_at AS lastLoginAt
+       FROM auth_users u LEFT JOIN auth_account_state st ON st.user_id=u.user_id
+       WHERE u.user_id=?`
+    : 'SELECT user_id AS userId, email_mask AS emailMask, status, created_at AS createdAt, last_login_at AS lastLoginAt FROM auth_users WHERE user_id=?', id);
   if (!user) return null;
   const lifecycle = has(sql, 'auth_account_state') ? one(sql, 'SELECT status, updated_at AS updatedAt FROM auth_account_state WHERE user_id=?', id) : null;
   const publicId = has(sql, 'auth_public_identities') ? one(sql, 'SELECT public_id AS publicId FROM auth_public_identities WHERE user_id=?', id) : null;

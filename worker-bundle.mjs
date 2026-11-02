@@ -26078,8 +26078,10 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
           input.now
         );
         user = this.#one(
-          `SELECT user_id AS id,email_ref AS emailRef,email_mask AS emailMask,status,created_at AS createdAt
-           FROM auth_users WHERE email_ref=?`,
+          `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,
+            COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
+           FROM auth_users u LEFT JOIN auth_account_state st ON st.user_id=u.user_id
+           WHERE u.email_ref=?`,
           input.emailRef
         );
         created = user?.id === input.userIdCandidate;
@@ -26219,7 +26221,10 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
           input.now
         );
         user = this.#one(
-          "SELECT user_id AS id,email_ref AS emailRef,email_mask AS emailMask,status,created_at AS createdAt FROM auth_users WHERE email_ref=?",
+          `SELECT u.user_id AS id,u.email_ref AS emailRef,u.email_mask AS emailMask,
+            COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
+           FROM auth_users u LEFT JOIN auth_account_state st ON st.user_id=u.user_id
+           WHERE u.email_ref=?`,
           input.emailRef
         );
       }
@@ -26656,7 +26661,10 @@ var SqliteAuthRepository = class _SqliteAuthRepository {
         input.challengeId
       );
       const user = this.#one(
-        "SELECT user_id AS id,email_mask AS emailMask,status,created_at AS createdAt FROM auth_users WHERE user_id=?",
+        `SELECT u.user_id AS id,u.email_mask AS emailMask,
+          COALESCE(st.status,u.status) AS status,u.created_at AS createdAt
+         FROM auth_users u LEFT JOIN auth_account_state st ON st.user_id=u.user_id
+         WHERE u.user_id=?`,
         challenge.userId
       );
       const count = this.#one("SELECT COUNT(*) AS count FROM auth_passkey_credentials WHERE user_id=? AND status='active'", challenge.userId);
@@ -32438,7 +32446,10 @@ function loginMethodLabels(row) {
 function studentProfile(sql, userId, { now = Date.now() } = {}) {
   const id = String(userId || "").trim();
   if (!id || id.length > 128 || !has(sql, "auth_users")) return null;
-  const user = one(sql, "SELECT user_id AS userId, email_mask AS emailMask, status, created_at AS createdAt, last_login_at AS lastLoginAt FROM auth_users WHERE user_id=?", id);
+  const user = one(sql, has(sql, "auth_account_state") ? `SELECT u.user_id AS userId,u.email_mask AS emailMask,
+        COALESCE(st.status,u.status) AS status,u.created_at AS createdAt,u.last_login_at AS lastLoginAt
+       FROM auth_users u LEFT JOIN auth_account_state st ON st.user_id=u.user_id
+       WHERE u.user_id=?` : "SELECT user_id AS userId, email_mask AS emailMask, status, created_at AS createdAt, last_login_at AS lastLoginAt FROM auth_users WHERE user_id=?", id);
   if (!user) return null;
   const lifecycle = has(sql, "auth_account_state") ? one(sql, "SELECT status, updated_at AS updatedAt FROM auth_account_state WHERE user_id=?", id) : null;
   const publicId = has(sql, "auth_public_identities") ? one(sql, "SELECT public_id AS publicId FROM auth_public_identities WHERE user_id=?", id) : null;
