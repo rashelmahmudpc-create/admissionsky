@@ -190,3 +190,31 @@ test('a topic page links up to the hub, not only sideways to its siblings', () =
     assert.ok(!href.includes('#'), `the breadcrumb links to a fragment (${href}), which a crawler cannot follow`);
   }
 });
+
+test('a question bank page links out to the rest of the site', () => {
+  /* Measured on the live site 2026-11-03: a topic page linked to the hub, to its
+   * 13 siblings, and to nothing else — no course, no about, no contact. The hub
+   * linked only to its own topics. A crawler entering the bank could not leave
+   * it, and a student who arrived from a question search had no path to the
+   * courses that are the site's other half.
+   *
+   * Checked on every generated page, because the footer is written in two
+   * templates (the hub and the topics) and only one of them going stale is
+   * exactly the kind of half-fix this repository keeps finding. */
+  const { dist } = generate();
+  const content = JSON.parse(readFileSync(FIXTURE, 'utf8'));
+  const topic = content.topics[0];
+  const folder = readdirSync(join(dist, 'question-bank')).find(n => n.startsWith(topic.id));
+
+  const pages = [
+    ['hub', read(dist, 'question-bank', 'index.html')],
+    ['topic', read(dist, 'question-bank', folder, 'index.html')],
+  ];
+  const REQUIRED = ['/', '/about.html', '/contact.html', '/privacy.html', '/courses/sandhi/'];
+  for (const [what, page] of pages) {
+    const links = new Set([...page.matchAll(/<a[^>]*href="([^"]+)"/g)].map(m => m[1]));
+    for (const href of REQUIRED) {
+      assert.ok(links.has(href), `the ${what} page does not link to ${href}`);
+    }
+  }
+});
