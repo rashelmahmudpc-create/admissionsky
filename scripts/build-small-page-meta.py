@@ -18,6 +18,7 @@ would produce a sentence nobody chose.
     python3 scripts/build-small-page-meta.py
 """
 import html
+import json
 import re
 import sys
 from pathlib import Path
@@ -42,11 +43,83 @@ PAGES = [
      'পদ্ধতি ও সময়সীমা — ডেটা মুছে ফেলার নির্দেশিকা।'),
 ]
 
+
+# The type each page should declare, and the one thing that page is for. Google
+# documents AboutPage, ContactPage and WebPage for exactly these four.
+PAGE_TYPES = {
+    'about.html': 'AboutPage',
+    'contact.html': 'ContactPage',
+    'privacy.html': 'WebPage',
+    'data-deletion.html': 'WebPage',
+}
+
+SITE = 'https://admissionsky.pages.dev'
+
+
+def structured_data(file: str, title: str, description: str, url: str) -> str:
+    """A small, self-contained graph for a page that had none.
+
+    Measured 2026-11-03: these four were the only pages on the site without
+    structured data — the homepage, the courses and the 15 question-bank pages
+    all carry it. A page with no graph is a page a search engine has to guess
+    about, and the two nodes below are what let it say who published the page
+    rather than only what the page says.
+
+    Organization and WebSite are inlined rather than referenced, because a
+    schema.org `@id` resolves inside its own graph — the course pages were fixed
+    for exactly this, and repeating the mistake here would be the same defect in
+    a new file.
+    """
+    page_id = f'{SITE}{url}#page'
+    graph = [
+        {
+            '@type': PAGE_TYPES.get(file, 'WebPage'),
+            '@id': page_id,
+            'name': title,
+            'description': description,
+            'url': f'{SITE}{url}',
+            'inLanguage': 'bn-BD',
+            'isPartOf': {'@id': f'{SITE}/#website'},
+            'about': {'@id': f'{SITE}/#organization'},
+        },
+        {
+            '@type': 'Organization',
+            '@id': f'{SITE}/#organization',
+            'name': 'Admission Sky',
+            'url': f'{SITE}/',
+            'logo': {
+                '@type': 'ImageObject',
+                'url': f'{SITE}/icons/icon-512.png',
+                'width': 512,
+                'height': 512,
+            },
+        },
+        {
+            '@type': 'WebSite',
+            '@id': f'{SITE}/#website',
+            'url': f'{SITE}/',
+            'name': 'Admission Sky',
+            'inLanguage': 'bn-BD',
+            'publisher': {'@id': f'{SITE}/#organization'},
+        },
+        {
+            '@type': 'BreadcrumbList',
+            '@id': f'{SITE}{url}#breadcrumb',
+            'itemListElement': [
+                {'@type': 'ListItem', 'position': 1, 'name': 'Admission Sky', 'item': f'{SITE}/'},
+                {'@type': 'ListItem', 'position': 2, 'name': title, 'item': f'{SITE}{url}'},
+            ],
+        },
+    ]
+    return ('<script type="application/ld+json">'
+            + json.dumps({'@context': 'https://schema.org', '@graph': graph}, ensure_ascii=False)
+            + '</script>')
+
 MARK_START = '<!-- seo:meta:start -->'
 MARK_END = '<!-- seo:meta:end -->'
 
 
-def block(title: str, description: str, url: str) -> str:
+def block(file: str, title: str, description: str, url: str) -> str:
     def meta(attr, key, value):
         return f'<meta {attr}="{key}" content="{html.escape(value, quote=True)}">'
 
@@ -63,13 +136,14 @@ def block(title: str, description: str, url: str) -> str:
     lines.append(meta('name', 'twitter:title', title))
     lines.append(meta('name', 'twitter:description', description))
     lines.append(meta('name', 'twitter:image', OG_IMAGE))
+    lines.append(structured_data(file, title, description, url))
     lines.append(MARK_END)
     return '\n'.join(lines)
 
 
-def apply(page: str, title: str, description: str, url: str) -> tuple:
+def apply(page: str, file: str, title: str, description: str, url: str) -> tuple:
     """Replace an existing block, or add the missing tags in place."""
-    fresh = block(title, description, url)
+    fresh = block(file, title, description, url)
     if MARK_START in page and MARK_END in page:
         start = page.index(MARK_START)
         end = page.index(MARK_END) + len(MARK_END)
@@ -101,7 +175,7 @@ def main() -> int:
         if not title:
             failures.append(f'{name}: no <title> to reuse')
             continue
-        updated, action = apply(page, title, description, url)
+        updated, action = apply(page, name, title, description, url)
         if action == 'no-title':
             failures.append(f'{name}: no </title> to anchor to')
             continue

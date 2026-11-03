@@ -395,6 +395,28 @@ test('every indexable page has a description and a share card', () => {
     for (const tag of ['twitter:card', 'twitter:title']) {
       assert.ok(head.includes(`name="${tag}"`), `${file} is missing ${tag}`);
     }
+
+    /* And structured data. Measured 2026-11-03: the four small pages were the
+     * only ones on the site without it — the homepage, the courses and the 15
+     * question-bank pages all carry a graph. A page with none is one a search
+     * engine has to guess about. */
+    const ld = page.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+    assert.ok(ld, `${file} has no structured data`);
+    let graph;
+    assert.doesNotThrow(() => { graph = JSON.parse(ld[1])['@graph']; }, `${file} JSON-LD must parse`);
+
+    // Same property the course pages are held to: an @id a node points at must
+    // be defined in the same graph, or the reference resolves to nothing.
+    const defined = new Set(graph.map(n => n['@id']).filter(Boolean));
+    for (const node of graph) {
+      for (const [key, value] of Object.entries(node)) {
+        if (value && typeof value === 'object' && !Array.isArray(value)
+            && Object.keys(value).length === 1 && value['@id']) {
+          assert.ok(defined.has(value['@id']),
+            `${file}: ${node['@type']}.${key} points at ${value['@id']}, which this page never defines`);
+        }
+      }
+    }
   }
 });
 
