@@ -486,3 +486,35 @@ test('the question bank pages the worker serves are the ones it allows', async (
   const stranger = await get('/question-bank-not-a-real-section/');
   assert.equal(stranger.status, 404, 'an unlisted path must still 404, or the allowlist proves nothing');
 });
+
+test('every course integrity pin matches the page it pins', async () => {
+  /* The defect this guards, found 2026-11-03 by running the generator and
+   * diffing: `somas` and `prottoy` had stale SHA-256 pins because a commit
+   * edited their descriptions without re-pinning. Nothing failed.
+   *
+   * That is the dangerous part. `source-course-tool.js` refuses a page whose
+   * hash does not match and then renders it with NO SCRIPTS — the course opens,
+   * looks fine, and every interactive part is silently gone. The tool logs to
+   * the console; a student sees a broken page, not an error.
+   *
+   * Checked here rather than in source-course-lessons because the pin and the
+   * page are two files that must agree, and this suite already owns the
+   * "the site serves what it claims" property. */
+  const tool = readFileSync(new URL('./source-course-tool.js', import.meta.url), 'utf8');
+  const { createHash } = await import('node:crypto');
+
+  const wrong = [];
+  for (const slug of ['prottoy', 'prottoy-master', 'sandhi', 'somas']) {
+    const pinned = tool.match(new RegExp(`'?${slug}'?: \\{[^}]*hash: '([a-f0-9]{64})'`))?.[1];
+    assert.ok(pinned, `${slug} has no integrity pin`);
+    const page = readFileSync(new URL(`./courses/${slug}/index.html`, import.meta.url));
+    const actual = createHash('sha256').update(page).digest('hex');
+    if (actual !== pinned) wrong.push(`${slug}: pin ${pinned.slice(0, 10)}, page ${actual.slice(0, 10)}`);
+  }
+  assert.deepEqual(wrong, [],
+    `these course pins are stale, so the course renders with no scripts — run: python3 scripts/build-course-breadcrumbs.py`);
+
+  // Non-vacuity: the pins must be real hashes of real files, not empty strings
+  // that would compare equal to nothing.
+  assert.ok((tool.match(/hash: '[a-f0-9]{64}'/g) || []).length >= 4, 'all four pins are present and full length');
+});
