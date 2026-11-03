@@ -298,3 +298,41 @@ test('every test script is reached by a workflow', () => {
   assert.ok(reached.size >= 15,
     `the walk only reached ${reached.size} scripts; if the workflow layout moved, fix this check rather than letting it go quiet`);
 });
+
+/* A generator whose output is committed must be checked, not remembered.
+ *
+ * `scripts/build-course-breadcrumbs.py`, `build-course-structured-data.py` and
+ * `build-small-page-meta.py` write files that are committed to the repository,
+ * and no workflow ran them. Four separate incidents came from that: a course
+ * shipped with a stale integrity pin and rendered with no scripts, twice.
+ *
+ * The check is not "is the script named somewhere" — it is "does a workflow
+ * verify the committed files still match what the generator produces". A
+ * generator that is only run by hand is a step someone has to remember, and
+ * remembering has failed every time.
+ */
+test('every generator whose output is committed is verified by a workflow', () => {
+  const scripts = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).scripts || {};
+  const workflowText = readdirSync(WORKFLOW_DIR)
+    .filter(name => name.endsWith('.yml') || name.endsWith('.yaml'))
+    .map(name => readFileSync(join(WORKFLOW_DIR, name), 'utf8'))
+    .join('\n');
+
+  // The generators whose output lives in the repository rather than in dist.
+  const COMMITTED_GENERATORS = [
+    'scripts/build-course-breadcrumbs.py',
+    'scripts/build-course-structured-data.py',
+    'scripts/build-small-page-meta.py',
+  ];
+  for (const generator of COMMITTED_GENERATORS) {
+    assert.ok(existsSync(join(ROOT, generator)), `${generator} is missing`);
+  }
+
+  // A script that runs them and fails on drift, and a workflow that runs it.
+  const checker = Object.entries(scripts)
+    .find(([, cmd]) => COMMITTED_GENERATORS.every(g => cmd.includes(g)));
+  assert.ok(checker, 'no script regenerates the committed pages and checks for drift');
+  const [checkerName] = checker;
+  assert.ok(workflowText.includes(`npm run ${checkerName}`),
+    `no workflow runs ${checkerName}, so a stale generated file ships unnoticed`);
+});

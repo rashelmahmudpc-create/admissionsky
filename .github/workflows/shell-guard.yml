@@ -91,6 +91,14 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
+      # The generated pages (course breadcrumbs, structured data, small-page
+      # meta) are committed, and their generators are run by hand. That is how
+      # two courses shipped with stale integrity pins and rendered with no
+      # scripts — four times, each fixed by "remember to run the generator".
+      # This regenerates them and fails if the committed files differ, so the
+      # remembering is done by CI.
+      - name: Verify the generated files match their generators
+        run: npm run check:generated-files
       - name: Verify app shell, dashboard and profile guards
         run: npm run test:shell-guards
       # The service-worker manifest check lives in its own script and no job ran
