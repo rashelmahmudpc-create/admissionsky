@@ -73,6 +73,33 @@ SITE_FOOTER = (
     '</footer>'
 )
 
+
+# A search result shows roughly 60 characters of a title; past that it is cut with
+# an ellipsis, and the cut lands in the middle of the topic name — the one part a
+# student is scanning for. Measured 2026-11-03: three topic pages were 68-75
+# characters because the topic names carry emoji.
+#
+# The suffix is what makes the title legible in a result list, so it is kept and
+# the name is trimmed. Trimming happens on a word boundary where one exists, and
+# the emoji are dropped first: they cost display width and carry no keyword.
+TITLE_BUDGET = 60
+
+
+def title_for(name: str) -> str:
+    """`<topic> — প্রশ্ন ও উত্তর | Admission Sky`, inside the display limit."""
+    suffix = ' — প্রশ্ন ও উত্তর | Admission Sky'
+    # Variation selectors and the emoji themselves: kept out of the title only.
+    stripped = re.sub(r'[\U0001F000-\U0001FAFF\u2600-\u27BF\uFE0F\u200D]+', '', str(name)).strip()
+    room = TITLE_BUDGET - len(suffix)
+    if len(stripped) <= room:
+        return f'{stripped}{suffix}'
+    cut = stripped[:room]
+    # Prefer a word boundary, but never below half the budget: a very long first
+    # word is better cut mid-word than dropped to nothing.
+    if ' ' in cut and cut.rfind(' ') > room // 2:
+        cut = cut[:cut.rfind(' ')]
+    return f'{cut.rstrip()}{suffix}'
+
 def esc(value) -> str:
     return html.escape(str(value if value is not None else ''), quote=True)
 
@@ -92,7 +119,7 @@ def page_for(topic: dict, subject: dict, questions: list, all_topics: list) -> s
     subject_name = subject.get('name') or 'প্রশ্নব্যাংক'
     shown = questions[:MAX_QUESTIONS]
 
-    title = f'{name} — প্রশ্ন ও উত্তর | Admission Sky'
+    title = title_for(name)
     description = (
         f'{name} টপিকের {len(questions)}টি ভর্তি পরীক্ষার প্রশ্ন, উত্তর ও ব্যাখ্যাসহ। '
         f'{subject_name} — বিশ্ববিদ্যালয়, মেডিকেল ও গুচ্ছ ভর্তি প্রস্তুতির জন্য।'
@@ -144,12 +171,12 @@ def page_for(topic: dict, subject: dict, questions: list, all_topics: list) -> s
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Admission Sky">
 <meta property="og:locale" content="bn_BD">
-<meta property="og:title" content="{esc(name)} — প্রশ্ন ও উত্তর">
+<meta property="og:title" content="{esc(title_for(name))}">
 <meta property="og:description" content="{esc(description)}">
 <meta property="og:url" content="{SITE}/question-bank/{esc(slug_of(topic.get('id') or '', name))}/">
 <meta property="og:image" content="{SITE}/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="{esc(name)} — প্রশ্ন ও উত্তর">
+<meta name="twitter:title" content="{esc(title_for(name))}">
 <meta name="twitter:description" content="{esc(description)}">
 <meta name="twitter:image" content="{SITE}/og-image.png">
 <script type="application/ld+json">{json.dumps({
