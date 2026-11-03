@@ -93,3 +93,12 @@ jobs:
         run: npm ci
       - name: Verify app shell, dashboard and profile guards
         run: npm run test:shell-guards
+      # The service-worker manifest check lives in its own script and no job ran
+      # it, so `npm run sw:manifest` could be forgotten after editing a shell
+      # asset and nothing said so until a deploy failed at step 5 — ahead of
+      # every deploy step, so nothing published. It has happened four times:
+      # course pages (silently, stripping their scripts), the sitemap, the small
+      # pages, and index.html. The check already existed and already worked;
+      # measured by corrupting a digest and watching p15-04 fail.
+      - name: Verify the service-worker manifest digests
+        run: npm run test:p15
