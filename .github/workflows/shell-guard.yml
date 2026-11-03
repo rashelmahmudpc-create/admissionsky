@@ -102,3 +102,32 @@ jobs:
       # measured by corrupting a digest and watching p15-04 fail.
       - name: Verify the service-worker manifest digests
         run: npm run test:p15
+      # Nine test scripts in package.json were run by no workflow at all: the
+      # session, routing, userdata, student-data, sync, p14, p16, p17 and
+      # legacy-adoption suites — 17 files, ~500 assertions, all passing, all
+      # guarding nothing. A script in package.json looks wired; nothing about it
+      # says whether a job calls it.
+      #
+      # Each is a separate `npm run` rather than one combined command so a
+      # failure names the suite that failed, which is what the reader needs.
+      - name: Verify the suites no job was running
+        run: |
+          set -eu
+          npm run test:session
+          npm run test:routing
+          npm run test:userdata
+          npm run test:student-data
+          npm run test:sync
+          npm run test:p14
+          npm run test:p16
+          npm run test:p17
+          npm run test:legacy-adoption
+          npm run test:personalized
+          npm run test:catalog
+          npm run test:descope
+          npm run test:sky-golden
+          npm run test:sky-request
+          npm run test:sky-stream
+          npm run test:p13
+          npm run test:p18
+          npm run test:p19
