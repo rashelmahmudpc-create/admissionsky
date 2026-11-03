@@ -407,3 +407,29 @@ test('the homepage links to every crawlable section, not just the courses', () =
     assert.ok(!href.startsWith('#'), `the homepage navigates to a fragment (${href}), which a crawler cannot follow`);
   }
 });
+
+test('the question bank pages the worker serves are the ones it allows', async () => {
+  /* The gap this closes, measured 2026-11-03: removing `/question-bank/` from
+   * the worker's PUBLIC_PREFIXES and its hub route turned every one of the 15
+   * generated pages into a 404 — and no test noticed. The pages exist in dist,
+   * the sitemap lists them, the generator's own tests pass; the only thing
+   * standing between them and a 404 is one line in _worker.js, and nothing
+   * checked that line.
+   *
+   * The stub is the realistic one: Cloudflare Pages answers an unknown path with
+   * 200 and the app shell, which is exactly why the worker has to distinguish
+   * "a real page" from "the SPA fallback". A stub returning plain text would
+   * hide the difference and pass either way — which is what the first version of
+   * this check did. */
+  const PATHS = ['/question-bank/', '/question-bank/top-001/', '/question-bank/top-004/'];
+  for (const path of PATHS) {
+    const res = await get(path);
+    assert.notEqual(res.status, 404,
+      `${path} is served by the worker as a 404 — is it still in PUBLIC_PREFIXES or PUBLIC_ROUTES?`);
+  }
+
+  // And the check is not vacuous: a path the worker does NOT allow must 404,
+  // or the assertion above would pass on a worker that allows everything.
+  const stranger = await get('/question-bank-not-a-real-section/');
+  assert.equal(stranger.status, 404, 'an unlisted path must still 404, or the allowlist proves nothing');
+});
