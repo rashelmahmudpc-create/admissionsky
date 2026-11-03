@@ -80,18 +80,42 @@ test('V2.2: the contract does not leak an implementation', () => {
    * methods (`establishFirebaseSession` and friends), so scanning it would flag
    * the one place that knowledge is supposed to live. The boundary being tested
    * is: a caller reading the contract learns a job, never a technology. */
-  const promise = source.slice(
-    source.indexOf('export const AUTH_CONTRACT_METHODS'),
-    source.indexOf('export const AUTH_ENGINE_METHOD_MAP')
-  );
+  /* Every export that is part of the PROMISE, which is more than the method
+   * list: the version, the four journey states and the credential list are all
+   * read by callers and all describe the job. The engine-name map is the one
+   * sanctioned place a technology may be named, and it is excluded.
+   *
+   * The previous version of this check sliced from AUTH_CONTRACT_METHODS to
+   * AUTH_ENGINE_METHOD_MAP — 1080 characters of an 8849-character file. A
+   * `Firebase` added to AUTH_JOURNEY_STATES or AUTH_CREDENTIAL_METHODS went
+   * unnoticed; measured by planting one and watching this pass. */
+  const mapAt = source.indexOf('export const AUTH_ENGINE_METHOD_MAP');
+  /* Comments are stripped first, and that is not a loophole — it is the point.
+   * The prose above these constants exists to explain that the contract must not
+   * name a technology; it says "no `Firebase`" in order to forbid one. A check
+   * that cannot tell an explanation from a violation flags its own
+   * documentation, and the first widened version of this check did exactly that
+   * — four hits, all of them the comment explaining the rule. */
+  const promise = source.slice(0, mapAt)
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '');
   for (const leak of ['firebase', 'Firebase', 'DurableObject', 'sqlite', 'Sqlite', 'SQLite', 'Cloudflare']) {
     assert.equal(promise.includes(leak), false, `the contract's promise must not name ${leak}`);
   }
-  // And the map is the only place a technology name may appear, so a future
-  // method cannot smuggle one in beside the promise.
-  const mapAt = source.indexOf('export const AUTH_ENGINE_METHOD_MAP');
-  const promiseAt = source.indexOf('export const AUTH_CONTRACT_METHODS');
-  assert.ok(mapAt > promiseAt, 'the map comes after the promise, and is the sanctioned bridge');
+  // The map must still be where the slice ends, or the slice is scanning the
+  // wrong region and the loop above proves nothing.
+  assert.ok(mapAt > 0, 'the engine-name map is present, and marks where the promise ends');
+  /* And the scan must still be reaching real code, not an empty slice. Compared
+   * against the same measurement — code without comments — rather than against
+   * the raw file length, which would always dwarf it and make this assertion
+   * fail for a reason that has nothing to do with the leak. */
+  const codeLength = source.slice(0, mapAt).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').length;
+  assert.ok(promise.length > codeLength / 2 && promise.length > 200,
+    `the scanned promise is only ${promise.length} characters — the slice is not reaching the contract's code`);
+  // And the map is the sanctioned bridge: the one place the engine's own names
+  // are written down, so a method cannot smuggle a technology in beside it.
+  assert.ok(source.indexOf('export const AUTH_CONTRACT_METHODS') < mapAt,
+    'the map comes after the promise, and is the sanctioned bridge');
 });
 
 test('V2.2: the credential methods are exactly the ones that hand out a session', () => {
