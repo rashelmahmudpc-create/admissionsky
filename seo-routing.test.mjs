@@ -255,6 +255,14 @@ test('every course page links back to the site and to its siblings', () => {
       if (other === slug) continue;
       assert.ok(hrefs.has(`/courses/${other}/`), `${slug} does not link to /courses/${other}/`);
     }
+    /* And out of the course section entirely. Measured 2026-11-03: a course page
+     * linked home, to its three siblings, and to nothing else — so a student who
+     * arrived from a search had no path to the 3000 questions, which are the
+     * other half of what the site offers. Linking only within a section is how a
+     * site becomes several sites. */
+    for (const href of ['/question-bank/', '/about.html', '/contact.html']) {
+      assert.ok(hrefs.has(href), `${slug} does not link out to ${href}`);
+    }
     // And the page must not link to itself as a navigational entry — that is
     // what the only previous link was.
     assert.ok(hrefs.size >= slugs.length, `${slug} links to only ${hrefs.size} distinct URLs`);
