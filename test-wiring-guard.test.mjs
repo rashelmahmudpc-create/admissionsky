@@ -240,3 +240,61 @@ test('every skipped test is named, and the list only shrinks', () => {
   assert.ok(found.length >= 5,
     `only ${found.length} skipped tests were found; if the syntax moved, fix this check rather than letting it go quiet`);
 });
+
+/* A test script in package.json is not a test that runs.
+ *
+ * The check above asks whether a suite file is named in a script or a workflow.
+ * That is necessary and not sufficient: `test:p15` named two files, held the
+ * service-worker digest check, and was called by no workflow — so the check that
+ * would have caught four stale-digest incidents never ran. Nine scripts were in
+ * that state, covering 17 files and roughly 500 passing assertions that guarded
+ * nothing.
+ *
+ * This asks the other question: does a workflow actually reach the script?
+ * Reachability is transitive, because a workflow may call a parent script that
+ * calls these.
+ */
+test('every test script is reached by a workflow', () => {
+  const scripts = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).scripts || {};
+  const workflowText = readdirSync(WORKFLOW_DIR)
+    .filter(name => name.endsWith('.yml') || name.endsWith('.yaml'))
+    .map(name => readFileSync(join(WORKFLOW_DIR, name), 'utf8'))
+    .join('\n');
+
+  const calls = command => [...command.matchAll(/npm run ([\w:-]+)/g)].map(m => m[1]);
+  const reached = new Set();
+  const frontier = Object.keys(scripts).filter(name => workflowText.includes(`npm run ${name}`));
+  while (frontier.length) {
+    const name = frontier.pop();
+    if (reached.has(name)) continue;
+    reached.add(name);
+    for (const child of calls(scripts[name] || '')) if (!reached.has(child)) frontier.push(child);
+  }
+
+  /* The question is whether the FILES a script names are reached, not whether
+   * that exact script is. `test:repo-cleanliness` is called by no workflow, and
+   * its one file runs inside `test:shell-guards` — a second door to the same
+   * room. Flagging that would be a false positive, and a guard that cries wolf
+   * is one the reader learns to skip. */
+  const coveredFiles = new Set();
+  for (const name of reached) {
+    for (const match of (scripts[name] || '').matchAll(/([\w.-]+\.test\.mjs)/g)) coveredFiles.add(match[1]);
+  }
+
+  const orphans = [];
+  for (const [name, command] of Object.entries(scripts)) {
+    if (!name.startsWith('test:') || !command.includes('.test.mjs')) continue;
+    if (reached.has(name)) continue;
+    const files = [...command.matchAll(/([\w.-]+\.test\.mjs)/g)].map(m => m[1]);
+    const unrun = files.filter(f => !coveredFiles.has(f));
+    if (unrun.length) orphans.push(`${name} (${unrun.join(', ')})`);
+  }
+
+  assert.deepEqual(orphans, [],
+    `no workflow reaches these suites, so they never execute: ${orphans.join(' | ')}`);
+
+  // Non-vacuity: the walk must actually be reaching scripts, or a workflow-text
+  // change would make this pass by finding nothing to check.
+  assert.ok(reached.size >= 15,
+    `the walk only reached ${reached.size} scripts; if the workflow layout moved, fix this check rather than letting it go quiet`);
+});
