@@ -184,13 +184,16 @@ h2{{font-size:17px;margin-top:28px}}
 </style>
 </head>
 <body>
-<nav><a href="/">Admission Sky</a> › <a href="/#question-bank">প্রশ্নব্যাংক</a> › {esc(name)}</nav>
+<nav><a href="/">Admission Sky</a> › <a href="/question-bank/">প্রশ্নব্যাংক</a> › {esc(name)}</nav>
 <h1>{esc(name)}</h1>
 <p>{esc(subject_name)} • {len(questions)}টি প্রশ্ন{'' if len(questions) <= len(shown) else f' (প্রথম {len(shown)}টি দেখানো হচ্ছে)'}</p>
 {''.join(items)}
 {more}
 <h2>অন্য টপিকগুলো</h2>
 <ul class="others">{others}</ul>
+<!-- The hash link is deliberate here: it opens the interactive app, not the
+     hub page. The breadcrumb above links to /question-bank/ instead, because a
+     crawler cannot follow a fragment. -->
 <p class="more"><a href="/#question-bank">পুরো প্রশ্নব্যাংক অ্যাপে খুলুন</a> — নিজের অগ্রগতি, ভুলের খাতা ও মডেল টেস্টসহ।</p>
 </body>
 </html>

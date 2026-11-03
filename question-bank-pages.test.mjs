@@ -161,3 +161,32 @@ test('a content outage skips the pages instead of failing the build', () => {
     'no pages are written when there is no content');
   assert.doesNotMatch(output, /pages,/);
 });
+
+test('a topic page links up to the hub, not only sideways to its siblings', () => {
+  /* The defect this guards, measured on the live site 2026-11-03: the hub linked
+   * down to all 14 topics, and every topic linked sideways to the other 13 — but
+   * none linked back to the hub. The breadcrumb's middle step pointed at
+   * `/#question-bank`, a hash route, so a crawler could not follow it. The hub
+   * was reachable from the sitemap and from nowhere else.
+   *
+   * That is the same dead-end shape the course pages had, and it is easy to miss
+   * because the page LOOKS navigable: the breadcrumb says "Admission Sky ›
+   * প্রশ্নব্যাংক › <topic>", and only the middle word is unfollowable. */
+  const { dist } = generate();
+  const content = JSON.parse(readFileSync(FIXTURE, 'utf8'));
+  const topic = content.topics[0];
+  const folder = readdirSync(join(dist, 'question-bank')).find(n => n.startsWith(topic.id));
+  const page = read(dist, 'question-bank', folder, 'index.html');
+
+  const links = new Set([...page.matchAll(/<a[^>]*href="([^"]+)"/g)].map(m => m[1]));
+  assert.ok(links.has('/question-bank/'),
+    'a topic page must link to the hub with a real path a crawler can follow');
+  assert.ok(links.has('/'), 'and back to the site');
+
+  // And no breadcrumb step may point at a fragment: a crawler cannot follow one.
+  const nav = page.match(/<nav>([\s\S]*?)<\/nav>/);
+  assert.ok(nav, 'the page has a breadcrumb');
+  for (const href of [...nav[1].matchAll(/href="([^"]+)"/g)].map(m => m[1])) {
+    assert.ok(!href.includes('#'), `the breadcrumb links to a fragment (${href}), which a crawler cannot follow`);
+  }
+});

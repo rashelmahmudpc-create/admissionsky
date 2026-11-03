@@ -377,3 +377,33 @@ test('every indexable page has a description and a share card', () => {
     }
   }
 });
+
+test('the homepage links to every crawlable section, not just the courses', () => {
+  /* Measured on the live site 2026-11-03: the homepage's static markup linked to
+   * the four course pages and to nothing else. The question bank — 15 generated
+   * pages, 3000 questions — was reachable from the sitemap and from nowhere in
+   * the site's own navigation. A page with no inbound link is a page a crawler
+   * finds late or not at all, and it is the page most likely to earn a search
+   * visit, because students search for the questions themselves.
+   *
+   * Checked on the static markup rather than the rendered page: a crawler that
+   * does not run JavaScript sees only what is in the HTML, which is the whole
+   * reason these pages exist. */
+  const page = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
+  const body = page.replace(/<script[\s\S]*?<\/script>/gi, '');
+  const hrefs = new Set([...body.matchAll(/<a[^>]*href="([^"]+)"/g)].map(m => m[1]));
+
+  const REQUIRED = [
+    ['/question-bank/', 'the question bank hub'],
+    ['/courses/prottoy/', 'a course page'],
+    ['/about.html', 'a site page'],
+  ];
+  for (const [href, what] of REQUIRED) {
+    assert.ok(hrefs.has(href), `the homepage does not link to ${what} (${href})`);
+  }
+
+  // And no navigation link may be a bare fragment: a crawler cannot follow one.
+  for (const href of hrefs) {
+    assert.ok(!href.startsWith('#'), `the homepage navigates to a fragment (${href}), which a crawler cannot follow`);
+  }
+});
