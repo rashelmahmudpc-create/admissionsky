@@ -53,11 +53,25 @@ BREADCRUMB_CSS = (
     '.seo-breadcrumb-siblings{display:flex;flex-wrap:wrap;gap:10px;margin-inline-start:auto}'
     '@media(max-width:640px){.seo-breadcrumb{font-size:12.5px;gap:6px}'
     '.seo-breadcrumb-siblings{margin-inline-start:0;width:100%}}'
+    '.seo-sitelinks{display:flex;flex-wrap:wrap;gap:10px;padding:8px 18px;font-size:13px;'
+    'border-bottom:1px solid var(--line,rgba(128,128,128,.18))}'
+    '.seo-sitelinks a{color:var(--muted,#8b93a7);text-decoration:none}'
+    '.seo-sitelinks a:hover{color:var(--brand,#4f46e5);text-decoration:underline}'
     '</style>'
 )
 
 def breadcrumb(current_slug: str, current_label: str) -> str:
-    """Homepage › this course, plus links to the sibling courses."""
+    """Homepage › this course, plus the rest of the site.
+
+    Measured 2026-11-03: a course page linked home, to its three siblings, and to
+    nothing else — no question bank, no about, no contact. A student who landed
+    on a course from a search had no path to the 3000 questions, which are the
+    other half of what the site offers, and a crawler saw the course section as
+    a closed set.
+
+    The sibling list is capped: a page that lists every section reads as a
+    directory rather than a page. The courses are the closest relatives, so they
+    stay; the rest go in one line below."""
     others = [(s, label) for s, label in PAGES if s != current_slug]
     links = ''.join(
         f'<a href="/courses/{slug}/">{label}</a>'
@@ -71,6 +85,12 @@ def breadcrumb(current_slug: str, current_label: str) -> str:
         f'<span aria-hidden="true">›</span>\n'
         f'<span class="seo-breadcrumb-current">{current_label}</span>\n'
         f'<span class="seo-breadcrumb-siblings">{links}</span>\n'
+        f'</nav>\n'
+        f'<nav class="seo-sitelinks" aria-label="সাইট">'
+        f'<a href="/question-bank/">প্রশ্নব্যাংক</a>'
+        f'<a href="/about.html">আমাদের সম্পর্কে</a>'
+        f'<a href="/contact.html">যোগাযোগ</a>'
+        f'<a href="/privacy.html">গোপনীয়তা</a>'
         f'</nav>\n'
         f'{MARK_END}'
     )
