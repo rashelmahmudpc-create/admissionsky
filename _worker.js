@@ -70,6 +70,12 @@ const PUBLIC_ROUTES = new Set([
   '/', '/index.html',
   '/privacy', '/privacy.html', '/data-deletion', '/data-deletion.html',
   '/about', '/about.html', '/contact', '/contact.html',
+  /* The question bank's crawlable pages. The app itself is hash-routed, so
+     these generated pages are the only URLs a search engine can read — one per
+     topic, plus the hub. They carry the public half of the bank (questions and
+     answers, which /api/content already serves to anyone) and none of the
+     per-student state. */
+  '/question-bank', '/question-bank/',
   /* The account page is a single full-screen document now; these preview pages
      stay reachable so the owner can open the designs on their own. */
   '/splash-preview', '/splash-preview.html',
@@ -93,7 +99,7 @@ const PUBLIC_FILES = new Set([
   '/robots.txt', '/sitemap.xml', '/favicon.ico', '/og-image.png',
   '/apple-touch-icon.png', '/manifest.json', '/manifest.webmanifest', '/sw.js'
 ]);
-const PUBLIC_PREFIXES = ['/icons/', '/course-assets/'];
+const PUBLIC_PREFIXES = ['/icons/', '/course-assets/', '/question-bank/'];
 const COURSE_SLUGS = new Set(['prottoy', 'prottoy-master', 'sandhi', 'somas']);
 const PROFILE_PATH = /^\/AH-[A-Z2-9]{6}\/?$/i;
 const ASSET_EXT = /\.(css|js|mjs|json|webmanifest|png|jpe?g|webp|avif|gif|svg|ico|pdf|woff2?|ttf|otf|eot|mp3|mp4|webm|txt|xml|map)$/i;

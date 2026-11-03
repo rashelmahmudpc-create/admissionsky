@@ -23,6 +23,9 @@ on:
       - 'fcm-notification.mjs'
       - 'scripts/pii-scan.mjs'
       - 'seo-routing.test.mjs'
+      - 'question-bank-pages.test.mjs'
+      - 'scripts/build-question-bank-pages.py'
+      - 'tests/fixtures/question-bank-content.json'
       - 'package.json'
       - 'package-lock.json'
       - 'wrangler.toml'
@@ -49,6 +52,9 @@ on:
       - 'fcm-notification.mjs'
       - 'scripts/pii-scan.mjs'
       - 'seo-routing.test.mjs'
+      - 'question-bank-pages.test.mjs'
+      - 'scripts/build-question-bank-pages.py'
+      - 'tests/fixtures/question-bank-content.json'
       - 'package.json'
       - 'package-lock.json'
       - 'wrangler.toml'
@@ -114,6 +120,10 @@ jobs:
 
           # The allowlist worker keeps unknown paths and missing assets at 404.
           node --test seo-routing.test.mjs
+          # The question bank's generated pages: one per topic, with the
+          # questions and answers in the markup. Run here because this is the
+          # job that already guards the crawlable surface.
+          node --test question-bank-pages.test.mjs
 
           echo 'SEO artifacts, meta tags and 404 routing are intact.'
 
