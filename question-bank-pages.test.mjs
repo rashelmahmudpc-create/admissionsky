@@ -248,3 +248,54 @@ test('every generated title fits what a search result shows', () => {
     assert.ok(og.length <= LIMIT, `${what} og:title is ${og.length} chars`);
   }
 });
+
+test('a malformed question cannot stop the whole bank from publishing', () => {
+  /* The bug this guards, found 2026-11-03 by feeding the generator bad content:
+   * an answer index outside the options list raised IndexError, which aborted
+   * the script. The deploy wraps it in `|| echo`, so the deploy stayed green and
+   * all fifteen pages silently stopped publishing — one malformed question in
+   * the owner's console would have taken the entire question bank off the site.
+   *
+   * A question whose answer cannot be resolved is still worth publishing: the
+   * question and its options are what a student searched for. Only the answer is
+   * omitted. */
+  const BAD = [
+    { name: 'out of range', question: { id: 'q1', topicId: 't1', question: 'Q?', options: ['a'], answer: 9 } },
+    { name: 'negative', question: { id: 'q1', topicId: 't1', question: 'Q?', options: ['a'], answer: -1 } },
+    { name: 'not a number', question: { id: 'q1', topicId: 't1', question: 'Q?', options: ['a'], answer: 'x' } },
+    { name: 'null', question: { id: 'q1', topicId: 't1', question: 'Q?', options: ['a'], answer: null } },
+    { name: 'no options', question: { id: 'q1', topicId: 't1', question: 'Q?', options: [], answer: 0 } },
+    { name: 'no answer', question: { id: 'q1', topicId: 't1', question: 'Q?' } },
+  ];
+  const content = {
+    subjects: [{ id: 's1', name: 'S' }],
+    topics: [{ id: 't1', name: 'T', subjectId: 's1' }],
+    questions: BAD.map(b => b.question),
+  };
+
+  const dist = mkdtempSync(join(tmpdir(), 'qb-bad-'));
+  const fixture = join(dist, 'content.json');
+  writeFileSync(fixture, JSON.stringify(content));
+
+  let output = '';
+  assert.doesNotThrow(() => {
+    output = execFileSync('python3', [GENERATOR, '--dist', dist, '--content', fixture], {
+      cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+    });
+  }, 'a malformed question must not abort the generator');
+
+  // And the pages are still produced — the point of not aborting.
+  assert.match(output, /question bank: \d+ pages/);
+  const folder = readdirSync(join(dist, 'question-bank')).find(n => n.startsWith('t1'));
+  const page = readFileSync(join(dist, 'question-bank', folder, 'index.html'), 'utf8');
+  const graph = JSON.parse(page.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1])['@graph'];
+  const faq = graph.find(n => n['@type'] === 'FAQPage');
+  assert.ok(faq, 'the page still carries its FAQ');
+
+  // Every entry has an answer field; the unresolvable ones are empty rather than
+  // guessed at.
+  for (const entry of faq.mainEntity) {
+    assert.equal(typeof entry.acceptedAnswer.text, 'string', 'every entry has a text field');
+    assert.equal(entry.acceptedAnswer.text, '', 'an unresolvable answer is empty, never a guess');
+  }
+});
