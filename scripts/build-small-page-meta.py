@@ -115,6 +115,23 @@ def structured_data(file: str, title: str, description: str, url: str) -> str:
             + json.dumps({'@context': 'https://schema.org', '@graph': graph}, ensure_ascii=False)
             + '</script>')
 
+
+# Every small page ends with this. Measured 2026-11-03: privacy.html linked only
+# to data-deletion.html and data-deletion.html linked to nothing at all, while
+# both sit in the sitemap — a crawler is invited to a page it cannot leave, and a
+# student reading the privacy policy has no way back to the app.
+SITE_FOOTER = (
+    '<footer class="site-links"><nav aria-label="সাইট">'
+    '<a href="/">হোম</a> · '
+    '<a href="/courses/sandhi/">কোর্স</a> · '
+    '<a href="/question-bank/">প্রশ্নব্যাংক</a> · '
+    '<a href="/about.html">আমাদের সম্পর্কে</a> · '
+    '<a href="/contact.html">যোগাযোগ</a> · '
+    '<a href="/privacy.html">গোপনীয়তা</a> · '
+    '<a href="/data-deletion.html">ডেটা মুছে ফেলা</a>'
+    '</nav></footer>'
+)
+
 MARK_START = '<!-- seo:meta:start -->'
 MARK_END = '<!-- seo:meta:end -->'
 
@@ -141,21 +158,47 @@ def block(file: str, title: str, description: str, url: str) -> str:
     return '\n'.join(lines)
 
 
+FOOTER_START = '<!-- seo:footer:start -->'
+FOOTER_END = '<!-- seo:footer:end -->'
+FOOTER_CSS = (
+    '<style>.site-links{margin-top:30px;padding-top:14px;border-top:1px solid #e3e6e4;'
+    'font-size:13.5px;color:#6b7370}.site-links a{color:#0f6b4f;text-decoration:none}'
+    '.site-links a:hover{text-decoration:underline}</style>'
+)
+
+
 def apply(page: str, file: str, title: str, description: str, url: str) -> tuple:
     """Replace an existing block, or add the missing tags in place."""
     fresh = block(file, title, description, url)
     if MARK_START in page and MARK_END in page:
         start = page.index(MARK_START)
         end = page.index(MARK_END) + len(MARK_END)
-        return page[:start] + fresh + page[end:], 'replaced'
+        page = page[:start] + fresh + page[end:]
+        action = 'replaced'
+    else:
+        # Remove any pre-existing description so it is not duplicated, then
+        # insert the whole block right after <title>.
+        cleaned = re.sub(r'<meta name="description"[^>]*>', '', page, count=1)
+        m = re.search(r'</title>', cleaned)
+        if not m:
+            return page, 'no-title'
+        page = cleaned[:m.end()] + '\n' + fresh + cleaned[m.end():]
+        action = 'inserted'
 
-    # Remove any pre-existing description so it is not duplicated, then insert
-    # the whole block right after <title>.
-    cleaned = re.sub(r'<meta name="description"[^>]*>', '', page, count=1)
-    m = re.search(r'</title>', cleaned)
-    if not m:
-        return page, 'no-title'
-    return cleaned[:m.end()] + '\n' + fresh + cleaned[m.end():], 'inserted'
+    # The footer goes at the end of the BODY, so it is a separate injection from
+    # the head block above.
+    footer = f'{FOOTER_START}\n{FOOTER_CSS}\n{SITE_FOOTER}\n{FOOTER_END}'
+    if FOOTER_START in page and FOOTER_END in page:
+        start = page.index(FOOTER_START)
+        end = page.index(FOOTER_END) + len(FOOTER_END)
+        page = page[:start] + footer + page[end:]
+    else:
+        at = page.rfind('</body>')
+        if at == -1:
+            return page, 'no-body'
+        page = page[:at] + footer + '\n' + page[at:]
+
+    return page, action
 
 
 def title_of(page: str) -> str:
