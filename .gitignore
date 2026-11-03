@@ -7,3 +7,8 @@ dist/
 
 # agent scratch space
 .agent_tmp/
+
+# Python bytecode — the generators in scripts/ are run directly, so CPython
+# writes these next to them. They are build output, not source.
+__pycache__/
+*.pyc

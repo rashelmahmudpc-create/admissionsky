@@ -377,6 +377,18 @@ test('every indexable page has a description and a share card', () => {
     const descriptions = head.match(/<meta name="description"/g) || [];
     assert.equal(descriptions.length, 1, `${file} must have exactly one meta description, saw ${descriptions.length}`);
 
+    /* A result shows roughly 160 characters and then cuts. Measured 2026-11-03:
+     * the prottoy course page's description was 183 characters, so the sentence
+     * was cut mid-clause and the last claim never appeared. A description that
+     * ends in an ellipsis is a promise the reader never sees. */
+    const description = head.match(/<meta name="description" content="([^"]*)"/)[1];
+    assert.ok(description.length <= 160,
+      `${file} description is ${description.length} characters; a result cuts at about 160`);
+
+    // The title is the other half of the result. 60 is the working limit.
+    const title = head.match(/<title>([^<]*)<\/title>/)[1];
+    assert.ok(title.length <= 60, `${file} title is ${title.length} characters: ${title}`);
+
     for (const tag of ['og:title', 'og:description', 'og:url', 'og:image']) {
       assert.ok(head.includes(`property="${tag}"`), `${file} is missing ${tag}`);
     }

@@ -218,3 +218,33 @@ test('a question bank page links out to the rest of the site', () => {
     }
   }
 });
+
+test('every generated title fits what a search result shows', () => {
+  /* Measured on the live site 2026-11-03: three topic pages had titles of 68-75
+   * characters, because the topic names carry emoji. A result past roughly 60
+   * characters is cut with an ellipsis, and the cut lands in the middle of the
+   * topic name — the one part a student is scanning for.
+   *
+   * The suffix is what makes the title legible in a list, so it is kept and the
+   * name is trimmed. Checked on every generated page rather than the three that
+   * were long, because the next topic the owner adds will have its own length. */
+  const { dist, } = generate();
+  const content = JSON.parse(readFileSync(FIXTURE, 'utf8'));
+  const LIMIT = 60;
+
+  const pages = [['hub', join(dist, 'question-bank', 'index.html')]];
+  for (const topic of content.topics) {
+    const folder = readdirSync(join(dist, 'question-bank')).find(n => n.startsWith(topic.id));
+    pages.push([topic.id, join(dist, 'question-bank', folder, 'index.html')]);
+  }
+
+  for (const [what, file] of pages) {
+    const page = readFileSync(file, 'utf8');
+    const title = page.match(/<title>([^<]*)<\/title>/)?.[1] ?? '';
+    assert.ok(title, `${what} has no title`);
+    assert.ok(title.length <= LIMIT, `${what} title is ${title.length} chars: ${title}`);
+    // The share card is the same title, so it has the same limit.
+    const og = page.match(/property="og:title" content="([^"]*)"/)?.[1] ?? '';
+    assert.ok(og.length <= LIMIT, `${what} og:title is ${og.length} chars`);
+  }
+});
