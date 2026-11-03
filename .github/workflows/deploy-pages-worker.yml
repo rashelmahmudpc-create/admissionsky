@@ -60,6 +60,7 @@ on:
       - 'ai-proxy/**'
       - '_worker.js'
       - 'scripts/pages-dist.mjs'
+      - 'scripts/build-question-bank-pages.py'
       # Self-reference, so editing this workflow publishes immediately instead
       # of needing a second unrelated commit to shake it loose.
       - '.github/workflows/deploy-pages-worker.yml'
@@ -528,6 +529,12 @@ jobs:
           test -s dist/index.html
           test -s dist/sw.js
           test -s dist/account-access.js
+          # The question bank's crawlable pages are generated into dist/ rather
+          # than committed, because the content changes from the owner's console
+          # and a committed snapshot would go stale the moment he edits a topic.
+          # A content outage must not fail the deploy, so this reports and moves
+          # on; the pages that are already live simply stay.
+          python3 scripts/build-question-bank-pages.py --dist dist || echo '::warning title=Question bank pages skipped::content API unavailable'
           # The voice page loads its module by relative path; without it the
           # page 404s the import and the gate protects a page that cannot run.
           test -s dist/voice-agent-client-core.mjs

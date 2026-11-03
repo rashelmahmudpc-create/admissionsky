@@ -1,0 +1,140 @@
+{
+ "subjects": [
+  {
+   "id": "sub-01",
+   "name": "GK",
+   "icon": "📚",
+   "color": "",
+   "order": 0,
+   "createdAt": 1788159935531
+  },
+  {
+   "id": "sub-02",
+   "name": "Bangla 1st",
+   "icon": "📚",
+   "color": "",
+   "order": 1,
+   "createdAt": 1788159935531
+  }
+ ],
+ "topics": [
+  {
+   "id": "top-001",
+   "subjectId": "sub-01",
+   "parentTopicId": "",
+   "name": "রাজনীতি , রাজনৈতিক দল ও নির্বাচন 🗳️",
+   "description": "",
+   "order": 0,
+   "createdAt": 1788159935531,
+   "updatedAt": 1788159935531
+  },
+  {
+   "id": "top-006",
+   "subjectId": "sub-05",
+   "parentTopicId": "",
+   "name": "জেনারেল সন্ধি",
+   "description": "",
+   "order": 5,
+   "createdAt": 1788159935531,
+   "updatedAt": 1788159935531
+  }
+ ],
+ "questions": [
+  {
+   "id": "pq-0001",
+   "topicId": "top-001",
+   "subjectId": "sub-01",
+   "difficulty": "mixed",
+   "sortKey": "top-001|sub-01|pq-0001",
+   "updatedAt": 1791637083629,
+   "subTopicId": "",
+   "question": "প্রতিনিধিত্বশীল গণতন্ত্রের প্রাণ কী?",
+   "options": [
+    "রাজনৈতিক দল",
+    "নির্বাচন কমিশন",
+    "জাতীয় সংসদ",
+    "সুশীল সমাজ"
+   ],
+   "answer": 0,
+   "explanation": "",
+   "tags": []
+  },
+  {
+   "id": "pq-0002",
+   "topicId": "top-001",
+   "subjectId": "sub-01",
+   "difficulty": "mixed",
+   "sortKey": "top-001|sub-01|pq-0002",
+   "updatedAt": 1791637083629,
+   "subTopicId": "",
+   "question": "‘বিকল্প সরকার’ বা ‘ছায়া সরকার’ বলা হয় কাকে?",
+   "options": [
+    "সরকারি দলকে",
+    "বিরোধী দলকে",
+    "নির্বাচন কমিশনকে",
+    "সুশীল সমাজকে"
+   ],
+   "answer": 1,
+   "explanation": "",
+   "tags": []
+  },
+  {
+   "id": "pq-0003",
+   "topicId": "top-001",
+   "subjectId": "sub-01",
+   "difficulty": "mixed",
+   "sortKey": "top-001|sub-01|pq-0003",
+   "updatedAt": 1791637083629,
+   "subTopicId": "",
+   "question": "‘Civil Society’-এর বাংলা কী?",
+   "options": [
+    "রাজনৈতিক দল",
+    "নাগরিক সরকার",
+    "সুশীল সমাজ",
+    "বিরোধী দল"
+   ],
+   "answer": 2,
+   "explanation": "",
+   "tags": []
+  },
+  {
+   "id": "pq-0004",
+   "topicId": "top-001",
+   "subjectId": "sub-01",
+   "difficulty": "mixed",
+   "sortKey": "top-001|sub-01|pq-0004",
+   "updatedAt": 1791637083629,
+   "subTopicId": "",
+   "question": "নিচের কোনটি প্রতিনিধিত্বশীল গণতন্ত্রের প্রাণ?",
+   "options": [
+    "বিরোধী দল",
+    "রাজনৈতিক দল",
+    "সুশীল সমাজ",
+    "নির্বাচন কমিশন"
+   ],
+   "answer": 1,
+   "explanation": "",
+   "tags": []
+  },
+  {
+   "id": "pq-0005",
+   "topicId": "top-001",
+   "subjectId": "sub-01",
+   "difficulty": "mixed",
+   "sortKey": "top-001|sub-01|pq-0005",
+   "updatedAt": 1791637083629,
+   "subTopicId": "",
+   "question": "ছায়া সরকার হিসেবে পরিচিত—",
+   "options": [
+    "সরকারি দল",
+    "বিরোধী দল",
+    "নির্বাচন কমিশন",
+    "জাতীয় সংসদ"
+   ],
+   "answer": 1,
+   "explanation": "",
+   "tags": []
+  }
+ ],
+ "at": 1791714883822
+}
