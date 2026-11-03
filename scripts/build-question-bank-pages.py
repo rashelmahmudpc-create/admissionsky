@@ -100,6 +100,28 @@ def title_for(name: str) -> str:
         cut = cut[:cut.rfind(' ')]
     return f'{cut.rstrip()}{suffix}'
 
+
+def answer_text(question: dict) -> str:
+    """The correct option's text, or "" when there is not one to give.
+
+    This is the one place the generator indexes a list with a value that comes
+    from the content API, and an out-of-range answer used to raise IndexError —
+    which aborted the whole script, so the deploy's `|| echo` swallowed it and
+    ALL fifteen pages silently stopped publishing. One malformed question in the
+    owner's console would have taken the entire question bank off the site.
+
+    A question whose answer cannot be resolved is still worth publishing: the
+    question and its options are the content a student searched for. Only the
+    answer is omitted, and the FAQPage entry says nothing rather than guessing.
+    """
+    options = question.get("options") or []
+    raw = question.get("answer", question.get("answerIndex"))
+    try:
+        index = int(raw)
+    except (TypeError, ValueError):
+        return ""
+    return str(options[index]) if 0 <= index < len(options) else ""
+
 def esc(value) -> str:
     return html.escape(str(value if value is not None else ''), quote=True)
 
@@ -193,9 +215,7 @@ def page_for(topic: dict, subject: dict, questions: list, all_topics: list) -> s
                     "name": q.get("question") or "",
                     "acceptedAnswer": {
                         "@type": "Answer",
-                        "text": (q.get("options") or [""])[int(q.get("answer", 0))]
-                        if (q.get("options") or []) and str(q.get("answer", 0)).lstrip("-").isdigit()
-                        else "",
+                        "text": answer_text(q),
                     },
                 }
                 for q in shown[:20] if q.get("question")
