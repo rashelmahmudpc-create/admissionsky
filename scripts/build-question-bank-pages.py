@@ -52,6 +52,27 @@ def fetch_content() -> dict:
         return json.loads(response.read())
 
 
+# Every generated page ends with this, so the question bank is part of the site
+# rather than an island. Measured 2026-11-03: a topic page linked to the hub and
+# to its 13 siblings and to nothing else — no course, no about, no contact — and
+# the hub linked only to its own topics. A crawler entering the bank could not
+# leave it.
+SITE_FOOTER = (
+    '<footer class="site-links">'
+    '<nav aria-label="সাইট">'
+    '<a href="/">হোম</a> · '
+    '<a href="/courses/sandhi/">সন্ধি</a> · '
+    '<a href="/courses/somas/">সমাস</a> · '
+    '<a href="/courses/prottoy/">প্রত্যয়</a> · '
+    '<a href="/courses/prottoy-master/">প্রত্যয় Master</a> · '
+    '<a href="/about.html">আমাদের সম্পর্কে</a> · '
+    '<a href="/contact.html">যোগাযোগ</a> · '
+    '<a href="/privacy.html">গোপনীয়তা</a> · '
+    '<a href="/data-deletion.html">ডেটা মুছে ফেলা</a>'
+    '</nav>'
+    '</footer>'
+)
+
 def esc(value) -> str:
     return html.escape(str(value if value is not None else ''), quote=True)
 
@@ -181,6 +202,7 @@ h2{{font-size:17px;margin-top:28px}}
 .e{{margin:6px 0 0;font-size:14px;color:#4b5350}}
 .more{{font-size:14px;color:#6b7370}}
 .others{{font-size:14px}}
+.site-links{{margin-top:34px;padding-top:16px;border-top:1px solid #e3e6e4;font-size:13.5px;color:#6b7370}}
 </style>
 </head>
 <body>
@@ -195,6 +217,7 @@ h2{{font-size:17px;margin-top:28px}}
      hub page. The breadcrumb above links to /question-bank/ instead, because a
      crawler cannot follow a fragment. -->
 <p class="more"><a href="/#question-bank">পুরো প্রশ্নব্যাংক অ্যাপে খুলুন</a> — নিজের অগ্রগতি, ভুলের খাতা ও মডেল টেস্টসহ।</p>
+{SITE_FOOTER}
 </body>
 </html>
 '''
@@ -281,6 +304,7 @@ h2{{font-size:17px;margin-top:26px}}
 ul{{padding-inline-start:20px}}
 li{{margin:4px 0}}
 .c{{color:#6b7370;font-size:13px}}
+.site-links{{margin-top:34px;padding-top:16px;border-top:1px solid #e3e6e4;font-size:13.5px;color:#6b7370}}
 </style>
 </head>
 <body>
@@ -289,6 +313,7 @@ li{{margin:4px 0}}
 <p>{total}টি প্রশ্ন, বিষয় ও টপিক অনুযায়ী সাজানো — উত্তরসহ।</p>
 {''.join(sections)}
 <p><a href="/#question-bank">পুরো প্রশ্নব্যাংক অ্যাপে খুলুন</a> — নিজের অগ্রগতি, ভুলের খাতা ও মডেল টেস্টসহ।</p>
+{SITE_FOOTER}
 </body>
 </html>
 '''
