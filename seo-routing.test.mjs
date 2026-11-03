@@ -389,6 +389,17 @@ test('every indexable page has a description and a share card', () => {
     const title = head.match(/<title>([^<]*)<\/title>/)[1];
     assert.ok(title.length <= 60, `${file} title is ${title.length} characters: ${title}`);
 
+    /* And the page must not be a dead end. Measured 2026-11-03: privacy.html
+     * linked only to data-deletion.html and data-deletion.html linked to nothing
+     * at all — both sit in the sitemap, so a crawler was invited to a page it
+     * could not leave, and a student reading the privacy policy had no way back
+     * to the app. */
+    const body = page.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '');
+    const hrefs = new Set([...body.matchAll(/<a[^>]*href="([^"]+)"/g)].map(m => m[1]));
+    for (const href of ['/', '/question-bank/', '/about.html', '/contact.html']) {
+      assert.ok(hrefs.has(href), `${file} does not link to ${href} — it is a dead end`);
+    }
+
     for (const tag of ['og:title', 'og:description', 'og:url', 'og:image']) {
       assert.ok(head.includes(`property="${tag}"`), `${file} is missing ${tag}`);
     }
