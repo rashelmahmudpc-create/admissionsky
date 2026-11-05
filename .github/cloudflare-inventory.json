@@ -3,7 +3,7 @@
   "account": "abb783e456e51a5d338419de93d5e576",
   "account_name": "Rashelzayan213@icloud.com's Account",
   "worker_subdomain": "admissionhub.workers.dev",
-  "last_verified": "2026-11-01",
+  "last_verified": "2026-11-05",
   "workers": {
     "tracked": [
       "admission-gk",
@@ -71,6 +71,10 @@
       {
         "name": "zozo-vault",
         "reason": "Owner-bot secret vault Worker for the fleet (2026-11-01). Not deployed by this repo. Sibling-bot/fleet tooling — waive; do not retire."
+      },
+      {
+        "name": "zozo-mcp-vault",
+        "reason": "Owner-bot MCP secret vault Worker for the fleet (2026-11-05). Not deployed by this repo. Sibling-bot/fleet tooling - waive; do not retire."
       }
     ]
   },
@@ -83,6 +87,10 @@
       {
         "name": "rashel-study-hub",
         "reason": "Old project (2026-09-17), answers 200. Not deployed by this repo. Owner call: retire."
+      },
+      {
+        "name": "webbrain",
+        "reason": "WebBrain MCP documentation/search pages project (2026-11-05). Owned by the WebBrain tool, not deployed by this repo - waive; do not retire."
       }
     ]
   },
