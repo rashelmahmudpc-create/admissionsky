@@ -1,12 +1,20 @@
 name: Appwrite Keep-Alive
-# Appwrite Cloud free plan pauses a project after ~7 days with no activity.
-# This pings the otp-i project (fra region) twice a week with a guest-scope
-# request (GET /v1/locale) so it always counts as active. No secret needed:
-# the project id is already public (see APPWRITE_PUBLIC_DEFAULTS in
-# auth-native/verification/providers.mjs).
+# Appwrite Cloud free plan pauses a project after a period of inactivity, which
+# takes the otp-i verification provider offline (auth degradation). This job
+# keeps the project (fra region) active.
+#
+# Design:
+# - A guest-scope GET /locale proves the project is reachable and needs no
+#   secret (the project id is already public, see APPWRITE_PUBLIC_DEFAULTS in
+#   auth-native/verification/providers.mjs).
+# - Appwrite's inactivity check is driven by real project/database activity.
+#   When the optional APPWRITE_API_KEY secret exists (scope: databases.read),
+#   this job also performs an authenticated GET /databases, which counts as
+#   activity. Without the secret it still runs key-free.
+# - Runs every day (previously Mon & Thu) so the maximum idle gap stays small.
 on:
   schedule:
-    - cron: '17 3 * * 1,4'   # Monday & Thursday 03:17 UTC
+    - cron: '17 3 * * *'   # every day 03:17 UTC
   workflow_dispatch:
 permissions: {}
 concurrency:
@@ -19,22 +27,37 @@ jobs:
     env:
       APPWRITE_ENDPOINT: https://fra.cloud.appwrite.io/v1
       APPWRITE_PROJECT_ID: 6ad1e9280025bf4464ee
+      APPWRITE_API_KEY: ${{ secrets.APPWRITE_API_KEY }}
     steps:
       - name: Ping Appwrite project
         run: |
           set -euo pipefail
+          reachable=0
           for attempt in 1 2 3; do
             code=$(curl -sS -o /tmp/resp.json -w '%{http_code}' --max-time 20 \
               -H "X-Appwrite-Project: ${APPWRITE_PROJECT_ID}" \
               -H 'X-Appwrite-Response-Format: 1.6.0' \
               "${APPWRITE_ENDPOINT}/locale" || echo 000)
-            echo "attempt ${attempt}: HTTP ${code}"
-            if [ "$code" = "200" ]; then
-              echo "Appwrite project ${APPWRITE_PROJECT_ID} is active."
-              exit 0
-            fi
+            echo "attempt ${attempt}: GET /locale -> HTTP ${code}"
+            if [ "$code" = "200" ]; then reachable=1; break; fi
             sleep 20
           done
-          echo '::error::Appwrite did not answer 200. The project may be paused - open the Appwrite console and restore it.'
-          cat /tmp/resp.json 2>/dev/null || true
-          exit 1
+          if [ "$reachable" != "1" ]; then
+            echo "::error::Appwrite project did not answer 200 — it may be paused. Restore it at https://cloud.appwrite.io/console/project-${APPWRITE_PROJECT_ID}"
+            cat /tmp/resp.json 2>/dev/null || true
+            exit 1
+          fi
+          echo "Appwrite project ${APPWRITE_PROJECT_ID} is reachable."
+          if [ -n "${APPWRITE_API_KEY:-}" ]; then
+            code=$(curl -sS -o /tmp/db.json -w '%{http_code}' --max-time 20 \
+              -H "X-Appwrite-Project: ${APPWRITE_PROJECT_ID}" \
+              -H "X-Appwrite-Key: ${APPWRITE_API_KEY}" \
+              -H 'X-Appwrite-Response-Format: 1.6.0' \
+              "${APPWRITE_ENDPOINT}/databases" || echo 000)
+            echo "authenticated GET /databases -> HTTP ${code}"
+            if [ "$code" != "200" ]; then
+              echo "::warning::Authenticated database ping failed (HTTP ${code}). Check the APPWRITE_API_KEY scope (needs databases.read)."
+            fi
+          else
+            echo "APPWRITE_API_KEY not set — using key-free guest ping only."
+          fi
