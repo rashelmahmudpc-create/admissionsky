@@ -267,12 +267,22 @@ const guardSend = async ({ request, env, context, body, fetchImpl, executionCont
   // for a minute, so a normal day costs at most one extra DO round trip per
   // isolate per minute rather than one per signup.
   const required = requiresHardHumanCheck(context) || (await fuzzBandNow(env)) === 'hard';
+  /* Owner order 2026-11-16: the widget is invisible now, so a token that never
+   * arrived is "the check could not run on this device", not "this is a bot".
+   * Refusing it was what locked real students out — the box silently failed to
+   * mint a token and the server turned that into HUMAN_CHECK_FAILED on every
+   * login. `optional` therefore lets a *missing* token through on the ordinary
+   * path only. The two callers that already earned the strict check keep it:
+   * a hosting-ASN caller and a deployment in the L8 hard band both set
+   * `required`, which overrides `optional`. A token Cloudflare actively
+   * rejects is still a refusal — only silence is forgiven. */
   await verifyTurnstile({
     env,
     token: body?.turnstileToken,
     ip: context.ip,
     fetchImpl,
-    required
+    required,
+    optional: !required
   });
   return null;
 };

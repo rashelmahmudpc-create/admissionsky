@@ -23,15 +23,28 @@ const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverif
  * verify against — so it refuses rather than pretending. It is only ever set
  * for callers already judged suspicious, never for the ordinary path, so an
  * unconfigured deployment keeps serving students normally.
+ *
+ * `optional` (owner 2026-11-16) is the one flag that lets a *missing* token
+ * through. The owner's instruction was that students must log in "like water"
+ * while Turnstile keeps guarding against bots: the widget now renders invisible
+ * and a real person never sees it, so the ordinary path must never be blocked
+ * by a challenge that silently failed to mint a token on their device. An
+ * explicit refusal from Cloudflare still refuses, and the `required` callers
+ * above still fail closed, so this is not a general bypass — it is "the check
+ * could not run, so do not punish the student for it."
  */
-export async function verifyTurnstile({ env, token, ip, fetchImpl = fetch, timeoutMs = 8000, required = false } = {}) {
+export async function verifyTurnstile({ env, token, ip, fetchImpl = fetch, timeoutMs = 8000, required = false, optional = false } = {}) {
   const secret = String(env?.TURNSTILE_SECRET_KEY || '').trim();
   if (!secret) {
     if (required) throw new NativeAuthError(AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
     return { enforced: false };
   }
   const value = String(token ?? '');
-  if (!value || value.length > 4096) throw new NativeAuthError(AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
+  if (!value) {
+    if (optional && !required) return { enforced: false, skipped: true };
+    throw new NativeAuthError(AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
+  }
+  if (value.length > 4096) throw new NativeAuthError(AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
   const form = new URLSearchParams({ secret, response: value });
   if (ip && ip !== 'unknown') form.set('remoteip', String(ip).slice(0, 96));
   const controller = new AbortController();
