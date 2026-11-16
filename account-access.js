@@ -1482,17 +1482,14 @@
   // (or the script unavailable) it resolves empty, and the server guard, which
   // only arms once its secret exists, stays the single source of truth.
   //
-  // Owner 2026-11-16: the check must live INSIDE the form a student is already
-  // looking at, not in a small card floating at the bottom of the screen. The
-  // Admission Sky flow publishes an empty slot (the .hc element) on the step that
-  // submits, so the widget renders inline, right under the field. The floating
-  // card survives only as a fallback for the legacy account form, where no slot
-  // exists.
+  // Owner 2026-11-16 (voice): "login হবেও, আবার এটাও থাকবে ... এটা invisible করো,
+  // ছাত্র যাতে টের না পায়." The check is now INVISIBLE: no card, no tap, no
+  // "মানব যাচাই" heading anywhere on screen. Cloudflare still verifies in the
+  // background and escalates to an interaction only when it genuinely suspects a
+  // bot, so the guard is kept and the student never has to solve anything. Every
+  // failure path resolves an empty token, and the server reads a missing token as
+  // "the check could not run" for an ordinary caller.
   let tsApiPromise = null;
-  const humanSlot = () => {
-    const slot = document.querySelector('#ah-sky-flow .scr.on .hc');
-    return slot instanceof HTMLElement ? slot : null;
-  };
   const humanToken = () => {
     const siteKey = String(window.ADMISSION_HUB_TURNSTILE_SITEKEY || '').trim();
     if (!siteKey) return Promise.resolve('');
@@ -1506,74 +1503,45 @@
         document.head.appendChild(script);
       });
     }
-    return tsApiPromise.then(api => new Promise((resolve, reject) => {
-      const slot = humanSlot();
+    return tsApiPromise.then(api => new Promise(resolve => {
+      /* Owner order 2026-11-16: no card, no tap, no heading — the check is
+         invisible. A real student is never asked to solve anything, which is
+         exactly what was locking people out before. Cloudflare still verifies in
+         the background and only escalates to an interaction when it genuinely
+         suspects a bot, so the guard is kept, not removed. Every failure path
+         resolves an empty token, and the server reads a missing token as "the
+         check could not run" for an ordinary caller. */
       const host = document.createElement('div');
-      host.className = slot ? 'ah-human-check ah-human-check-inline' : 'ah-human-check';
-      host.setAttribute('role', 'group');
-      host.setAttribute('aria-label', 'মানব যাচাই');
-      const head = document.createElement('p');
-      head.className = 'ah-hc-head';
-      const shield = document.createElement('span');
-      shield.className = 'ah-hc-shield';
-      shield.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5.5c0 4.3-2.9 7.9-7 9.5-4.1-1.6-7-5.2-7-9.5V6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 12l2.2 2.2L15.5 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-      const heading = document.createElement('b');
-      heading.textContent = 'মানব যাচাই';
-      head.append(shield, heading);
-      const sub = document.createElement('p');
-      sub.className = 'ah-hc-sub';
-      sub.textContent = 'নিচের বাক্সে একবার ট্যাপ করো।';
-      const mount = document.createElement('div');
-      mount.className = 'ah-hc-mount';
-      const bar = document.createElement('div');
-      bar.className = 'ah-hc-bar';
-      bar.appendChild(document.createElement('i'));
-      host.append(head, sub, mount, bar);
-      (slot || document.body).appendChild(host);
-      if (slot) { try { host.scrollIntoView({ block: 'nearest' }); } catch (_) {} }
-      /* The on-screen keyboard is why the old box failed: only visualViewport
-         reports it, and a bottom-pinned card landed in the covered strip where
-         the tap could not be made. The inline slot needs no pinning at all, so
-         this runs for the floating fallback only. */
-      const pin = () => {
-        if (slot) return;
-        const vv = window.visualViewport;
-        if (!vv) { host.style.top = 'auto'; host.style.bottom = '12px'; return; }
-        const covered = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-        const above = vv.offsetTop + 12;
-        if (window.innerHeight - covered - above >= 190) {
-          host.style.top = 'auto';
-          host.style.bottom = (covered + 12) + 'px';
-        } else {
-          host.style.bottom = 'auto';
-          host.style.top = above + 'px';
-        }
-      };
-      pin();
+      host.className = 'ah-human-check ah-human-check-invisible';
+      host.setAttribute('aria-hidden', 'true');
+      host.style.cssText = 'position:fixed;left:-9999px;top:0;width:0;height:0;overflow:hidden;';
+      document.body.appendChild(host);
       let done = false, widgetId = null, timer = null;
-      const finish = (fn, value) => {
+      const finish = value => {
         if (done) return;
         done = true;
         clearTimeout(timer);
-        if (window.visualViewport) window.visualViewport.removeEventListener('resize', pin);
         try { api.remove(widgetId); } catch (_) {}
         try { host.remove(); } catch (_) {}
-        fn(value);
+        resolve(value);
       };
-      if (window.visualViewport) window.visualViewport.addEventListener('resize', pin, { passive: true });
-      /* The student has to tap, so the box waits for them instead of expiring on
-         the old 15s silent-pass window. Re-running execute on every scroll or
-         resize is deliberately gone: it reset the challenge while the student
-         was mid-tap, which is why the check "never completed" for real people. */
-      timer = setTimeout(() => finish(resolve, ''), 120000);
+      /* Nobody is looking at this, so the wait is short: if Cloudflare has not
+         minted a token in 20s the check simply could not run, and the student
+         must not be held for it. The old 120s window existed only because a
+         person had to find and tap a box. */
+      timer = setTimeout(() => finish(''), 20000);
       try {
-        widgetId = api.render(mount, {
-          sitekey: siteKey, action: 'email_ownership', size: 'normal', appearance: 'always',
-          callback: token => finish(resolve, String(token || '')),
-          'error-callback': () => finish(resolve, ''),
-          'expired-callback': () => finish(resolve, '')
+        widgetId = api.render(host, {
+          sitekey: siteKey, action: 'email_ownership', size: 'invisible',
+          callback: token => finish(String(token || '')),
+          'error-callback': () => finish(''),
+          'expired-callback': () => finish('')
         });
-      } catch (_) { finish(resolve, ''); return; }
+      } catch (_) { finish(''); return; }
+      /* An invisible widget runs on its own, so execute() is a no-op at best and
+         can throw at worst. Ignoring that is deliberate: resolving '' here would
+         throw away a token Cloudflare is about to mint, which is the failure the
+         old visible box had. The callback, or the 20s ceiling, settles it. */
       try { api.execute(widgetId); } catch (_) {}
     })).catch(() => '');
   };

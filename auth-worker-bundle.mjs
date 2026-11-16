@@ -1131,14 +1131,18 @@ var __verificationConfigTest = Object.freeze({ SLOT_DEFINITIONS, DEFAULT_POLICY,
 
 // auth-native/verification/turnstile.mjs
 var SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
-async function verifyTurnstile({ env, token, ip, fetchImpl = fetch, timeoutMs = 8e3, required = false } = {}) {
+async function verifyTurnstile({ env, token, ip, fetchImpl = fetch, timeoutMs = 8e3, required = false, optional = false } = {}) {
   const secret = String(env?.TURNSTILE_SECRET_KEY || "").trim();
   if (!secret) {
     if (required) throw new NativeAuthError(AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
     return { enforced: false };
   }
   const value = String(token ?? "");
-  if (!value || value.length > 4096) throw new NativeAuthError(AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
+  if (!value) {
+    if (optional && !required) return { enforced: false, skipped: true };
+    throw new NativeAuthError(AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
+  }
+  if (value.length > 4096) throw new NativeAuthError(AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
   const form = new URLSearchParams({ secret, response: value });
   if (ip && ip !== "unknown") form.set("remoteip", String(ip).slice(0, 96));
   const controller = new AbortController();
@@ -2350,7 +2354,8 @@ var guardSend = async ({ request, env, context, body, fetchImpl, executionContex
     token: body?.turnstileToken,
     ip: context.ip,
     fetchImpl,
-    required
+    required,
+    optional: !required
   });
   return null;
 };

@@ -14,14 +14,14 @@ const relative = path => new URL(path, root);
 // The asset version string shared by account-access.{js,css} and the
 // language-engine table. Bump both when either file changes.
 const UI_VERSION_FROM = '20261116-humancheck-v2';
-const UI_VERSION_TO = '20261116-humancheck-v2';
+const UI_VERSION_TO = '20261116-invisible-v3';
 const LANG_VERSION_FROM = 'lang-v5-single-email-button';
 const LANG_VERSION_TO = 'lang-v5-single-email-button';
 // NOTE: SW_BUILD_TO must always equal the BUILD_ID in sw.js. Without a bump the
 // deploy ships new files under old ?v= tokens; browsers then serve them
 // immutable for a year, so students keep the old app and every fix misses them.
 const SW_BUILD_FROM = 'v366-human-check-inline';
-const SW_BUILD_TO = 'v366-human-check-inline';
+const SW_BUILD_TO = 'v367-human-check-invisible';
 
 const targets = [
   'index.html',
@@ -87,7 +87,10 @@ const replacements = [
   ['sky-flow-20261018-v11', 'sky-flow-20261018-v12'],
   // Owner 2026-11-16: the human check moved inline into the form, so the
   // flow's token must move or a cached copy keeps the floating box.
-  ['sky-flow-20261018-v12', 'sky-flow-20261116-hc-v13']
+  ['sky-flow-20261018-v12', 'sky-flow-20261116-hc-v13'],
+  // Owner 2026-11-16 (later): the check went invisible, so the tokens must move
+  // again or a phone keeps the visible card that was locking students out.
+  ['sky-flow-20261116-hc-v13', 'sky-flow-20261116-inv-v14']
 ];
 
 let changed = 0;

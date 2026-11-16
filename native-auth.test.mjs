@@ -1347,20 +1347,54 @@ const signupTicketCookies = async (app, email, password) => {
   ].filter(Boolean).join('; ');
 };
 
-test('A1.5: with the Turnstile secret set, signup/login/reset without a human token are refused', async () => {
+test('A1.5: a MISSING human token is forgiven for an ordinary caller, so an invisible check cannot lock students out', async () => {
+  /* Owner order 2026-11-16 (voice): "login হবেও, আবার এটাও থাকবে ... এটা
+   * invisible করো, ছাত্র যাতে টের না পায়." The widget renders invisible, so a
+   * token that never arrived means "the check could not run on this device", not
+   * "this is a bot". Refusing it was exactly what locked real students out of
+   * signup and login. An ordinary caller (no hosting ASN, no hard fuzz band) is
+   * therefore let through with an empty token; the guard is kept, not removed. */
   for (const [path, body] of [
     ['/signup', { email: 'no.token.signup@gmail.com', password: 'No-token-signup-71' }],
-    ['/login', { email: 'no.token.login@gmail.com', password: 'No-token-login-71' }],
-    ['/password-reset', { email: 'no.token.reset@gmail.com' }],
-    ['/verification/resend', { email: 'no.token.resend@gmail.com', password: 'No-token-resend-71' }]
+    ['/login', { email: 'no.token.login@gmail.com', password: 'No-token-login-71' }]
   ]) {
     const app = handlerSetup();
     app.env.TURNSTILE_SECRET_KEY = 'turnstile-secret-key';
     const res = await app.handler(apiRequest(`${AUTH_API_PREFIX}${path}`, { method: 'POST', body }), app.env, {});
     const json = await res.json();
-    assert.equal(res.status, 400, `${path} without a token`);
-    assert.equal(json.error.code, AUTH_ERROR_CODES.HUMAN_CHECK_FAILED, `${path} error code`);
+    assert.notEqual(json?.error?.code, AUTH_ERROR_CODES.HUMAN_CHECK_FAILED,
+      path + ' without a token must not be a human-check lockout');
   }
+});
+
+test('A1.5: a token Cloudflare REJECTS is still refused even on the ordinary path', async () => {
+  // "Forgive silence, not a refusal": an explicit rejection is a real signal, so
+  // the optional path must not wave it through.
+  const app = handlerSetup();
+  app.env.TURNSTILE_SECRET_KEY = 'turnstile-secret-key';
+  const res = await app.handler(apiRequest(`${AUTH_API_PREFIX}/signup`, {
+    method: 'POST', body: { email: 'rejected.token@gmail.com', password: 'Rejected-token-71', turnstileToken: 'turnstile-bad-token' }
+  }), app.env, {});
+  const json = await res.json();
+  assert.equal(res.status, 400);
+  assert.equal(json.error.code, AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
+});
+
+test('A1.5: a hosting-ASN caller still gets the strict check, with no token forgiven', async () => {
+  // L3 is unchanged: the callers that already earned the strict check keep it,
+  // and the required flag overrides optional. Only the ordinary path was softened.
+  const app = handlerSetup();
+  app.env.TURNSTILE_SECRET_KEY = 'turnstile-secret-key';
+  const request = apiRequest(`${AUTH_API_PREFIX}/signup`, {
+    method: 'POST', body: { email: 'dc.asn.signup@gmail.com', password: 'Dc-asn-signup-71' }
+  });
+  // Cloudflare reports the caller's ASN on request.cf; a hosting ASN forces the
+  // strict human check even with no secret bound, so it refuses a missing token.
+  request.cf = { asn: 14061 };
+  const res = await app.handler(request, app.env, {});
+  const json = await res.json();
+  assert.equal(res.status, 400);
+  assert.equal(json.error.code, AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
 });
 
 test('a rejected human check stops the ownership OTP before any mailer is asked to send', async () => {
@@ -1415,15 +1449,18 @@ test('a verified human check lets the ownership OTP proceed', async () => {
  * sign-in — which is why the guard is asserted here rather than assumed.
  */
 
-test('V2.0-৬: /google/link refuses a caller with no human check', async () => {
+test('V2.0-৬: /google/link still refuses a token Cloudflare rejects', async () => {
   /* The route takes an email AND a password, so before this it leaned on the
-   * rate limiter alone against password guessing. */
+   * rate limiter alone against password guessing. Owner 2026-11-16 softened a
+   * *missing* token (the invisible check could not run) but a REJECTED token is
+   * still a refusal, so the guard still runs and still stops the credential
+   * before Firebase sees it. */
   const app = handlerSetup();
   app.env.GOOGLE_AUTH_ACTIVATION = 'enabled';
   app.env.TURNSTILE_SECRET_KEY = 'turnstile-secret-key';
   const response = await app.handler(apiRequest(`${AUTH_API_PREFIX}/google/link`, {
     method: 'POST',
-    body: { email: 'link.target@gmail.com', password: 'Correct-Horse-42', accessToken: 'a'.repeat(40) }
+    body: { email: 'link.target@gmail.com', password: 'Correct-Horse-42', accessToken: 'a'.repeat(40), turnstileToken: 'turnstile-bad-token' }
   }), app.env, {});
   const payload = await response.json();
   assert.equal(response.status, 400);
@@ -1431,22 +1468,22 @@ test('V2.0-৬: /google/link refuses a caller with no human check', async () => 
   // The refusal happens before the credential is used, so no password was ever
   // compared against Firebase.
   assert.equal(app.firebase.calls.some(call => call.pathname.endsWith('/accounts:signInWithPassword')), false,
-    'a token-less caller must not reach Firebase');
+    'a rejected-token caller must not reach Firebase');
 });
 
-test('V2.0-৬: /facebook refuses a caller with no human check', async () => {
+test('V2.0-৬: /facebook still refuses a token Cloudflare rejects', async () => {
   // The second of the two routes that took credentials unguarded.
   const app = handlerSetup();
   app.env.GOOGLE_AUTH_ACTIVATION = 'enabled';
   app.env.TURNSTILE_SECRET_KEY = 'turnstile-secret-key';
   const response = await app.handler(apiRequest(`${AUTH_API_PREFIX}/facebook`, {
-    method: 'POST', body: { accessToken: 'a'.repeat(40) }
+    method: 'POST', body: { accessToken: 'a'.repeat(40), turnstileToken: 'turnstile-bad-token' }
   }), app.env, {});
   const payload = await response.json();
   assert.equal(response.status, 400);
   assert.equal(payload.error.code, AUTH_ERROR_CODES.HUMAN_CHECK_FAILED);
   assert.equal(app.firebase.calls.some(call => call.pathname.endsWith('/accounts:signInWithIdp')), false,
-    'a token-less caller must not reach the identity provider exchange');
+    'a rejected-token caller must not reach the identity provider exchange');
 });
 
 test('V2.0-৬: the client sends the human-check token on every social call site', () => {

@@ -94,43 +94,42 @@ test('a failed human check carries its own error code end to end', () => {
   assert.ok(!/INVALID_INPUT:\s*'[^']*মানব যাচাই/.test(CLIENT), 'the human-check message is not attached to INVALID_INPUT');
 });
 
-// Owner order 2026-11-01 (voice): "make it visible for everyone so students can
-// click". The previous shape only enlarged itself *after* Cloudflare announced a
-// challenge, and it was pinned to the bottom of the screen -- on a phone the
-// keyboard covered it, so the tap could not be made and the check timed out.
-// The box is now always visible and pinned above the keyboard.
-test('the human check can actually be completed when Cloudflare asks for a tap', () => {
-  assert.ok(CLIENT.includes("appearance: 'always'"), 'the widget is visible before a challenge, not only after one');
-  assert.ok(CLIENT.includes('visualViewport'), 'the box is pinned above the on-screen keyboard');
-  assert.ok(!/size: 'invisible'/.test(CLIENT), 'an invisible widget cannot show an interaction challenge');
-  assert.ok(!/appearance: 'interaction-only'/.test(CLIENT), 'an interaction-only widget renders nothing until challenged, so a covered box has no second chance');
+// Owner order 2026-11-16 (voice): "login হবেও, আবার এটাও থাকবে ... এটা invisible
+// করো, ছাত্র যাতে টের না পায়". The check is INVISIBLE now: no card, no tap, no
+// heading. Cloudflare still verifies in the background, so the guard is kept and
+// the student never has to solve anything -- which is exactly what was locking
+// people out when a visible box was covered by the phone keyboard.
+test('the human check is invisible: no card, no tap, no on-screen heading', () => {
+  assert.ok(CLIENT.includes("size: 'invisible'"), 'the widget is rendered invisible');
+  assert.ok(!CLIENT.includes("appearance: 'always'"), 'no always-visible card is rendered');
+  assert.ok(!/heading\.textContent = 'মানব যাচাই'/.test(CLIENT), 'no on-screen heading is built');
+  assert.ok(!/নিচের বাক্সে একবার ট্যাপ করো/.test(CLIENT), 'the student is never told to tap a box');
+  assert.ok(CLIENT.includes('ah-human-check-invisible'), 'the host is parked off-screen');
 });
 
-// Owner order 2026-11-16 (voice): "এটা একটা UI-তে সুন্দর করে বসাও, যাতে মানুষ
-// এটাকে টিক দিতে পারে ... স্টুডেন্টরা এখন লগইনই করতে পারতেছে না". The check was a
-// card pinned to the bottom-right of the viewport; on a phone the keyboard sits
-// over exactly that strip, and every scroll/resize re-ran execute() and reset
-// the challenge mid-tap, so a real person could not finish it. The check now
-// renders inline in the form, and the flow's race ceiling is longer than the
-// window the widget itself waits for.
-test('the human check renders inline in the flow, not in a floating corner card', () => {
-  assert.match(SKY, /<div class="hc"><\/div>/, 'the flow offers an inline human-check slot');
-  assert.match(CLIENT, /#ah-sky-flow \.scr\.on \.hc/, 'the client mounts into the active screen slot');
-  assert.ok(CLIENT.includes("'ah-human-check ah-human-check-inline'"), 'a slot mounts the inline variant');
-  assert.match(ACC_CSS, /\.ah-human-check-inline\{[^}]*position:static/, 'the inline variant drops the fixed pin');
+test('the invisible host is parked off-screen and hidden from assistive tech', () => {
+  assert.match(ACC_CSS, /\.ah-human-check-invisible\{[^}]*left:-9999px/, 'the CSS parks it off-screen');
+  assert.match(ACC_CSS, /\.ah-human-check-invisible\{[^}]*visibility:hidden/, 'and hides it from view');
+  assert.ok(CLIENT.includes("host.setAttribute('aria-hidden', 'true')"), 'and from assistive tech');
+  assert.ok(!/\.ah-human-check-inline/.test(ACC_CSS), 'the old inline card styling is gone');
 });
 
-test('the human check is not reset while the student is tapping it', () => {
-  assert.doesNotMatch(CLIENT, /addEventListener\('scroll',\s*onViewport/, 'no scroll handler re-executes the widget');
-  assert.match(CLIENT, /try \{ api\.execute\(widgetId\); \} catch \(_\) \{\}/, 'the widget is nudged once after render');
+test('an invisible widget is not held for a tap it can never receive', () => {
+  // The old 120s window existed only because a person had to find and tap a box.
+  // Nobody is looking now, so a short ceiling is right: a check that could not
+  // run must not hold the student.
+  const widget = Number((CLIENT.match(/setTimeout\(\(\) => finish\(''\), (\d+)\)/) || [])[1]);
+  assert.ok(Number.isFinite(widget) && widget > 0 && widget <= 30000,
+    'the invisible check settles within 30s, got ' + widget);
+  assert.ok(!/setTimeout\(\(\) => finish\(resolve, ''\), 120000\)/.test(CLIENT),
+    'the old two-minute tap window is gone');
 });
 
-test('the flow waits longer for a tap than the widget itself does', () => {
-  const widget = Number((CLIENT.match(/setTimeout\(\(\) => finish\(resolve, ''\), (\d+)\)/) || [])[1]);
-  assert.ok(widget >= 120000, 'the widget waits at least two minutes for the tap');
-  const ceilings = [...SKY.matchAll(/within\([\s\S]*?, (\d+)\)/g)].map(m => Number(m[1]));
-  assert.ok(ceilings.length >= 3, 'the flow wraps the guarded calls in a race');
-  for (const ms of ceilings) {
-    assert.ok(ms > widget, 'the race ceiling ' + ms + 'ms must exceed the ' + widget + 'ms tap window');
-  }
+test('a token that never arrives is forgiven on the ordinary path, not turned into a lockout', () => {
+  // The server half of "students must get in like water". The client resolves an
+  // empty token on every failure path; the server must read that as "the check
+  // could not run" for an ordinary caller rather than refusing the login.
+  assert.match(HANDLER, /optional: !required/, 'the ordinary path is marked optional');
+  assert.match(HANDLER, /required = requiresHardHumanCheck\(context\) \|\| \(await fuzzBandNow\(env\)\) === 'hard'/,
+    'and the strict path still overrides it');
 });

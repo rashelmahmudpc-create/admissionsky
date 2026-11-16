@@ -6,7 +6,7 @@ window.AH_SEED = { subjects: [], topics: [], questions: [], vocabulary: [], voca
 (() => {
   if (document.getElementById('ah-sky-ui-style')) return;
   const base = new URL('.', document.currentScript.src);
-  const version = 'sky-flow-20261116-hc-v13';
+  const version = 'sky-flow-20261116-inv-v14';
   const style = document.createElement('link');
   style.id = 'ah-sky-ui-style'; style.rel = 'stylesheet';
   style.href = new URL(`sky-onboarding.css?v=${version}`, base);
