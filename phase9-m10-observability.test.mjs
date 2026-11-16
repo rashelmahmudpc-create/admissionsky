@@ -68,7 +68,7 @@ t('M10-৯. the shipped rate sheet is empty on purpose',
   Object.keys(PRICING).every(p => Object.keys(PRICING[p]).length === 0));
 t('M10-১০. an unpriced model reports priced:false and a null cost, never a guess',
   (() => {
-    const r = estimateCost({ provider: 'gemini', model: 'gemini-3.1-flash-lite', tokensIn: 1000, tokensOut: 500 });
+    const r = estimateCost({ provider: 'gemini', model: 'gemini-flash-lite-latest', tokensIn: 1000, tokensOut: 500 });
     return r.priced === false && r.usd === null && r.reason === 'no-rate-for-model';
   })());
 t('M10-১১. an unknown provider is unpriced rather than crashing',
@@ -87,7 +87,7 @@ t('M10-১৩. with a rate present the arithmetic is exact (per 1M tokens)',
   })());
 t('M10-১৪. a trace built from an unpriced model carries costUsd null and priced false',
   (() => {
-    const tr = makeTrace({ rid: 'r-1', provider: 'gemini', model: 'gemini-3.1-flash-lite', tokensIn: 40, tokensOut: 40 });
+    const tr = makeTrace({ rid: 'r-1', provider: 'gemini', model: 'gemini-flash-lite-latest', tokensIn: 40, tokensOut: 40 });
     return tr.costUsd === null && tr.priced === false;
   })());
 

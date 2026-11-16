@@ -4,8 +4,8 @@
 // যেগুলা সচল সেগুলা একদম ফাস্টে করে দাও" — "put the completely dead ones at the
 // very end, and make the working ones really fast."
 //
-// Measured, not guessed: `gemini-3.1-flash-lite` (the FAST tier) answered 503 to
-// 6/6 live probes at ~0.42 s each, while `gemini-3-flash-preview` answered the
+// Measured, not guessed: the FAST tier answered 503 to
+// 6/6 live probes at ~0.42 s each, while the SMART tier answered the
 // same question in 1.14 s. `routerChain` emits one entry per key per model, so
 // with ~17 Gemini keys the student paid ~7.2 s of silent retries before the
 // healthy model was reached.
@@ -25,8 +25,8 @@ const SRC = readFileSync('ai-agent.js', 'utf8');
 const { rankChainByModelHealth, failureMarker, HEALTH } = H;
 
 const e = (key, model) => ({ sig: String(key).slice(0, 12) + ':' + model, provider: 'gemini', key, model });
-const FAST = 'gemini-3.1-flash-lite';
-const SMART = 'gemini-3-flash-preview';
+const FAST = 'gemini-flash-lite-latest';
+const SMART = 'gemini-3.6-flash';
 
 /* ── ১. Ordering ── */
 t('P31-১. a model failing on every key is moved behind a healthy one', (() => {

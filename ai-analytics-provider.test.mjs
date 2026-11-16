@@ -40,7 +40,7 @@ test('P5-PROV-২. no key means no bridge — null, not a throw and not a stub',
 
 test('P5-PROV-৩. the fast model is the default tier, and an override is honoured', () => {
   assert.equal(ANALYTICS_MODEL_TIER, 'FAST');
-  assert.equal(ANALYTICS_MODELS.FAST, 'gemini-3.1-flash-lite');
+  assert.equal(ANALYTICS_MODELS.FAST, 'gemini-flash-lite-latest');
 
   const fallback = resolveEntry({ GEMINI_KEYS: 'k1' });
   assert.equal(fallback.model, ANALYTICS_MODELS.FAST);

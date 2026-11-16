@@ -72,11 +72,11 @@ t('১৫. sseParse + geminiTextFromChunk', (() => {
 
 /* ── ৭. Model Router (basic) ── */
 const envK = { GEMINI_KEYS: 'k1,k2' };
-t('১৬. routerChain: SMART-ইনটেন্ট → smart-মডেল-প্রথম', routerChain(envK, 'SMART', new Set())[0].model.includes('flash-preview'));
+t('১৬. routerChain: SMART-ইনটেন্ট → smart-মডেল-প্রথম', routerChain(envK, 'SMART', new Set())[0].model === 'gemini-3.6-flash');
 t('১৭. routerChain: bad-set-এ key/model বাদ + groq-সংযুক্ত', (() => {
-  const bad = new Set(['k1' + ':gemini-3-flash-preview']);
+  const bad = new Set(['k1' + ':gemini-3.6-flash']);
   const c = routerChain({ GEMINI_KEYS: 'k1', GROQ_API_KEY: 'g1' }, 'SMART', bad);
-  return !c.some(x => x.key === 'k1' && x.model === 'gemini-3-flash-preview') && c.some(x => x.provider === 'groq') && c.some(x => x.key === 'k1' && x.model === 'gemini-3.1-flash-lite');
+  return !c.some(x => x.key === 'k1' && x.model === 'gemini-3.6-flash') && c.some(x => x.provider === 'groq') && c.some(x => x.key === 'k1' && x.model === 'gemini-flash-lite-latest');
 })());
 t('১৮. routerChain: NO-key → empty (503-পথ)', routerChain({}, 'FAST', new Set()).length === 0);
 

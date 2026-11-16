@@ -1795,7 +1795,7 @@ export async function agentChat(request, env, uid, opts = {}) {
         let attempts = 0, credFails = 0;
         let lastErr = '';
         /* P31: a model that fails is not retried once per key inside this same
-           request. Measured 2026-10-16: a globally busy `gemini-3.1-flash-lite`
+           request. Measured 2026-10-16: a globally busy `gemini-flash-lite-latest`
            was tried ~17 times at ~0.42 s each, so the student waited ~7.2 s of
            silence before the healthy model was even reached.
            An explicit 5xx/429 kills the model outright, that status is a

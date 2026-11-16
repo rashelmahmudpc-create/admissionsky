@@ -115,10 +115,10 @@ async function chainFirstModel(env, question) {
   return firstModel;
 }
 t('P26-৮. E2E: a simple academic question reaches the FAST model',
-  (async () => (await chainFirstModel(capturingEnv(), 'বাংলাদেশের রাজধানী কোনটি?')) === 'gemini-3.1-flash-lite')(),
+  (async () => (await chainFirstModel(capturingEnv(), 'বাংলাদেশের রাজধানী কোনটি?')) === 'gemini-flash-lite-latest')(),
   { timeout: 20000 });
 t('P26-৯. E2E: a hard academic question still reaches the SMART model',
-  (async () => (await chainFirstModel(capturingEnv(), 'নিউটনের দ্বিতীয় ও তৃতীয় সূত্রের পার্থক্য কী?')) === 'gemini-3-flash-preview')(),
+  (async () => (await chainFirstModel(capturingEnv(), 'নিউটনের দ্বিতীয় ও তৃতীয় সূত্রের পার্থক্য কী?')) === 'gemini-3.6-flash')(),
   { timeout: 20000 });
 
 /* ── ৫. Wiring invariants ── */
