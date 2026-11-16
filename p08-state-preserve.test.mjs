@@ -43,8 +43,8 @@ t('examTimerTick: remaining<=0 → submitExam(true) [AC3-regression]', /if\(rema
 
 /* ৬ — ভার্সন-ট্র্যাকিং v193 + ক্যাশ-কী (performance-hardening ?v=2) */
 
-t('sw BUILD_ID current shell', SW.includes("const BUILD_ID = 'v367-human-check-invisible'"));
-t('index sw-marker current shell', H.includes("const expectedSwVersion = 'v367-human-check-invisible'"));
+t('sw BUILD_ID current shell', SW.includes("const BUILD_ID = 'v368-turnstile-appearance'"));
+t('index sw-marker current shell', H.includes("const expectedSwVersion = 'v368-turnstile-appearance'"));
 t('performance-hardening.js?v=2 deferred; lean startup shell excludes it', H.includes('<script defer src="performance-hardening.js?v=2"></script>') && !SW.includes("'./performance-hardening.js?v=2'"));
 
 console.log(`\nP08-STATE-PRESERVE: ${pass} pass / ${fail} fail`);

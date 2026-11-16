@@ -32728,7 +32728,14 @@ var AdmissionAuthAuthority = class {
         return response2(200, { ok: true, result });
       }
       if (url.pathname === "/internal/firebase/rate") {
-        const result = await this.engine.consumeFirebaseOperation(body.input, body.context);
+        let result;
+        try {
+          result = await this.engine.consumeFirebaseOperation(body.input, body.context);
+        } catch (cause) {
+          if (cause instanceof NativeAuthError) throw cause;
+          this.#noteHousekeepingFailure(cause);
+          result = { accepted: true, acceptedAt: Date.now(), degraded: true };
+        }
         await this.#scheduleExpiry();
         return response2(200, { ok: true, result });
       }
