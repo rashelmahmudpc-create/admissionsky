@@ -79,7 +79,7 @@
     const skyStyle = document.createElement('link');
     skyStyle.id = 'ah-sky-flow-style';
     skyStyle.rel = 'stylesheet';
-    skyStyle.href = 'sky-onboarding.css?v=sky-flow-20261016-v6';
+    skyStyle.href = 'sky-onboarding.css?v=sky-flow-20261116-hc-v13';
     document.head.append(skyStyle);
   }
   pageHost.className = 'ah-account-page';
@@ -1481,7 +1481,18 @@
   // Worker verifies the token; this just mints it. With no site key configured
   // (or the script unavailable) it resolves empty, and the server guard, which
   // only arms once its secret exists, stays the single source of truth.
+  //
+  // Owner 2026-11-16: the check must live INSIDE the form a student is already
+  // looking at, not in a small card floating at the bottom of the screen. The
+  // Admission Sky flow publishes an empty slot (the .hc element) on the step that
+  // submits, so the widget renders inline, right under the field. The floating
+  // card survives only as a fallback for the legacy account form, where no slot
+  // exists.
   let tsApiPromise = null;
+  const humanSlot = () => {
+    const slot = document.querySelector('#ah-sky-flow .scr.on .hc');
+    return slot instanceof HTMLElement ? slot : null;
+  };
   const humanToken = () => {
     const siteKey = String(window.ADMISSION_HUB_TURNSTILE_SITEKEY || '').trim();
     if (!siteKey) return Promise.resolve('');
@@ -1496,9 +1507,10 @@
       });
     }
     return tsApiPromise.then(api => new Promise((resolve, reject) => {
+      const slot = humanSlot();
       const host = document.createElement('div');
-      host.className = 'ah-human-check';
-      host.setAttribute('role', 'dialog');
+      host.className = slot ? 'ah-human-check ah-human-check-inline' : 'ah-human-check';
+      host.setAttribute('role', 'group');
       host.setAttribute('aria-label', 'মানব যাচাই');
       const head = document.createElement('p');
       head.className = 'ah-hc-head';
@@ -1517,11 +1529,14 @@
       bar.className = 'ah-hc-bar';
       bar.appendChild(document.createElement('i'));
       host.append(head, sub, mount, bar);
-      document.body.appendChild(host);
-      /* visualViewport is the only thing that reports the on-screen keyboard:
-         innerHeight does not change when it opens, so a bottom-pinned box lands
-         in the covered strip and cannot be tapped -- the whole bug. */
+      (slot || document.body).appendChild(host);
+      if (slot) { try { host.scrollIntoView({ block: 'nearest' }); } catch (_) {} }
+      /* The on-screen keyboard is why the old box failed: only visualViewport
+         reports it, and a bottom-pinned card landed in the covered strip where
+         the tap could not be made. The inline slot needs no pinning at all, so
+         this runs for the floating fallback only. */
       const pin = () => {
+        if (slot) return;
         const vv = window.visualViewport;
         if (!vv) { host.style.top = 'auto'; host.style.bottom = '12px'; return; }
         const covered = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
@@ -1540,29 +1555,16 @@
         if (done) return;
         done = true;
         clearTimeout(timer);
-        if (window.visualViewport) {
-          window.visualViewport.removeEventListener('resize', onViewport);
-          window.visualViewport.removeEventListener('scroll', onViewport);
-        }
+        if (window.visualViewport) window.visualViewport.removeEventListener('resize', pin);
         try { api.remove(widgetId); } catch (_) {}
         try { host.remove(); } catch (_) {}
         fn(value);
       };
-      /* Cloudflare can hand back a non-interactive widget that only later
-         decides a human is needed. Re-running execute on a viewport change is
-         the only nudge available to make it re-present inside the box we just
-         moved, and it is a no-op once a token has arrived. */
-      function onViewport() {
-        try { pin(); } catch (_) {}
-        if (done) return;
-        try { api.execute(widgetId); } catch (_) {}
-      }
-      if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', onViewport, { passive: true });
-        window.visualViewport.addEventListener('scroll', onViewport, { passive: true });
-      }
-      /* The student has to tap, so the box waits for them instead of expiring
-         on the old 15s silent-pass window. */
+      if (window.visualViewport) window.visualViewport.addEventListener('resize', pin, { passive: true });
+      /* The student has to tap, so the box waits for them instead of expiring on
+         the old 15s silent-pass window. Re-running execute on every scroll or
+         resize is deliberately gone: it reset the challenge while the student
+         was mid-tap, which is why the check "never completed" for real people. */
       timer = setTimeout(() => finish(resolve, ''), 120000);
       try {
         widgetId = api.render(mount, {

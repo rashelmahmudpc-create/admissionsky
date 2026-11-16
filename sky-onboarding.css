@@ -136,6 +136,10 @@
 #ah-sky-flow .fl .eye svg{stroke:var(--mut)}
 #ah-sky-flow .fl.pwf input{padding-right:54px}
 #ah-sky-flow .hint{margin:12px 6px 0;font-size:13.5px;color:var(--mut);text-align:center;min-height:20px}
+/* Owner 2026-11-16: the human check renders inside the form here, under the
+   password field, instead of in a floating card at the bottom of the screen. */
+#ah-sky-flow .hc{margin:14px 0 2px}
+#ah-sky-flow .hc:empty{display:none}
 #ah-sky-flow .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;justify-content:center}
 #ah-sky-flow .chip{border:0;background:rgba(255,255,255,.95);padding:11px 18px;border-radius:17px;font-size:15px;font-weight:700;box-shadow:0 10px 18px -12px rgba(11,27,58,.55),inset 0 0 0 1.5px var(--ln);transition:all .3s cubic-bezier(.2,.9,.2,1)}
 #ah-sky-flow .chip:active{scale:.93}

@@ -13,6 +13,8 @@ import { readFileSync } from 'node:fs';
 // new route from copying half the sequence.
 const HANDLER = readFileSync(new URL('./auth-native/worker/public-auth-handler.mjs', import.meta.url), 'utf8');
 const CLIENT = readFileSync(new URL('./account-access.js', import.meta.url), 'utf8');
+const SKY = readFileSync(new URL('./sky-onboarding.js', import.meta.url), 'utf8');
+const ACC_CSS = readFileSync(new URL('./account-access.css', import.meta.url), 'utf8');
 
 /* AUTH V2.0 (owner 2026-10-31): /google/link and /facebook were the two
  * credential-taking routes missing from this list. /google/link takes an email
@@ -102,4 +104,33 @@ test('the human check can actually be completed when Cloudflare asks for a tap',
   assert.ok(CLIENT.includes('visualViewport'), 'the box is pinned above the on-screen keyboard');
   assert.ok(!/size: 'invisible'/.test(CLIENT), 'an invisible widget cannot show an interaction challenge');
   assert.ok(!/appearance: 'interaction-only'/.test(CLIENT), 'an interaction-only widget renders nothing until challenged, so a covered box has no second chance');
+});
+
+// Owner order 2026-11-16 (voice): "এটা একটা UI-তে সুন্দর করে বসাও, যাতে মানুষ
+// এটাকে টিক দিতে পারে ... স্টুডেন্টরা এখন লগইনই করতে পারতেছে না". The check was a
+// card pinned to the bottom-right of the viewport; on a phone the keyboard sits
+// over exactly that strip, and every scroll/resize re-ran execute() and reset
+// the challenge mid-tap, so a real person could not finish it. The check now
+// renders inline in the form, and the flow's race ceiling is longer than the
+// window the widget itself waits for.
+test('the human check renders inline in the flow, not in a floating corner card', () => {
+  assert.match(SKY, /<div class="hc"><\/div>/, 'the flow offers an inline human-check slot');
+  assert.match(CLIENT, /#ah-sky-flow \.scr\.on \.hc/, 'the client mounts into the active screen slot');
+  assert.ok(CLIENT.includes("'ah-human-check ah-human-check-inline'"), 'a slot mounts the inline variant');
+  assert.match(ACC_CSS, /\.ah-human-check-inline\{[^}]*position:static/, 'the inline variant drops the fixed pin');
+});
+
+test('the human check is not reset while the student is tapping it', () => {
+  assert.doesNotMatch(CLIENT, /addEventListener\('scroll',\s*onViewport/, 'no scroll handler re-executes the widget');
+  assert.match(CLIENT, /try \{ api\.execute\(widgetId\); \} catch \(_\) \{\}/, 'the widget is nudged once after render');
+});
+
+test('the flow waits longer for a tap than the widget itself does', () => {
+  const widget = Number((CLIENT.match(/setTimeout\(\(\) => finish\(resolve, ''\), (\d+)\)/) || [])[1]);
+  assert.ok(widget >= 120000, 'the widget waits at least two minutes for the tap');
+  const ceilings = [...SKY.matchAll(/within\([\s\S]*?, (\d+)\)/g)].map(m => Number(m[1]));
+  assert.ok(ceilings.length >= 3, 'the flow wraps the guarded calls in a race');
+  for (const ms of ceilings) {
+    assert.ok(ms > widget, 'the race ceiling ' + ms + 'ms must exceed the ' + widget + 'ms tap window');
+  }
 });

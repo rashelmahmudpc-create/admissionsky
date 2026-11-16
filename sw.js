@@ -3,7 +3,7 @@ const CACHE_PREFIX = 'admission-hub-shell-';
 // hold user data; this one holds exactly one image and is trimmed on write.
 const AVATAR_CACHE = 'admission-hub-avatar-v1';
 
-const BUILD_ID = 'v365-human-check';
+const BUILD_ID = 'v366-human-check-inline';
 const CACHE_NAME = `${CACHE_PREFIX}${BUILD_ID}`;
 const VERSION_HEADER = 'X-Admission-Hub-Build';
 const DOCUMENT_NETWORK_TIMEOUT_MS = 2500;
@@ -33,13 +33,13 @@ const APP_SHELL = [
   './3d-loader.css?v=3d-v2',
   './session-persist.js?v=session-v2',
   './analytics-service.js?v=analytics-p2-v2-insights',
-  './account-access.css?v=20261101-humancheck-v1',
-  './sky-onboarding.css?v=sky-flow-20261018-v12',
+  './account-access.css?v=20261116-humancheck-v2',
+  './sky-onboarding.css?v=sky-flow-20261116-hc-v13',
   './sky-chat.css?v=skyv1',
   './institutions-bd.js?v=bd-institutions-v2',
   './language-engine.js?v=lang-v5-single-email-button',
-  './account-access.js?v=20261101-humancheck-v1&startup=fast1',
-  './sky-onboarding.js?v=sky-flow-20261018-v12',
+  './account-access.js?v=20261116-humancheck-v2&startup=fast1',
+  './sky-onboarding.js?v=sky-flow-20261116-hc-v13',
   './email-policy-client.js?v=20261018-allowlist-v1',
   './welcome-story.css?v=welcome-story-20261018-v3',
   './welcome-story.js?v=welcome-story-20261018-v3',
@@ -93,20 +93,20 @@ const APP_SHELL = [
 // A truncated/corrupt download is NEVER written to the shell cache.
 const ASSET_DIGESTS = {
 /* sw-manifest:start */
-  "./index.html": "c6f8ade1dc1496a303f11a7802e21e31dfebe56cbb47ba36311dba6228c94bb6",
+  "./index.html": "6fdde0d6104c27a64ed6447912138f20492293107c010c106c091629956416e6",
   "./manifest.json": "b85bf71627f396fb4b89cdce1fdc3723e616a7778cf2bf7df135a6266ab9d943",
   "./manifest.webmanifest": "0db3ff740c2833d60bfee6a8156fb51ed935fe366d0dcb72a4a228b58c16fb6e",
   "./dashboard-v2.css?v=dash2f13-theme": "4541bc1e65fd158c593443562975400d128b8f1d3b636595df3c235b99e8cced",
   "./3d-loader.css?v=3d-v2": "d186d0ef97f9db680bb1dd7ed20cbbe4e8c6be725de6ae88bbe0a75fc78b7a06",
   "./session-persist.js?v=session-v2": "e4b86d09a44d3fcf74a1f123bbade5640d381cd56cb718b7ad7e9859beea2296",
   "./analytics-service.js?v=analytics-p2-v2-insights": "0ab179926605131aa1f3db0064d035dce9733c5051c6b48780230feaf660953d",
-  "./account-access.css?v=20261101-humancheck-v1": "860c919519741e135e98a4e0e7642e1f367047d077a5cdb255a33f9ed2254d6b",
-  "./sky-onboarding.css?v=sky-flow-20261018-v12": "f94c44b34348038eea1b934f68ae0988a27ef64d76dbef47cd6dd640efde0bbe",
+  "./account-access.css?v=20261116-humancheck-v2": "ef216c34dae5ad699450445215ce7398c5bf7bcaa6a7f40147389dd8adf5d8cc",
+  "./sky-onboarding.css?v=sky-flow-20261116-hc-v13": "c106e2d4673c7809a9c002c5d01a52c33fc5bb666c44e6078288b4fbd15c2f76",
   "./sky-chat.css?v=skyv1": "f80c193a5d48e166bb87e068fc1e00527bb3d734151a566c01164a705437db10",
   "./institutions-bd.js?v=bd-institutions-v2": "602c5549515e8207ad152b948ca9b8fe3ad0fbe429afb56380e4e21b662f779d",
   "./language-engine.js?v=lang-v5-single-email-button": "5df04230120078119c39d1a574fb7b80a74b8606c2988fd929c26ae3e7614ae2",
-  "./account-access.js?v=20261101-humancheck-v1&startup=fast1": "47871ff1b62c4b04575657dd5dbca74aaf4bca0638fdb842d59ac8acadedac2c",
-  "./sky-onboarding.js?v=sky-flow-20261018-v12": "f601a6e189d2a0123546b024ba3da24e8ebe3bbd92c374d95fe66f092793e5b6",
+  "./account-access.js?v=20261116-humancheck-v2&startup=fast1": "ffd3ce9dc95d293d9a8b6d1cd288a2118a71a4df02c6e070e5dc22c90974c186",
+  "./sky-onboarding.js?v=sky-flow-20261116-hc-v13": "3b42eba7436bc9dbd628561f4e0271a6817964974edbd4bec323ef34fb09ae5c",
   "./email-policy-client.js?v=20261018-allowlist-v1": "d52570ca207888a5dc0e320a30ea59b576887e4bc4f33f48bfec64c2eb2245b5",
   "./welcome-story.css?v=welcome-story-20261018-v3": "4b589890fdf457149113e236320f94014b5cc2845c190b1bdf853f1f2963073d",
   "./welcome-story.js?v=welcome-story-20261018-v3": "af3aa4e476c890acbb5eba5420e9a0dd71cfdae90d9a42dcd981cddc8a3eacbb",

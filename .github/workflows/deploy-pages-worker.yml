@@ -35,6 +35,12 @@ on:
       - '*.html'
       - 'sw.js'
       - 'account-access.*'
+      # The Admission Sky flow and its loader are live UI assets too. Neither
+      # was listed, so a change to sky-onboarding.* or app-seed.js -- the human
+      # check lives in exactly those files -- could merge with every check green
+      # and publish nothing, which is the same gap the notes above describe.
+      - 'sky-onboarding.*'
+      - 'app-seed.js'
       # The crawler files ship to Pages like any other asset, but neither was
       # listed — so the sitemap date fix pushed 2026-11-03 published nothing,
       # and the live sitemap kept the stale dates it was written to correct.
