@@ -5,7 +5,13 @@ import {spawnSync} from 'node:child_process';
 const root=resolve(process.argv[2]||'dist');
 /* The welcome version comes from app-seed.js (the file that actually loads sky-onboarding), so the
    deployed ?v= tokens can never fall behind the source again (a pinned v6 here shipped stale assets). */
-const version=(readFileSync(join(root,'app-seed.js'),'utf8').match(/sky-flow-\d{8}-v\d+/)||[])[0];
+/* The version token can carry extra segments between the date and the final
+   -vN (e.g. sky-flow-20261116-inv-v14, added with the invisible human check).
+   The old /sky-flow-\d{8}-v\d+/ matched only the two-part form, so once the
+   infix appeared the welcome build threw 'app-seed.js sky-flow version
+   missing' and Deploy Profile V2 failed on every push. Accept any run of
+   [a-z0-9-] segments after the date, still ending in -vN. */
+const version=(readFileSync(join(root,'app-seed.js'),'utf8').match(/sky-flow-\d{8}(?:-[a-z0-9]+)*-v\d+/)||[])[0];
 if(!version)throw Error('app-seed.js sky-flow version missing');
 const release=(process.env.GITHUB_SHA||'local-preview').slice(0,12);
 const buildId=`welcome-${release}`;
