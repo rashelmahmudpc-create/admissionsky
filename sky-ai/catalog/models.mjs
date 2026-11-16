@@ -68,8 +68,12 @@ export const CATALOG = Object.freeze([
     adapter: 'gemini',
     key: 'GEMINI_KEYS',
     url: null,
-    models: ['gemini-3.1-flash-lite', 'gemini-3-flash-preview'],
-    tiers: { FAST: 'gemini-3.1-flash-lite', SMART: 'gemini-3-flash-preview' },
+    /* Owner 2026-11-16: the student default is gemini-3.6-flash, and the list
+     * is kept to the two ids proven to answer on the free tier. The retired
+     * 3.1-flash-lite / 3-flash-preview pair is gone; gemini-flash-latest and
+     * every Pro id time out or 429, so they are not listed. */
+    models: ['gemini-flash-lite-latest', 'gemini-3.6-flash'],
+    tiers: { FAST: 'gemini-flash-lite-latest', SMART: 'gemini-3.6-flash' },
     capability: [CAPABILITY.CHAT, CAPABILITY.REASONING, CAPABILITY.VISION, CAPABILITY.TOOLS],
     limits: null,
     tos: 'Free tier: inputs and outputs are used to improve Google\'s products and human reviewers may read API input/output; the paid tier is not. Source: https://ai.google.dev/gemini-api/docs/pricing',

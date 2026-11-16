@@ -4,7 +4,7 @@
  * THE PROBLEM
  * -----------
  * `classifyIntent` sends every academic question to the SMART model
- * (`gemini-3-flash-preview`), on the assumption that "academic means hard".
+ * (`gemini-3.6-flash`), on the assumption that "academic means hard".
  * Measured against the real classifier, that is not true: "নিউটনের দ্বিতীয়
  * সূত্র কী?" and "বাংলাদেশের রাজধানী কোনটি?" are academic by the regex and
  * simple by any human reading. They were paying the SMART rate for an answer

@@ -70,7 +70,7 @@ test('the router derives its provider list from the catalog (no drift)', () => {
 
 test('the Gemini tiers are the catalog tiers', () => {
   const t = tierModels('gemini');
-  assert.deepEqual(t, { FAST: 'gemini-3.1-flash-lite', SMART: 'gemini-3-flash-preview' });
+  assert.deepEqual(t, { FAST: 'gemini-flash-lite-latest', SMART: 'gemini-3.6-flash' });
   assert.deepEqual(modelsFor('gemini'), [t.FAST, t.SMART]);
 });
 

@@ -29,8 +29,8 @@ export const AI_PROVIDER_VERSION = 'ai-p5-provider-v1';
 /* Mirrors the Agent Core's fast/smart split without importing its private table:
  * the copilot is a restatement task, so the fast model is always the right tier. */
 export const ANALYTICS_MODELS = Object.freeze({
-  FAST: 'gemini-3.1-flash-lite',
-  SMART: 'gemini-3-flash-preview'
+  FAST: 'gemini-flash-lite-latest',
+  SMART: 'gemini-3.6-flash'
 });
 
 /* Model tier for analytics prose. The fast model is the right choice: the task is

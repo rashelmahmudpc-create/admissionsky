@@ -43,8 +43,8 @@ t('M2-৬. providerChain = router chain minus stream-only providers', (() => {
 })());
 t('M2-৭. providerChain honours the bad-set (same key/model exclusion as router)', (() => {
   const env = { GEMINI_KEYS: 'k1', GROQ_API_KEY: '' };
-  const bad = new Set(['k1:gemini-3-flash-preview']);
-  return !providerChain(env, 'SMART', bad).some(x => x.model === 'gemini-3-flash-preview');
+  const bad = new Set(['k1:gemini-3.6-flash']);
+  return !providerChain(env, 'SMART', bad).some(x => x.model === 'gemini-3.6-flash');
 })());
 t('M2-৮. providerChain {} → empty (still the 503 path)', providerChain({}, 'FAST', new Set()).length === 0);
 t('M2-৯. providerChain never includes groq even when GROQ_API_KEY is set', !providerChain(stubEnv().env, 'FAST', new Set()).some(x => x.provider === 'groq'));
@@ -88,7 +88,7 @@ t('M2-১৫. E2E: non-stream path still returns gemini text through GEMINI_ADAP
   try {
     const r = await agentChat(new Request('https://x/api/ai', { method: 'POST', body: JSON.stringify({ messages: [{ role: 'user', content: 'বুঝাও' }] }) }), env, 'account-um2b');
     const d = await r.json();
-    return r.status === 200 && d.text === 'সরাসরি-উত্তর' && d.provider === undefined && d.model === 'gemini-3-flash-preview';
+    return r.status === 200 && d.text === 'সরাসরি-উত্তর' && d.provider === undefined && d.model === 'gemini-3.6-flash';
   } finally { globalThis.fetch = real; }
 })(), { timeout: 10000 });
 

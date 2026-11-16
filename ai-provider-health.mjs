@@ -111,7 +111,7 @@ export function failureMarker(status, now) {
  * ------------------------------------
  * `routerChain` emits ONE ENTRY PER KEY PER MODEL, so a model that is globally
  * unavailable is retried once for every key we hold. Measured 2026-10-16:
- * `gemini-3.1-flash-lite` answered 503 to 6/6 probes at ~0.42 s each, and with
+ * `gemini-flash-lite-latest` answered 503 to 6/6 probes at ~0.42 s each, and with
  * ~17 Gemini keys the student waited ~7.2 s of silent retries before the second
  * model was even reached, on a question the healthy model answers in ~1.1 s.
  *
