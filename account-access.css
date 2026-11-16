@@ -1439,3 +1439,12 @@ body.ah-account-page-active>.ah-account-page[data-current-view="sky"]:not([data-
   .ah-human-check{animation:none}
   .ah-hc-bar i{animation:none;width:100%}
 }
+/* Owner 2026-11-16: the human check belongs inside the form the student is
+   already filling, not in a card floating at the bottom of the screen where the
+   keyboard can cover it. When the Admission Sky flow offers a slot the widget is
+   rendered inline, so every bit of the fixed positioning is dropped. */
+.ah-human-check-inline{position:static;right:auto;bottom:auto;top:auto;left:auto;z-index:auto;
+  width:100%;max-width:100%;margin:4px 0 0;padding:12px 12px 10px;border-radius:14px;
+  box-shadow:none;animation:none}
+.ah-human-check-inline .ah-hc-sub{font-size:11px}
+.ah-human-check-inline .ah-hc-mount{min-height:64px}
