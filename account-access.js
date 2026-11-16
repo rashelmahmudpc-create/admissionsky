@@ -1532,7 +1532,7 @@
       timer = setTimeout(() => finish(''), 20000);
       try {
         widgetId = api.render(host, {
-          sitekey: siteKey, action: 'email_ownership', size: 'invisible',
+          sitekey: siteKey, action: 'email_ownership', appearance: 'interaction-only',
           callback: token => finish(String(token || '')),
           'error-callback': () => finish(''),
           'expired-callback': () => finish('')

@@ -246,7 +246,28 @@ export class AdmissionAuthAuthority {
         return response(200, { ok: true, result });
       }
       if (url.pathname === '/internal/firebase/rate') {
-        const result = await this.engine.consumeFirebaseOperation(body.input, body.context);
+        /* AUTH V2.8 (owner 2026-11-16): the same rule as #scheduleExpiry, applied
+         * to the rate check itself. Live symptom: POST /api/auth/v1/google
+         * answered 500 INTERNAL_ERROR at stage RATE_CHECK — the client showed
+         * it as "[INTERNAL_ERROR · RATE_CHECK]" — while the very same object
+         * answered other routes. The cause is a raw fault inside the rate path
+         * (an audit/limit table missing, or its columns drifted by an older
+         * deploy) escaping as a plain exception, which asNativeAuthError() can
+         * only render as a 500.
+         *
+         * A deliberate refusal (RATE_LIMITED, INVALID_INPUT) is a NativeAuthError
+         * and still refuses — that is the guard doing its job. Only an INTERNAL
+         * fault is recorded and forgiven: an anti-abuse limiter that cannot read
+         * its own bookkeeping must not lock every student out, and the Turnstile
+         * gate and the other layers still stand. Recorded, not swallowed. */
+        let result;
+        try {
+          result = await this.engine.consumeFirebaseOperation(body.input, body.context);
+        } catch (cause) {
+          if (cause instanceof NativeAuthError) throw cause;
+          this.#noteHousekeepingFailure(cause);
+          result = { accepted: true, acceptedAt: Date.now(), degraded: true };
+        }
         await this.#scheduleExpiry();
         return response(200, { ok: true, result });
       }

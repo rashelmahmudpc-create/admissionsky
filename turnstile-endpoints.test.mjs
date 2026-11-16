@@ -100,7 +100,15 @@ test('a failed human check carries its own error code end to end', () => {
 // the student never has to solve anything -- which is exactly what was locking
 // people out when a visible box was covered by the phone keyboard.
 test('the human check is invisible: no card, no tap, no on-screen heading', () => {
-  assert.ok(CLIENT.includes("size: 'invisible'"), 'the widget is rendered invisible');
+  // AUTH V2.8 (owner 2026-11-16): invisibility comes from appearance:
+  // 'interaction-only', NOT from size. Turnstile accepts size values
+  // normal|compact|flexible only; passing "invisible" made the SDK log
+  // 'Invalid value for parameter "size"' and fall back to a VISIBLE managed
+  // widget — the checkbox the owner still saw after the first "make it
+  // invisible" change. Assert the mechanism that actually hides it, and that
+  // the invalid size can never come back.
+  assert.ok(CLIENT.includes("appearance: 'interaction-only'"), 'the widget is hidden via appearance');
+  assert.ok(!/size:\s*'invisible'/.test(CLIENT), 'size:"invisible" is not a valid Turnstile value');
   assert.ok(!CLIENT.includes("appearance: 'always'"), 'no always-visible card is rendered');
   assert.ok(!/heading\.textContent = 'মানব যাচাই'/.test(CLIENT), 'no on-screen heading is built');
   assert.ok(!/নিচের বাক্সে একবার ট্যাপ করো/.test(CLIENT), 'the student is never told to tap a box');

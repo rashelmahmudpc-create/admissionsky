@@ -125,3 +125,66 @@ test('V2.7: a housekeeping failure is recorded, not swallowed', async () => {
   assert.match(String(authority.lastHousekeepingFailure.message), /auth_security_challenges/);
   database.close();
 });
+
+
+test('V2.8: a drifted audit table does not fail the rate check (RATE_CHECK 500)', async () => {
+  const { database, state } = stateFixture();
+  const authority = new AdmissionAuthAuthority(state, env);
+  await authority.ready;
+
+  // The audit table the rate path writes to is gone (or its columns drifted by
+  // an older deploy). Live, this made POST /google answer 500 INTERNAL_ERROR at
+  // stage RATE_CHECK. An anti-abuse limiter that cannot read its own bookkeeping
+  // must not lock every student out.
+  database.exec('DROP TABLE auth_security_events');
+
+  const response = await authority.fetch(post('/internal/firebase/rate', {
+    input: { operation: 'google' },
+    context: { ip: '1.2.3.4', deviceId: 'dev-12345678901234567890' }
+  }));
+  const body = await response.json();
+
+  assert.equal(response.status, 200,
+    'an internal rate-path fault must not become the student\'s 500: ' + JSON.stringify(body));
+  assert.equal(body.ok, true);
+  assert.equal(body.result.accepted, true);
+  assert.equal(body.result.degraded, true, 'the degraded answer says so');
+  assert.ok(authority.lastHousekeepingFailure, 'and the fault is recorded for the owner');
+  database.close();
+});
+
+test('V2.8: a deliberate rate refusal is still a refusal, not forgiven', async () => {
+  const { database, state } = stateFixture();
+  const authority = new AdmissionAuthAuthority(state, env);
+  await authority.ready;
+
+  // Exhaust the google per-minute global slot (limit 180) so the limiter must
+  // refuse. The resilience wrapper may only forgive INTERNAL faults; a real
+  // RATE_LIMITED must still come back as one.
+  let last = null;
+  for (let i = 0; i < 181; i += 1) {
+    last = await authority.fetch(post('/internal/firebase/rate', {
+      input: { operation: 'google' },
+      context: { ip: '9.9.9.' + (i % 250), deviceId: 'dev-1234567890123456789' + (i % 10) }
+    }));
+  }
+  assert.equal(last.status, 429, 'the 181st google check in the minute is refused');
+  const body = await last.json();
+  assert.equal(body.error.code, 'RATE_LIMITED');
+  database.close();
+});
+
+test('V2.8: the human-check widget never passes an invalid size to Turnstile', async () => {
+  const fs = await import('node:fs/promises');
+  // Cloudflare Turnstile accepts size: normal|compact|flexible only. Passing
+  // "invisible" made the SDK log 'Invalid value for parameter "size"' and fall
+  // back to a VISIBLE managed widget — the checkbox the owner still saw after
+  // the "make it invisible" fix. Invisibility comes from appearance.
+  for (const file of ['account-access.js', 'weekly-report-tool.js', 'mistake-notebook-tool.js']) {
+    const src = await fs.readFile(new URL('./' + file, import.meta.url), 'utf8');
+    assert.ok(!/size:\s*'invisible'/.test(src), file + ' must not pass size:"invisible"');
+    if (/turnstile/i.test(src) && /api\.render\(/.test(src)) {
+      assert.match(src, /appearance:\s*'interaction-only'/, file + ' hides the widget with appearance');
+    }
+  }
+});

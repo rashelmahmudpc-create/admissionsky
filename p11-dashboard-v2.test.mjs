@@ -12,8 +12,8 @@ t('dashboard-v2.js defer-লোড (?v=dash2)', H.includes('<script defer src=".
 t('dashboard-v2.css link (?v=dash2)', H.includes('<link rel="stylesheet" href="./dashboard-v2.css?v=dash2f13-theme">'));
 t('sw APP_SHELL-এ dashboard-v2 (js+css)', SW.includes("'./dashboard-v2.js?v=dash2f20-orb-inline'") && SW.includes("'./dashboard-v2.css?v=dash2f13-theme'"));
 
-t('sw BUILD_ID v367-human-check-invisible', SW.includes("const BUILD_ID = 'v367-human-check-invisible'"));
-t('index sw-marker v348', H.includes("const expectedSwVersion = 'v367-human-check-invisible'") && H.includes('admission-hub-shell-v367-human-check-invisible'));
+t('sw BUILD_ID v368-turnstile-appearance', SW.includes("const BUILD_ID = 'v368-turnstile-appearance'"));
+t('index sw-marker v348', H.includes("const expectedSwVersion = 'v368-turnstile-appearance'") && H.includes('admission-hub-shell-v368-turnstile-appearance'));
 
 /* ২ — ১৪ মডিউল (মালিকের নতুন ডিজাইন: Scholar Dashboard 3) */
 t('১ Personal Header (avatar+তারিখ+🔔)', V2.includes('id="greet"') && V2.includes('id="today"') && V2.includes('id="themeBtn"') && V2.includes('iconbtn'));

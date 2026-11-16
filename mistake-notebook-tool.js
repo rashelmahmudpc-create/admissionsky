@@ -145,7 +145,7 @@
       const finish = (fn, v) => { if (done) return; done = true; clearTimeout(t); try { api.remove(wid); } catch (_) {} try { host.remove(); } catch (_) {} fn(v); };
       const t = setTimeout(() => finish(reject, new Error('Human verification সময়মতো হয়নি।')), 45000);
       try {
-        wid = api.render(host, { sitekey: siteKey, action: 'result_analysis', size: 'invisible', appearance: 'interaction-only',
+        wid = api.render(host, { sitekey: siteKey, action: 'result_analysis', appearance: 'interaction-only',
           callback: (tok) => finish(resolve, String(tok || '')),
           'error-callback': () => finish(reject, new Error('Human verification ব্যর্থ।')),
           'expired-callback': () => finish(reject, new Error('Human verification মেয়াদ শেষ।')) });

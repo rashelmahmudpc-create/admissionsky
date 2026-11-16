@@ -42,9 +42,9 @@ test('retired identity/onboarding scripts are no longer boot-critical or loaded'
 
 
 test('service-worker build marker is synchronized',
-  SW.includes("const BUILD_ID = 'v367-human-check-invisible'") &&
-  H.includes("const expectedSwVersion = 'v367-human-check-invisible'") &&
-  H.includes('admission-hub-shell-v367-human-check-invisible'));
+  SW.includes("const BUILD_ID = 'v368-turnstile-appearance'") &&
+  H.includes("const expectedSwVersion = 'v368-turnstile-appearance'") &&
+  H.includes('admission-hub-shell-v368-turnstile-appearance'));
 test('data protection summarizes stores with count rather than full reads', DP.includes('tx.objectStore(name).count()'));
 test('unprotected automatic Pages deploy stays retired', WF.includes('Cloudflare Pages Bundle Guard (No Deploy)') && !WF.includes('wrangler-action') && !WF.includes('pages deploy dist --project-name admissionhub'));
 
