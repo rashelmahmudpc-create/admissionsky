@@ -32643,12 +32643,43 @@ var AdmissionAuthAuthority = class {
     } catch (_) {
     }
   }
+  /* AUTH V2.7 (owner 2026-11-16): housekeeping is best-effort, never a gate.
+   *
+   * This method arms the cleanup alarm. It is not part of the answer to the
+   * student: whether a row was due for deletion has no bearing on whether a
+   * login should succeed. Yet it used to sit unguarded in the request path, so
+   * ANY failure inside it — a housekeeping table missing a column, a schema
+   * drifted by an older deploy, a cleanup query that outran the migration —
+   * propagated out of fetch() and turned a perfectly good login into a 500.
+   *
+   * Live symptom (2026-11-16): /internal/ping answered 200 while login and
+   * signup answered 500 INTERNAL_ERROR, because ping returns before this call
+   * and every other route reaches it. The student saw "unexpected problem" for
+   * a fault that had nothing to do with them.
+   *
+   * The alarm is a convenience: if it cannot be armed this minute, the next
+   * request, or the DO alarm handler (which already has its own catch), will
+   * arm it. Losing one scheduling opportunity must never cost a student their
+   * login. Failures are recorded, not swallowed silently, so the fault is still
+   * visible to the owner. */
   async #scheduleExpiry() {
-    const expiries = await Promise.all([this.engine.nextExpiry(), this.verification.nextExpiry(), this.pendingSignups?.nextExpiry() ?? null]);
-    const next = expiries.filter(Boolean).sort((left, right) => left - right)[0] || null;
-    if (!next) return;
-    const scheduled = await this.state.storage.getAlarm();
-    if (!scheduled || next < scheduled) await this.state.storage.setAlarm(next);
+    try {
+      const expiries = await Promise.all([this.engine.nextExpiry(), this.verification.nextExpiry(), this.pendingSignups?.nextExpiry() ?? null]);
+      const next = expiries.filter(Boolean).sort((left, right) => left - right)[0] || null;
+      if (!next) return;
+      const scheduled = await this.state.storage.getAlarm();
+      if (!scheduled || next < scheduled) await this.state.storage.setAlarm(next);
+    } catch (cause) {
+      this.#noteHousekeepingFailure(cause);
+    }
+  }
+  /* The one place a housekeeping failure is recorded. A plain field write —
+   * no throw path of its own, so it cannot become a second way to fail. */
+  #noteHousekeepingFailure(cause) {
+    this.lastHousekeepingFailure = {
+      at: Date.now(),
+      message: String(cause && cause.message ? cause.message : cause).slice(0, 200)
+    };
   }
   async #verificationIdentity(input = {}) {
     const session = await this.engine.getFirebaseSession(input.sessionToken, {
