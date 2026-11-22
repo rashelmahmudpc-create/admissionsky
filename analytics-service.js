@@ -593,9 +593,30 @@
     return window.firebase;
   }
 
+  /* Perf: keep the GA4 (gtag) boot off the first-paint path. Events are not
+   * lost: transmit()/setUserContext() await ensureAnalytics(), which awaits this
+   * gate, so they simply go out a moment later. The gate opens on the first
+   * touch / key / scroll, or once the browser is idle after window load. */
+  const sdkGate = new Promise((resolve) => {
+    try {
+      let opened = false;
+      const open = () => { if (opened) return; opened = true; resolve(); };
+      ['pointerdown', 'keydown', 'touchstart', 'scroll'].forEach((t) => {
+        window.addEventListener(t, open, { capture: true, passive: true, once: true });
+      });
+      const idle = () => {
+        if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(open, { timeout: 8000 });
+        else setTimeout(open, 5000);
+      };
+      if (document.readyState === 'complete') setTimeout(idle, 3000);
+      else window.addEventListener('load', () => setTimeout(idle, 3000), { once: true });
+    } catch (_) { resolve(); }
+  });
+
   function loadSdk() {
     if (!sdkPromise) {
       sdkPromise = (async () => {
+        await sdkGate;
         try { return await loadSdkFrom(SDK_LOCAL); }
         catch (_) { return await loadSdkFrom(SDK_BASE); }
       })();

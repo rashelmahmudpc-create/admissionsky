@@ -32,7 +32,7 @@ const APP_SHELL = [
   './dashboard-v2.css?v=dash2f13-theme',
   './3d-loader.css?v=3d-v2',
   './session-persist.js?v=session-v2',
-  './analytics-service.js?v=analytics-p2-v2-insights',
+  './analytics-service.js?v=analytics-p2-v3-sdkgate',
   './account-access.css?v=20261116-invisible-v4',
   './sky-onboarding.css?v=sky-flow-20261116-inv-v14',
   './sky-chat.css?v=skyv1',
@@ -93,13 +93,13 @@ const APP_SHELL = [
 // A truncated/corrupt download is NEVER written to the shell cache.
 const ASSET_DIGESTS = {
 /* sw-manifest:start */
-  "./index.html": "e7a4e46d2a8ed30c1335b5928caf2a457358e0e3b11e716574e6e2f154bbd26e",
+  "./index.html": "fa29a395dbc6e04dbff47bc205e458126d056038a9b3fac74db6d97ea0d6e0c6",
   "./manifest.json": "b85bf71627f396fb4b89cdce1fdc3723e616a7778cf2bf7df135a6266ab9d943",
   "./manifest.webmanifest": "0db3ff740c2833d60bfee6a8156fb51ed935fe366d0dcb72a4a228b58c16fb6e",
   "./dashboard-v2.css?v=dash2f13-theme": "4541bc1e65fd158c593443562975400d128b8f1d3b636595df3c235b99e8cced",
   "./3d-loader.css?v=3d-v2": "d186d0ef97f9db680bb1dd7ed20cbbe4e8c6be725de6ae88bbe0a75fc78b7a06",
   "./session-persist.js?v=session-v2": "e4b86d09a44d3fcf74a1f123bbade5640d381cd56cb718b7ad7e9859beea2296",
-  "./analytics-service.js?v=analytics-p2-v2-insights": "0ab179926605131aa1f3db0064d035dce9733c5051c6b48780230feaf660953d",
+  "./analytics-service.js?v=analytics-p2-v3-sdkgate": "a3b6356795fe7ab27fe750f9a66c73f6afcf524353ee18b5199f4c4076cccdaf",
   "./account-access.css?v=20261116-invisible-v4": "fe8ad54785f53c64fd58c3bd01f2de9097219f848ce3a6de886eb049c94efd28",
   "./sky-onboarding.css?v=sky-flow-20261116-inv-v14": "f94c44b34348038eea1b934f68ae0988a27ef64d76dbef47cd6dd640efde0bbe",
   "./sky-chat.css?v=skyv1": "f80c193a5d48e166bb87e068fc1e00527bb3d734151a566c01164a705437db10",
