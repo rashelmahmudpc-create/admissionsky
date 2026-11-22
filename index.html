@@ -6007,7 +6007,7 @@ window.admissionLoadPack = function admissionLoadPack(name) {
  const load=src=>new Promise(resolve=>{const s=document.createElement('script');s.src=src;s.async=false;s.onload=()=>{state.loaded.push(src);resolve();};s.onerror=()=>{state.failed.push(src);console.warn('[Startup] Optional feature unavailable:',src);resolve();};document.head.appendChild(s);});
  const start=()=>{if(work)return work;work=(async()=>{try{await window.__admissionBootPromise;}catch(_){} await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));try{performance.mark('ah-critical-first-frame');}catch(_){} for(const src of sources){await load(src);await pause();}state.ready=true;window.dispatchEvent(new CustomEvent('admission:idle-features-ready'));})();return work;};
  state.loadFeatures=start;
- const queue=()=>setTimeout(start,200);
+ const queue=()=>{let fired=false;const go=()=>{if(fired)return;fired=true;start();};['pointerdown','keydown','touchstart','scroll'].forEach(t=>addEventListener(t,go,{capture:true,passive:true,once:true}));const idle=()=>{if(typeof requestIdleCallback==='function')requestIdleCallback(go,{timeout:6000});else setTimeout(go,4000);};if(document.readyState==='complete')setTimeout(idle,2500);else addEventListener('load',()=>setTimeout(idle,2500),{once:true});};
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',queue,{once:true});else queue();
 })();
 </script>
