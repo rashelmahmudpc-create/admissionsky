@@ -233,13 +233,20 @@
   // --- change detection: a screen change is noticed in well under a second ---
   let burst = [];
   let lastKick = 0;
+  // Perf: while the page is still booting (until 1.5s after window load) the DOM churns
+  // constantly and every kick used to schedule six full syncs. During that window one
+  // coalesced pass (<=120ms later) is enough; the 250ms interval below still backstops it.
+  // After boot the full burst is unchanged, so screen changes are noticed exactly as before.
+  let loadedAt = document.readyState === 'complete' ? Date.now() : 0;
+  if (!loadedAt) addEventListener('load', () => { loadedAt = Date.now(); });
+  const booting = () => !loadedAt || Date.now() - loadedAt < 1500;
   const kick = () => {
     epoch++;
     const now = Date.now();
     if (now - lastKick < 120) return;
     lastKick = now;
     burst.forEach(clearTimeout);
-    burst = [0, 60, 150, 300, 550, 900].map(ms => setTimeout(sync, ms));
+    burst = (booting() ? [120] : [0, 60, 150, 300, 550, 900]).map(ms => setTimeout(sync, ms));
   };
   let soon = 0;
   const syncSoon = () => {
@@ -266,7 +273,7 @@
   addEventListener('scroll', () => requestAnimationFrame(sync), { passive: true });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) kick(); });
   window.AhChrome = { sync, kick };
-  setInterval(sync, 250);
+  setInterval(() => { if (!document.hidden) sync(); }, 250);
   if (document.body) sync(); else document.addEventListener('DOMContentLoaded', sync);
 
   /* ---- 4. one viewport everywhere ----
